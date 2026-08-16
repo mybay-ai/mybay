@@ -1,0 +1,45 @@
+.dark {
+  color-scheme: dark;
+
+  --theme-canvas: var(--mybay-slate-950);
+  --theme-sidebar: #07111f;
+  --theme-surface: var(--mybay-slate-900);
+  --theme-surface-raised: #111c30;
+  --theme-surface-muted: var(--mybay-slate-800);
+  --theme-control: rgba(15, 23, 42, 0.76);
+  --theme-control-hover: rgba(30, 41, 59, 0.9);
+  --theme-header: rgba(2, 6, 23, 0.82);
+  --theme-popover: rgba(15, 23, 42, 0.98);
+  --theme-nav-active: rgba(51, 65, 85, 0.72);
+  --theme-nav-hover: rgba(30, 41, 59, 0.76);
+  --theme-avatar: rgba(30, 41, 59, 0.95);
+
+  --theme-content: var(--mybay-slate-50);
+  --theme-content-secondary: var(--mybay-slate-300);
+  --theme-content-muted: var(--mybay-slate-500);
+  --theme-content-inverse: var(--mybay-slate-950);
+  --theme-outline: rgba(71, 85, 105, 0.45);
+  --theme-outline-strong: var(--mybay-slate-600);
+
+  --theme-brand: var(--mybay-indigo-400);
+  --theme-brand-hover: var(--mybay-indigo-300);
+  --theme-brand-contrast: var(--mybay-slate-950);
+  --theme-focus-ring: rgba(129, 140, 248, 0.35);
+
+  --theme-danger: #f87171;
+  --theme-danger-hover: #fca5a5;
+  --theme-danger-contrast: var(--mybay-slate-950);
+
+  --theme-status-info-bg: rgba(30, 64, 175, 0.22);
+  --theme-status-info-border: rgba(96, 165, 250, 0.32);
+  --theme-status-info-text: #93c5fd;
+  --theme-status-success-bg: rgba(6, 78, 59, 0.25);
+  --theme-status-success-border: rgba(52, 211, 153, 0.28);
+  --theme-status-success-text: #6ee7b7;
+  --theme-status-warning-bg: rgba(120, 53, 15, 0.26);
+  --theme-status-warning-border: rgba(251, 191, 36, 0.3);
+  --theme-status-warning-text: #fcd34d;
+  --theme-status-danger-bg: rgba(127, 29, 29, 0.24);
+  --theme-status-danger-border: rgba(248, 113, 113, 0.28);
+  --theme-status-danger-text: #fca5a5;
+}

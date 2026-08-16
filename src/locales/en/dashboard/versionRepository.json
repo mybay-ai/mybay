@@ -1,0 +1,89 @@
+{
+  "title": "Image registry",
+  "subtitle": "Discovered official images and their local Docker cache status",
+  "refresh": "Refresh local list",
+  "refreshTitle": "Reload the locally discovered release list",
+  "versionFamily": "Version / family",
+  "releaseDate": "Release date",
+  "latest": "Latest",
+  "officialImage": "Official image",
+  "capabilities": "Capabilities",
+  "notDiscovered": "Not discovered",
+  "pullImage": "Pull image",
+  "core": "Core",
+  "feishu": "Feishu/Lark",
+  "recommended": "Recommended",
+  "feishuUnsupported": "Feishu/Lark unsupported",
+  "followLatest": "follow latest",
+  "loadingImages": "Loading image registry...",
+  "statuses": {
+    "idle": "Not downloaded",
+    "queued": "Queued",
+    "pulling": "Pulling image...",
+    "cached": "Cached locally",
+    "failed": "Pull failed"
+  },
+  "prewarm": {
+    "failedTitle": "Image pull failed",
+    "failedMessage": "The Docker image pull could not be started.",
+    "networkMessage": "Could not reach the server to start the image pull. Check your network connection.",
+    "unknownDetail": "No underlying error details were returned"
+  },
+  "sync": {
+    "successTitle": "Release metadata synced",
+    "newVersions": "Discovered {{count}} new official release(s):\n{{versions}}",
+    "noNewVersions": "No new releases were found. The local release metadata is up to date.",
+    "latestVersion": "Recommended core version: {{version}}",
+    "failedTitle": "Release sync failed",
+    "failedMessage": "Could not sync official release metadata. Try again later.",
+    "networkMessage": "Could not connect to the release sync endpoint.",
+    "invalidResponse": "The remote service returned no valid data"
+  },
+  "management": {
+    "upgradeFailed": "Upgrade failed",
+    "confirmUpgrade": "Confirm version upgrade",
+    "executeUpgrade": "Start upgrade",
+    "cancel": "Cancel",
+    "apiUnavailable": "Could not connect to the platform API. Check your network connection.",
+    "unknownUnderlyingError": "Unknown underlying error",
+    "unknownError": "Unknown error",
+    "single": {
+      "feishuUnsupported": "Instance “{{name}}” uses a Feishu/Lark channel, but target version [{{tag}}] does not support Feishu. Select a Feishu-compatible release.",
+      "latestFeishuConfirm": "Instance “{{name}}” uses a Feishu/Lark channel. When upgrading to [latest], the system will automatically select the newest stable release with full Feishu support to prevent channel dependency failures. Continue with the rolling upgrade?",
+      "resolvedTag": "(resolved to {{tag}})",
+      "submitted": "Upgrade task submitted {{resolvedText}}",
+      "submitFailed": "Could not submit the upgrade task. Try again later."
+    },
+    "rollback": {
+      "confirmTitle": "Confirm version rollback",
+      "confirmMessage": "Roll back instance “{{name}}” to [{{tag}}]? The running container will be rebuilt and service may be interrupted briefly.",
+      "confirmAction": "Confirm rollback",
+      "submitted": "Rollback task submitted",
+      "failedTitle": "Rollback failed",
+      "failedMessage": "The previous version could not be restored. Check the container status.",
+      "invalidResponse": "Unexpected rollback response"
+    },
+    "bulk": {
+      "submitFailedTitle": "Submission failed",
+      "selectAtLeastOne": "Select at least one instance for bulk scheduling.",
+      "feishuUnsupported": "The selection includes instances with Feishu/Lark channels: {{names}}, but target version [{{tag}}] does not support Feishu. Select a compatible image or remove those instances.",
+      "confirmMessage": "Upgrade the selected {{count}} instance(s) to [{{tag}}]? The tasks will run concurrently as rolling upgrades.",
+      "confirmAction": "Confirm upgrade",
+      "submitted": "Bulk upgrade task submitted",
+      "failedMessage": "Could not submit the bulk upgrade task.",
+      "serviceUnavailable": "Could not reach the upgrade service. Check your network connection.",
+      "panelTitle": "Bulk rolling upgrade",
+      "panelDescription": "Select instances and a target version to run a smooth bulk rolling update",
+      "submit": "Submit bulk upgrade ({{count}})",
+      "upgradeLatest": "Upgrade to latest",
+      "outdatedOnly": "Updates only",
+      "selectOutdated": "Select outdated",
+      "checkStatus": "Check all statuses",
+      "viewResults": "View upgrade results"
+    },
+    "latestProtection": {
+      "title": "Smart release routing is enabled:",
+      "description": "The target is <latest>latest</latest>. Standard instances will upgrade to the newest official mainline release. Instances with <feishu>Feishu/Lark channels enabled</feishu> are <routed>automatically routed to the newest stable Feishu-compatible release</routed>, preventing outages caused by missing dependencies."
+    }
+  }
+}

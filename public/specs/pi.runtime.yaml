@@ -1,0 +1,60 @@
+# MyBay Agent Runtime Manifest Example (Pi Agent)
+specVersion: "1.0.0"
+name: "pi-agent"
+displayName: "Pi Agent"
+version: "1.0.0"
+description: "Pi Agent runtime for interactive reasoning, coding tasks, and multi-channel messaging."
+
+runtime:
+  type: "pi"
+  image: "ghcr.io/mybay-ai/pi-agent"
+  tag: "latest"
+  internalPort: 8080
+  environmentVariables:
+    - name: "PI_API_KEY"
+      description: "API key or token for Pi Agent runtime"
+      required: true
+      sensitive: true
+    - name: "LLM_API_KEY"
+      description: "Model provider secret key"
+      required: true
+      sensitive: true
+
+health:
+  endpoint: "/health"
+  intervalSeconds: 20
+  timeoutSeconds: 5
+  expectedStatusCode: 200
+
+storage:
+  dataPath: "/opt/pi/data"
+  configPath: "/opt/pi/config"
+  volumeNamePrefix: "mybay-pi-data"
+
+capabilities:
+  chat: true
+  fileUpload: true
+  scheduledTasks: true
+  browser: true
+  shell: true
+  imChannels:
+    - "web"
+    - "telegram"
+    - "feishu"
+    - "weixin"
+    - "slack"
+    - "webhook"
+    - "api"
+
+resources:
+  minimumMemory: "512Mi"
+  recommendedMemory: "1Gi"
+  minimumCpu: 0.5
+
+backup:
+  includePaths:
+    - "/opt/pi/data"
+    - "/opt/pi/config"
+  excludePatterns:
+    - "*.log"
+    - "cache/*"

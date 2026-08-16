@@ -1,0 +1,89 @@
+{
+  "title": "镜像仓库",
+  "subtitle": "查看已发现的官方镜像及其本地 Docker 缓存状态",
+  "refresh": "刷新本地列表",
+  "refreshTitle": "重新载入本地已发现的版本列表",
+  "versionFamily": "版本 / 家族",
+  "releaseDate": "发布日期",
+  "latest": "最新",
+  "officialImage": "官方镜像",
+  "capabilities": "能力",
+  "notDiscovered": "尚未发现",
+  "pullImage": "拉取镜像",
+  "core": "核心",
+  "feishu": "飞书/Lark",
+  "recommended": "推荐",
+  "feishuUnsupported": "不支持飞书/Lark",
+  "followLatest": "跟随最新",
+  "loadingImages": "正在载入镜像仓库...",
+  "statuses": {
+    "idle": "未下载",
+    "queued": "等待拉取",
+    "pulling": "正在拉取镜像...",
+    "cached": "已缓存到本机",
+    "failed": "拉取失败"
+  },
+  "prewarm": {
+    "failedTitle": "镜像拉取失败",
+    "failedMessage": "未能启动 Docker 镜像拉取任务。",
+    "networkMessage": "未能连接服务器发起镜像拉取，请检查网络连接。",
+    "unknownDetail": "服务端未返回底层错误详情"
+  },
+  "sync": {
+    "successTitle": "版本元数据同步完成",
+    "newVersions": "发现 {{count}} 个新的官方版本：\n{{versions}}",
+    "noNewVersions": "未发现新版本，本地版本元数据已是最新状态。",
+    "latestVersion": "推荐核心版本：{{version}}",
+    "failedTitle": "版本同步失败",
+    "failedMessage": "未能同步官方版本元数据，请稍后再试。",
+    "networkMessage": "未能连接版本同步接口。",
+    "invalidResponse": "远程服务未返回有效数据"
+  },
+  "management": {
+    "upgradeFailed": "升级失败",
+    "confirmUpgrade": "确认升级版本",
+    "executeUpgrade": "执行升级",
+    "cancel": "取消",
+    "apiUnavailable": "无法连接平台服务 API，请检查网络。",
+    "unknownUnderlyingError": "未知底层错误",
+    "unknownError": "未知错误",
+    "single": {
+      "feishuUnsupported": "实例【{{name}}】启用了飞书/Lark 通道，但目标版本 [{{tag}}] 不支持飞书能力。请选择支持飞书的专属版本进行升级。",
+      "latestFeishuConfirm": "实例【{{name}}】启用了飞书/Lark 通道。升级到 [latest] 后，系统会自动匹配完整支持飞书能力的最新专属稳定版，以避免通道依赖失效。确认执行滚动升级吗？",
+      "resolvedTag": "（解析为 {{tag}}）",
+      "submitted": "升级任务已提交 {{resolvedText}}",
+      "submitFailed": "提交升级任务失败，请稍后重试。"
+    },
+    "rollback": {
+      "confirmTitle": "确认回滚版本",
+      "confirmMessage": "确定要将实例【{{name}}】回滚到 [{{tag}}] 吗？回滚会重建运行容器，请确认当前业务可接受短暂中断。",
+      "confirmAction": "确认回滚",
+      "submitted": "回滚任务已提交",
+      "failedTitle": "回滚失败",
+      "failedMessage": "老版本还原未成功，请检查容器状态。",
+      "invalidResponse": "版本回滚响应异常"
+    },
+    "bulk": {
+      "submitFailedTitle": "提交失败",
+      "selectAtLeastOne": "请至少选择一个实例进行批量调度。",
+      "feishuUnsupported": "所选实例中包含已启用飞书/Lark 通道的实例：{{names}}，但目标版本 [{{tag}}] 不支持飞书能力。请重新选择兼容版本，或从批量更新列表中移除这些实例。",
+      "confirmMessage": "确定要将当前选中的 {{count}} 个实例批量更新到 [{{tag}}] 版本吗？任务将并发平滑处理。",
+      "confirmAction": "确定更新",
+      "submitted": "批量升级任务已提交",
+      "failedMessage": "批量调度升级任务提交失败。",
+      "serviceUnavailable": "无法连通升级服务，请检查网络连接。",
+      "panelTitle": "批量滚动升级面板",
+      "panelDescription": "勾选列表中的实例，选择目标版本后执行平滑批量热更新",
+      "submit": "提交批量升级（{{count}} 台）",
+      "upgradeLatest": "升级到最新",
+      "outdatedOnly": "仅看待升级",
+      "selectOutdated": "选中待升级",
+      "checkStatus": "批量检查状态",
+      "viewResults": "查看升级结果"
+    },
+    "latestProtection": {
+      "title": "智能路由解析防护已启用：",
+      "description": "当前目标版本为 <latest>latest</latest>。普通实例将自动升级至最新主线官方版；对于<feishu>已启用飞书/Lark 通道</feishu>的实例，后端会<routed>自动路由至支持 Feishu 能力的最新专属稳定版</routed>，避免因依赖缺失导致通信中断。"
+    }
+  }
+}

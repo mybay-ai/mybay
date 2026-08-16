@@ -1,0 +1,162 @@
+{
+  "workbench_title": "Agent Workspace",
+  "workbench_subtitle": "Quickly deploy and run your own AI agents to keep everyday tasks moving automatically",
+  "quick_start": "Quick Start",
+  "start_from_template": "Create Agent from Template",
+  "start_from_template_desc": "Choose a prebuilt workflow to quickly create an agent for your business needs",
+  "custom_deploy": "New Deployment",
+  "custom_deploy_desc": "Start from scratch and configure your preferred models, tools, messaging channels, and runtime settings",
+  "recommend_templates": "Recommended Workflows & Blueprints",
+  "recommend_templates_desc": "Select the best template for your business scenario and deploy with one click",
+  "view_all_templates": "View All Templates",
+  "experience_demo": "Experience Demo Hub",
+  "experience_demo_desc": "Instantly experience configured AI assistants and third-party channel interactions in sandbox",
+  "recent_tasks": "Recent Tasks & Executions",
+  "recent_outputs": "Recent Generated Outputs (Outputs)",
+  "instance_overview": "Instance Running Overview",
+  "channel_web": "Standalone Web Console",
+  "channel_api_desc": "API mode is used to programmatically call the instance. It requires using the instance URL's API endpoint and API Key. If the Web UI is disabled, only whitelisted paths can be accessed.",
+  "channel_status": "Channel Integration Status",
+  "system_status_summary": "System Status & Resource Summary",
+  "action_deploy": "One-click Deploy",
+  "action_new_deploy": "Create Custom Deployment",
+  "action_go_demo": "Try the Demo",
+  "no_tasks": "No tasks executed",
+  "no_tasks_desc": "When the Agent receives messages, executes tasks, or generates results, related activities will be synchronized here.",
+  "no_outputs": "No generated outputs",
+  "recent_outputs_desc": "Files, reports, and outputs generated during agent execution",
+  "templates": {
+    "customer_support": {
+      "name": "7x24h AI Customer Assistant",
+      "desc": "Integrate with multiple channels like WeChat, Web, answering with auto-generated service sheets"
+    },
+    "content_writer": {
+      "name": "Cross-language Content Flow",
+      "desc": "Leverage advanced LLMs to translate, refine, and reconstruct marketing content with ease"
+    },
+    "data_scraping": {
+      "name": "Auto Industry Briefing Scraper",
+      "desc": "Schedule polling, extract web info, and export standardized research reports in Markdown"
+    }
+  },
+  "attention_title": "Attention Needed",
+  "attention": {
+    "error": {
+      "title": "Instance Runtime Error",
+      "desc": "Found {{count}} instance(s) with deployment or execution failures.",
+      "btn": "View & Fix"
+    },
+    "model": {
+      "title": "Model Configuration Required",
+      "desc": "No active model credentials found. The Agent cannot function without LLM access.",
+      "btn": "Configure Model"
+    },
+    "stopped": {
+      "title": "Instances Stopped",
+      "desc": "All of your Agent instances are currently stopped or archived.",
+      "btn": "Start Instance"
+    }
+  },
+  "stat_running_agents": "Running Agents",
+  "stat_running_agents_desc": "Instances currently executing tasks",
+  "stat_attention_needed": "Attention Required",
+  "stat_attention_needed_desc": "Abnormal, pending or config items",
+  "stat_attention_items_count": "{{count}} items",
+  "stat_recent_tasks": "Tasks in the Last 24 Hours",
+  "stat_recent_tasks_desc": "Task executions in the last 24h",
+  "stat_recent_tasks_placeholder": "Pending statistics integration",
+  "stat_quota_usage": "Instance Quota Usage",
+  "stat_quota_usage_desc": "Agent deployment limit of current plan",
+  "stat_no_data": "None",
+  "channel_ai_service": "AI Model Service",
+  "channel_unconfigured": "Not Configured",
+  "channel_message_gateway": "Lark / Message Channel",
+  "channel_inactive": "Inactive",
+  "channel_public_gateway": "Public Gateway",
+  "channel_running_well": "Running Well",
+  "channel_not_generated": "Not Generated",
+  "quota_available": "Available Instance Quota",
+  "quota_cpu_spec": "CPU Spec",
+  "quota_memory": "Memory Quota",
+  "task_center_fallback": "Task Center",
+  "instance_center_fallback": "Instance Center",
+  "no_instances_fallback": "No running Agents",
+  "browse_files": "Browse files",
+  "model": "Model",
+  "channel": "Channel",
+    "chat": {
+      "messageSuccess": "Chat Workspace: Message sent successfully",
+      "messageFailed": "Chat Workspace: Message sending failed",
+      "multiturnSuccess": "Chat Workspace: Multi-turn session completed",
+      "multiturnFailed": "Chat Workspace: Multi-turn session failed"
+    },
+    "assist": {
+      "completed": "Assist completed: {{skill}}",
+      "failed": "Assist failed: {{skill}}",
+      "skills": {
+        "modelConfigDiagnosis": "Model configuration diagnosis",
+        "explainLastError": "Explain last error",
+        "instanceHealthSummary": "Instance health summary",
+        "summarizeConversation": "Summarize conversation"
+      }
+    },
+  "not_set": "Not set",
+  "local_terminal": "Local terminal",
+  "cpu_cores": "{{count}} cores",
+  "admin": {
+    "planAdmin": "Admin",
+    "planFree": "Free",
+    "title": "Infrastructure and platform topology (Admin)",
+    "live": "Live",
+    "unavailable": "Resource status is unavailable",
+    "loading": "Loading platform resource metrics...",
+    "remainingCapacity": "Available capacity",
+    "activeContainers": "Active containers",
+    "failedNodes": "Failed nodes",
+    "pressureLevel": "Resource pressure",
+    "levelCritical": "Critical",
+    "levelWarning": "Warning",
+    "levelHealthy": "Healthy",
+    "cpuLoad": "Live CPU load",
+    "memoryUsage": "Physical memory usage",
+    "diskUsage": "Persistent disk usage",
+    "systemNotice": "{{type}} system notice"
+  },
+  "audit": {
+    "unknown_instance": "Unknown Instance",
+    "instance_id": "Instance ID: {{id}}",
+    "actions": {
+      "create": "Created instance",
+      "start": "Started instance",
+      "stop": "Stopped instance",
+      "restart": "Restarted instance",
+      "rebuild_proxy": "Refreshed gateway",
+      "redeploy": "Redeployed instance",
+      "restore": "Restored instance",
+      "archive": "Archived instance",
+      "delete": "Deleted instance",
+      "task_complete": "Task completed"
+    },
+    "details": {
+      "manual_restart_container": "Instance restarted manually",
+      "restart_action": "Restart action dispatched",
+      "manual_stop_container": "Instance stopped manually",
+      "stop_action": "Stop action dispatched",
+      "manual_start_container": "Manually started Agent",
+      "start_action": "Start action dispatched",
+      "created_instance": "Created new Agent instance",
+      "created_new_instance": "Created new instance",
+      "started_instance": "Started instance",
+      "stopped_instance": "Stopped instance",
+      "restarted_instance": "Restarted instance",
+      "archived_instance": "Archived instance (configuration retained)",
+      "deleted_instance_permanently": "Deleted instance permanently",
+      "upgrade_started": "Agent upgrade started",
+      "upgrade_completed": "Agent upgrade completed",
+      "upgrade_failed": "Agent upgrade failed",
+      "rebuilt_proxy_mapping": "Refreshed gateway",
+      "previewed_backup_package": "Previewed backup package of instance: {{instance}}",
+      "none": "Not set"
+    }
+  }
+}

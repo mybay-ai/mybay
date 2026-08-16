@@ -1,0 +1,155 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MyBayAgentRuntimeSpecification",
+  "description": "JSON Schema defining the MyBay Agent Runtime Specification (mybay.runtime.yaml) for agent docker images and adapters.",
+  "type": "object",
+  "required": [
+    "specVersion",
+    "name",
+    "displayName",
+    "version",
+    "runtime",
+    "health",
+    "storage",
+    "capabilities"
+  ],
+  "properties": {
+    "specVersion": {
+      "type": "string",
+      "description": "MyBay Specification version, e.g., '1.0.0'",
+      "default": "1.0.0"
+    },
+    "name": {
+      "type": "string",
+      "description": "Unique identifier for the agent runtime type (kebab-case)",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "displayName": {
+      "type": "string",
+      "description": "Human-readable name of the agent"
+    },
+    "version": {
+      "type": "string",
+      "description": "Version string of the agent runtime image or manifest"
+    },
+    "description": {
+      "type": "string",
+      "description": "Brief description of the agent runtime capabilities"
+    },
+    "runtime": {
+      "type": "object",
+      "required": ["type", "image", "internalPort"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["hermes", "pi", "openclaw", "custom_docker"],
+          "description": "Runtime archetype identifier"
+        },
+        "image": {
+          "type": "string",
+          "description": "Default Docker registry image"
+        },
+        "tag": {
+          "type": "string",
+          "default": "latest"
+        },
+        "internalPort": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535,
+          "description": "Internal HTTP/REST port exposed by the agent container"
+        },
+        "environmentVariables": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": { "type": "string" },
+              "description": { "type": "string" },
+              "required": { "type": "boolean", "default": false },
+              "default": { "type": "string" },
+              "sensitive": { "type": "boolean", "default": false }
+            }
+          }
+        }
+      }
+    },
+    "health": {
+      "type": "object",
+      "required": ["endpoint"],
+      "properties": {
+        "endpoint": {
+          "type": "string",
+          "description": "HTTP health probe path, e.g. '/health' or '/api/status'"
+        },
+        "intervalSeconds": {
+          "type": "integer",
+          "default": 30
+        },
+        "timeoutSeconds": {
+          "type": "integer",
+          "default": 10
+        },
+        "expectedStatusCode": {
+          "type": "integer",
+          "default": 200
+        }
+      }
+    },
+    "storage": {
+      "type": "object",
+      "required": ["dataPath", "configPath"],
+      "properties": {
+        "dataPath": {
+          "type": "string",
+          "description": "Container path for persistent user data and sqlite/state"
+        },
+        "configPath": {
+          "type": "string",
+          "description": "Container path for configuration files"
+        },
+        "volumeNamePrefix": {
+          "type": "string",
+          "default": "mybay-agent-data"
+        }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "required": ["chat", "fileUpload", "imChannels"],
+      "properties": {
+        "chat": { "type": "boolean", "default": true },
+        "fileUpload": { "type": "boolean", "default": true },
+        "scheduledTasks": { "type": "boolean", "default": false },
+        "browser": { "type": "boolean", "default": false },
+        "shell": { "type": "boolean", "default": false },
+        "imChannels": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "properties": {
+        "minimumMemory": { "type": "string", "default": "512Mi" },
+        "recommendedMemory": { "type": "string", "default": "1Gi" },
+        "minimumCpu": { "type": "number", "default": 0.5 }
+      }
+    },
+    "backup": {
+      "type": "object",
+      "properties": {
+        "includePaths": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "excludePatterns": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}

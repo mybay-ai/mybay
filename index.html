@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="cn">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#2563eb" />
+    <meta name="color-scheme" content="light dark" />
+    <script>
+      /* Apply the saved theme before React and styles paint to avoid a light/dark flash. */
+      (function() {
+        try {
+          var storedMode = window.localStorage.getItem("mybay-theme-mode");
+          var mode = storedMode === "light" || storedMode === "dark" || storedMode === "system"
+            ? storedMode
+            : "system";
+          var resolvedTheme = mode === "system"
+            ? (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+            : mode;
+          var root = document.documentElement;
+          root.classList.toggle("dark", resolvedTheme === "dark");
+          root.dataset.theme = mode;
+          root.dataset.resolvedTheme = resolvedTheme;
+          root.style.colorScheme = resolvedTheme;
+        } catch (error) {
+          document.documentElement.dataset.theme = "system";
+          document.documentElement.dataset.resolvedTheme = "light";
+        }
+      })();
+    </script>
+    <script>
+      (function() {
+        try {
+          var origFetch = window.fetch;
+          if (typeof origFetch === 'function') {
+            var _currentFetch = origFetch;
+            Object.defineProperty(window, 'fetch', {
+              get: function() {
+                return _currentFetch;
+              },
+              set: function(val) {
+                if (typeof val === 'function') {
+                  _currentFetch = val;
+                }
+              },
+              configurable: true,
+              enumerable: true
+            });
+          }
+        } catch (e) {
+          console.error('Fetch property setup error:', e);
+        }
+      })();
+    </script>
+    <!--title-outlet-->
+    <!--meta-outlet-->
+  </head>
+  <body>
+    <div id="root"><!--ssr-outlet--></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

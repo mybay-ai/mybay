@@ -1,0 +1,343 @@
+{
+  "templates": {
+    "cross_border_ecom_operation": {
+      "name": "DTC & E-commerce Operations Agent",
+      "description": "An all-in-one smart agent for cross-border e-commerce: including price change monitoring of major competitor shops, daily foreign market intelligence briefings, and real-time anomaly analysis of order fulfillment.",
+      "audience": "Perfect for cross-border e-commerce sellers, DTC brand outbound marketing teams, and product selection managers to quickly follow market trends.",
+      "business_value": "Achieve 24/7 competitor tracking and automatic public product information gathering. Effortlessly rewrite high-converting English product copy using large language models, and trigger automated alerts on Feishu or group chats upon detecting competitor price changes.",
+      "business_impact": [
+        "24/7 automated tracking and scheduled scraping of competitor products, reducing manual effort by 85%",
+        "One-click batch rewriting by AI agents to generate high-converting English product descriptions optimized for local SEO",
+        "Accurate detection of competitor price drops, delivering instant security warnings to Feishu or Telegram groups"
+      ],
+      "preparation_notice": [
+        "Prepare your OpenAI / Gemini API credentials for server-side linguistic processing and copywriting",
+        "Prepare Shopify Storefront API credentials if automatic synchronization to your store is required",
+        "Configure notification webhooks (such as Feishu Webhook or Telegram Bot Token) to receive instant messages"
+      ],
+      "tech_spec": "Built-in agile web scraper plugin + customized DTC copy rewrite model",
+      "limitations": "Currently supports standard HTTPS public websites. If target websites enforce strong anti-bot defenses (e.g. Cloudflare Turnstile or advanced captcha), specialized premium proxies might be required.",
+      "post_deploy_guide": [
+        "Step 1: Input and initialize your dedicated store URL to set up environment variables.",
+        "Step 2: Add URLs of major competitors' products to start real-time tracking in the console.",
+        "Step 3: Enable scheduled analysis jobs to auto-deliver a comprehensive product report every Sunday at midnight.",
+        "Step 4: Connect Feishu or Telegram gateway channels to receive real-time alerts on abnormal orders."
+      ]
+    },
+    "content_marketing_operation": {
+      "name": "Content Marketing Agent",
+      "description": "Pioneer of new media content matrices: assisting content teams in smart drafting of viral topic ideas, deconstructing high-performing short video scripts, and collecting daily global social media trend breakouts.",
+      "audience": "Designed for Red (Xiaohongshu) and short-video creators, new-media content teams, and MCN managers to efficiently produce viral content.",
+      "business_value": "Supports uploading trending posts, competitor analysis, or script outlines for structured extraction, enabling teams to scale multi-dimensional topics. Automatically optimizes copy and drafts outlines based on audience pain points, solving daily writer's block.",
+      "business_impact": [
+        "Upload viral posts or script drafts in PDF/TXT to automatically extract high-conversion structures",
+        "Scheduled smart topic library extension: automatically derive and test headlines and outlines matching audience pain points",
+        "24/7 optimization of copy patterns: AI learns from traffic feedbacks to self-correct and improve subsequent copy styles"
+      ],
+      "preparation_notice": [
+        "Prepare a large context-window model API key (such as Gemini 1.5 Pro / Claude 3.5) to support deep document analysis",
+        "Prepare 1-3 best-performing competitor posts or script outlines in PDF/TXT format as study samples",
+        "Set up destination messaging endpoints (e.g., Feishu webhook or Enterprise WeChat Bot)"
+      ],
+      "tech_spec": "Viral mind replication engine + deep semantic document deconstructor",
+      "limitations": "Due to social media platform API restrictions, auto-publishing is not supported. This Agent primarily focuses on generating high-converting draft copy, outlines, and illustration cues.",
+      "post_deploy_guide": [
+        "Step 1: Open the 'Xiaohongshu Topic Generator' settings, configure your target vertical and follower personas.",
+        "Step 2: Trigger the script to batch-generate your first content schedule with cover ideas, outlines, and hooks.",
+        "Step 3: Submit high-performing short video scripts for AI storyboard extraction and style learning.",
+        "Step 4: Integrate Feishu open platform to receive daily trending keywords and inspiration directly in group chats."
+      ]
+    },
+    "team_collaboration": {
+      "name": "Team Collaboration Agent",
+      "description": "Enterprise collaboration hub: automatically condense long PDF documents into outlines, intelligently extract tasks from group chats, and dispatch weekly project progress updates on schedule.",
+      "audience": "Ideal for project managers in cross-department communication, operational teams in small-to-medium enterprises, and agile R&D groups.",
+      "business_value": "Extract structured action items and meeting summaries from meeting minutes. Aggregate fragmented logs into concise daily and weekly reports, and answer common team queries via chatbot monitoring to reduce communication overhead.",
+      "business_impact": [
+        "Auto-ingest meeting audio files or documents, extracting key summaries and assigning action items in seconds",
+        "Multi-source log aggregation: compile scattered project status records into neat daily/weekly report formats with one click",
+        "Feishu group chatbot: automatically answer questions based on your custom uploaded SOP training PDFs"
+      ],
+      "preparation_notice": [
+        "Register a self-built app on Feishu Open Platform and acquire its App ID & App Secret credentials",
+        "Possess group owner or admin privileges for target Feishu chats to add bots and configure event subscription rules",
+        "Prepare training docs, standard SOP handbooks, or Q&A knowledge bases in PDF format"
+      ],
+      "tech_spec": "Full-duplex Feishu gateway integration + structured multi-dimensional text synthesizer",
+      "limitations": "Highly dependent on Feishu App permissions. Organizational administrators must approve and enable corresponding bot events and cloud document API scopes in Feishu Admin.",
+      "post_deploy_guide": [
+        "Step 1: Go to Instance Settings, authorize and link your Feishu custom app (with App ID and App Secret).",
+        "Step 2: Add the bot to your target chat and send '@bot list' to trigger initial message summary.",
+        "Step 3: Upload research reports or project PDF attachments via the file manager for instant AI structure mapping.",
+        "Step 4: Configure the cron schedule (e.g. 18:00 every workday) to automate daily task digest publishing."
+      ]
+    },
+    "ecommerce_operation": {
+      "name": "E-commerce Guard Agent",
+      "description": "24/7 E-commerce Sentinel: monitoring order processing times, delivery delays, and other operational boundaries across mainstream platforms, paired with competitor tracking and scheduled industry summaries.",
+      "audience": "Tailored for multi-platform shop owners, storefront managers, and warehouse logistics supervisors to automate order flow and threshold monitoring.",
+      "business_value": "Automatically inspect inventory limits, order accumulation, and shipping latency. Screen refund requests, risky addresses, or logistics issues, preventing platform penalties caused by late shipments.",
+      "business_impact": [
+        "Omnichannel store monitoring: automatically track critical thresholds like low stock, delivery limits, or stagnant orders",
+        "Proactive risk screening: millisecond-level filtering of customer refund requests, suspicious buyers, or high-risk addresses",
+        "Instant dispatching: push critical logistics alerts (like courier delays or delivery blockages) immediately to manager group chats"
+      ],
+      "preparation_notice": [
+        "Obtain authorized merchant API Keys or secure access tokens for target e-commerce platforms",
+        "Configure safety inventory levels and transit time threshold parameters for your core products",
+        "Set up chatbot webhook endpoints (Feishu/Telegram) to receive real-time critical warnings"
+      ],
+      "tech_spec": "High-concurrency event probe + multi-channel dispatch engine",
+      "limitations": "Due to frequent encryption and anti-scraping updates on major merchant backends, official API partner connections are recommended rather than raw page scraping in production.",
+      "post_deploy_guide": [
+        "Step 1: Input and initialize your storefront and target product configuration maps.",
+        "Step 2: Set warning conditions for delayed shipping, risky refunds, or inventory exhaustion limits.",
+        "Step 3: Specify competitor SKU watching lists and delivery time check schedules.",
+        "Step 4: Map notifications to your Feishu or Telegram chat groups for 24/7 instant alerts."
+      ]
+    },
+    "daily_news_briefing": {
+      "name": "Daily Industry Intelligence Briefing",
+      "description": "Smart deduplication and structuring of industry news based on keywords and subscription topics, delivering structured briefs on schedule.",
+      "audience": "Product managers, marketing directors, financial analysts, founders, and VC investment teams who need high sensitivity to market changes.",
+      "automation_result": "On workdays, the Agent searches, filters, analyzes, and extracts core developments according to your custom keywords to generate an elegant intelligence brief delivered directly to your screen.",
+      "business_value": "Save 1-2 hours of manual reading and noise filtering every day, capturing 100% of industry breakouts and competitor shifts ahead of others.",
+      "key_requirements": [
+        "Define precise keywords, market segments, or trusted RSS URLs for monitoring",
+        "Configure notification channels (e.g. Feishu robot, WeChat webhook, or SMTP email)"
+      ],
+      "trigger_mode": "Cron-scheduled automated running (e.g., every morning or custom time intervals)",
+      "limitations": "Without authorized APIs, search crawls depend on open RSS and public DOM texts. High-wall sites that require user logins or paid accounts might fall back to general model-based estimates.",
+      "post_deploy_guide": [
+        "Step 1: Set up vertical keywords or specific RSS news feeds to narrow down the scraper's focus.",
+        "Step 2: Verify that standard search/scraping tools are properly enabled in the active skill list.",
+        "Step 3: Define daily running schedules (e.g., 08:30 on workdays) to deliver fresh briefs before your work hours.",
+        "Step 4: Wire up notifications to push daily briefs to your team chat or target email inbox."
+      ]
+    },
+    "competitor_price_monitor": {
+      "name": "Competitor Price Watchdog",
+      "description": "Track competitor listing prices, discount strategies, and SKU changes across major platforms to formulate optimum pricing tactics.",
+      "audience": "E-commerce operation experts, pricing managers, procurement heads, and store owners.",
+      "automation_result": "Analyzes specification details of target products, evaluates pricing deviations, and generates comprehensive strategy recommendations and safety margin reviews.",
+      "business_value": "Establish a round-the-clock storefront price guard, avoiding manual polling across several regional sites. Delivers instant alerts to preserve pricing advantage and safeguard margins.",
+      "key_requirements": [
+        "Provide competitor product pages, SKU lists, or target platform storefront URLs",
+        "Set margin parameters, pricing strategies, and API credentials"
+      ],
+      "trigger_mode": "Periodic cron runs (multiple times daily) or instant manual refresh",
+      "limitations": "Default tests operate on simulated page structures. Live parsing of complex web structures might be restricted by anti-bot checks (e.g. Cloudflare captchas), requiring stable enterprise API bridges.",
+      "post_deploy_guide": [
+        "Step 1: Input target product URLs of competitor platforms or standalone shops.",
+        "Step 2: Configure price movement alert thresholds (such as triggering warnings on drop > 10%).",
+        "Step 3: Enable the scheduled price compiler (defaults to every Sunday at midnight).",
+        "Step 4: Interface notification webhooks (Feishu, DingTalk, or Telegram) to instantly receive warnings."
+      ]
+    },
+    "feishu_message_summary": {
+      "name": "Feishu Chat Intelligence Summarizer",
+      "description": "Automatically distill unread messages and multi-thread discussions in Feishu groups into actionable logs, decisions, and tasks.",
+      "audience": "Project leaders, administrative coordinators, and operations managers overwhelmed by group conversations.",
+      "automation_result": "Ingests chats on a scheduled or on-demand basis, filters chatter, and categorizes core topics, resolutions, and assigned tasks into structural notes.",
+      "business_value": "Avoid scrolling through endless logs, saving 30-60 minutes daily. Translate casual chat streams into clear action lists, keeping everyone in sync and removing information silos.",
+      "key_requirements": [
+        "Acquire a self-built Feishu Application with proper API event credentials",
+        "Acquire admin privileges in required chat rooms to invite the assistant bot"
+      ],
+      "trigger_mode": "Instant '@bot summary' triggers or automated cron intervals",
+      "limitations": "For ultra-large group chats (500+ members), scheduled hourly summaries are recommended to prevent API rate limiting, instead of real-time callbacks on every text.",
+      "post_deploy_guide": [
+        "Step 1: Go to Feishu Configs in the instance dashboard, ensuring App ID and App Secret are entered and valid.",
+        "Step 2: Invite the bot into target Feishu chat rooms, making a simple test call.",
+        "Step 3: Mention the bot with '@bot summary' to let it write down key summaries of recent messages.",
+        "Step 4: Turn on periodic cron schedules (e.g. 18:00 every workday) to auto-distribute elegant progress digests."
+      ]
+    },
+    "pdf_summary": {
+      "name": "Smart PDF & Document Distiller",
+      "description": "Upload multi-page research papers, SOPs, or reports to generate detailed outlines, key points, and technical specifications in seconds, complete with Q&A drilldowns.",
+      "audience": "Researchers, compliance analysts, intense readers, product selection experts, and business consultants.",
+      "automation_result": "Parses complex, multi-page PDF or DOCX attachments to deliver structural core takeaways, data references, and outline sections, ready for follow-up questions.",
+      "business_value": "Reduce document scanning times by 90%. Instantly identify key limitations or required conditions across lengthy papers, avoiding manual copy-paste errors.",
+      "key_requirements": [
+        "Acquire standard model API keys for text parsing",
+        "Provide digital text-layer PDF or DOCX (scanned image-only files must be pre-processed by OCR)"
+      ],
+      "trigger_mode": "Manual upload and single-click execution",
+      "limitations": "Scanned images or locked paper formats need OCR text extraction before uploading. File sizes are recommended to be kept under 30MB per single attachment.",
+      "post_deploy_guide": [
+        "Step 1: Open file manager in the workspace, uploading target PDF or DOCX research articles.",
+        "Step 2: Command the Agent to distill the file structures, outputting neat Markdown outlines in 10 seconds.",
+        "Step 3: Direct granular follow-up questions at the file inside the chat window for contextual answers.",
+        "Step 4: Save the exported Markdown content directly into your team wiki or collaborative documents."
+      ]
+    },
+    "lead_form_auto_reply": {
+      "name": "Form Lead Follow-up & Responder",
+      "description": "Automatically match product FAQs and SOPs on receiving new leads, dispatching immediate email responses and alerting sales reps in real-time.",
+      "audience": "Sales directors, private customer success teams, and landing-page marketing coordinators.",
+      "automation_result": "Intercepts newly submitted leads, queries custom knowledge libraries, constructs professional personalized follow-up mail drafts, and pings sales reps on instant channels.",
+      "business_value": "Reduces initial reaction times from hours to under 10 seconds, boosting consumer interest and deal closure rates. 24/7 autonomous replies provide enterprise-grade responsiveness.",
+      "key_requirements": [
+        "Configure a secure Webhook trigger URL for the inbound lead submission forms",
+        "Submit standard product pitch briefs or sales Q&A handbooks as knowledge references"
+      ],
+      "trigger_mode": "Webhook-triggered event subscriptions",
+      "limitations": "Reply quality corresponds strongly with FAQ documentation depth. If details are missing, the bot might respond with general info, so human review buffers are suggested for critical industries.",
+      "post_deploy_guide": [
+        "Step 1: Set up target audience segments and typical FAQs inside the workspace configurations.",
+        "Step 2: Connect your website form handler to the Agent's Webhook trigger endpoint.",
+        "Step 3: Run trial forms; verify that customized replies are correctly dispatched within seconds.",
+        "Step 4: Monitor follow-up logs and response latencies directly in the lead table panel."
+      ]
+    },
+    "ecommerce_order_alert": {
+      "name": "E-commerce Delayed Order Guard",
+      "description": "Monitor shop orders, auto-verify postal formats, detect refund requests, and trigger instant high-risk alert routing.",
+      "audience": "Customer service leads, storefront dispatch supervisors, and warehouse managers.",
+      "automation_result": "Polls storefront order tables, contrasts address strings with safety filters, cross-checks buyer behavior profiles, and flags exceptions immediately.",
+      "business_value": "Detect fulfillment failures in seconds. Monitor multiple platforms under one dashboard to guarantee delivery speed and lower dispute rates.",
+      "key_requirements": [
+        "Provide store backend API tokens or secure webhook connection keys",
+        "Define criteria for abnormal statuses, high-risk flags, or blacklisted terms"
+      ],
+      "trigger_mode": "Real-time payment push hooks or periodic API polling",
+      "limitations": "High-frequency API polling might exhaust merchant quota limits. Optimize polling intervals sensibly to prevent rate limits or brief connection blocks.",
+      "post_deploy_guide": [
+        "Step 1: Set up storefront API bridges and state boundary parameters.",
+        "Step 2: Confirm order scraping background jobs are running cleanly in the Task list.",
+        "Step 3: Connect warning signals to your Feishu or Telegram webhook endpoints.",
+        "Step 4: Check real-time exception trends on the control board."
+      ]
+    },
+    "xiaohongshu_topic_generator": {
+      "name": "Xiaohongshu Viral Title & Outline Planner",
+      "description": "Craft attention-grabbing headlines, core copy outlines, and click-worthy hooks for lifestyle, cosmetics, or office posts based on trending formulas.",
+      "audience": "Social media writers, content creators, and brand marketing matrix coordinators.",
+      "automation_result": "Takes target products or main topics, matches consumer pain points, and generates 10 high-conversion titles, hook lines, and outline proposals.",
+      "business_value": "Eradicate content stagnation and creative block. Craft click-enticing titles and storyboards to lift video retention and view-through rates, dropping ideation efforts by 80%.",
+      "key_requirements": [
+        "Provide product positioning parameters, keywords, or niche boundaries",
+        "Leverage capable models (such as Gemini 1.5 Pro) to catch subtle cultural nuances"
+      ],
+      "trigger_mode": "On-demand manual triggers and interactive iterations",
+      "limitations": "Schedules and trends represent algorithm estimates. Distribution also relies on platform sensitive filters, fresh event tags, and manual recommendations, so keep human reviews active.",
+      "post_deploy_guide": [
+        "Step 1: Save account category limits, targeting, and typical follower profiles.",
+        "Step 2: Trigger the ideation script to generate your batch table of title/outline variations.",
+        "Step 3: Select preferred topics, prompting the bot to write full, emoji-rich draft copy.",
+        "Step 4: Copy generated tags and posting times to lift discoverability and interactions."
+      ]
+    },
+    "short_video_script_analyzer": {
+      "name": "Short Video Script Analyst & Deconstructor",
+      "description": "Deconstruct viral video transcripts or dialogue scripts into detailed storyboards, hook setups, visual instructions, and derived copy drafts.",
+      "audience": "Video producers, content curators, copywriters, and video editing directors.",
+      "automation_result": "Dissects high-performing transcripts, extracts the vital 'first 3 seconds' hooks, pacing structure, and emotional triggers, compiling 3 alternative shoot-ready scripts.",
+      "business_value": "Transition from watching viral videos to dissecting their business core. Map visual blueprints for immediate reuse, scaling up script production limits.",
+      "key_requirements": [
+        "Upload text, word, or PDF transcript drafts of viral videos",
+        "Specify visual styles (indoor/outdoor, dramatic tones, pacing, and presenter style)"
+      ],
+      "trigger_mode": "Triggered on uploading transcript attachments",
+      "limitations": "Deconstructed storyboards are semantic analyses and do not replace the director's artistic touch, trending BGM, or precise sound effects. Fine-tuning with directors is recommended.",
+      "post_deploy_guide": [
+        "Step 1: Set up target video genre, brand image, and stylistic boundaries.",
+        "Step 2: Upload competitor transcript sheets in text/docx formats via the file manager.",
+        "Step 3: Run analysis commands, letting the bot chart visual, storyboard, and retention hooks.",
+        "Step 4: Ask the Agent to rewrite and expand the outline into 3 alternative shoot plans."
+      ]
+    }
+  },
+  "type_blueprint": "Industry Solution Blueprint",
+  "type_workflow": "Workflow",
+  "risk_low": "Low Risk",
+  "risk_medium": "Medium Risk",
+  "risk_high": "High Risk",
+  "risk_unknown": "Unknown Risk",
+  "header_sparkle": "Smart Productivity Preset",
+  "header_title": "MyBay Solutions & Template Center",
+  "header_desc": "Out-of-the-box industry Core Agents and rule-specific Workflow templates. One-click deployment with built-in environments, private skills, and gateways to get your dedicated AI digital employee in seconds.",
+  "btn_demo_hub": "Go to Demo Hub",
+  "tab_solutions": "Industry Business Solutions",
+  "tab_workflows": "AI Productivity Workflows",
+  "search_solutions": "Search industry business solutions (e.g., Shopify, Customer Service)...",
+  "search_workflows": "Search productivity workflows...",
+  "not_found_solutions": "No matching industry solution templates found",
+  "not_found_workflows": "No matching workflow rules found",
+  "version_label": "Version",
+  "risk_label": "Risk Level",
+  "skills_label": "Recommended Skills",
+  "channels_label": "Recommended Gateways",
+  "btn_details": "Base Info & Config",
+  "btn_deploy_blueprint": "Deploy Solution",
+  "btn_use_workflow": "Use Workflow",
+  "view_params": "View Input Parameters",
+  "target_audience_label": "Target Audience",
+  "business_value_label": "Business Value",
+  "recommendation_badge": "Recommended from Experience Center",
+  "error_loading": "Failed to fetch Template Center configuration. Please refresh and try again.",
+  "modal": {
+    "aria_close": "Close",
+    "nav_label": "Navigation:",
+    "tab_value": "🎯 Target & Benefits",
+    "tab_prep": "📋 Preparation Checklist",
+    "tab_context": "🧠 AI Instructions",
+    "tab_guide": "📖 Next Actions Guide",
+    "tab_limits": "⚠️ Limitations & Notes",
+    "title_value": "Target Audience & Business Value",
+    "title_context": "AI Agent Brain Instructions (System Context)",
+    "title_guide": "Immediate Post-Deployment Actions Guide",
+    "title_limits": "Limitations & Precautions",
+    "title_prep": "Required Preparation Checklist",
+    "prep_desc": "Please make sure you have prepared the following items before deploying:",
+    "title_specs": "Recommended Technical Specs",
+    "title_specs_wf": "Automation Mechanisms & Technical Specs",
+    "tech_core": "Underlying Architecture",
+    "tech_skills": "Recommended Skill Plugins (Skills)",
+    "tech_channels": "Recommended Communication Gateways (Channels)",
+    "tech_channels_wf": "Recommended Gateway (Channel)",
+    "sandbox_promise": "Runs in isolated sandbox. API keys fully encrypted. Data protected.",
+    "sandbox_promise_wf": "Passed secure sandbox audit, multi-task fully isolated operation.",
+    "vpc_auto": "Supports 0.0.0.0:3000 standard VPC automation with one-click hot update",
+    "no_dev": "No dev env configuration needed. Auto-allocation of high-throughput sandbox",
+    "btn_back": "Back to List",
+    "btn_deploy_blueprint": "One-click Deploy Business Solution",
+    "type_blueprint": "Industry Solution Blueprint",
+    "btn_deploy_workflow": "Deploy This Workflow",
+    "type_workflow": "AI Workflow Solution",
+    "params_json": "Standard Input Parameters JSON Schema Example",
+    "trigger_mode": "Recommended Trigger/Schedule Mode",
+    "wf_audit_desc": "The workflow configuration has passed security and performance audits, supporting one-click non-destructive mounting",
+    "no_code_needed": "No coding required, supports cross-system rules mapping",
+    "bp_fallback_target": "Digital transformation specialist, operations team lead, AI digital employee explorer",
+    "bp_fallback_impact_1": "Automate monitoring, retrieval, and analysis of specified business flows, significantly replacing manual repetitive tasks",
+    "bp_fallback_impact_2": "Intelligently match scenario-specific tones based on AI settings to produce high-standard structured copy",
+    "bp_fallback_impact_3": "Integrate communication gateway support to establish a closed loop of message reporting and dispatching",
+    "bp_fallback_prep_1": "Please prepare the API credentials of the core large language model in the background",
+    "bp_fallback_prep_2": "Ensure your notification delivery endpoint (such as Feishu or Webhook interface) is established",
+    "bp_fallback_tech_spec": "Multi-role intelligent collaboration architecture + standard secure isolated container environment",
+    "wf_fallback_target": "Department business experts, pioneers of daily automation efficiency",
+    "wf_fallback_result": "Narrow down processes for specific, high-frequency small-scale business scenarios, replacing highly repetitive manual operations with AI.",
+    "wf_fallback_req_1": "Large model API key credentials",
+    "wf_fallback_req_2": "Clear definition of the source data to be processed (e.g., files, Webhook endpoints, etc.)",
+    "wf_fallback_trigger": "Manual one-click running / external event real-time triggering",
+    "audience_title_blue": "Recommended Teams / Users",
+    "audience_title_amber": "Recommended Teams for Efficiency",
+    "core_results_label": "Core Outcomes After Deployment:",
+    "business_value_title": "Core Business Value",
+    "automation_result_title": "Expected Automation Outcomes:",
+    "workflow_default_prompt_notice": "Optimized core logic is built-in; custom prompts are not required for this workflow.",
+    "source_db": "Source: Database Published",
+    "source_static": "Source: Static Fallback (Complete in Admin Panel)"
+  },
+  "readiness": {
+    "ready": "Ready for Execution",
+    "llm_report_ready": "LLM Report Ready (No actual operation triggered)",
+    "simulated": "Sandbox Simulated (Frontend virtual stream)",
+    "requires_webhook": "Webhook Trigger Required",
+    "requires_file_parser": "Document Pending Analysis",
+    "requires_channel_auth": "Gateway Pending Authorization",
+    "coming_soon": "Coming Soon"
+  }
+}

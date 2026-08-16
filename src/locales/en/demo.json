@@ -1,0 +1,82 @@
+{
+  "hub": {
+    "title": "Explore the Business Value of Generative AI",
+    "subtitle": "Experience how AI Agents solve real business scenarios immediately in our public demo environment, with no API keys required! Please note that this is a public trial environment; do not enter real sensitive or production data. You can deploy your own dedicated instance at any time.",
+    "tag": "AI Agent Demo Hub",
+    "feature1": "Ready to Use",
+    "feature2": "Out-of-the-box Scenarios",
+    "feature3": "Powered by Real LLMs",
+    "targetAudienceLabel": "Target Audience",
+    "inputTypeLabel": "Input Type"
+  },
+  "runner": {
+    "backToHub": "Back to Demo Hub",
+    "randomExample": "Random Example",
+    "suggestionsLength": "Suggested length: under {{max}} chars",
+    "exceededLength": "(Exceeded, may be truncated or cause errors)",
+    "runButton": "Generate",
+    "running": "Running...",
+    "clearButton": "Clear Input",
+    "regenerateButton": "Regenerate",
+    "resultTitle": "Output Result",
+    "copyButton": "Copy Content",
+    "waitingResult": "Results will be displayed here",
+    "structuredReport": "AI Structured Analysis Report",
+    "coreSummary": "Core Summary",
+    "keyTakeaways": "Key Takeaways & Analysis",
+    "actionRecommendations": "Next Steps & Action Recommendations",
+    "rawText": "Raw Full Content",
+    "ctaTitle": "Like what you see? Deploy your Agent",
+    "ctaDesc": "Bind your own API key for external services and custom tool orchestration.",
+    "ctaButton": "Go to Templates",
+    "disclaimer": "This is an MVP Demo. MyBay provides public model quota. Please do not input sensitive or production data.",
+    "errors": {
+      "fetchTokenFail": "Failed to get Demo quota",
+      "networkError": "Network error, cannot get Demo quota",
+      "noToken": "No valid Demo quota obtained, please refresh and try again",
+      "fillRequired": "Please fill in: {{field}}",
+      "requestFail": "Request failed, anti-abuse limits or model errors may have triggered",
+      "unknownError": "An unknown error occurred",
+      "notFound": "Demo not found, please go back and try again.",
+      "noStreamBrowser": "ReadableStream not supported in this browser."
+    }
+  },
+  "demos": {
+    "pdfSummary": {
+      "title": "Long Text & Document Summary",
+      "valueProp": "Extract Information Efficiently",
+      "description": "Instantly turn hundreds of pages of reports into structured summaries, automatically extracting core conclusions and next steps.",
+      "targetAudience": "Researchers, Analysts, PMs",
+      "inputType": "Plain Text / Drafts",
+      "ctaText": "Try Document Summary",
+      "fieldContentLabel": "Document Content",
+      "fieldContentPlaceholder": "Paste long text or document content here..."
+    },
+    "newsSummary": {
+      "title": "Structured News Summary",
+      "valueProp": "Automated Daily Briefings",
+      "description": "Input fragmented industry news, and the system will automatically organize them into a clear, readable daily briefing format.",
+      "targetAudience": "Marketing, Content Ops, PR",
+      "inputType": "Topics & News Snippets",
+      "ctaText": "Try News Summary",
+      "fieldTopicLabel": "Topic of Interest",
+      "fieldTopicPlaceholder": "e.g., AI, EVs",
+      "fieldNewsLabel": "News Snippets",
+      "fieldNewsPlaceholder": "Paste relevant news or snippets..."
+    },
+    "customerReply": {
+      "title": "Smart Customer Reply",
+      "valueProp": "Professional Communication",
+      "description": "Automatically draft professional reply emails based on customer feedback and emotion, providing solutions with the desired tone.",
+      "targetAudience": "Support, Sales, Customer Success",
+      "inputType": "Structured Form",
+      "ctaText": "Try Smart Reply",
+      "fieldNameLabel": "Customer Name",
+      "fieldNamePlaceholder": "e.g., Mr. Smith",
+      "fieldFeedbackLabel": "Customer Feedback",
+      "fieldFeedbackPlaceholder": "e.g., Great product but a bit expensive...",
+      "fieldToneLabel": "Desired Tone",
+      "fieldTonePlaceholder": "e.g., Professional, Warm, Tactful"
+    }
+  }
+}

@@ -1,0 +1,15 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Documented synthetic placeholders used by security validation tests and CI"
+regexTarget = "secret"
+regexes = [
+  '''replace-with-a-random-32-byte-secret''',
+  '''replace-with-a-64-character-hex-secret''',
+  '''replace-with-a-64-character-hex-routing-secret''',
+  '''test-jwt-secret-with-sufficient-length-1234567890''',
+  '''0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef''',
+  '''abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789''',
+  '''sk-123456789012345678901234''',
+]

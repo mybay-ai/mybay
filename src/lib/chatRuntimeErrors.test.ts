@@ -1,0 +1,22 @@
+import { describe, expect, it } from "vitest";
+import { humanizeChatError } from "./chatRuntimeErrors";
+
+describe("chatRuntimeErrors", () => {
+  it("maps runtime codes to user-friendly messages", () => {
+    const result = humanizeChatError({ data: { error: "INSTANCE_OFFLINE", message: "container exited" }, status: 503 });
+    expect(result.code).toBe("INSTANCE_OFFLINE");
+    expect(result.message).toContain("离线");
+    expect(result.technicalMessage).toBe("container exited");
+  });
+
+  it("infers timeout and network failures", () => {
+    expect(humanizeChatError({ data: { error: "REMOTE_TIMEOUT" } }).message).toContain("超时");
+    expect(humanizeChatError(new Error("Failed to fetch")).message).toContain("网络连接失败");
+  });
+
+  it("keeps a safe fallback for unknown errors", () => {
+    const result = humanizeChatError({ data: { error: "SOME_NEW_ERROR" } }, "自定义失败提示");
+    expect(result.message).toBe("自定义失败提示");
+    expect(result.known).toBe(false);
+  });
+});

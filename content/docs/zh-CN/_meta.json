@@ -1,0 +1,49 @@
+{
+  "title": "文档",
+  "groups": [
+    {
+      "id": "start",
+      "title": "开始使用",
+      "items": [
+        { "id": "getting-started", "title": "快速开始", "legacyId": "getting_started" },
+        { "id": "installation/local-deployment", "title": "本地与服务器部署" },
+        { "id": "installation/docker-images", "title": "Hermes Agent 镜像与缓存" }
+      ]
+    },
+    {
+      "id": "models",
+      "title": "模型与凭据",
+      "items": [
+        { "id": "models/byok-credentials", "title": "BYOK 模型凭据", "legacyId": "credential_usage" }
+      ]
+    },
+    {
+      "id": "instances",
+      "title": "实例管理",
+      "items": [
+        { "id": "instances/deploy-instance", "title": "部署 Agent 实例", "legacyId": "deploy_instance" }
+      ]
+    },
+    {
+      "id": "workspace",
+      "title": "文件与工作区",
+      "items": [
+        { "id": "workspace/files", "title": "文件、预览与本地存储", "legacyId": "files_storage" }
+      ]
+    },
+    {
+      "id": "security",
+      "title": "安全",
+      "items": [
+        { "id": "security/overview", "title": "开源版安全实践", "legacyId": "security_practices" }
+      ]
+    },
+    {
+      "id": "troubleshooting",
+      "title": "故障排查",
+      "items": [
+        { "id": "troubleshooting/common", "title": "常见故障排查", "legacyId": "error_troubleshooting" }
+      ]
+    }
+  ]
+}

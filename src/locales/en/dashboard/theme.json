@@ -1,0 +1,7 @@
+{
+  "label": "Appearance",
+  "light": "Light",
+  "dark": "Dark",
+  "system": "System",
+  "current": "Current appearance: {{mode}}"
+}

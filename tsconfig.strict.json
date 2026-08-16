@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "allowJs": false,
+    "skipLibCheck": true
+  },
+  "include": [
+    "server/dockerErrorClassifier.ts",
+    "server/services/skillPolicyEnforcer.ts",
+    "server/services/instanceCleanup.ts",
+    "server/workers/deployWorker.ts",
+    "server/routes/deployments.ts",
+    "server/routes/instances/lifecycle.routes.ts",
+    "shared/skillPolicyRegistry.ts"
+  ]
+}

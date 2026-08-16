@@ -1,0 +1,49 @@
+{
+  "title": "Docs",
+  "groups": [
+    {
+      "id": "start",
+      "title": "Get started",
+      "items": [
+        { "id": "getting-started", "title": "Getting started", "legacyId": "getting_started" },
+        { "id": "installation/local-deployment", "title": "Local and server deployment" },
+        { "id": "installation/docker-images", "title": "Hermes Agent images and cache" }
+      ]
+    },
+    {
+      "id": "models",
+      "title": "Models and credentials",
+      "items": [
+        { "id": "models/byok-credentials", "title": "BYOK model credentials", "legacyId": "credential_usage" }
+      ]
+    },
+    {
+      "id": "instances",
+      "title": "Instance management",
+      "items": [
+        { "id": "instances/deploy-instance", "title": "Deploy an Agent instance", "legacyId": "deploy_instance" }
+      ]
+    },
+    {
+      "id": "workspace",
+      "title": "Files and workspace",
+      "items": [
+        { "id": "workspace/files", "title": "Files, preview, and local storage", "legacyId": "files_storage" }
+      ]
+    },
+    {
+      "id": "security",
+      "title": "Security",
+      "items": [
+        { "id": "security/overview", "title": "Open-source security practices", "legacyId": "security_practices" }
+      ]
+    },
+    {
+      "id": "troubleshooting",
+      "title": "Troubleshooting",
+      "items": [
+        { "id": "troubleshooting/common", "title": "Common troubleshooting", "legacyId": "error_troubleshooting" }
+      ]
+    }
+  ]
+}

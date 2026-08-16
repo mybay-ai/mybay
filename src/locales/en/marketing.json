@@ -1,0 +1,1195 @@
+{
+  "openSourceLanding": {
+    "hero": {
+      "badge": "MyBay Open Source · Self-hosted",
+      "titlePrefix": "Run and manage AI agents",
+      "titleHighlight": "on your own machine",
+      "description": "A local-first, self-hosted Agent Runtime platform. Deploy and manage multiple agents with ease. Each agent runs independently, while your data, credentials, and runtime stay fully under your control."
+    },
+    "cloud": {
+      "eyebrow": "Recommended first install",
+      "title": "Quick Start deployment",
+      "description": "Automatically checks your environment, generates secure configuration, and starts the service — no complex manual setup required.",
+      "benefits": {
+        "noInstall": "Checks the runtime environment",
+        "noOps": "Generates secure configuration",
+        "managedUpdates": "Starts local Compose services"
+      },
+      "action": "View Quick Start"
+    },
+    "selfHost": {
+      "eyebrow": "Advanced self-hosting",
+      "title": "Manual Docker deployment",
+      "description": "Manage .env, Compose, ports, domains, HTTPS, and upgrades yourself.",
+      "benefits": {
+        "ownData": "Keep data on your own machine",
+        "ownKeys": "Manage model API keys yourself",
+        "advancedDocker": "Advanced Docker configuration"
+      },
+      "action": "View deployment options"
+    },
+    "deployment": {
+      "eyebrow": "Open-source deployment",
+      "title": "Choose a local deployment method",
+      "description": "Use Quick Start first; use manual Docker for deep customization.",
+      "quick": {
+        "recommended": "Recommended",
+        "title": "Quick Start",
+        "audience": "Beginner friendly",
+        "description": "Checks Docker, creates configuration, generates secrets and an administrator password, and starts services."
+      },
+      "manual": {
+        "mode": "Advanced mode",
+        "title": "Manual Docker deployment",
+        "audience": "For developers",
+        "description": "Manage .env, Compose, domains, HTTPS, and upgrades yourself."
+      }
+    },
+    "commands": {
+      "copy": "Copy command",
+      "copied": "Copied",
+      "editEnvComment": "Edit .env and replace every default placeholder",
+      "quickLabel": "Linux / macOS Terminal",
+      "manualLabel": "Advanced Docker Compose"
+    },
+    "requirements": {
+      "environmentTitle": "Environment",
+      "environmentValue": "A Linux server or computer with Docker Desktop",
+      "resourcesTitle": "Recommended resources",
+      "resourcesValue": "2 CPU cores, 4 GB RAM, and 20 GB free disk space",
+      "accessTitle": "Access URL",
+      "accessValue": "Open http://SERVER_IP:3000 after deployment"
+    }
+  },
+  "header": {
+    "features": "Features",
+    "models": "Supported Models",
+    "docs": "Documentation",
+    "contact": "Contact",
+    "dashboard": "Console",
+    "login": "Login",
+    "createAgent": "Create Free Agent",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
+  },
+  "footer": {
+    "desc": "MyBay makes AI agents easier to deploy and operate, more reliable to integrate and manage, helping every agent stay reliably online and continuously deliver real-world results.",
+    "product": "Product",
+    "resources": "Resources",
+    "support": "Support",
+    "features": "Features",
+    "dashboard": "Console",
+    "models": "Models",
+    "channels": "Channels",
+    "docs": "Documentation",
+    "guide": "Guides",
+    "faq": "FAQ",
+    "techSupport": "Support",
+    "statusPage": "Status",
+    "contact": "Contact Us",
+    "changelog": "Changelog",
+    "privacy": "Privacy Policy",
+    "security": "Security",
+    "terms": "Terms of Service",
+    "copyright": "MyBay Open Source · AGPL-3.0-only",
+    "demo": "Demo Center"
+  },
+  "contact": {
+    "title": "Contact Us",
+    "subtitle": "We're here to help. Contact us for technical support, deployment help, business cooperation, or custom enterprise AI solutions.",
+    "cards": {
+      "support": {
+        "title": "Technical Support",
+        "desc": "Whether you’re dealing with instance errors, failed deployments, 502 errors, login issues, network connectivity problems, or failed upgrades, our technical team is here to provide professional troubleshooting and resolution support.",
+        "response": "Typically replies in 1-2 hours (working days)",
+        "action": "Send Email"
+      },
+      "business": {
+        "title": "Business & Partnership",
+        "desc": "Inquire about custom packages, team tier collaborations, enterprise dedicated customer service, or discuss long-term strategic partnerships.",
+        "response": "Replies within 24 hours (including weekends)",
+        "action": "Contact Business"
+      },
+      "migration": {
+        "title": "Deployment & Migration",
+        "desc": "Need support with local deployment, seamless migration of legacy instances, custom Feishu integrations, or dedicated version upgrades? Our technical team is here to help.",
+        "response": "Migration evaluation provided same-day",
+        "action": "Book Expert"
+      }
+    },
+    "preparation": {
+      "title": "Before You Contact Support",
+      "desc": "To help us diagnose and resolve your issue as quickly as possible, we recommend preparing the following details:",
+      "items": [
+        "Affected Agent Instance ID",
+        "Complete error message, screenshots, or screen recordings",
+        "Deployment logs or active Runtime logs",
+        "Detailed, step-by-step instructions to reproduce the issue",
+        "Host node IP address or node name",
+        "Currently deployed Hermes engine version"
+      ]
+    },
+    "troubleshooting": {
+      "title": "Self-Service Resources",
+      "desc": "If you're looking for instant answers, we recommend exploring our comprehensive documentation and centers:",
+      "faq": "FAQ & Help Center",
+      "guide": "User Guides",
+      "instances": "Agent Center",
+      "versions": "Version Archives",
+      "nodes": "Node Documentation"
+    },
+    "security": {
+      "title": "Security & Privacy Notice",
+      "desc": "For your own security and asset protection, please **NEVER** share sensitive API Keys (e.g. OpenAI/Anthropic keys), passwords, auth tokens, or full cookies. We recommend masking sensitive credentials before attaching any logs."
+    },
+    "mailSubjects": {
+      "support": "MyBay Technical Support Inquiry",
+      "business": "MyBay Business Cooperation Inquiry",
+      "migration": "MyBay Deployment & Migration Service Request"
+    },
+    "role": "Role: ",
+    "responseTime": "Response Time",
+    "suggestedInstanceIds": "Suggested Instance IDs",
+    "suggestedInstanceIdsHelp": "Copy the corresponding instance ID and provide it to customer service so we can locate the fault and logs faster:",
+    "copyFullId": "Copy Full ID"
+  },
+  "mainLanding": {
+    "heroTitle1": "Launch Your ",
+    "heroTitle2": "AI Agent ",
+    "heroTitle3": "in 30 Seconds",
+    "heroDesc": "No complex setup required. Create your own always-on AI Agent in just a few steps. Connect your preferred models, tools, and communication channels, and let it receive and handle your everyday tasks whenever you need it.",
+    "ctaText": "Create Agent for Free",
+    "dashboardText": "Go to Console",
+    "viewFlow": "See How It Works",
+    "whyNeedHeader": "Why So Many AI Agents Never Go Live",
+    "whyNeedDesc": "Building a local demo is easy. Turning it into a stable, always-on service is the hard part. Setup, credentials, channel connections, troubleshooting, and upgrades all take time. MyBay brings it all into one visual control panel.",
+    "traditionalTitle": "Build It Yourself",
+    "traditionalItems": [
+      "Set up the runtime environment yourself and manage every configuration manually",
+      "Spend time troubleshooting model and tool connections",
+      "Handle ongoing maintenance after connecting external channels",
+      "Dig through logs whenever something breaks",
+      "Worry about disrupting your service every time you upgrade"
+    ],
+    "traditionalFooter": "Best for technical teams with time to manage infrastructure",
+    "mybayTitle": "Use MyBay",
+    "mybayItems": [
+      "Choose your model, add credentials, connect channels, and launch in minutes",
+      "A managed runtime environment with far less repetitive setup",
+      "Centralized credential management to reduce exposure risk",
+      "View runtime status, logs, and interactions from one place",
+      "Make updates and upgrades more easily over time"
+    ],
+    "mybayFooter": "Built for teams that want to launch and operate AI Agents faster",
+    "stepsHeader": "Go from Setup to Live in Four Steps",
+    "stepsDesc": "No repetitive setup. No infrastructure headaches. MyBay turns the launch process into a clear step-by-step workflow.",
+    "step1Title": "Choose Your Model",
+    "step1Desc": "Connect OpenAI, DeepSeek, OpenRouter, Gemini, or any OpenAI-compatible model provider.",
+    "step2Title": "Add Credentials",
+    "step2Desc": "Securely add your API keys and credentials in one managed place.",
+    "step3Title": "Connect Channels",
+    "step3Desc": "Connect Feishu, Telegram, Discord, Webhook, and other channels so your Agent can start serving real users.",
+    "step4Title": "Go Live",
+    "step4Desc": "Launch your Agent and monitor its status, logs, and future updates from one dashboard.",
+    "capabilitiesHeader": "The Runtime Your Agent Actually Needs",
+    "capabilitiesDesc": "MyBay does more than create an Agent. It provides the environment you need to launch, run, manage, monitor, and upgrade it over time.",
+    "audiencesHeader": "Designed For",
+    "securityHeader": "Built with Safety Boundaries for Live Agents",
+    "securityDesc": "From credential protection and isolated runtimes to admin-level permission controls, MyBay helps reduce operational risk after your Agent goes live.",
+    "securityBox1Title": "Sandbox Isolation",
+    "securityBox1Desc": "Independent runtimes and storage space per instance to prevent interference.",
+    "securityBox2Title": "Resource Bounds",
+    "securityBox2Desc": "Supports strict memory & processor limits to safeguard other running projects.",
+    "securityBox3Title": "Secure Endpoints",
+    "securityBox3Desc": "Blocks unauthorized third-party calling attempts and scraper requests.",
+    "faqHeader": "Frequently Asked Questions",
+    "faqDesc": "Important answers about the MyBay Open Source control plane",
+    "ctaHeader": "Ready to Launch Your First AI Agent?",
+    "ctaButton": "Get Started Free",
+    "capabilitiesList": {
+      "box": {
+        "title": "Isolated Runtimes",
+        "desc": "Each Agent runs in its own container environment, helping reduce resource and storage conflicts."
+      },
+      "gateway": {
+        "title": "Auto Connections",
+        "desc": "The system monitors runtime health and manages domain routing to simplify network setup."
+      },
+      "auth": {
+        "title": "Auth Gateways",
+        "desc": "Enable Basic Auth in one click to stop unauthorized queries and protect endpoints."
+      },
+      "cpu": {
+        "title": "Instant Integrations",
+        "desc": "Native integrations with top core models to easily swap or scale without code edits."
+      },
+      "chat": {
+        "title": "Multi-Channel Links",
+        "desc": "Configure once to bridge with Lark, Telegram, Discord, and messaging channels."
+      },
+      "terminal": {
+        "title": "Real-time Access Logs",
+        "desc": "Real-time output viewer in the control panel for faster troubleshooting."
+      },
+      "activity": {
+        "title": "Smart Health Probes",
+        "desc": "Built-in probes scan instance active states to auto-restart or trigger warning events."
+      },
+      "lifecycle": {
+        "title": "All-in-One Operations",
+        "desc": "From instance creation and configuration updates to version upgrades, MyBay provides one local control plane for managing AI Agents."
+      }
+    },
+    "audiencesList": {
+      "developer": {
+        "title": "AI Developers",
+        "desc": "Tired of repeatedly configuring Agent environments by hand"
+      },
+      "startup": {
+        "title": "AI Startups",
+        "desc": "Needing clean tenant environment isolation for client deliveries"
+      },
+      "operations": {
+        "title": "Automated Teams",
+        "desc": "Looking to link Agents natively into workflows and group chats"
+      },
+      "internal": {
+        "title": "Corporate Assistants",
+        "desc": "Looking to build access-controlled, isolated private knowledge helpers"
+      },
+      "fullstack": {
+        "title": "Full-stack Engineers",
+        "desc": "Eager to turn local prototype scripts into active online businesses"
+      }
+    },
+    "coreCapabilities": [
+      {
+        "title": "Isolated Runtimes",
+        "desc": "Each Agent runs in its own container environment, helping reduce resource and storage conflicts."
+      },
+      {
+        "title": "Auto Connections",
+        "desc": "The system monitors runtime health and manages domain routing to simplify network setup."
+      },
+      {
+        "title": "Auth Gateways",
+        "desc": "Enable Basic Auth in one click to stop unauthorized queries and protect endpoints."
+      },
+      {
+        "title": "Instant Integrations",
+        "desc": "Native integrations with top core models to easily swap or scale without code edits."
+      },
+      {
+        "title": "Multi-Channel Links",
+        "desc": "Configure once to bridge with Lark, Telegram, Discord, and messaging channels."
+      },
+      {
+        "title": "Real-time Access Logs",
+        "desc": "Real-time output viewer in the control panel for faster troubleshooting."
+      },
+      {
+        "title": "Smart Health Probes",
+        "desc": "Built-in probes scan instance active states to auto-restart or trigger warning events."
+      },
+      {
+        "title": "All-in-One Operations",
+        "desc": "From instance creation and configuration updates to version upgrades, MyBay provides one local control plane for managing AI Agents."
+      }
+    ],
+    "audiences": [
+      {
+        "title": "AI Developers",
+        "desc": "Tired of repeatedly configuring Agent environments by hand"
+      },
+      {
+        "title": "AI Startups",
+        "desc": "Needing clean tenant environment isolation for client deliveries"
+      },
+      {
+        "title": "Automated Teams",
+        "desc": "Looking to link Agents natively into workflows and group chats"
+      },
+      {
+        "title": "Corporate Assistants",
+        "desc": "Looking to build access-controlled, isolated private knowledge helpers"
+      },
+      {
+        "title": "Full-stack Engineers",
+        "desc": "Eager to turn local prototype scripts into active online businesses"
+      }
+    ],
+    "faqs": [
+      {
+        "q": "Will my API Key be visible to others?",
+        "a": "Absolutely not. Stored keys are heavily encrypted and injected into isolated runtime environments on startup. They are never returned or shown in raw details."
+      },
+      {
+        "q": "Does each Agent run in isolated containers?",
+        "a": "Yes. Each Agent instance runs with isolated container resources. A failure in one instance does not change another instance's runtime state."
+      },
+      {
+        "q": "Can I bridge with Feishu, Telegram, and Discord?",
+        "a": "Yes, completely supported. The network proxy solves all verification, handshake, and structure mappings automatically. You only supply typical Credentials."
+      },
+      {
+        "q": "Is MyBay suitable for commercial use?",
+        "a": "MyBay Open Source can be used commercially under AGPL-3.0-only. Availability, public routing, HTTPS, backups, and recovery remain the self-hosted administrator's responsibility."
+      },
+      {
+        "q": "How does this differ from building on personal servers?",
+        "a": "Self-hosting requires deep DevOps labor, setup layers, reverse routes, and crash logs. MyBay automates all of this to launch safely in under 30 seconds."
+      }
+    ],
+    "interactiveDemoDescription": "This is not a video screenshot. It is a lightweight interactive mockup showing how MyBay deploys, manages, monitors, and chats with local AI agents."
+  },
+  "legacyLanding": {
+    "versionTip": "Current Version v1.2.2 (2026.6.4)",
+    "sec1Heading": "In Just 30 Seconds",
+    "sec1Sub": "Deploy Your Custom 24/7 AI Agent",
+    "sec1Desc": "MyBay is a production-grade hosting platform built exclusively for AI Agents. Isolated instances and multi-model credential sync support minute-level deployment to multi-channel messengers.",
+    "featuresHeader": "Core Features",
+    "featuresList": {
+      "speed": {
+        "title": "Instant Productivity Deliveries",
+        "desc": "Skips complex Linux setup times to spin up secure production containers with HTTPS."
+      },
+      "routing": {
+        "title": "Multi-Provider Smart Routing",
+        "desc": "Centrally manage model tokens to route requests dynamically according to budget or latency constraints."
+      },
+      "channel": {
+        "title": "Omnichannel Full-stack Setup",
+        "desc": "Handles connection APIs, auth handshakes, and Webhooks for Lark, Telegram, and more natively."
+      },
+      "isolation": {
+        "title": "Enterprise Data Sandbox",
+        "desc": "Docker environments ensure separate data calling vaults and storage, ensuring data safety."
+      },
+      "self_healing": {
+        "title": "Self-healing Cluster",
+        "desc": "Automated probes scan connectivity state and cold-boot or warm-restart when blockages are detected."
+      },
+      "audit": {
+        "title": "Traceable Compliance Audit Logs",
+        "desc": "Tracks and stores deployment edits, API key rotations, and actions, satisfying high compliance."
+      }
+    }
+  },
+  "features": {
+    "metaTitle": "Features - MyBayAI",
+    "metaDesc": "Explore MyBay's AI Agent deployment, model providers, channel connections, security proxy, logging, container isolation, and resource configuration.",
+    "heroTitle": "All the capabilities you need to take an AI Agent online,",
+    "heroAccent": "provided by MyBay",
+    "heroDesc": "MyBay wraps container deployment, model sets, multiplex routing, access control, and log monitoring directly inside one dashboard.",
+    "capabilitiesHeader": "Out-of-the-box Architecture",
+    "audiencesHeader": "Target Audiences",
+    "deploymentTitle": "One-click Deployment",
+    "deploymentDesc": "Spin up live Agent containers from templates, specific models, and channel integrations in a few steps.",
+    "isolationTitle": "Isolated Containers",
+    "isolationDesc": "Every instance gets an isolated security boundary, preventing resource and crash overlaps.",
+    "providersTitle": "Sovereign Key Integration",
+    "providersDesc": "Bring your own keys to consume OpenAI, Claude, Gemini, DeepSeek, and more natively.",
+    "channelsTitle": "Broad Messaging Channels",
+    "channelsDesc": "Connect smoothly with Web Chat, Lark, Telegram, and Discord right where your audience lives.",
+    "authTitle": "Basic Auth Proxies",
+    "authDesc": "Set custom credentials and shield endpoints to enforce bulletproof access boundaries.",
+    "monitorTitle": "Streaming Logs & Health Probes",
+    "monitorDesc": "Centralized logs and health diagnostics eliminate black-box runtime blindspots.",
+    "limitsTitle": "Resource Overheads Control",
+    "limitsDesc": "Assign precise CPU / Memory allowances to manage overall hosting consumption.",
+    "upgradeTitle": "Frictionless Updates & Fallbacks",
+    "upgradeDesc": "Provides structured version targets to trigger version hot-reloads and safe recovery rollbacks.",
+    "categories": {
+      "deploy": {
+        "title": "Deploy & Run",
+        "items": [
+          "Auto Container Deployment",
+          "Automatic Domain Allocations",
+          "Reverse Proxy Integration",
+          "Instance Operations"
+        ]
+      },
+      "models": {
+        "title": "Models & Channels",
+        "items": [
+          "Multi-Model Providers",
+          "API Key Isolation",
+          "Web / Lark / TG / Discord",
+          "Template-based Wizards"
+        ]
+      },
+      "security": {
+        "title": "Security & Operations",
+        "items": [
+          "Basic Auth Shielding",
+          "Sandboxed Multi-Tenancy",
+          "Structured Action Auditing",
+          "Allocated CPU/Memory Limits"
+        ]
+      }
+    },
+    "audiences": [
+      {
+        "title": "AI Developers",
+        "desc": "Turning local agents into easily accessible standalone public services."
+      },
+      {
+        "title": "AI Startup Crews",
+        "desc": "Provisioning completely isolated Agent container environments for tenant demos."
+      },
+      {
+        "title": "DevOps & Automations",
+        "desc": "Hooking Agents perpetually into corporate Feishu, TG, and Discord chat chains."
+      },
+      {
+        "title": "Enterprise Innovators",
+        "desc": "Searching for out-of-the-box hosting environments without Nginx or DevOps burdens."
+      }
+    ],
+    "coreFeatures": [
+      {
+        "title": "Create Your Agent in Minutes",
+        "desc": "Create your own AI Agent by following a guided setup. No coding or server configuration required."
+      },
+      {
+        "title": "Always Online",
+        "desc": "Once deployed, your Agent stays online and can receive tasks from the web or connected communication tools."
+      },
+      {
+        "title": "Connect Popular AI Models",
+        "desc": "Connect OpenAI, Claude, Gemini, DeepSeek and more. Manage model settings in one place and switch when needed."
+      },
+      {
+        "title": "Work from Your Favorite Apps",
+        "desc": "Connect Feishu, Telegram, Discord and other channels, so you can use your Agent directly from familiar tools."
+      },
+      {
+        "title": "Secure Access, Automatically",
+        "desc": "MyBay automatically prepares a dedicated access URL, HTTPS, and access protection for each Agent."
+      },
+      {
+        "title": "Isolated Agent Instances",
+        "desc": "Each Agent runs with its own data, configuration, and runtime environment for better privacy and stability."
+      },
+      {
+        "title": "Update Settings Online",
+        "desc": "Adjust models, prompts, and common settings without rebuilding everything from scratch."
+      },
+      {
+        "title": "Clear Status and Logs",
+        "desc": "View instance status, task history, and runtime logs to understand what is happening and resolve issues faster."
+      }
+    ],
+    "capabilities": [
+      {
+        "title": "Runtime Networking Isolations",
+        "items": [
+          "Single-container mapping stops overlap",
+          "VPC native closed loops boundaries",
+          "Systematized mappings on port 3000",
+          "Image execution cache warm-ups",
+          "Auto self-healing ping probes"
+        ]
+      },
+      {
+        "title": "Communication Ingress Routing",
+        "items": [
+          "Native Telegram signatures included",
+          "Feishu tenant token challenges",
+          "Discord Ed25519 payload analysis",
+          "WeCom app validation pipelines",
+          "Decoupled conversational frontends"
+        ]
+      },
+      {
+        "title": "Vaulted Credential Protections",
+        "items": [
+          "Encrypted bilateral storage logic",
+          "Pool-based scaling rotation support",
+          "Discrete separation of API variables",
+          "Mitigation from open abusive accesses",
+          "Env masked log traces completely"
+        ]
+      }
+    ],
+    "ctaTextConsole": "Go to Console",
+    "ctaTextCreate": "Create Free Agent",
+    "ctaReadDocs": "Read Documentation",
+    "overviewTitle": "Core Capabilities Overview",
+    "overviewDesc": "From creation and integrations to runtime monitoring, MyBay helps you truly host and operate your Agent.",
+    "capabilitiesDesc": "Highly abstracted sandboxing and proxy components made readily available out of the box.",
+    "modulePrefix": "Module",
+    "metaParams": {
+      "title": "Features - MyBay Platform",
+      "desc": "Explore MyBay's AI Agent deployment, model providers, channel connections, security proxy, logging, container isolation, and resource configuration."
+    },
+    "audiencesDesc": "Whether you are a solo developer or an enterprise IT operator, find your workspace here.",
+    "traditionalItems": [
+      "Manually configure Docker and environments",
+      "Handle Nginx / Traefik / ports independently",
+      "Dispersed configuration for models and channels",
+      "Rely on manual oversight for logs, health, and upgrades",
+      "Isolation and access rights often get tangled"
+    ],
+    "mybayItems": [
+      "Create distinct Agent instances via Console",
+      "Automatically write config and boot containers",
+      "Auto-generate endpoints with Auth gates",
+      "Centrally manage models, channels, logs, and states",
+      "Seamlessly scale resource limits, upgrades, and monitoring"
+    ],
+    "ctaHeader": "Ready to launch?",
+    "ctaDesc": "From model mapping to instance execution, MyBay binds your deployments inside a single console."
+  },
+  "models": {
+    "title": "Foundation LLMs Directory",
+    "desc1": "MyBay is natively compatible with globally leading AI providers. Whether your priority is",
+    "desc2": "complex reasoning",
+    "desc3": "advanced coding",
+    "desc4": "multilingual tasks",
+    "desc5": "or",
+    "desc6": "maximum cost efficiency",
+    "desc7": ", you can assign the perfect",
+    "desc8": "engine to each locally managed Agent.",
+    "searchPlaceholder": "Search for integrated model providers (e.g., OpenAI, DeepSeek) or reference models (e.g., gpt-4)...",
+    "tags": {
+      "all": "All",
+      "zh": "Chinese Friendly",
+      "code": "Coding",
+      "longContext": "Long Context",
+      "multimodal": "Multimodal",
+      "reasoning": "Reasoning",
+      "lowCost": "Low Price",
+      "aggregate": "Aggregators",
+      "direct": "Direct API Access"
+    },
+    "getApiKey": "Get API Key",
+    "tutorialHeadline": "Quick Credentials Guide",
+    "useCasesLabel": "Best Use Cases",
+    "difficultyLabel": "Setup Complexity",
+    "difficulties": {
+      "easy": "Easy",
+      "medium": "Medium",
+      "complex": "Advanced"
+    },
+    "stepNumber": "Step {{num}}",
+    "noResult": "No providers found matching your query",
+    "noResultDesc": "Try adjusting your search terms, or connect custom providers via the standard 'OpenAI Compatible' proxy endpoint.",
+    "copied": "Copied successfully",
+    "copyLink": "Copy link",
+    "tutorialUrlTip": "Visit official console key page"
+  },
+  "docs": {
+    "title": "Platform Documentation",
+    "breadcrumbsHome": "Docs",
+    "breadcrumbsGuide": "Guides",
+    "headline": "MyBay Guides & Architecture Definitions",
+    "subtitle": "From quick-starting with templates and selecting foundation configurations to bridging communication messengers, we help you complete production deployment swiftly.",
+    "backHome": "Back to Home",
+    "console": "Console Home",
+    "loginToStart": "Sign in to deploy",
+    "footerText": "AI Agent hosting made effortless",
+    "home": {
+      "title": "Documentation",
+      "subtitle": "Choose an entry based on the task you are trying to complete. New users can start with Quick Start, while admins can jump directly into deployment, models, files, security, or troubleshooting.",
+      "cards": {
+        "quickStart": {
+          "title": "New user quick start",
+          "desc": "Register, understand local setup basics, and create your first chat-ready Agent instance."
+        },
+        "deploy": {
+          "title": "Deploy your first Agent",
+          "desc": "Choose BYOK, BYOK models, templates, or blank setup based on your scenario."
+        },
+        "workspace": {
+          "title": "Use the Dialogue Workspace",
+          "desc": "Learn quick mode, Agent mode, execution traces, file previews, and result downloads."
+        },
+        "credits": {
+          "title": "Configure models and BYOK",
+          "desc": "Understand BYOK models, token usage, token accounting, insufficient balance, and BYOK."
+        },
+        "files": {
+          "title": "Clean up file storage",
+          "desc": "Review generated files, preview or download results, and clean up large artifacts."
+        },
+        "errors": {
+          "title": "Troubleshoot common errors",
+          "desc": "Diagnose send failures, UPSTREAM_RUN_NOT_FOUND, quota exceeded, and no response."
+        }
+      },
+      "pathTitle": "Recommended reading path",
+      "pathDesc": "If this is your first time using MyBay, read Quick Start, then Deploy Instances, then Dialogue Workspace. Use troubleshooting and storage docs when problems appear.",
+      "path": {
+        "quickStart": "Quick Start",
+        "deploy": "Deploy Instances",
+        "workspace": "Dialogue Workspace"
+      }
+    },
+    "faq": "FAQ",
+    "terms": "Terms of Service",
+    "errTitle": "Docs Loading Interrupted",
+    "errDesc": "Due to sandbox constraints or component conflicts, the documentation cannot load. Try clearing state cache with 'Refresh' or go back main home.",
+    "refresh": "Refresh Page",
+    "backToHome": "Back to Home",
+    "readingTime": "Est. {{time}} mins",
+    "audienceLabel": "Target Audience",
+    "difficultyLabel": "Configuration",
+    "accessMethodLabel": "Accessibility",
+    "audiences": {
+      "new": "Beginners",
+      "advanced": "Advanced"
+    },
+    "difficulties": {
+      "easy": "🟢 Simple",
+      "medium": "🟡 Intermediate",
+      "expert": "🔴 Professional"
+    },
+    "accessMethods": {
+      "gui": "✅ Admin Console UI",
+      "env": "⚙️ Env Injector"
+    },
+    "nav": [
+      {
+        "group": "Quick Start",
+        "items": [
+          {
+            "id": "getting_started",
+            "title": "Quick start: administrator login, configuration, first instance"
+          },
+          {
+            "id": "platform",
+            "title": "Platform overview and self-diagnosis"
+          },
+          {
+            "id": "create_agent",
+            "title": "Create your first Agent"
+          }
+        ]
+      },
+      {
+        "group": "Deploy Instances",
+        "items": [
+          {
+            "id": "deploy_instance",
+            "title": "BYOK / BYOK models / templates / blank setup",
+            "isNew": true
+          },
+          {
+            "id": "access_agent",
+            "title": "How to access your Agent"
+          },
+          {
+            "id": "provider_choice",
+            "title": "Choosing model providers"
+          },
+          {
+            "id": "credential_usage",
+            "title": "Using stored credentials"
+          },
+          {
+            "id": "api_key_manual",
+            "title": "Manual API key setup"
+          }
+        ]
+      },
+      {
+        "group": "Dialogue Workspace",
+        "items": [
+          {
+            "id": "chat_workspace",
+            "title": "Quick mode, Agent mode, and execution trace"
+          }
+        ]
+      },
+      {
+        "group": "Models and BYOK",
+        "items": [
+          {
+            "id": "hot_update_llm",
+            "title": "Update running model configuration"
+          },
+          {
+            "id": "llm_errors",
+            "title": "Common model connection errors"
+          }
+        ]
+      },
+      {
+        "group": "Channels",
+        "items": [
+          {
+            "id": "web_console",
+            "title": "Web Console"
+          },
+          {
+            "id": "feishu",
+            "title": "Lark / Feishu"
+          },
+          {
+            "id": "telegram",
+            "title": "Telegram Bot"
+          },
+          {
+            "id": "discord",
+            "title": "Discord Bot"
+          },
+          {
+            "id": "wecom",
+            "title": "WeCom / Enterprise WeChat"
+          },
+          {
+            "id": "webhook",
+            "title": "Webhook integration"
+          }
+        ]
+      },
+      {
+        "group": "Files and Storage",
+        "items": [
+          {
+            "id": "files_storage",
+            "title": "File management, quotas, and cleanup",
+            "isNew": true
+          },
+          {
+            "id": "resource_limits",
+            "title": "CPU / memory / storage limits"
+          }
+        ]
+      },
+      {
+        "group": "Security",
+        "items": [
+          {
+            "id": "security_practices",
+            "title": "API keys, BYOK models, and access boundaries",
+            "isNew": true
+          },
+          {
+            "id": "security_skills",
+            "title": "High-risk skill permissions"
+          },
+          {
+            "id": "credential_security",
+            "title": "Credential security design"
+          },
+          {
+            "id": "network_isolation",
+            "title": "Multi-instance isolation"
+          },
+          {
+            "id": "basic_auth",
+            "title": "Access protection and passwords"
+          }
+        ]
+      },
+      {
+        "group": "Instance Operations",
+        "items": [
+          {
+            "id": "instance_status",
+            "title": "Lifecycle and states"
+          },
+          {
+            "id": "health_chain",
+            "title": "Health check chain"
+          },
+          {
+            "id": "logs_troubleshooting",
+            "title": "Logs and troubleshooting"
+          },
+          {
+            "id": "lifecycle_ops",
+            "title": "Restart, delete, and archive"
+          }
+        ]
+      },
+      {
+        "group": "Versions and Upgrades",
+        "items": [
+          {
+            "id": "runtime_versions",
+            "title": "Runtime versions"
+          },
+          {
+            "id": "image_registry",
+            "title": "Image registry and latest tags"
+          },
+          {
+            "id": "image_prewarm",
+            "title": "Image prewarming"
+          },
+          {
+            "id": "instance_upgrade",
+            "title": "Instance upgrades and rollback"
+          }
+        ]
+      },
+      {
+        "group": "Troubleshooting",
+        "items": [
+          {
+            "id": "error_troubleshooting",
+            "title": "Send failed, UPSTREAM_RUN_NOT_FOUND, quota exceeded",
+            "isNew": true
+          },
+          {
+            "id": "deploy_trouble",
+            "title": "Common deployment failures"
+          },
+          {
+            "id": "faq",
+            "title": "General FAQ"
+          }
+        ]
+      }
+    ],
+    "groupNames": {
+      "快速开始": "Quickstart",
+      "模型配置与凭证": "LLM & Credentials",
+      "通讯渠道接入": "Messaging Channels",
+      "实例管理": "Instances Admin",
+      "版本与升级": "Versions & Specs",
+      "资源与安全": "Sandbox Security",
+      "常见问题": "FAQ"
+    },
+    "docsLayout": {
+      "searchPlaceholder": "Search docs...",
+      "menuBtn": "Menu",
+      "docsMenu": "Docs Menu",
+      "backToTop": "Back To Top",
+      "onThisPage": "On This Page",
+      "noHeadings": "No headings"
+    },
+    "appStrings": {
+      "needMoreHelp": "Need more help? Connect with our developer desk or check FAQ",
+      "viewKnowledgeBase": "View Knowledge Base",
+      "guideTitle": "MyBay Open Source Guide: {{title}}",
+      "engGuideInfo": "You are currently viewing the English documentation segment for <strong>{{title}}</strong>. MyBay provides automated orchestration, sandboxed environment isolations, VPC container networks on port 3000, and comprehensive SSL proxies dynamically mapped.",
+      "goToConsole": "Go to Console and Begin deploying"
+    }
+  },
+  "faq": {
+    "title": "Frequently Asked Questions",
+    "subtitle": "Installation, data, security, and integration guidance for the single-administrator, local-first, self-hosted edition.",
+    "searchPlaceholder": "Search deployment, data, credentials, Docker, or channels...",
+    "resultsFound": "Found {{count}} related questions",
+    "categoryLabel": "Category:",
+    "tagLabel": "Tags:",
+    "allCategories": "All categories",
+    "categoryTitles": {
+      "quickstart": "Quick Start",
+      "deployment": "Deployment & Runtime",
+      "data": "Local Data",
+      "integrations": "Third-Party Integrations",
+      "security": "Security",
+      "troubleshooting": "Troubleshooting"
+    },
+    "ctaHeader": "Still need help?",
+    "ctaDesc": "Check the documentation and local logs first. Reproducible issues can be reported through GitHub Issues.",
+    "technicalFaq": "Redact logs before sharing. Never publish API keys, tokens, passwords, or a complete .env.",
+    "readDocs": "Read documentation",
+    "contactSupport": "Contact maintainers",
+    "noResult": "No matching question found",
+    "noResultDesc": "Try another keyword or review deployment and security documentation.",
+    "recommendedSearches": [
+      "Deploy",
+      "SQLite",
+      "Chat history",
+      "Credentials",
+      "Docker",
+      "Feishu"
+    ],
+    "categories": [
+      {
+        "id": "quickstart",
+        "name": "Quick Start",
+        "description": "MyBay Open Source purpose and boundaries",
+        "iconName": "Zap"
+      },
+      {
+        "id": "deployment",
+        "name": "Deployment & Runtime",
+        "description": "Docker, networking, and lifecycle",
+        "iconName": "Server"
+      },
+      {
+        "id": "data",
+        "name": "Local Data",
+        "description": "SQLite, files, logs, and backups",
+        "iconName": "FileText"
+      },
+      {
+        "id": "integrations",
+        "name": "Third-Party Integrations",
+        "description": "Model providers and messaging channels",
+        "iconName": "MessageSquare"
+      },
+      {
+        "id": "security",
+        "name": "Security",
+        "description": "Administrator, credentials, and Docker privileges",
+        "iconName": "Lock"
+      },
+      {
+        "id": "troubleshooting",
+        "name": "Troubleshooting",
+        "description": "Status, logs, and common failures",
+        "iconName": "Wrench"
+      }
+    ],
+    "items": [
+      {
+        "id": "purpose",
+        "category": "quickstart",
+        "question": "What is MyBay Open Source?",
+        "answer": "MyBay Open Source is a self-hosted AI Agent control plane distributed under AGPL-3.0-only. It is designed for one administrator and manages Hermes Agent through Docker on your own machine. It does not provide cloud accounts, subscription plans, billing, or multi-tenant services.",
+        "tags": [
+          "Local",
+          "Open source",
+          "Single admin"
+        ]
+      },
+      {
+        "id": "install",
+        "category": "deployment",
+        "question": "How do I install and start it?",
+        "answer": "Use quick-start.sh or quick-start.ps1. The scripts check Docker, create a local .env, generate secure random values, and start Compose services. For manual deployment, replace every security placeholder from .env.example first.",
+        "tags": [
+          "Install",
+          "Quick Start",
+          "Docker"
+        ]
+      },
+      {
+        "id": "data",
+        "category": "data",
+        "question": "What data does MyBay Open Source persist?",
+        "answer": "The control plane stores administrator details, instance configuration, encrypted credentials, task records, conversations, chatMessages, chatRuns, chatMessageFeedback, uploaded files, and logs on the host. Structured data is primarily stored in data/mybay.sqlite. Chat history is persistent, not merely held in memory.",
+        "tags": [
+          "SQLite",
+          "Chat history",
+          "Files"
+        ]
+      },
+      {
+        "id": "third-party",
+        "category": "integrations",
+        "question": "Does all data stay on the local machine?",
+        "answer": "No. The control plane is local-first, but when you configure OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter, Telegram, Discord, Feishu/Lark, Slack, or another third party, prompts, messages, files, or metadata required for a request may be sent to that service.",
+        "tags": [
+          "Third party",
+          "Privacy",
+          "Provider"
+        ]
+      },
+      {
+        "id": "credentials",
+        "category": "security",
+        "question": "How are API keys and channel tokens stored?",
+        "answer": "Credentials are encrypted locally using ENCRYPTION_KEY, and APIs should not return plaintext to the browser. You must still protect .env, the data directory, backups, and host access, and rotate third-party credentials.",
+        "tags": [
+          "Keys",
+          "Encryption",
+          "Credentials"
+        ]
+      },
+      {
+        "id": "docker",
+        "category": "security",
+        "question": "Why does the control plane need the Docker socket?",
+        "answer": "Instance lifecycle management requires control of the Docker daemon. A MyBay Open Source administrator therefore has high-privilege host-management capability. Do not expose an unprotected control plane directly to the public Internet.",
+        "tags": [
+          "Docker socket",
+          "Privileges",
+          "Public server"
+        ]
+      },
+      {
+        "id": "cost",
+        "category": "integrations",
+        "question": "Does it include model credits or third-party fees?",
+        "answer": "No. You select third-party AI providers and messaging channels and are responsible for their fees, quotas, and terms. MyBay Open Source provides no SaaS SLA and does not guarantee third-party availability.",
+        "tags": [
+          "BYOK",
+          "Costs",
+          "Third party"
+        ]
+      },
+      {
+        "id": "troubleshoot",
+        "category": "troubleshooting",
+        "question": "How do I diagnose an instance that will not start or open?",
+        "answer": "Review deployment events, container state, and instance logs, then check Docker, image pulls, ports, disk, provider credentials, and reverse proxy settings. Remove passwords, tokens, API keys, domains, and user data before filing an Issue.",
+        "tags": [
+          "Logs",
+          "Startup failure",
+          "Troubleshooting"
+        ]
+      }
+    ],
+    "appStrings": {
+      "backHome": "Back to Home",
+
+      "popularTags": "Common topics:",
+      "filterCategory": "Filter by category",
+      "reset": "Reset",
+      "allCoreQs": "All questions",
+      "allSearchDesc": "Local deployment, data, security, and integration guidance",
+      "resultsFoundTag": "Found {{count}} results",
+      "noResult": "No matching answer",
+      "noResultDesc": "No content matched '{{query}}'. Try another keyword.",
+      "clearSearch": "Clear search",
+      "viewGuidebooks": "Read the documentation",
+      "unresolvedHeader": "Still unresolved?",
+      "unresolvedTitle": "Inspect local logs or file an Issue",
+      "unresolvedDesc": "Review deployment logs and instance diagnostics first. Remove every secret and private value before sharing.",
+      "contactSupport": "Contact maintainers",
+      "contactSupportSub": "Use the security email when appropriate",
+      "examineLogs": "View instance logs",
+      "examineLogsSub": "Open console diagnostics",
+      "returnConsole": "Return to console",
+      "returnConsoleSub": "Manage local instances",
+      "suggestFeatures": "Suggest a feature",
+      "suggestFeaturesSub": "Open GitHub Issues"
+    }
+  },
+  "changelog": {
+    "title": "MyBay Open Source Changelog",
+    "subtitle": "Only capabilities released and verified in the MyBay Open Source.",
+    "timelineTip": "Preview Release",
+    "releases": [
+      {
+        "version": "v0.1.0-preview",
+        "date": "2026.08.15",
+        "badge": "PREVIEW",
+        "summary": "MyBay Open Source v0.1.0-preview is an early public preview focused on a safe, stable local-first release.",
+        "sections": [
+          {
+            "title": "Stability fixes",
+            "type": "fix",
+            "items": [
+              "Fixed JSON, text, and other raw file responses being incorrectly handled by the business JSON parser.",
+              "Added request cancellation and generation checks to file previews so stale requests cannot overwrite the current session, instance, or a closed preview.",
+              "Unified stop terminal states across Quick, Assist, and asynchronous chats so cancellation and completion cannot overwrite each other.",
+              "Applied one message-length contract and history context budget across the frontend and backend to protect requests, storage, and model context."
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "terms": {
+    "title": "MyBay Open Source Terms of Use",
+    "subtitle": "Licensing, deployment, security, and third-party boundaries for the open-source self-hosted software.",
+    "backHome": "Back to Home",
+    "lastUpdated": "Last updated: {{date}}",
+    "suggestions": "Questions about these terms?",
+    "suggestionsDesc": "Contact the maintainers for licensing or security questions.",
+    "footer": "MyBay Open Source is offered under AGPL-3.0-only, with a separate commercial license available.",
+    "sections": [
+      {
+        "id": "service",
+        "title": "1. Nature of the Software",
+        "content": [
+          "MyBay Open Source is self-hosted open-source software that you deploy, operate, and maintain. It is not a SaaS service operated by the maintainers.",
+          "It is provided as-is and does not include cloud accounts, billing, subscription plans, multi-tenant scheduling, or a SaaS service-level agreement.",
+          "You are responsible for the server, Docker daemon, network, domains, HTTPS, backups, updates, and capacity."
+        ]
+      },
+      {
+        "id": "account",
+        "title": "2. Administrator and Security",
+        "content": [
+          "MyBay Open Source uses a single-administrator model. Use a strong password and secure random secrets, and restrict control-plane network access.",
+          "The control plane requires Docker socket access. Treat administrator access as high-privilege host-management capability.",
+          "You manage model API keys, channel tokens, .env, SQLite data, and backups."
+        ]
+      },
+      {
+        "id": "content",
+        "title": "3. User Content and Third-Party Services",
+        "content": [
+          "You are responsible for prompts, files, configuration, automated tasks, and your use of Agent output, and must comply with applicable law.",
+          "You select third-party AI providers and messaging channels and are responsible for their fees, quotas, data processing, and compliance.",
+          "Third-party services have their own terms. The project does not guarantee any provider, channel, image registry, or network service."
+        ]
+      },
+      {
+        "id": "prohibited",
+        "title": "4. Lawful and Secure Use",
+        "content": [
+          "Do not use the software for unauthorized access, malicious scanning, DDoS, spam, credential theft, or unlawful activity.",
+          "Do not remove required notices or violate AGPL-3.0-only source-availability obligations.",
+          "Assess Agent tool permissions and automation risks and apply least privilege and auditing."
+        ]
+      },
+      {
+        "id": "resources",
+        "title": "5. No Service-Level Commitment",
+        "content": [
+          "The project provides no SaaS SLA or guarantee of uptime, response time, data recovery, or third-party connectivity.",
+          "Resource limits depend on your host and configuration. Insufficient disk, memory, CPU, or network capacity can cause failures.",
+          "AI output can be inaccurate or hallucinatory and requires human review for high-risk decisions."
+        ]
+      },
+      {
+        "id": "disclaimer",
+        "title": "6. Open-Source License, Commercial License, and Trademarks",
+        "content": [
+          "MyBay Open Source may be used under AGPL-3.0-only, including commercially, subject to its copyleft and source-availability obligations.",
+          "Organizations requiring proprietary integration or redistribution without AGPL copyleft obligations may obtain a separate commercial license.",
+          "The MyBay name and logos, and third-party brands, are not licensed as trademarks by the AGPL code license."
+        ]
+      }
+    ]
+  },
+  "privacy": {
+    "title": "MyBay Open Source Privacy Notice",
+    "subtitle": "Local-first storage, third-party transfers, and self-hosted administrator responsibilities.",
+    "backHome": "Back to Home",
+    "lastUpdated": "Last updated: {{date}}",
+    "questions": "Privacy or security question?",
+    "questionsDesc": "Report vulnerabilities privately as described in SECURITY.md. Do not place secrets or private data in a public Issue.",
+    "footer": "This notice applies to the self-hosted MyBay Open Source.",
+    "sections": [
+      {
+        "id": "collection",
+        "title": "1. Data Stored Locally",
+        "content": [
+          "MyBay Open Source primarily stores data on the machine you operate. It does not require a MyBay cloud account or cloud database.",
+          "Local data may include administrator details, instance configuration, encrypted credentials, task records, conversations, chatMessages, chatRuns, chatMessageFeedback, uploaded files, runtime logs, and audit records.",
+          "Structured data is primarily stored in data/mybay.sqlite. MyBay Open Source persists chat history; it is not only held briefly in memory."
+        ]
+      },
+      {
+        "id": "usage",
+        "title": "2. Local Processing and Security",
+        "content": [
+          "Credentials are encrypted locally using ENCRYPTION_KEY. Host administrators, backup systems, and anyone with Docker daemon access remain inside a high-trust boundary.",
+          "The operator is responsible for access control, backups, retention, security updates, and log redaction.",
+          "This edition does not include telemetry, cloud billing, or multi-tenant data aggregation."
+        ]
+      },
+      {
+        "id": "retention",
+        "title": "3. Retention, Backup, and Deletion",
+        "content": [
+          "Retention is controlled by the self-hosted administrator and configured third parties. Define appropriate backup and deletion policies.",
+          "Deleting an instance may remove related containers, directories, and records. Verify backups first; the project provides no SaaS recovery commitment.",
+          "Removing MyBay Open Source does not erase data already received or retained by third-party providers."
+        ]
+      },
+      {
+        "id": "thirdparty",
+        "title": "4. Third-Party Services",
+        "content": [
+          "Configured model providers may receive prompts, messages, files, or metadata required to process a request.",
+          "Configured channels such as Telegram, Discord, Feishu/Lark, and Slack may receive messages and required metadata.",
+          "Third parties apply their own privacy policies, terms, fees, and retention rules."
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,1135 @@
+{
+  "systemSecurity": {
+    "loadError": "无法加载系统诊断数据",
+    "loading": "正在获取运行环境与安全诊断数据...",
+    "fetchFailed": "获取数据失败",
+    "reload": "重新加载",
+    "title": "系统诊断与本地安全检查",
+    "description": "查看本地自部署环境的安全防护状态、资源策略与宿主机配置。",
+    "updateSuccess": "策略已更新",
+    "updateFailedTitle": "更新失败",
+    "updateFailedMessage": "无法更新全局安全设置策略。",
+    "confirm": {
+      "title": "高风险操作确认",
+      "message": "启用此选项将允许管理员实例挂载并访问宿主机 /var/run/docker.sock。这意味着该实例内的 Agent 拥有控制宿主机容器的权限！确定要启用此功能吗？",
+      "enable": "确定启用",
+      "cancel": "取消"
+    },
+    "adminPassword": {
+      "title": "管理员密码状态",
+      "default": "使用的是默认管理员初始密码，建议尽快修改密码",
+      "secure": "已使用自定义强密码，身份安全判定正常"
+    },
+    "encryption": {
+      "title": "模型与 IM 密钥加密",
+      "description": "已成功配置全局 256 位 AES-GCM 加密密钥（ENCRYPTION_KEY），数据脱敏落盘。"
+    },
+    "resources": {
+      "title": "本地资源守护策略",
+      "description": "最大实例限额：{{max}}｜单实例默认磁盘限制：{{disk}} MB"
+    },
+    "environmentGate": {
+      "title": "宿主机 Docker 挂载硬开关（ENABLE_DOCKER_SOCKET_SKILL）",
+      "description": "此设置代表当前服务器环境变量的安全要求。关闭时，系统将禁止任何 Docker Socket 挂载行为。",
+      "variable": "环境变量名",
+      "enabled": "物理环境已允许（Enabled）",
+      "disabled": "物理环境未允许（Disabled）"
+    },
+    "dockerAuthorization": {
+      "title": "宿主机 Docker 载入授权（admin_docker_socket_enabled）",
+      "description": "允许管理员实例在启用 <docker>docker</docker> 或 <dockerEngine>docker_engine</dockerEngine> 技能时，挂载宿主机的 <socket>/var/run/docker.sock</socket>。",
+      "toggleLabel": "管理员实例允许挂载"
+    }
+  },
+    "preflightUi":  {
+                        "loadingTitle":  "正在深入扫描宿主机运行环境，请稍候…",
+                        "loadingDescription":  "正在检测 Docker、网络端口、安全密钥和系统资源。",
+                        "groups":  {
+                                       "runtime":  "运行环境与资源",
+                                       "network":  "网络与访问",
+                                       "security":  "安全配置"
+                                   },
+                        "status":  {
+                                       "ok":  "正常",
+                                       "warn":  "警告",
+                                       "fail":  "失败"
+                                   },
+                        "toggleDetails":  "展开或收起诊断详情",
+                        "problemLabel":  "问题描述：",
+                        "solutionLabel":  "解决方案：",
+                        "commandLabel":  "诊断命令：",
+                        "copyCommand":  "复制诊断命令",
+                        "copied":  "已复制",
+                        "recheck":  "重新检测",
+                        "summaryPassed":  "部署前环境检测通过",
+                        "summaryPassedDescription":  "核心运行条件已经就绪，可以继续配置并部署 Agent。",
+                        "summaryBlocked":  "发现 {{count}} 个部署阻塞项",
+                        "summaryBlockedDescription":  "请先修复：{{items}}。",
+                        "repairs":  {
+                                        "runtime":  {
+                                                        "reason":  "控制面无法连接 Docker Engine，因而不能创建 Agent 容器。",
+                                                        "suggestion":  "请启动 Docker，并确认控制面容器已挂载 /var/run/docker.sock 且具有访问权限。"
+                                                    },
+                                        "storage":  {
+                                                        "reason":  "宿主机当前可用内存或磁盘空间偏低。",
+                                                        "suggestion":  "请释放磁盘和内存资源，或减少同时运行的 Agent 实例数量。"
+                                                    },
+                                        "connectivity":  {
+                                                             "reason":  "当前访问地址配置需要确认。",
+                                                             "suggestion":  "本地模式可以直接使用 localhost；只有公网访问时才需要配置 BASE_DOMAIN。"
+                                                         },
+                                        "proxy":  {
+                                                      "reason":  "代理或本地直连网络尚未准备完成。",
+                                                      "suggestion":  "local 模式请检查 Docker 专属网络；Traefik/Nginx 模式请检查对应网关服务。"
+                                                  },
+                                        "network":  {
+                                                        "reason":  "动态端口池没有可用端口，或目标端口已被其他程序占用。",
+                                                        "suggestion":  "请释放 10000–19999 范围内的端口，随后重新检测。"
+                                                    },
+                                        "encryption":  {
+                                                           "reason":  "用于加密敏感配置的 ENCRYPTION_KEY 缺失或强度不足。",
+                                                           "suggestion":  "生成 32 字节随机密钥，写入 .env 的 ENCRYPTION_KEY 后重启控制面。"
+                                                       },
+                                        "internal_routing":  {
+                                                                 "reason":  "内部路由密钥 MYBAY_INTERNAL_ROUTING_SECRET 缺失。",
+                                                                 "suggestion":  "生成 32 字节随机密钥并写入 .env；local 模式内部直连仍建议保留该密钥用于兼容和安全校验。"
+                                                             },
+                                        "default":  {
+                                                        "reason":  "当前宿主机检查项未达到部署要求。",
+                                                        "suggestion":  "请检查 Docker 运行状态、环境变量和宿主机资源后重新检测。"
+                                                    }
+                                    },
+                        "summaryBlocked_plural":  "发现 {{count}} 个部署阻塞项"
+                    },
+    "firstRun":  {
+                     "title":  "首次启动环境检测",
+                     "description":  "在创建第一个 Agent 前，先确认本机 Docker、安全密钥、网络和资源状态。",
+                     "loading":  "正在检测运行环境…",
+                     "loadError":  "环境检测失败，请确认服务正常运行后重试。",
+                     "recheck":  "重新检测",
+                     "continue":  "检测通过，进入控制台",
+                     "saving":  "正在完成…",
+                     "blocked":  "存在必须修复的项目，修复后请重新检测。",
+                     "deploymentMode":  {
+                                            "title":  "选择部署场景",
+                                            "description":  "此设置会统一决定实例 URL、Docker 端口绑定方式和部署前检测规则。",
+                                            "apply":  "应用场景并重新检测",
+                                            "settingsTitle":  "实例访问与部署场景",
+                                            "settingsDescription":  "配置本机、局域网或服务器访问方式。修改后请重新部署现有实例。",
+                                            "manage":  "配置访问模式",
+                                            "desktop":  {
+                                                            "title":  "本机桌面",
+                                                            "description":  "仅允许当前电脑访问，默认绑定 127.0.0.1，安全性最高。"
+                                                        },
+                                            "lan":  {
+                                                        "title":  "局域网共享",
+                                                        "description":  "允许同一局域网设备通过指定网卡 IP 访问，不会开放所有网卡。"
+                                                    },
+                                            "server":  {
+                                                           "title":  "服务器部署",
+                                                           "description":  "通过域名、HTTPS 和 Traefik 网关对外访问，适合云服务器。"
+                                                       },
+                                            "lanIp":  "选择要绑定的局域网 IPv4 地址",
+                                            "selectIp":  "请选择网卡地址",
+                                            "lanRestartRequired":  "控制台当前没有绑定这个局域网地址。请在项目目录执行下面的命令重建控制台，然后重新打开此页面。",
+                                            "serverRequirement":  "服务器网关尚未配置。请回到项目目录执行下面的命令，按提示填写控制台域名、Agent 根域名和证书邮箱。",
+                                            "serverReady":  "Traefik、真实域名和 HTTPS 环境变量已配置，可以应用服务器模式并继续检测。",
+                                            "ready":  "已配置",
+                                            "notConfigured":  "尚未配置",
+                                            "errors":  {
+                                                           "LAN_IP_INVALID":  "所选 IP 不是本机当前可用的网卡地址，请重新选择。",
+                                                           "LAN_CONTROL_PANEL_RESTART_REQUIRED":  "控制台需要通过 quick-start.sh --lan 重新创建后才能应用该局域网地址。",
+                                                           "SERVER_TRAEFIK_REQUIRED":  "服务器模式尚未启用 Traefik，请先修改部署环境配置并重启服务。",
+                                                           "SERVER_DOMAIN_REQUIRED":  "服务器模式必须配置真实域名，不能使用 localhost。",
+                                                           "SERVER_CONTROL_PANEL_DOMAIN_REQUIRED":  "服务器模式必须配置真实的控制台域名。",
+                                                           "SERVER_CERT_EMAIL_REQUIRED":  "服务器模式必须配置有效的 HTTPS 证书通知邮箱。",
+                                                           "DEPLOYMENT_MODE_INVALID":  "部署场景配置无效，请检查后重试。"
+                                                       }
+                                        },
+                     "checks":  {
+                                    "runtime":  {
+                                                    "title":  "Docker 运行环境",
+                                                    "ok":  "Docker Engine 可以正常访问。",
+                                                    "warn":  "Docker 状态需要确认。",
+                                                    "fail":  "无法访问 Docker Engine，请启动 Docker 并检查 Socket 权限。"
+                                                },
+                                    "storage":  {
+                                                    "title":  "系统资源",
+                                                    "ok":  "可用内存满足运行要求。",
+                                                    "warn":  "可用内存偏低，运行多个实例可能不稳定。",
+                                                    "fail":  "系统资源不足。"
+                                                },
+                                    "proxy":  {
+                                                  "title":  "网关网络",
+                                                  "ok":  "网关网络配置正常。",
+                                                  "warn":  "网关网络需要确认。",
+                                                  "fail":  "网关网络缺失。"
+                                              },
+                                    "network":  {
+                                                    "title":  "端口资源",
+                                                    "ok":  "存在可用端口。",
+                                                    "warn":  "可用端口较少。",
+                                                    "fail":  "端口池已用尽。"
+                                                },
+                                    "connectivity":  {
+                                                         "title":  "访问域名",
+                                                         "ok":  "访问域名已配置。",
+                                                         "warn":  "可以使用 localhost 访问；如需公网访问可稍后配置域名。",
+                                                         "fail":  "访问地址配置不可用。"
+                                                     },
+                                    "encryption":  {
+                                                       "title":  "数据加密密钥",
+                                                       "ok":  "加密密钥配置正常。",
+                                                       "warn":  "加密密钥强度不足。",
+                                                       "fail":  "加密密钥缺失。"
+                                                   },
+                                    "internal_routing":  {
+                                                             "title":  "内部路由密钥",
+                                                             "ok":  "内部路由密钥配置正常。",
+                                                             "warn":  "内部路由配置需要确认。",
+                                                             "fail":  "内部路由密钥缺失，实例部署将失败。"
+                                                         }
+                                }
+                 },
+    "steps":  {
+                  "preflight":  {
+                                    "title":  "Preflight",
+                                    "desc":  "部署前环境检测"
+                                },
+                  "basic":  {
+                                "title":  "基础信息",
+                                "desc":  "实例名称与访问保护"
+                            },
+                  "container":  {
+                                    "title":  "容器配置",
+                                    "desc":  "端口、域名与运行参数"
+                                },
+                  "model":  {
+                                "title":  "大模型",
+                                "desc":  "API 密钥及参数设置"
+                            },
+                  "channel":  {
+                                  "title":  "渠道",
+                                  "desc":  "接入渠道与机器人"
+                              },
+                  "skills":  {
+                                 "title":  "技能",
+                                 "desc":  "外部技能和能力树"
+                             },
+                  "deploy":  {
+                                 "title":  "部署",
+                                 "desc":  "最终确认并部署"
+                             },
+                  "complete":  {
+                                   "title":  "完成",
+                                   "desc":  "部署交付状态单"
+                               }
+              },
+    "validation":  {
+                       "pwd_min":  "管理员密码长度最少为 8 位",
+                       "required_field":  "请填写必填字段：{{field}}",
+                       "test_llm_first":  "请在配置好大模型参数后，点击大模型测试组件",
+                       "test_channel_first":  "已绑定外部消息渠道，请务必在点击测试连通成功后再继续",
+                       "preflight_loading":  "正在深度探测宿主机，请稍候...",
+                       "preflight_fail":  "请先修复 Docker 等核心 FAIL 检测项以继续",
+                       "basic_info_missing":  "请先填写 实例名称 / 访问账号及保护密码",
+                       "basic_name_missing":  "请先填写实例名称",
+                       "dashboard_access_missing":  "启用 Dashboard 访问时，请填写 Dashboard 访问账号和密码",
+                       "username_format":  "Web 会话账号名格式仅支持字母及短斜划线",
+                       "template_consent_required":  "您必须先在页面底部勾选安全与合规确认选项，以确认接受该工作流开启的接口权限风险。",
+                       "feishu_variant_required":  "当前版本家族没有可用的 Feishu 专版镜像，请切换到支持 Feishu 的版本后再创建实例。",
+                       "submit_error":  "请求服务器启动服务发生异常，请检查配置。",
+                       "platform_model_web_only":  "平台内置模型仅支持 Web 界面对话，如需连接 IM 渠道请配置 BYOK API Key。",
+                       "plan_channel_restricted":  "当前配置不支持开启外部 IM 通信渠道。",
+                       "select_platform_model":  "请选择平台模型或配置自备 Key。"
+                   },
+    "path_selection":  {
+                           "title":  "选择您的部署路径",
+                           "title_desc":  "在启动 Agent 容器实例前，请选择最符合您当前业务诉求的创建方式",
+                           "template_title":  "从业务模板开始",
+                           "template_desc":  "适合想快速上手，直接套用行业成熟方案与工作流的用户。无需关心底层镜像与复杂参数，一键拥有专属数字员工。",
+                           "template_features":  [
+                                                     "开箱即用，快速部署行业核心场景",
+                                                     "智能参数与指令预填，零基础友好",
+                                                     "内置成熟的大脑设定、机器人渠道与扩展技能"
+                                                 ],
+                           "blank_title":  "从空白环境开始",
+                           "blank_desc":  "适合有明确自定义需求，想从头开始自由定制的高级用户。保留完整的底层容器、多模型配置及外部技能挂载能力。",
+                           "blank_features":  [
+                                                  "全权控制容器镜像版本、CPU 与内存规格限制",
+                                                  "自定义系统上下文指令，多模型与多通道调试",
+                                                  "独立的沙箱隔离运行，全自主按需热更"
+                                              ],
+                           "btn_select_template":  "选择此路径：浏览业务模板",
+                           "btn_select_blank":  "选择此路径：进入自定义部署",
+                           "back_to_selection":  "返回路径选择",
+                           "template_browser_title":  "选择业务模板开始部署",
+                           "template_browser_desc":  "点击下方任意一个成熟的行业场景方案或特定功能工作流，系统将为您自动预填最佳运行环境与参数。",
+                           "tab_all":  "全部模板",
+                           "tab_blueprints":  "行业场景方案 Blueprints",
+                           "tab_workflows":  "智能体工作流 Workflows"
+                       },
+    "custom_engine_badge":  "自定义智能体",
+    "wizard_header":  {
+                          "title":  "部署新的Agent",
+                          "desc":  "全链路环境探测与分布式 Agent 容器实例拓扑配置",
+                          "progress":  "进度 {{current}} / {{total}}",
+                          "restart":  "重新开始"
+                      },
+    "template_banner":  {
+                            "blueprint_preset":  "行业解决方案预填",
+                            "workflow_preset":  "智能工作流模板预填",
+                            "configuring_params":  "正在配置参数 (步骤 {{current}} / {{total}})",
+                            "exit_template":  "退出模板部署，转为自定义创建"
+                        },
+    "footer_status":  {
+                          "preflight_loading":  "正在深度检测服务器主机，请稍候...",
+                          "preflight_fix":  "需修复：{{fields}}",
+                          "preflight_warning":  "存在警告，但可以继续",
+                          "preflight_success":  "预检通过，可以继续",
+                          "basic_info":  "需填写：实例别名名称、Web 会话访问账号与保护密码",
+                          "basic_name":  "需填写：实例别名名称",
+                          "dashboard_access":  "启用 Dashboard 访问时，需填写 Dashboard 访问账号与密码",
+                          "dashboard_access_configured":  "Dashboard 访问已启用，账号与 Basic Auth 密码已配置",
+                          "dashboard_access_disabled":  "Dashboard 访问已关闭，实例仍会通过已配置渠道及 Agent 工作区运行",
+                          "basic_format_error":  "格式错误：Web 会话账号名仅能支持英文、数字与短横线",
+                          "basic_pwd_error":  "安全密码长度最少要 8 字节",
+                          "basic_configured":  "访问保护与 Basic Auth 验证参数已配置",
+                          "container_traefik":  "群集自适应内部网关反代已就绪",
+                          "container_port":  "宿主机端口自动分配逻辑已激活",
+                          "model_test_required":  "需先完成所设智能 LLM 的连通测试并通过",
+                          "model_success":  "大语言模型及 provider 连通成功",
+                          "channel_test_required":  "⚠️ 当前即时通讯渠道尚未配置或尚未通过连通测试。请在上方输入相应的 API 凭据，并点击「测试通道网络」验证通过后再试。",
+                          "channel_empty_allowlist":  "平台可以连接，但没有允许用户，机器人可能不会响应任何消息。",
+                          "channel_success":  "第三方 Instant Message 机器人渠道连通成功",
+                          "channel_disabled":  "不启用即时通讯，仅限控制台可视化多对多调试",
+                          "skills_checking":  "外部技能扩展组件与插件列表确认中",
+                          "review_success":  "配置清单汇总校对完成，可立即启动实例"
+                      },
+    "quota_check":  {
+                        "loading":  "正在检查你的实例额度...",
+                        "error_fail":  "检测创建额度失败，请稍后刷新。",
+                        "error_title":  "额度检查异常",
+                        "btn_retry":  "重试检查",
+                        "quota_remaining":  "实例额度：已使用 {{used}} / {{limit}}，还可创建 {{remaining}} 个实例。",
+                        "quota_unlimited":  "实例额度：已使用 {{used}} 个实例，当前账号不限制实例数量。",
+                        "quota_full":  "已达到服务器允许的最大实例数量（{{used}} / {{limit}}），无法创建更多实例。"
+                    },
+    "preflight_errors":  {
+                             "permission_title":  "权限错误",
+                             "permission_msg":  "您没有权限执行底层环境探测，请联系管理员。",
+                             "system_title":  "系统错误",
+                             "system_msg":  "无法获取预检信息"
+                         },
+    "business_summary_card":  {
+                                  "title_blueprint":  "行业解决方案方案预置",
+                                  "title_workflow":  "自动化业务工作流配置",
+                                  "step_hint":  "配置进度（第 {{current}} 步，共 {{total}} 步）",
+                                  "exit_btn":  "退出模板部署，转为自定义创建",
+                                  "target_audience":  "面向人群",
+                                  "target_audience_default":  "适用于所有企业级团队及业务人员",
+                                  "business_value":  "业务收益 / 自动化效果",
+                                  "business_value_default":  "降低人工处理成本，实现自动化处理",
+                                  "coverage_title":  "预置完成度与待办项",
+                                  "auto_configured":  "已自动完成配置：",
+                                  "pending_configure":  "待您填写/确认：",
+                                  "status_model":  "大模型底层引擎",
+                                  "status_prompt":  "系统 Prompt 指令",
+                                  "status_channel":  "推荐通信渠道",
+                                  "status_skills":  "配套能力扩展技能",
+                                  "status_inputs":  "业务环境变量输入",
+                                  "status_credentials":  "账号保护密码",
+                                  "status_consent":  "安全合规确认",
+                                  "blueprint_desc_title":  "行业方案业务摘要",
+                                  "workflow_desc_title":  "自动化任务执行规则",
+                                  "audience_label":  "推荐面向对象",
+                                  "business_value_label":  "方案业务收益",
+                                  "skills_label":  "配套内置技能插件",
+                                  "channels_label":  "推荐接入通信通道",
+                                  "target_result_label":  "自动化执行预期成果",
+                                  "required_inputs_section":  "工作流特有业务环境变量输入区",
+                                  "platform_fields_section":  "平台底层实例安全防护配置",
+                                  "no_extra_skills":  "无需额外技能",
+                                  "core_brain":  "大模型核心大脑",
+                                  "channel_telegram":  "Telegram",
+                                  "channel_feishu":  "飞书"
+                              },
+    "advanced_config":  {
+                            "title":  "底层容器高级配置（仅供专家微调）",
+                            "desc":  "包含底层容器镜像版本、物理 CPU 配额及内存物理上限限制，模板部署路径默认折叠以保持界面清爽。"
+                        },
+    "template_selection":  {
+                               "title":  "AI 智能工作流模板驱动选配",
+                               "reselect_workflow":  "← 重新选择工作流",
+                               "reselect_blueprint":  "← 重新选择行业方案",
+                               "loading_templates":  "正在拉取系统预设高能工作流面板...",
+                               "retry_load":  "重新加载模板",
+                               "skip_template":  "跳过并继续基础部署",
+                               "no_templates":  "当前暂无可用工作流模板",
+                               "no_templates_sub":  "您仍可以不使用模板直接创建基础 Agent 实例",
+                               "intro_desc":  "推荐选择精选生产力工作流。系统将根据后台模型/数据配置自动预装引擎和通信端口，降低配置成本。",
+                               "activated":  "已激活",
+                               "env_section_title":  "设定工作流环境变量",
+                               "upload_unsupported":  "格式不支持：仅允许上传标准的 .pdf 电子文档。",
+                               "upload_size_limit":  "容量超限：该文件大小为 {{currentSize}}MB，越过了系统设定的 {{maxSize}}MB 安全物理上限。",
+                               "upload_progress":  "正在上传校验文件...",
+                               "upload_success":  "安全文件就绪 · {{fileSize}}",
+                               "upload_error":  "网络传输或安全验证异常",
+                               "clear_and_retry":  "清除并重试",
+                               "placeholder_json":  "请输入 JSON 格式数据...",
+                               "placeholder_textarea":  "请输入相关配置内容...",
+                               "placeholder_url":  "输入目标 URLs，一行一个链接...",
+                               "placeholder_boolean":  "启用该项功能配置",
+                               "placeholder_input":  "请输入...",
+                               "consent_title":  "系统及数据权限合规确认",
+                               "consent_list_title":  "该工作流/方案所需开启/载入的安全权限项列表：",
+                               "consent_checkbox":  "我已知晓并对该部署模型所需的系统接口及可能产生的外部权限调用完全负责。",
+                               "basic_protection_title":  "基础命名与 Dashboard 访问",
+                               "basic_protection_desc":  "设置实例别名，并决定是否开放该 Agent Runtime 自带的 Dashboard 访问入口。",
+                               "instance_alias":  "智能实例别名",
+                               "assigned_path":  "自动分配安全路由路径",
+                               "access_username":  "Dashboard 访问账号",
+                               "access_password":  "Dashboard 访问密码 (≥ 8位)",
+                               "protection_warning":  "访问 /agent/{{path}} 时将使用 Dashboard 账号和密码进行 Basic Auth 保护，未授权请求会返回 401。",
+                               "enable_dashboard_label":  "启用 Dashboard 访问",
+                               "enable_dashboard_desc":  "开启后，可通过实例 URL 访问 Agent Runtime 自带的 Dashboard；关闭后，实例仍会通过已配置渠道及 Agent 工作区运行。",
+                               "dashboard_access_disabled_notice":  "Dashboard 访问已关闭。实例仍会通过已配置渠道及 Agent 工作区运行，但不会开放 Dashboard 访问入口。",
+                               "dashboard_check_label":  "Dashboard 访问防护 (Basic Auth)",
+                               "dashboard_check_enabled":  "已启用（账号：{{username}}）",
+                               "dashboard_check_disabled":  "已关闭，不开放 Dashboard 访问入口",
+                               "blueprint_business_title":  "行业解决方案业务摘要",
+                               "workflow_business_title":  "自动化任务执行规则",
+                               "blueprint_desc_label":  "行业方案业务价值描述",
+                               "workflow_desc_label":  "工作流自动化场景描述",
+                               "blueprint_auto_config_title":  "方案特有预装资产与配置环境",
+                               "blueprint_auto_config_desc":  "本方案已自动配置完毕：包括预装的系统核心指令集、推荐的消息通道及能力扩展插件。您无需手动编写任何代码或配置复杂环境变量即可直接进行下一阶段的部署。",
+                               "recommended_skills_label":  "配套内置技能插件",
+                               "recommended_channels_label":  "推荐接入通信通道",
+                               "target_result_label":  "预期自动化效果",
+                               "required_inputs_section":  "工作流特有业务环境变量输入区",
+                               "platform_fields_section":  "平台底层实例安全防护配置",
+                               "blueprint_preset_badge":  "行业解决方案",
+                               "workflow_preset_badge":  "智能工作流",
+                               "placeholder_file_click_drag":  "点击上传或将 PDF 文件拖拽至此",
+                               "placeholder_file_limits":  "支持格式: .pdf，最大安全上传上限 {{maxSize}}MB",
+                               "synced_100":  "100% 同步",
+                               "file_name_label":  "文件名: {{name}} ({{size}})",
+                               "upload_err_server_dump":  "服务端转储上传文件时遇到未知阻碍。",
+                               "upload_err_invalid_json":  "无效的服务端安全响应校验，JSON 转译出错。",
+                               "upload_err_status_code":  "上传失败，状态码 HTTP {{status}}",
+                               "upload_err_disconnect":  "云端传输断开，错误代码 HTTP {{status}}",
+                               "upload_err_network_interrupted":  "上传网络中断：无法连通外部传输代理层，请检查本地物理网络。",
+                               "upload_err_aborted":  "上传指令被意外中止。",
+                               "deploy_id_missing":  "部署任务 ID 构建异常，请刷新选件页面重新同步配置。",
+                               "remove_file_fail":  "删除已上传文件失败: {{message}}",
+                               "placeholder_instance_alias":  "例如：麦贝 个人科研助手",
+                               "placeholder_instance_password":  "设置 401 拦截认证密码",
+                               "permission_scope_fallback":  "隐私权限",
+                               "permission_reason_fallback":  "保障必要的数据接入。",
+                               "upload_default_error":  "校验未通过，请检查文件格式或大小限制。"
+                           },
+    "container_config":  {
+                             "title":  "实例底架隔离与端口分配",
+                             "title_desc":  "分配智能进程镜像和路由规则，支持群居集群代理。",
+                             "image_label":  "底层 Agent 镜像代码",
+                             "tag_label":  "标签/版本 (Tag)",
+                             "latest_option":  "latest (跟随最新)",
+                             "feishu_warning_title":  "飞书兼容性警告",
+                             "feishu_warning_desc":  "当前选择的官方 Hermes 镜像 {{tag}} 未声明飞书/Lark 能力，请选择已发现的兼容版本。",
+                             "prewarmed_ready":  "镜像预热就绪：此版本已存在于本地 Docker 缓存，可减少部署等待时间。",
+                             "traefik_title":  "⚡ Traefik 精致微服务集群自发现模式",
+                             "traefik_desc":  "检测到系统正在运行高级分布式群集治理（Traefik）。网关通信会自动通过系统内部共享 Docker Socket 来进行反代映射。",
+                             "session_port_label":  "会话管理端口配置：",
+                             "traefik_ports":  "自动分配，端口池 10100-19999",
+                             "advanced_details":  "⚙️ 高级配置 (智能分配参数)",
+                             "start_port_scan":  "起始扫描端口:",
+                             "end_port_scan":  "截止扫描端口:",
+                             "internal_rules":  "内部分配规则:",
+                             "port_auto_title":  "宿主机端口自动分配",
+                             "port_auto_desc":  "系统将根据宿主机物理环境自动寻找并绑定可用端口。用户无需手动选择或处理冲突，部署后将在实例详情页面展示。",
+                             "internal_port_badge":  "内部端口: 9119",
+                             "allocating_badge":  "自动分配中...",
+                             "resource_limits_title":  "物理资源限制配额 (容器邻居防护)",
+                             "standard_shared_plan":  "标准共享型（默认）",
+                             "cpu_limit_label":  "CPU 核心限制配额 (Limits)",
+                             "cpu_option_01":  "0.1 核 (极高约束，仅保活任务)",
+                             "cpu_option_025":  "0.25 核 (中度约束)",
+                             "cpu_option_05":  "0.5 核 (默认推荐 - 邻居防护)",
+                             "cpu_option_1":  "1.0 核 (标准独占单核心)",
+                             "cpu_option_2":  "2.0 核 (高吞吐业务模式)",
+                             "no_limit_option":  "不进行限制 (不推荐群居部署)",
+                             "cpu_tip":  "限制此容器运行的最大 CPU 核心上限，避免单实例出现代码死循环拖垮宿主机。",
+                             "ram_limit_label":  "物理内存上限 (RAM Limits)",
+                             "ram_option_128":  "128 MB RAM (极轻量微型模式)",
+                             "ram_option_256":  "256 MB RAM (低功耗核心模式)",
+                             "ram_option_512":  "512 MB RAM (默认推荐 - 邻居防护)",
+                             "ram_option_1":  "1.0 GB RAM (标准实例)",
+                             "ram_option_2":  "2.0 GB RAM (全功能重载实例)",
+                             "ram_no_limit_option":  "不进行限制 (极其容易引发 OOM 闪退)",
+                             "ram_tip":  "容器内存超出上限时，Docker daemon 将按重启策略进行恢复，避免持续占用宿主机资源。",
+                             "enable_dashboard_label":  "启用 Dashboard 访问",
+                             "enable_dashboard_desc":  "开启后可通过实例 URL 访问 Agent Runtime 自带的 Dashboard。",
+                             "advanced_panel_title":  "底层容器高级参数（镜像 / 端口 / 资源限制）",
+                             "hide_advanced_btn":  "收起参数配置",
+                             "show_advanced_btn":  "展开高级参数进行微调"
+                         },
+    "load_errors":  {
+                        "err_401":  "401：登录状态已失效，请重新登录",
+                        "err_403":  "403：当前账号无权读取模板",
+                        "err_404":  "404：模板服务暂不可用",
+                        "err_500":  "500：模板服务异常，请稍后重试",
+                        "err_network":  "网络连接异常，请重试。",
+                        "err_fallback":  "无法加载工作流模板列表，请检查本地服务或刷新重试。"
+                    },
+    "validation_errors":  {
+                              "json_format_err":  "JSON 格式错误: {{message}}",
+                              "json_item_format_err":  "输入项【{{label}}】存在 JSON 格式错误: {{message}}",
+                              "json_required_and_valid":  "必填项，且必须为合法的 JSON 格式",
+                              "template_input_required":  "请填写模板必填输入项:【{{label}}】",
+                              "file_upload_required":  "请上传所需文件",
+                              "file_item_upload_required":  "请完整上传【{{label}}】所需文件",
+                              "field_required":  "此项为必填项"
+                          },
+    "trustPermission":  {
+                            "eyebrow":  "Security Gate",
+                            "title":  "实例安全与合规确认",
+                            "description":  "部署前请仔细核对该 Agent 实例的运行权限与访问边界。",
+                            "riskLabel":  "风险等级",
+                            "risk":  {
+                                         "low":  "Low",
+                                         "medium":  "Medium",
+                                         "high":  "High"
+                                     },
+                            "model":  "大模型",
+                            "platformModel":  "平台托管",
+                            "channels":  "通信渠道",
+                            "externalNetwork":  "外网访问",
+                            "fileAccess":  "文件读取",
+                            "dockerAccess":  "Docker / 容器引擎",
+                            "sensitiveAssets":  "敏感资产",
+                            "sensitiveAssetsCount":  "{{count}} 个敏感资产",
+                            "none":  "无",
+                            "unspecified":  "未指定",
+                            "webOnly":  "仅 Web 控制台 / 无外部渠道",
+                            "externalNetworkEnabled":  "允许容器发起外部网络请求",
+                            "externalNetworkDisabled":  "禁止外部网络访问",
+                            "fileAccessEnabled":  "允许访问宿主机挂载目录",
+                            "fileAccessDisabled":  "禁止访问宿主机目录",
+                            "dockerAccessEnabled":  "已开启 Docker 容器引擎调用权限",
+                            "dockerAccessDisabled":  "未开启 Docker 容器引擎权限",
+                            "confirmLabel":  "我已知晓并确认上述权限，同意部署该 Agent 实例",
+                            "confirmRequired":  "请勾选安全确认选项"
+                        },
+    "wizardCopy":  {
+                       "footer":  {
+                                      "ready":  "配置就绪，可以继续",
+                                      "previous":  "上一步",
+                                      "deploying":  "部署中…",
+                                      "start":  "启动实例",
+                                      "next":  "下一步"
+                                  },
+                       "model":  {
+                                     "title":  "大语言模型引擎设置（AI Models）",
+                                     "description":  "连接并配置此实例的模型服务。建议选择响应速度稳定的模型。",
+                                     "testing":  "正在测试连接…",
+                                     "testPassed":  "连接测试已通过（点击重测）",
+                                     "test":  "测试模型连接",
+                                     "success":  "模型服务连接成功，当前配置有效。",
+                                     "successDetail":  "连接测试成功，API 配置有效。",
+                                     "failure":  "模型连接测试失败，请检查配置。",
+                                     "unknownError":  "发生未知的鉴权或网络错误。",
+                                     "byokTitle":  "使用自己的 API Key（BYOK）",
+                                     "byokDescription":  "使用您自己的模型 API Key，密钥会加密保存在本地。",
+                                     "savedCredential":  "使用已保存的凭据",
+                                     "manualKey":  "手动输入 API Key",
+                                     "savedCredentialHint":  "从凭据管理中选择已加密保存的密钥。",
+                                     "provider":  "模型服务商（Provider）",
+                                     "selectProvider":  "请选择模型服务商…",
+                                     "apiKey":  "模型 API Key",
+                                     "usingSavedCredential":  "正在使用已保存的凭据",
+                                     "apiKeyPlaceholder":  "请输入 API Key（例如 sk-…）",
+                                     "baseUrl":  "API 端点（Base URL）",
+                                     "defaultBaseUrl":  "默认：{{url}}",
+                                     "baseUrlPlaceholder":  "请输入 API 端点",
+                                     "model":  "模型版本（Model）",
+                                     "customModel":  "自定义模型名",
+                                     "customModelPlaceholder":  "请输入自定义模型（例如 gemini-2.5-flash）",
+                                     "securityTitle":  "安全说明：",
+                                     "securitySaved":  "所选凭据将加密传递给 Agent 容器。",
+                                     "securityByok":  "API Key 将使用服务端 ENCRYPTION_KEY 加密存储。",
+                                     "securityVerify":  "请点击右上方的测试按钮确认配置。"
+                                 },
+                       "skills":  {
+                                      "dockerEnvDisabled":  "服务端未启用 ENABLE_DOCKER_SOCKET_SKILL，Docker 高危能力已关闭。",
+                                      "dockerAdminDisabled":  "本地安全策略未允许挂载 Docker Socket。请先在系统设置的安全页面启用并确认风险。",
+                                      "dockerAdminActivation":  "尚未允许管理员挂载 Docker Socket，请前往系统设置启用。",
+                                      "comingSoon":  "即将推出",
+                                      "riskCritical":  "极高风险 / 管理员",
+                                      "riskHigh":  "高风险能力",
+                                      "riskMedium":  "中等风险",
+                                      "securityDisabled":  "安全配置未启用",
+                                      "confirmTitle":  "确认启用高风险能力",
+                                      "enabling":  "正在启用：{{name}}",
+                                      "dockerWarning":  "安全警告：启用后，此实例可以访问宿主机 Docker API。请确保 Agent 指令完全可信。",
+                                      "confirmPrompt":  "请输入以下文本确认启用（仅管理员）",
+                                      "confirmPlaceholder":  "在此输入确认文本",
+                                      "cancel":  "取消",
+                                      "confirm":  "确认启用",
+                                      "title":  "启用技能与能力",
+                                      "description":  "为 Agent 配置系统级技能。请谨慎启用高风险能力，敏感操作会被记录。",
+                                      "hideAdvanced":  "收起高风险安全设置",
+                                      "showAdvanced":  "展开高风险安全能力",
+                                      "credentialsTitle":  "高级能力凭据设置",
+                                      "test":  "测试连接",
+                                      "blockedTitle":  "安全策略提醒",
+                                      "acknowledge":  "我知道了",
+                                      "catalog": {
+                                          "browser": {
+                                              "name": "浏览器网页抓取",
+                                              "desc": "使用内置 Chrome 进行高级网页浏览、内容抓取、模拟点击和全屏截图。",
+                                              "warning": "受限网络访问：禁止访问内网地址与 Metadata 服务，并使用临时浏览器配置。"
+                                          },
+                                          "shell": {
+                                              "name": "Shell 沙箱终端",
+                                              "desc": "在隔离沙箱中执行系统 Shell 命令、运行脚本和安装依赖。",
+                                              "warning": "高风险能力：命令必须在独立沙箱中运行，仅允许访问实例工作区，并禁止挂载 Docker Socket。"
+                                          },
+                                          "file_system": {
+                                              "name": "文件系统读写",
+                                              "desc": "读取、写入、修改和解压本实例专属工作区中的文件。",
+                                              "warning": "高风险能力：仅允许访问实例工作区，禁止访问系统敏感目录，所有操作均会被审计。"
+                                          },
+                                          "file_read": {
+                                              "name": "文件读取与文档分析",
+                                              "desc": "读取并解析用户上传的受支持媒体、文档和脚本文案，生成结构化内容。",
+                                              "warning": "不会访问敏感系统资源，仅分析用户主动上传的内容。"
+                                          },
+                                          "docker": {
+                                              "name": "Docker Engine 容器连接",
+                                              "desc": "连接宿主机 Docker Socket，用于动态启动和调度其他服务。",
+                                              "warning": "极高风险管理员能力：Docker Engine 访问可能等同于宿主机 root 权限，仅可在受控环境中启用。"
+                                          },
+                                          "crypto": {
+                                              "name": "Web3 与智能合约工具",
+                                              "desc": "提供智能合约调试、数字签名以及以太坊/Solidity 合约调用沙箱。",
+                                              "warning": ""
+                                          },
+                                          "custom_webhooks": {
+                                              "name": "HTTP Webhook 触发器",
+                                              "desc": "调用外部 Webhook 接口、传输 JSON 数据并轮询响应。",
+                                              "warning": "此能力可能向外部传输数据，请仅使用可信的 Webhook 地址。"
+                                          },
+                                          "tavily_search": {
+                                              "name": "Tavily AI 智能搜索",
+                                              "desc": "使用面向 AI 的专业搜索引擎过滤噪声，并生成整洁的结构化研究资料。",
+                                              "warning": "",
+                                              "label": "Tavily API Key",
+                                              "placeholder": "留空以保留当前密钥（tvly-…）"
+                                          },
+                                          "google_search": {
+                                              "name": "Google Serper 全局搜索",
+                                              "desc": "通过 Serper API 快速获取全球 Google 搜索结果。",
+                                              "warning": "",
+                                              "label": "Serper.dev API Key",
+                                              "placeholder": "留空以保留当前密钥"
+                                          },
+                                          "github": {
+                                              "name": "GitHub 仓库与 Issue 工作流",
+                                              "desc": "对指定仓库进行 Issue 诊断、提交代码修改并创建拉取请求。",
+                                              "warning": "系统将使用个人访问令牌访问你的代码仓库。",
+                                              "label": "GitHub Personal Access Token（PAT）",
+                                              "placeholder": "留空以保留当前令牌（ghp_…）"
+                                          },
+                                          "feishu": {
+                                              "name": "飞书 / Lark 开放平台集成",
+                                              "desc": "连接飞书或 Lark 自建应用，实现消息回传、富文本卡片和多维表格自动化。",
+                                              "warning": "此能力可以读取和发送飞书/Lark 消息，启用前请确认 App ID 与密钥正确。"
+                                          }
+                                      }
+                                  },
+                       "webhookHelper": {
+                           "title": "Traefik 反向代理 Webhook 回调地址",
+                           "gatewayIsolated": "已配置网关隔离",
+                           "copy": "复制地址",
+                           "copied": "已复制",
+                           "description": "请将此 URL 填入对应开放平台的事件订阅回调或 Webhook 设置，例如飞书开放平台、钉钉开发者后台或 Telegram BotFather。",
+                           "validation": {
+                               "feishuAppId": "飞书 App ID 通常以 cli_ 开头。",
+                               "feishuAppSecret": "飞书 App Secret 长度不足。",
+                               "dingtalkAppKey": "钉钉 App Key / Client ID 格式异常。",
+                               "telegramBotToken": "Telegram Bot Token 格式异常，应包含以冒号分隔的 ID 和密钥。",
+                               "qqBotAppId": "QQ Bot AppID 应为纯数字。"
+                           }
+                       },
+                       "channel":  {
+                                       "restricted":  "本地配置已禁用此渠道。",
+                                       "title":  "Agent 对话与消息渠道",
+                                       "description":  "绑定 Agent 使用的消息渠道，用于对话、任务通知和指令执行。",
+                                       "hideGuide":  "隐藏配置指南",
+                                       "showGuide":  "显示配置指南",
+                                       "connecting":  "连接中…",
+                                       "connected":  "连接成功",
+                                       "test":  "测试渠道连接",
+                                       "success":  "渠道连接验证通过。",
+                                       "failure":  "渠道或网络连接异常。",
+                                       "timeout":  "通信握手超时，请检查 Token 是否有效以及当前主机能否访问该渠道。",
+                                       "bindLaterTitle":  "部署后自动绑定（推荐）",
+                                       "bindLaterDesc":  "部署后自动捕获首次消息并生成授权申请，可在实例详情中批准绑定。",
+                                       "allowlistTitle":  "仅允许白名单",
+                                       "allowlistDesc":  "只允许下方配置的用户或群聊访问。",
+                                       "allowAllTitle":  "允许所有用户",
+                                       "allowAllDesc":  "不拦截未配置的用户，仅建议用于公开演示或调试。",
+                                       "disabledTitle":  "禁用机器人渠道",
+                                       "disabledDesc":  "关闭此渠道的消息收发，只保留控制台对话。",
+                                       "production":  "正式环境",
+                                       "testing":  "调试环境",
+                                       "feishuGuideTitle":  "飞书 / Lark 版本要求",
+                                       "feishuGuideDescription":  "飞书 / Lark 渠道需要使用包含对应能力的 Agent 版本。",
+                                       "feishuImageHint":  "请选择声明飞书/Lark 能力的官方 Hermes 版本。",
+                                       "latestWarningTitle":  "latest 版本提醒",
+                                       "latestWarningDescription":  "当前选择 latest。建议明确指定支持飞书的版本，避免依赖随更新发生变化。",
+                                       "switchRecommended":  "切换到推荐飞书版本（{{tag}}）",
+                                       "feishuSupportedTitle":  "当前版本支持飞书",
+                                       "feishuSupportedDescription":  "当前版本 {{tag}} 已包含飞书能力，可以继续配置。",
+                                       "incompatibleTitle":  "版本不兼容",
+                                       "incompatibleDescription":  "当前版本 {{tag}} 不支持飞书 / Lark，请切换到兼容版本。",
+                                       "forceRecommended":  "切换到飞书推荐版本（{{tag}}）",
+                                       "accessPolicy":  "1. 渠道访问策略",
+                                       "autoBindTitle":  "已开启自动绑定",
+                                       "autoBindStep1":  "无需预先填写复杂的平台 ID。请先填写机器人凭据并部署实例。",
+                                       "autoBindStep2":  "用户首次向机器人发送消息后，系统会在实例详情中生成绑定申请。",
+                                       "autoBindStep3":  "在实例详情中批准申请后即可完成渠道授权。",
+                                       "allowAllWarningTitle":  "开放访问安全提醒",
+                                       "allowAllWarning":  "启用后，任何能够联系机器人的用户都可能消耗模型资源。仅建议用于测试或公开演示。",
+                                       "credentials":  "2. 渠道凭据",
+                                       "verifyTitle":  "配置完成后请测试渠道连接",
+                                       "verifyDescription":  "验证渠道凭据以及当前主机的网络连接。",
+                                       "emptyAllowlistTitle":  "白名单为空",
+                                       "emptyAllowlistDescription":  "尚未添加允许访问的用户或群聊。请至少配置一个 User ID 或 Chat ID。"
+                                   },
+                       "container":  {
+                                         "locked":  "系统锁定",
+                                         "imagePlaceholder":  "例如 nousresearch/hermes-agent",
+                                         "imageLockedHint":  "普通用户只能使用本地管理员认可的镜像。如需更换，请由管理员维护镜像版本。",
+                                         "feishuSupported":  "（支持飞书）"
+                                     },
+                       "channelManual":  {
+                                             "common":  {
+                                                            "usersPlaceholder":  "输入用户 ID，多个值用英文逗号分隔",
+                                                            "betaTitle":  "Beta 渠道说明",
+                                                            "callbackUrl":  "服务器回调 URL"
+                                                        },
+                                             "qr":  {
+                                                        "title":  "扫码快速绑定",
+                                                        "notice":  "扫码后将自动获取并安全回填渠道凭据，也可以继续使用下方手动配置。",
+                                                        "start":  "开始扫码",
+                                                        "starting":  "正在生成…",
+                                                        "scanHint":  "请使用对应的飞书、Lark 或个人微信客户端扫码并确认授权。",
+                                                        "completed":  "扫码绑定成功，凭据已回填。",
+                                                        "failed":  "扫码绑定失败，请重新生成二维码。",
+                                                        "errors": {
+                                                            "expired": "二维码已失效，请重新生成。",
+                                                            "network": "控制面容器无法连接微信服务，请检查 Docker DNS 或代理设置后重试。",
+                                                            "service": "微信二维码服务暂时不可用，请稍后重试。",
+                                                            "generic": "二维码生成或绑定失败，请重试。"
+                                                        }
+                                                    },
+                                             "weixin":  {
+                                                            "title":  "个人微信 iLink Bot",
+                                                            "notice":  "使用个人微信扫码连接腾讯 iLink Bot，并由 Hermes 原生 Weixin 适配器持续收发消息。",
+                                                            "accountId":  "iLink Bot 账号 ID",
+                                                            "accountIdPlaceholder":  "扫码后自动回填",
+                                                            "token":  "iLink Bot Token",
+                                                            "tokenPlaceholder":  "扫码后自动回填",
+                                                            "baseUrl":  "iLink API 地址"
+                                                        },
+                                             "telegram":  {
+                                                              "botToken":  "Bot Token",
+                                                              "tokenPlaceholder":  "例如 5820986161:AAH8t_N8…",
+                                                              "tokenHint":  "可通过 Telegram @BotFather 申请",
+                                                              "allowedUsers":  "允许的 Telegram 用户 ID",
+                                                              "usersPlaceholder":  "例如 10593856, 8295832",
+                                                              "usersHint":  "仅允许这些 Telegram 用户发送指令或私聊",
+                                                              "allowedChats":  "允许的 Telegram 群组或频道 ID",
+                                                              "chatsPlaceholder":  "例如 -10018590623, -10015948013",
+                                                              "chatsHint":  "限制机器人只能在指定群组或频道中活动"
+                                                          },
+                                             "feishu":  {
+                                                            "region":  "飞书 / Lark 应用服务区",
+                                                            "regionChina":  "中国区飞书（open.feishu.cn）",
+                                                            "regionGlobal":  "海外版 Lark（open.larksuite.com）",
+                                                            "appId":  "飞书 / Lark App ID",
+                                                            "appIdPlaceholder":  "以 cli_ 开头的 App ID",
+                                                            "appSecret":  "飞书 / Lark App Secret",
+                                                            "appSecretPlaceholder":  "应用专用 App Secret",
+                                                            "allowedUsers":  "允许的飞书用户 OpenID",
+                                                            "usersPlaceholder":  "例如 ou_34739de8, ou_982cd73",
+                                                            "usersHint":  "仅允许白名单内的飞书成员与助手单独会话",
+                                                            "allowedChats":  "允许的飞书群聊 Chat ID",
+                                                            "chatsPlaceholder":  "例如 oc_12347de8",
+                                                            "chatsHint":  "限制机器人只能在指定群聊中响应"
+                                                        },
+                                             "slack":  {
+                                                           "token":  "Slack Bot User OAuth Token",
+                                                           "tokenPlaceholder":  "以 xoxb- 开头的令牌",
+                                                           "allowedUsers":  "允许的 Slack 用户 ID",
+                                                           "usersPlaceholder":  "例如 U12345678, U87654321",
+                                                           "usersHint":  "仅允许白名单内的 Slack 用户触发操作",
+                                                           "allowedChannels":  "允许的 Slack 频道 ID",
+                                                           "channelsPlaceholder":  "例如 C12345678",
+                                                           "channelsHint":  "限制机器人只能在指定频道中响应"
+                                                       },
+                                             "discord":  {
+                                                             "token":  "Discord Bot Token",
+                                                             "tokenPlaceholder":  "请输入 Discord 开发者平台 Bot Token",
+                                                             "allowedGuilds":  "允许的 Discord 服务器 ID",
+                                                             "guildsPlaceholder":  "输入服务器 ID，多个值用英文逗号分隔",
+                                                             "allowedUsers":  "允许的 Discord 用户 ID",
+                                                             "allowedChannels":  "允许的 Discord 频道 ID",
+                                                             "channelsPlaceholder":  "输入频道 ID，多个值用英文逗号分隔"
+                                                         },
+                                             "webhook":  {
+                                                             "url":  "外部 Payload 推送 URL",
+                                                             "allowedUsers":  "允许的关联用户",
+                                                             "usersPlaceholder":  "输入关联 User ID，多个值用英文逗号分隔",
+                                                             "allowedChannels":  "允许的关联频道",
+                                                             "channelsPlaceholder":  "输入关联 Channel ID，多个值用英文逗号分隔",
+                                                             "info":  "Webhook 接收端使用 8644 端口，并通过实例域名下的 /webhooks/... 路径对外提供服务。请在调用端配置正确的 WEBHOOK_SECRET 签名验证。"
+                                                         },
+                                             "api":  {
+                                                         "info":  "API 模式用于程序化调用实例，需要使用实例 URL 的 API 入口和 API Key。关闭 Web UI 后，仅明确允许的路径可以访问。",
+                                                         "authInfo":  "API 服务使用 8642 端口，并通过实例域名下的 /v1/... 路径提供服务。请求 Header 必须携带 API Key，例如 Authorization: Bearer \u003cAPI_KEY\u003e。"
+                                                     },
+                                             "whatsapp":  {
+                                                              "phoneId":  "WhatsApp Phone Number ID",
+                                                              "phoneIdPlaceholder":  "输入 Meta App 中的电话号码 ID",
+                                                              "token":  "WhatsApp Access Token（Meta Graph API）",
+                                                              "tokenPlaceholder":  "输入以 EAAG… 开头的访问令牌",
+                                                              "allowedUsers":  "允许的 WhatsApp 电话号码",
+                                                              "usersPlaceholder":  "输入带国际区号的手机号，例如 86138…",
+                                                              "allowedChannels":  "允许的 WhatsApp 群组",
+                                                              "channelsPlaceholder":  "输入群组或过滤 ID（可选）"
+                                                          },
+                                             "dingtalk":  {
+                                                              "appKey":  "钉钉 AppKey",
+                                                              "appKeyPlaceholder":  "输入钉钉应用 AppKey",
+                                                              "appSecret":  "钉钉 AppSecret",
+                                                              "appSecretPlaceholder":  "输入应用 AppSecret",
+                                                              "robotSecret":  "钉钉群机器人签名密钥（可选）",
+                                                              "robotSecretPlaceholder":  "输入以 SEC 开头的签名密钥（可选）",
+                                                              "allowedUsers":  "允许的钉钉成员 ID",
+                                                              "usersPlaceholder":  "输入 StaffID，多个值用英文逗号分隔",
+                                                              "allowedChats":  "允许的钉钉群聊 ID",
+                                                              "chatsPlaceholder":  "输入 OpenConversationID，多个值用英文逗号分隔"
+                                                          },
+                                             "qq":  {
+                                                        "appId":  "QQ 机器人 AppID",
+                                                        "appIdPlaceholder":  "输入机器人 AppID",
+                                                        "secret":  "QQ 机器人 Secret",
+                                                        "secretPlaceholder":  "输入机器人 Secret",
+                                                        "allowedUsers":  "允许的 QQ 用户 OpenID",
+                                                        "usersPlaceholder":  "输入用户 OpenID，多个值用英文逗号分隔",
+                                                        "allowedGuilds":  "允许的 QQ 频道组 ID",
+                                                        "guildsPlaceholder":  "输入 Guild ID，多个值用英文逗号分隔",
+                                                        "allowedChannels":  "允许的子频道 ID（可选）",
+                                                        "channelsPlaceholder":  "输入子频道 ID，多个值用英文逗号分隔"
+                                                    },
+                                             "wechat":  {
+                                                            "betaDescription":  "微信公众号采用平台回调模式。请在微信公众平台配置与下方一致的 Token 和 AESKey。",
+                                                            "appId":  "微信公众号 AppID",
+                                                            "appIdPlaceholder":  "输入公众号 AppID",
+                                                            "appSecret":  "微信公众号 AppSecret",
+                                                            "appSecretPlaceholder":  "输入公众号 AppSecret",
+                                                            "token":  "微信公众号 Token",
+                                                            "tokenPlaceholder":  "输入自定义 Token",
+                                                            "aesKey":  "微信公众号 EncodingAESKey（可选）",
+                                                            "aesKeyPlaceholder":  "输入安全模式生成的 43 位密钥",
+                                                            "allowedUsers":  "允许的公众号 OpenID",
+                                                            "usersPlaceholder":  "输入关注者 OpenID，多个值用英文逗号分隔",
+                                                            "allowedChats":  "允许的会话群",
+                                                            "chatsPlaceholder":  "输入会话过滤器，多个值用英文逗号分隔"
+                                                        },
+                                             "wecom":  {
+                                                           "betaDescription":  "企业微信采用平台回调模式。请在企业微信自建应用后台配置与下方一致的 Token 和 AESKey。",
+                                                           "appId":  "企业微信 CorpID / AppID",
+                                                           "appIdPlaceholder":  "输入企业 CorpID",
+                                                           "appSecret":  "企业微信 AppSecret",
+                                                           "appSecretPlaceholder":  "输入自建应用 Secret",
+                                                           "agentId":  "企业微信 AgentID",
+                                                           "agentIdPlaceholder":  "例如 1000002",
+                                                           "token":  "企业微信 Token",
+                                                           "tokenPlaceholder":  "输入企业微信后台配置的 Token",
+                                                           "aesKey":  "企业微信 EncodingAESKey",
+                                                           "aesKeyPlaceholder":  "输入自建应用生成的 EncodingAESKey",
+                                                           "allowedUsers":  "允许的企业微信用户账号",
+                                                           "usersPlaceholder":  "输入成员账号，多个值用英文逗号分隔",
+                                                           "allowedChats":  "允许的企业微信群聊 ID",
+                                                           "chatsPlaceholder":  "例如 chat_…，多个值用英文逗号分隔"
+                                                       }
+                                         },
+                       "review":  {
+                                      "blueprintFallback":  "行业蓝图",
+                                      "workflowFallback":  "智能工作流",
+                                      "channelNone":  "本地闭环（未连接外部渠道）",
+                                      "channelConnected":  "渠道连接测试通过",
+                                      "channelUntested":  "已跳过测试或尚未验证",
+                                      "templateReference":  "当前参考的行业模板：",
+                                      "templateName":  "{{name}} 模板",
+                                      "validationBlocked":  "部署安全校验未通过：",
+                                      "allowlistWarningTitle":  "白名单安全提醒",
+                                      "allowlistWarning":  "渠道可以连接，但没有允许访问的用户，机器人可能不会响应消息。",
+                                      "allowlistWarningDetail":  "尚未配置 User ID 或 Chat ID，且未开启 Allow All。建议返回上一步补充白名单。",
+                                      "readyTitle":  "部署配置检查完成",
+                                      "readyDescription":  "启动实例后，系统会创建容器并写入对应的访问路由。",
+                                      "route":  "实例访问路径：",
+                                      "model":  "模型：",
+                                      "port":  "访问端口：",
+                                      "portTraefik":  "由网关自动分配",
+                                      "portAuto":  "自动分配",
+                                      "channel":  "消息渠道：",
+                                      "localOnly":  "仅本地控制台",
+                                      "skills":  "已启用技能：",
+                                      "skillsEnabled":  "已启用 {{count}} 项",
+                                      "noSkills":  "未启用外部技能",
+                                      "noSkillsDescription":  "未启用外部插件，Agent 将使用内置模型能力运行。",
+                                      "matchedTemplate":  "已匹配运行模板：",
+                                      "templateInitialization":  "创建实例时将自动初始化定时触发器、事件通知和初始任务队列。",
+                                      "startupNoticeTitle":  "启动提示：",
+                                      "startupNotice":  "容器初始化通常需要 5–10 秒。启动完成后，实例访问路由会自动生效。",
+                                      "channelGuideReady":  "消息渠道配置指南已就绪",
+                                      "channelGuideDescription":  "当前实例连接了 {{channel}} 渠道，可以打开专项指南完成配置。",
+                                      "viewChannelGuide":  "查看 {{channel}} 配置指南",
+                        "deploymentProgress":  {
+                            "title": "实例正在部署",
+                            "failedTitle": "部署未完成",
+                            "processing": "正在处理部署任务",
+                            "genericFailure": "部署失败，请检查 Docker 后重试。",
+                            "currentStage": "当前阶段：{{stage}}",
+                            "retry": "重新部署",
+                            "steps": {
+                                "queued": "已提交，排队中",
+                                "preparing": "准备资源",
+                                "port_reserved": "端口已预留",
+                                "network_creating": "正在创建网络",
+                                "network_ready": "网络已就绪",
+                                "image_pulling": "正在拉取镜像",
+                                "image_ready": "镜像已就绪",
+                                "container_creating": "正在创建容器",
+                                "container_created": "容器已创建",
+                                "container_starting": "正在启动容器",
+                                "health_checking": "正在进行健康检查",
+                                "ready": "实例已就绪"
+                            },
+                            "errors": {
+                                "PORT_CONFLICT": "所选宿主机端口已被占用，系统将选择其他端口后重试。",
+                                "DOCKER_UNAVAILABLE": "Docker Engine 当前不可用，请启动 Docker 后重新部署。",
+                                "IMAGE_PULL_FAILED": "无法下载 Agent 镜像，请检查镜像名称、网络和镜像仓库访问权限。",
+                                "NETWORK_CREATE_FAILED": "无法创建实例使用的隔离 Docker 网络。",
+                                "CONTAINER_CREATE_FAILED": "无法创建实例容器，请查看部署日志中的具体原因后重试。",
+                                "CONTAINER_START_FAILED": "实例容器已创建，但无法启动。",
+                                "HEALTH_CHECK_FAILED": "实例容器已启动，但未通过就绪检查。",
+                                "DEPLOYMENT_TIMEOUT": "部署超过允许时间，任务已取消。",
+                                "DEPLOYMENT_CANCELLED": "部署任务已取消。",
+                                "DEPLOYMENT_RETRY_EXHAUSTED": "部署任务已达到最大自动重试次数。",
+                                "CONTAINER_MISSING": "数据库中存在实例记录，但对应 Docker 容器不存在。",
+                                "CLEANUP_FAILED": "部分实例资源未能完成清理。",
+                                "QUOTA_EXCEEDED": "当前实例配额已用尽。",
+                                "PATH_CONFLICT": "已有其他实例使用相同访问路径。"
+                            }
+                        },
+                                      "deployedTitle":  "部署任务已提交",
+                                      "deployedDescription":  "实例 {{name}} 正在后台创建并启动。您可以通过下方清单查看交付状态。",
+                                      "checklistTitle":  "{{name}} 实例交付清单",
+                                      "basicAuth":  "Web 控制台访问保护",
+                                      "enabledAccount":  "已启用（账号：{{username}}）",
+                                      "gatewayRoute":  "实例访问路由",
+                                      "routing":  "正在配置路由",
+                                      "channelMode":  "渠道模式",
+                                      "channelStatus":  "渠道连接状态",
+                                      "allowlistTargets":  "白名单目标数量",
+                                      "targetCount":  "{{count}} 个目标",
+                                      "accessUrl":  "实例访问地址：",
+                                      "chatGuideTitle":  "实例部署完成后，如何通过消息渠道对话？",
+                                      "chatGuideDescription":  "请参考 {{channel}} 配置指南完成令牌和白名单设置。",
+                                      "zeroTargetsTitle":  "当前渠道白名单目标数量为 0",
+                                      "zeroTargetsDescription":  "渠道能够连接，但未配置任何允许访问的用户或群组，机器人将保持静默。请进入渠道配置添加白名单，或在明确了解风险后开启 Allow All。",
+                                      "nextGuideTitle":  "{{name}} · 下一步配置指南",
+                                      "blueprintGuideDescription":  "此实例基于行业模板部署，请完成以下关键配置后开始使用。",
+                                      "workflowGuideDescription":  "此实例基于工作流模板部署，请完成以下步骤以保证自动化任务稳定运行。",
+                                      "quickTestTitle":  "快速验证：完成首次实例测试",
+                                      "quickTestDescription":  "部署成功后，可以按照以下步骤完成首次功能验证。",
+                                      "quickStep1Title":  "进入实例详情",
+                                      "quickStep1Description":  "点击下方推荐操作，系统会直接打开对应的实例详情页面。",
+                                      "quickStep2Title":  "打开文件或日志页签",
+                                      "quickStep2Description":  "根据任务需要进入文件管理上传测试资料，或进入实时日志查看运行过程。",
+                                      "quickStep3Title":  "执行测试并查看日志",
+                                      "quickStep3Description":  "上传测试文件或填写测试数据后，在实例控制台执行首次任务并观察实时日志。",
+                                      "unnamedAction":  "未命名操作",
+                                      "completeConfiguration":  "完成配置",
+                                      "completeConfigurationDescription":  "在实例详情中完成相关配置。",
+                                      "recommendedActions":  "推荐下一步操作",
+                                      "recommendedActionsDescription":  "实例已在后台启动，请通过下方操作卡片继续完成必要配置。",
+                                      "recommended":  "推荐",
+                                      "goNow":  "立即前往",
+                                      "finish":  "完成并返回控制台",
+                                      "actions":  {
+                                                      "importCompetitors":  "导入竞品监控",
+                                                      "runPriceScraping":  "运行价格抓取",
+                                                      "uploadProductGuide":  "上传产品说明",
+                                                      "configureWebhookUrl":  "配置 Webhook 地址",
+                                                      "configureFeishuCredentials":  "配置飞书应用凭据",
+                                                      "runChatSummary":  "运行聊天摘要",
+                                                      "configureNiche":  "设置内容定位",
+                                                      "generateTopics":  "批量生成选题",
+                                                      "runBriefing":  "运行行业简报",
+                                                      "scheduleBriefing":  "设置简报时间",
+                                                      "uploadScript":  "上传视频文案",
+                                                      "analyzeScript":  "运行结构化分析",
+                                                      "uploadPdf":  "上传研究报告 PDF",
+                                                      "runPdfSummary":  "运行 PDF 总结",
+                                                      "configureWebhook":  "配置 Webhook",
+                                                      "testPayload":  "导入测试数据",
+                                                      "instanceSettings":  "配置实例参数",
+                                                      "uploadReferences":  "上传参考文件",
+                                                      "testRun":  "执行测试运行",
+                                                      "connectChannel":  "连接通知渠道",
+                                                      "scheduleJob":  "设置定时任务"
+                                                  },
+                                      "genericGuideSteps":  [
+                                                                "打开实例详情，确认实例状态与访问地址。",
+                                                                "检查模型凭据并完成模型连接测试。",
+                                                                "如已配置消息渠道，请确认渠道权限和白名单。",
+                                                                "发送第一条测试消息，并通过实时日志确认任务正常完成。"
+                                                            ],
+                                      "defaultActions":  {
+                                                             "instance":  {
+                                                                              "label":  "打开实例管理",
+                                                                              "description":  "查看实例状态、访问地址和运行配置。"
+                                                                          },
+                                                             "credentials":  {
+                                                                                 "label":  "检查模型凭据",
+                                                                                 "description":  "确认模型 API 凭据已配置并通过连接测试。"
+                                                                             },
+                                                             "guide":  {
+                                                                           "label":  "查看使用指南",
+                                                                           "description":  "阅读实例、渠道和任务运行的使用说明。"
+                                                                       }
+                                                         },
+                                      "actionDescriptions":  {
+                                                                 "input_urls":  "导入或更新需要监控的竞品 URL。",
+                                                                 "run_initial_scraping":  "手动运行首次价格抓取并查看日志。",
+                                                                 "update_knowledge_base":  "上传产品说明或知识库文件。",
+                                                                 "configure_webhook_url":  "查看并配置实例的 Webhook 回调地址。",
+                                                                 "configure_credentials":  "填写并验证飞书 App ID 与 App Secret。",
+                                                                 "run_test_job":  "手动运行首次聊天摘要任务。",
+                                                                 "configure_niche":  "设置内容定位、受众和主题偏好。",
+                                                                 "generate_topics":  "运行首次批量选题生成任务。",
+                                                                 "trigger_manual_run":  "手动运行首次行业简报。",
+                                                                 "set_cron_schedule":  "设置简报的定时运行时间。",
+                                                                 "upload_script":  "上传用于分析的视频文案或字幕文件。",
+                                                                 "analyze_now":  "运行首次结构化脚本分析。",
+                                                                 "upload_pdf":  "上传需要总结的 PDF 文档。",
+                                                                 "run_pdf_summary":  "运行 PDF 总结并开始文档问答。",
+                                                                 "configure_webhook":  "获取并配置订单回调 Webhook。",
+                                                                 "test_payload":  "导入测试数据，验证预警与处理流程。",
+                                                                 "open_instance_settings":  "打开实例设置并调整运行参数。",
+                                                                 "upload_reference_files":  "上传供 Agent 使用的参考文件。",
+                                                                 "test_run":  "执行首次测试任务并查看实时日志。",
+                                                                 "connect_channel":  "打开渠道配置并完成通知渠道连接。",
+                                                                 "schedule_first_job":  "设置首次自动任务和周期运行计划。"
+                                                             }
+                                  },
+                       "channelSelector":  {
+                                               "title":  "选择消息渠道",
+                                               "experimental":  "待验证",
+                                               "restricted":  "受限",
+                                               "channels":  {
+                                                                "web":  {
+                                                                            "name":  "Web 控制台",
+                                                                            "description":  "不连接外部消息平台，仅通过本地 Web 控制台对话。"
+                                                                        },
+                                                                "telegram":  {
+                                                                                 "name":  "Telegram Bot",
+                                                                                 "description":  "通过 Telegram Bot API 与个人、群组或频道对话。"
+                                                                             },
+                                                                "feishu":  {
+                                                                               "name":  "飞书 / Lark",
+                                                                               "description":  "在飞书或 Lark 单聊、群聊中使用 Agent。"
+                                                                           },
+                                                                "weixin":  {
+                                                                              "name":  "个人微信",
+                                                                              "description":  "扫码连接腾讯 iLink Bot，在个人微信中与 Agent 对话。"
+                                                                          },
+                                                                "slack":  {
+                                                                              "name":  "Slack",
+                                                                              "description":  "在 Slack 频道和会话中接收指令与回复。"
+                                                                          },
+                                                                "discord":  {
+                                                                                "name":  "Discord Bot",
+                                                                                "description":  "在 Discord 服务器和频道中进行消息交互。"
+                                                                            },
+                                                                "webhook":  {
+                                                                                "name":  "自定义 Webhook",
+                                                                                "description":  "将 Agent 事件和结果推送到指定 HTTP 接口。"
+                                                                            },
+                                                                "whatsapp":  {
+                                                                                 "name":  "WhatsApp",
+                                                                                 "description":  "通过 Meta Graph API 接入 WhatsApp 对话。"
+                                                                             },
+                                                                "dingtalk":  {
+                                                                                 "name":  "钉钉 / DingTalk",
+                                                                                 "description":  "在钉钉群聊和单聊中使用 Agent。"
+                                                                             },
+                                                                "qq_bot":  {
+                                                                               "name":  "QQ Bot",
+                                                                               "description":  "通过 QQ 开放平台接入私聊、群聊或频道。"
+                                                                           },
+                                                                "wechat_mp":  {
+                                                                                  "name":  "微信公众号",
+                                                                                  "description":  "通过微信公众号回调接收消息并回复。"
+                                                                              },
+                                                                "wecom":  {
+                                                                              "name":  "企业微信 / WeCom",
+                                                                              "description":  "通过企业微信自建应用接入消息和群聊。"
+                                                                          },
+                                                                "api":  {
+                                                                            "name":  "API 接口",
+                                                                            "description":  "通过标准 API 端点供第三方应用调用实例。"
+                                                                        }
+                                                            }
+                                           },
+                       "channelGuide":  {
+                                            "unavailable":  "该渠道暂无专项指南，请参考官方文档配置。",
+                                            "difficulty":  "难度：{{level}}",
+                                            "levels":  {
+                                                           "easy":  "入门",
+                                                           "medium":  "进阶",
+                                                           "hard":  "专家"
+                                                       },
+                                            "estimatedTime":  "预计用时：{{time}}",
+                                            "requirements":  "准备清单",
+                                            "steps":  "配置步骤",
+                                            "fillFields":  "将生成的字段填写到左侧表单：",
+                                            "collapse":  "收起步骤",
+                                            "expand":  "展开其余 {{count}} 个步骤",
+                                            "officialHome":  "官方网站",
+                                            "tip":  "提示"
+                                        },
+                       "instanceInfo":  {
+                                            "reupload":  "重新上传",
+                                            "runtimeType":  "Agent 运行时类型",
+                                            "hermesBadge":  "标准 / 全功能",
+                                            "hermesDescription":  "经典全功能运行时，包含 9119 控制接口、Python 执行器和多种消息渠道。",
+                                            "piBadge":  "实验预览 / 即将推出",
+                                            "piDescription":  "Pi Agent 当前仍是实验预览，暂时无法部署；请改用 Hermes Agent。"
+                                        },
+                       "preflight":  {
+                                         "localRuntime":  "本地运行环境",
+                                         "localRuntimeReady":  "本地运行环境已就绪"
+                                     },
+                       "templateStatus":  {
+                                              "blueprint":  "当前基于 {{name}} 行业方案部署",
+                                              "workflow":  "当前基于 {{name}} 工作流部署"
+                                          }
+                   }
+}

@@ -1,0 +1,23 @@
+:root {
+  /* Primitive palette: semantic theme files are the only place that should consume it. */
+  --mybay-slate-50: #f8fafc;
+  --mybay-slate-100: #f1f5f9;
+  --mybay-slate-200: #e2e8f0;
+  --mybay-slate-300: #cbd5e1;
+  --mybay-slate-400: #94a3b8;
+  --mybay-slate-500: #64748b;
+  --mybay-slate-600: #475569;
+  --mybay-slate-700: #334155;
+  --mybay-slate-800: #1e293b;
+  --mybay-slate-900: #0f172a;
+  --mybay-slate-950: #020617;
+
+  --mybay-indigo-300: #a5b4fc;
+  --mybay-indigo-400: #818cf8;
+  --mybay-indigo-500: #6366f1;
+  --mybay-indigo-600: #4f46e5;
+  --mybay-indigo-700: #4338ca;
+
+  --mybay-radius-control: 0.5rem;
+  --mybay-radius-card: 1rem;
+}

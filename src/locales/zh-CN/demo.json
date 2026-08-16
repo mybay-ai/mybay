@@ -1,0 +1,82 @@
+{
+  "hub": {
+    "title": "探索生成式 AI 的业务价值",
+    "subtitle": "无需配置 API Key，立即在公共演示环境中体验 AI Agent 如何解决实际业务场景问题。请注意，本站提供公共体验环境，请勿在此输入真实的敏感或生产数据。体验结束后，您可以随时在平台内部署专属实例。",
+    "tag": "AI Agent 体验中心",
+    "feature1": "即开即用",
+    "feature2": "开箱即用场景",
+    "feature3": "真实大模型驱动",
+    "targetAudienceLabel": "适合人群",
+    "inputTypeLabel": "输入类型"
+  },
+  "runner": {
+    "backToHub": "返回 Demo Hub",
+    "randomExample": "随机示例",
+    "suggestionsLength": "建议长度：不超过 {{max}} 字",
+    "exceededLength": "（当前已超出，可能被截断或报错）",
+    "runButton": "执行生成",
+    "running": "运行中...",
+    "clearButton": "清空输入",
+    "regenerateButton": "重新生成",
+    "resultTitle": "输出结果",
+    "copyButton": "复制内容",
+    "waitingResult": "在此区域查看运行结果",
+    "structuredReport": "AI 结构化分析报告",
+    "coreSummary": "核心摘要",
+    "keyTakeaways": "关键结论与分析",
+    "actionRecommendations": "后续行动与建议",
+    "rawText": "原始完整内容",
+    "ctaTitle": "觉得不错？部署您的专属 Agent",
+    "ctaDesc": "绑定自有 API Key，支持对外服务与自定义工具编排。",
+    "ctaButton": "前往模板中心",
+    "disclaimer": "本页面为 MVP Demo，由 MyBay 提供公共模型体验额度。请勿输入真实的敏感或生产数据。",
+    "errors": {
+      "fetchTokenFail": "获取 Demo 额度失败",
+      "networkError": "网络错误，无法获取 Demo 额度",
+      "noToken": "未获取到有效的 Demo 额度，请刷新页面重试",
+      "fillRequired": "请填写完整：{{field}}",
+      "requestFail": "请求失败，可能触发了防刷限制或模型报错",
+      "unknownError": "运行中发生未知错误",
+      "notFound": "找不到该 Demo，请返回重试。",
+      "noStreamBrowser": "当前浏览器不支持流式响应 (ReadableStream)"
+    }
+  },
+  "demos": {
+    "pdfSummary": {
+      "title": "长文本与文档总结",
+      "valueProp": "高效提炼海量信息",
+      "description": "将数百页的报告或长文瞬间转化为结构化摘要，自动提取核心结论与后续行动建议。",
+      "targetAudience": "研究员、分析师、产品经理",
+      "inputType": "纯文本 / 报告草稿",
+      "ctaText": "体验文档总结",
+      "fieldContentLabel": "文档内容",
+      "fieldContentPlaceholder": "在此粘贴长文本或文档内容..."
+    },
+    "newsSummary": {
+      "title": "行业新闻结构化摘要",
+      "valueProp": "自动化生成行业早报",
+      "description": "输入碎片化的多条行业新闻，系统自动为您整理成清晰、易读的每日简报格式。",
+      "targetAudience": "市场营销、内容运营、PR",
+      "inputType": "主题与新闻素材片段",
+      "ctaText": "体验简报生成",
+      "fieldTopicLabel": "关注主题",
+      "fieldTopicPlaceholder": "例如：人工智能、新能源汽车",
+      "fieldNewsLabel": "新闻素材",
+      "fieldNewsPlaceholder": "粘贴几条相关新闻或内容片段..."
+    },
+    "customerReply": {
+      "title": "客户反馈智能回复",
+      "valueProp": "专业高效的客户沟通",
+      "description": "根据客户情绪与反馈内容，自动起草符合期望语气的专业回复邮件，安抚情绪并提供方案。",
+      "targetAudience": "客服团队、销售、客户成功",
+      "inputType": "结构化表单字段",
+      "ctaText": "体验智能回复",
+      "fieldNameLabel": "客户姓名",
+      "fieldNamePlaceholder": "例如：张先生",
+      "fieldFeedbackLabel": "客户反馈内容",
+      "fieldFeedbackPlaceholder": "例如：你们的产品很好用，但是价格偏高，希望能有更多优惠。",
+      "fieldToneLabel": "期望语气",
+      "fieldTonePlaceholder": "例如：专业、热情、委婉"
+    }
+  }
+}

@@ -1,0 +1,162 @@
+{
+  "workbench_title": "Agent 智能体工作台",
+  "workbench_subtitle": "快速部署并运行您的专属 AI Agent，让日常任务持续自动执行",
+  "quick_start": "快速开始",
+  "start_from_template": "从模板创建 Agent",
+  "start_from_template_desc": "选择预设工作流，快速创建适合不同业务场景的 Agent",
+  "custom_deploy": "新建部署",
+  "custom_deploy_desc": "从空白配置开始，自定义模型、工具、消息通道与运行设置",
+  "recommend_templates": "推荐工作流与解决方案",
+  "recommend_templates_desc": "选择最适合您业务场景的预置模板一键部署",
+  "view_all_templates": "查看全部模板",
+  "experience_demo": "体验 Demo 中心",
+  "experience_demo_desc": "在沙盒环境中即时体验已配置的 AI 助手与第三方通道交互",
+  "recent_tasks": "最近任务与执行",
+  "recent_outputs": "最近生成 (Outputs)",
+  "instance_overview": "实例运行概览",
+  "channel_web": "Web 独立控制台",
+  "channel_api_desc": "API 模式用于程序化调用实例；需要使用实例 URL 的 API 入口和 API Key；如果 Web UI 被关闭，只有明确白名单路径可访问。",
+  "channel_status": "渠道接入状态",
+  "system_status_summary": "系统状态与资源摘要",
+  "action_deploy": "一键部署",
+  "action_new_deploy": "新建自定义部署",
+  "action_go_demo": "体验 Demo",
+  "no_tasks": "暂无执行任务",
+  "no_tasks_desc": "当 Agent 接收消息、执行任务或生成结果后，相关动态会即时同步显示在这里。",
+  "no_outputs": "暂无产出",
+  "recent_outputs_desc": "Agent 执行过程中生成的文件、报告及输出结果",
+  "templates": {
+    "customer_support": {
+      "name": "7×24h 智能客服助手",
+      "desc": "对接企微、Web 网页等多渠道，智能回复并生成多格式服务报表"
+    },
+    "content_writer": {
+      "name": "跨语言内容重塑工作流",
+      "desc": "利用高阶 LLM 对海量行业素材进行多语种重组、润色与一键分发"
+    },
+    "data_scraping": {
+      "name": "自动化行业简报抓取",
+      "desc": "定时轮询、页面特征过滤，输出规范 Markdown 结构化研究报告"
+    }
+  },
+  "attention_title": "待您处理",
+  "attention": {
+    "error": {
+      "title": "实例运行异常",
+      "desc": "发现 {{count}} 个部署或运行中发生错误的实例。",
+      "btn": "查看并修复"
+    },
+    "model": {
+      "title": "需要配置模型",
+      "desc": "当前尚未配置可用模型凭据，由于无法调用 LLM，Agent 将无法正常工作。",
+      "btn": "配置模型"
+    },
+    "stopped": {
+      "title": "实例已停止",
+      "desc": "您的所有 Agent 实例目前均处于停止运行或已归档状态。",
+      "btn": "启动实例"
+    }
+  },
+  "stat_running_agents": "运行中的 Agent",
+  "stat_running_agents_desc": "当前正在执行任务的实例",
+  "stat_attention_needed": "需要处理",
+  "stat_attention_needed_desc": "异常、待授权或待配置事项",
+  "stat_attention_items_count": "{{count}} 项",
+  "stat_recent_tasks": "最近 24 小时任务",
+  "stat_recent_tasks_desc": "最近 24 小时任务执行情况",
+  "stat_recent_tasks_placeholder": "待接入真实统计",
+  "stat_quota_usage": "实例额度占用",
+  "stat_quota_usage_desc": "当前本地配置 Agent 部署上限",
+  "stat_no_data": "暂无",
+  "channel_ai_service": "AI 大模型服务",
+  "channel_unconfigured": "未配置",
+  "channel_message_gateway": "飞书 / 消息通道",
+  "channel_inactive": "未激活",
+  "channel_public_gateway": "公网访问网关",
+  "channel_running_well": "运行良好",
+  "channel_not_generated": "未生成",
+  "quota_available": "实例可用配额",
+  "quota_cpu_spec": "CPU 规格",
+  "quota_memory": "内存配额",
+  "task_center_fallback": "任务中心",
+  "instance_center_fallback": "实例中心",
+  "no_instances_fallback": "暂无运行中的 Agent",
+  "browse_files": "浏览文件",
+  "model": "模型",
+  "channel": "渠道",
+    "chat": {
+      "messageSuccess": "对话工作台：消息发送成功",
+      "messageFailed": "对话工作台：消息发送失败",
+      "multiturnSuccess": "对话工作台：多轮对话已完成",
+      "multiturnFailed": "对话工作台：多轮对话执行失败"
+    },
+    "assist": {
+      "completed": "Assist 执行完成：{{skill}}",
+      "failed": "Assist 执行失败：{{skill}}",
+      "skills": {
+        "modelConfigDiagnosis": "模型配置诊断",
+        "explainLastError": "解释最近错误",
+        "instanceHealthSummary": "实例健康摘要",
+        "summarizeConversation": "总结会话"
+      }
+    },
+  "not_set": "未设定",
+  "local_terminal": "本地终端",
+  "cpu_cores": "{{count}} 核",
+  "admin": {
+    "planAdmin": "管理员",
+    "planFree": "免费版",
+    "title": "基础设施与平台拓扑（管理员视图）",
+    "live": "实时刷新",
+    "unavailable": "资源状态暂不可用",
+    "loading": "正在加载平台负载指标...",
+    "remainingCapacity": "可创建容量",
+    "activeContainers": "活跃容器",
+    "failedNodes": "故障节点",
+    "pressureLevel": "资源压力等级",
+    "levelCritical": "严重",
+    "levelWarning": "警告",
+    "levelHealthy": "正常",
+    "cpuLoad": "CPU 实时负荷",
+    "memoryUsage": "物理内存占用",
+    "diskUsage": "数据持久化磁盘",
+    "systemNotice": "{{type}} 系统通知"
+  },
+  "audit": {
+    "unknown_instance": "未知实例",
+    "instance_id": "实例 ID：{{id}}",
+    "actions": {
+      "create": "创建实例",
+      "start": "启动实例",
+      "stop": "停止实例",
+      "restart": "重启实例",
+      "rebuild_proxy": "刷新网关",
+      "redeploy": "重新部署",
+      "restore": "恢复实例",
+      "archive": "归档实例",
+      "delete": "删除实例",
+      "task_complete": "任务已完成"
+    },
+    "details": {
+      "manual_restart_container": "已手动重启 Agent 实例",
+      "restart_action": "重启操作已下发执行",
+      "manual_stop_container": "已手动停止实例",
+      "stop_action": "停止操作已下发执行",
+      "manual_start_container": "已手动启动 Agent",
+      "start_action": "启动操作已下发执行",
+      "created_instance": "已创建新 Agent 实例",
+      "created_new_instance": "已创建新实例",
+      "started_instance": "已启动实例",
+      "stopped_instance": "已停止实例",
+      "restarted_instance": "已重启实例",
+      "archived_instance": "已归档实例（保留配置）",
+      "deleted_instance_permanently": "已永久删除实例",
+      "upgrade_started": "已开始升级 Agent",
+      "upgrade_completed": "Agent 升级完成",
+      "upgrade_failed": "Agent 升级失败",
+      "rebuilt_proxy_mapping": "已刷新网关",
+      "previewed_backup_package": "已校验实例备份包：{{instance}}",
+      "none": "未设定"
+    }
+  }
+}

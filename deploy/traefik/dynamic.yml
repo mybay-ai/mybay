@@ -1,0 +1,6 @@
+http:
+  services:
+    mybay-console-service:
+      loadBalancer:
+        servers:
+          - url: "http://mybay-local-control-panel:3000"

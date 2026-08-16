@@ -1,0 +1,30 @@
+services:
+  mybay-local:
+    build:
+      context: .
+      args:
+        VITE_PUBLIC_APP_URL: ${VITE_PUBLIC_APP_URL:-http://localhost:3000}
+        VITE_MYBAY_PLATFORM_ORIGIN: ${VITE_MYBAY_PLATFORM_ORIGIN:-http://localhost:3000}
+    container_name: mybay-local-control-panel
+    env_file:
+      - .env
+    dns:
+      - "${MYBAY_CONTROL_PANEL_DNS:-1.1.1.1}"
+    ports:
+      - "${CONTROL_PANEL_BIND_IP:-127.0.0.1}:${PORT:-3000}:${PORT:-3000}"
+    environment:
+      NODE_ENV: production
+      PORT: ${PORT:-3000}
+      LOCAL_ADMIN_USERNAME: ${LOCAL_ADMIN_USERNAME:-admin}
+      LOCAL_ADMIN_PASSWORD: ${LOCAL_ADMIN_PASSWORD:?LOCAL_ADMIN_PASSWORD is required}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
+      MYBAY_INTERNAL_ROUTING_SECRET: ${MYBAY_INTERNAL_ROUTING_SECRET:?MYBAY_INTERNAL_ROUTING_SECRET is required}
+      MAX_INSTANCE_COUNT: ${MAX_INSTANCE_COUNT:-10}
+      DEFAULT_INSTANCE_MEMORY: ${DEFAULT_INSTANCE_MEMORY:-1024m}
+      DEFAULT_INSTANCE_CPUS: ${DEFAULT_INSTANCE_CPUS:-1}
+      DEFAULT_INSTANCE_DISK_MB: ${DEFAULT_INSTANCE_DISK_MB:-4096}
+    volumes:
+      - ./data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped

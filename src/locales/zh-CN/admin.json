@@ -1,0 +1,70 @@
+{
+  "title": "用户管理",
+  "subtitle": "管理本地系统配置与账户",
+  "template_data_loading": "正在加载模板数据...",
+  "search_placeholder": "搜索用户名或 ID...",
+  "add_user": "新增用户",
+  "edit_user": "编辑用户",
+  "delete_user": "物理清理删除用户",
+  "delete_success": "删除已完成；关联的本地记录、文件、网络路由和受管容器已按清理策略处理。",
+  "delete_error_reason": "请选择删除原因",
+  "delete_confirm_delete": "请输入“DELETE”以确认永久删除",
+  "reset_password": "重置密码",
+  "reset_email_confirm": "确定重置 {username} 的密码吗？",
+  "reset_email_sent": "密码已成功重置",
+  "role_all": "所有角色",
+  "role_admin": "管理员 (admin)",
+  "role_user": "普通用户 (user)",
+  "status_all": "所有状态",
+  "status_active": "正常",
+  "status_disabled": "已禁用",
+  "table": {
+    "user": "用户",
+    "role": "角色",
+    "status": "状态",
+    "instances": "实例使用量",
+    "created_at": "注册时间",
+    "actions": "操作",
+    "credits": "用量余额"
+  },
+  "no_matched_users": "没找到匹配的用户",
+  "loading_error": "用户列表加载失败，请重试",
+  "subscription": {
+    "label": "本地配置",
+    "planHelp": "本地配置变更会同步更新实例数量、通信渠道、备份导出权限和用户磁盘策略。",
+    "plans": {
+      "free": "社区基础版 - 1 个实例 / 512 MB",
+      "personal": "个人标准版 - 2 个实例 / 2 GB",
+      "pro": "高配扩展版 - 5 个实例 / 10 GB"
+    }
+  },
+  "credits": {
+    "balance": "用量余额",
+    "adjust": "调整用量",
+    "adjustTitle": "调整用户用量",
+    "amount": "调整数量",
+    "amountHelp": "输入正数表示增加配额/用量，输入负数表示扣减。",
+    "reason": "调整原因",
+    "reasonPlaceholder": "例如：管理员手动调整、测试配额发放、异常修正...",
+    "confirm": "确认调整",
+    "cancel": "取消",
+    "updated": "用量已调整",
+    "updateFailed": "用量调整失败",
+    "loadFailed": "用量余额加载失败",
+    "noAccount": "未开户",
+    "positive": "增加配额",
+    "negative": "扣减",
+    "recentTransactions": "最近明细",
+    "loadingTransactions": "加载中...",
+    "noTransactions": "暂无用量明细",
+    "transactionKinds": {
+      "admin_grant": "管理员配额调整",
+      "admin_deduct": "管理员扣减",
+      "model_usage": "模型消耗",
+      "refund": "退款",
+      "adjustment": "调整",
+      "reservation": "预留",
+      "reservation_release": "释放预留"
+    }
+  }
+}

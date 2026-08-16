@@ -1,0 +1,15 @@
+{
+  "running": "运行中",
+  "channelReady": "通道已就绪",
+  "archived": "已归档",
+  "storageExceeded": "存储超额 (已暂停)",
+  "deploying": "部署中...",
+  "restarting": "重启中...",
+  "stopped": "已暂停",
+  "failed": "部署失败",
+  "starting": "启动中...",
+  "gatewayStarting": "构建中...",
+  "unhealthy": "运行异常",
+  "dashboardReady": "控制台已就绪",
+  "partialRunning": "部分启动"
+}

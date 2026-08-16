@@ -1,0 +1,192 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, "fix/*" ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  secret-scan:
+    name: Secret Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout full repository history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Scan repository history with Gitleaks
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/repo:ro" ghcr.io/gitleaks/gitleaks:v8.28.0 git /repo --redact --no-banner
+
+      - name: Scan working tree with Gitleaks
+        run: |
+          mkdir "$RUNNER_TEMP/gitleaks-working-tree"
+          git archive --format=tar HEAD | tar -xf - -C "$RUNNER_TEMP/gitleaks-working-tree"
+          docker run --rm --user "$(id -u):$(id -g)" -v "$RUNNER_TEMP/gitleaks-working-tree:/repo:ro" ghcr.io/gitleaks/gitleaks:v8.28.0 dir /repo --redact --no-banner
+
+  quick-start-platform-checks:
+    name: Quick Start (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate macOS/Linux launcher
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          bash -n quick-start.sh scripts/quick-start-env.sh scripts/quick-start-no-node.test.sh
+          bash scripts/quick-start-no-node.test.sh
+
+      - name: Validate Windows PowerShell launcher
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          Set-ExecutionPolicy -Scope Process Bypass
+          .\scripts\quick-start-powershell.test.ps1
+          .\scripts\quick-start-mode-switch-powershell.test.ps1
+
+  test-and-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check Release Version Consistency
+        run: npm run check:version
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Strict Typecheck Lifecycle Core
+        run: npm run typecheck:strict-core
+
+      - name: Run Unit Tests
+        run: npm test
+
+      - name: Run Schema Tests
+        run: npm run test:schema
+
+      - name: Check Mojibake
+        run: npm run check:mojibake
+
+      - name: Check Local Edition Copy Boundary
+        run: npm run check:local-copy
+
+      - name: Check Recursive i18n Key Parity
+        run: npm run check:i18n
+
+      - name: Check New UI Copy Hardcodes
+        run: npm run check:i18n-hardcode
+
+      - name: Check New i18n Fallbacks
+        run: npm run check:i18n-fallbacks
+
+      - name: Check New API Error Contract Violations
+        run: npm run check:api-error-contract
+
+      - name: Security Smoke Test
+        run: npx tsx scripts/security-smoke-test.js
+
+      - name: Build Application Bundle
+        run: npm run build
+
+      - name: Validate Bash Script Syntax
+        run: bash -n quick-start.sh scripts/quick-start-env.sh scripts/quick-start-no-node.test.sh
+
+      - name: Verify Quick Start Has No Host Node Dependency
+        run: bash scripts/quick-start-no-node.test.sh
+
+      - name: Verify PowerShell Quick Start Is Included
+        run: |
+          test -f quick-start.ps1
+          test -f scripts/quick-start-env.ps1
+          test -f scripts/quick-start-powershell.test.ps1
+          test -f scripts/quick-start-mode-switch-powershell.test.ps1
+
+      - name: Build Docker Image
+        run: docker build --pull --build-arg VITE_PUBLIC_APP_URL=https://rc.example.test --tag mybay-local:test .
+
+      - name: Build Lifecycle Fixture Runtime
+        run: docker build --tag mybay-local-runtime-fixture:e2e test/fixtures/runtime
+
+      - name: Real Docker Lifecycle and Port Conflict E2E
+        env:
+          MYBAY_DOCKER_E2E: "true"
+        run: npm run test:docker-e2e
+
+      - name: Verify Docker Runtime Dependencies and Vite Build Args
+        run: |
+          docker run --rm mybay-local:test curl --version
+          docker run --rm mybay-local:test sh -c "grep -R -F https://rc.example.test /app/dist/assets >/dev/null"
+
+      - name: Create and Verify Clean Release ZIP
+        run: |
+          npm run release:create -- release/mybay-local-ci.zip
+          npm run release:check -- release/mybay-local-ci.zip
+          mkdir "$RUNNER_TEMP/mybay-release"
+          unzip -q release/mybay-local-ci.zip -d "$RUNNER_TEMP/mybay-release"
+          cd "$RUNNER_TEMP/mybay-release"
+          npm ci
+          npm run check:version
+          npm run typecheck
+          npm run build
+          docker build --tag mybay-local:release-smoke .
+
+      - name: Prepare Compose Environment
+        run: |
+          cp .env.example .env
+          cat >> .env <<'EOF'
+          # Synthetic CI fixtures only; none are production credentials.
+          NODE_ENV=production
+          LOCAL_ADMIN_PASSWORD=test-password-123456
+          JWT_SECRET=test-jwt-secret-with-sufficient-length-1234567890
+          ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+          MYBAY_INTERNAL_ROUTING_SECRET=abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789
+          EOF
+
+      - name: Validate Desktop, LAN, and Server Compose Configurations
+        run: |
+          DEPLOYMENT_MODE=desktop CONTROL_PANEL_BIND_IP=127.0.0.1 docker compose config --quiet
+          DEPLOYMENT_MODE=lan CONTROL_PANEL_BIND_IP=127.0.0.1 DEPLOYMENT_LAN_BIND_IP=127.0.0.1 docker compose config --quiet
+          DEPLOYMENT_MODE=server CONTROL_PANEL_DOMAIN=console.example.test MYBAY_INSTANCE_ROOT_DOMAIN=agents.example.test LETSENCRYPT_EMAIL=ci@example.test docker compose -f docker-compose.yml -f docker-compose.server.yml config --quiet
+
+      - name: Docker Compose Smoke Test
+        run: |
+          EXPECTED_VERSION="$(node -p "JSON.parse(require('fs').readFileSync('package.json', 'utf8')).version")"
+          docker compose up -d --build
+          for i in $(seq 1 30); do
+            HEALTH_RESPONSE="$(curl -fsS http://127.0.0.1:3000/api/health || true)"
+            if printf '%s' "$HEALTH_RESPONSE" | grep -Fq "\"version\":\"$EXPECTED_VERSION\""; then
+              echo "Health check passed!"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Health check timed out!"
+          docker compose logs
+          exit 1
+
+      - name: Clean up Docker Compose
+        if: always()
+        run: docker compose down -v

@@ -1,0 +1,62 @@
+@theme inline {
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-display: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  /* Stable brand palette for artwork and explicit brand accents. */
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #e0e7ff;
+  --color-brand-200: #c7d2fe;
+  --color-brand-300: #a5b4fc;
+  --color-brand-400: #818cf8;
+  --color-brand-500: #6366f1;
+  --color-brand-600: #4f46e5;
+  --color-brand-700: #4338ca;
+  --color-brand-800: #3730a3;
+  --color-brand-900: #312e81;
+  --color-brand-950: #1e1b4b;
+
+  /* Theme-aware semantic utilities used by application components. */
+  --color-app-canvas: var(--theme-canvas);
+  --color-sidebar: var(--theme-sidebar);
+  --color-header: var(--theme-header);
+  --color-popover: var(--theme-popover);
+  --color-nav-active: var(--theme-nav-active);
+  --color-nav-hover: var(--theme-nav-hover);
+  --color-avatar: var(--theme-avatar);
+  --color-surface: var(--theme-surface);
+  --color-surface-raised: var(--theme-surface-raised);
+  --color-surface-muted: var(--theme-surface-muted);
+  --color-control: var(--theme-control);
+  --color-control-hover: var(--theme-control-hover);
+  --color-content: var(--theme-content);
+  --color-content-secondary: var(--theme-content-secondary);
+  --color-content-muted: var(--theme-content-muted);
+  --color-content-inverse: var(--theme-content-inverse);
+  --color-outline: var(--theme-outline);
+  --color-outline-strong: var(--theme-outline-strong);
+  --color-action: var(--theme-brand);
+  --color-action-hover: var(--theme-brand-hover);
+  --color-action-contrast: var(--theme-brand-contrast);
+  --color-focus-ring: var(--theme-focus-ring);
+  --color-danger: var(--theme-danger);
+  --color-danger-hover: var(--theme-danger-hover);
+  --color-danger-contrast: var(--theme-danger-contrast);
+  --color-status-info-bg: var(--theme-status-info-bg);
+  --color-status-info-border: var(--theme-status-info-border);
+  --color-status-info-text: var(--theme-status-info-text);
+  --color-status-success-bg: var(--theme-status-success-bg);
+  --color-status-success-border: var(--theme-status-success-border);
+  --color-status-success-text: var(--theme-status-success-text);
+  --color-status-warning-bg: var(--theme-status-warning-bg);
+  --color-status-warning-border: var(--theme-status-warning-border);
+  --color-status-warning-text: var(--theme-status-warning-text);
+  --color-status-danger-bg: var(--theme-status-danger-bg);
+  --color-status-danger-border: var(--theme-status-danger-border);
+  --color-status-danger-text: var(--theme-status-danger-text);
+
+  --shadow-soft: 0 4px 20px -2px rgba(0, 0, 0, 0.03);
+  --shadow-card: 0 10px 40px -10px rgba(0, 0, 0, 0.06);
+  --shadow-float: 0 20px 40px -10px rgba(0, 0, 0, 0.08);
+  --shadow-glow: 0 0 20px rgba(79, 70, 229, 0.15);
+}

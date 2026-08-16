@@ -1,0 +1,1195 @@
+{
+  "openSourceLanding": {
+    "hero": {
+      "badge": "麦贝开源版 · 本地自托管",
+      "titlePrefix": "在自己的机器上",
+      "titleHighlight": "运行和管理 AI Agent",
+      "description": "一个本地优先、自托管的 Agent Runtime 平台。一键部署和管理多个 Agent，每个 Agent 独立运行，数据、密钥与运行环境全部由你掌控。"
+    },
+    "cloud": {
+      "eyebrow": "推荐首次安装",
+      "title": "Quick Start 一键部署",
+      "description": "自动检查运行环境、生成安全配置并启动服务，无需手动配置复杂参数。",
+      "benefits": {
+        "noInstall": "自动检查运行环境",
+        "noOps": "自动生成安全配置",
+        "managedUpdates": "启动本地 Compose 服务"
+      },
+      "action": "查看 Quick Start"
+    },
+    "selfHost": {
+      "eyebrow": "高级自托管",
+      "title": "手动 Docker 部署",
+      "description": "自行维护 .env、Compose、端口、域名、HTTPS 和升级流程。",
+      "benefits": {
+        "ownData": "数据保存在自己的机器",
+        "ownKeys": "自主管理模型 API Key",
+        "advancedDocker": "支持 Docker 高级配置"
+      },
+      "action": "查看部署方式"
+    },
+    "deployment": {
+      "eyebrow": "开源部署",
+      "title": "选择本地部署方式",
+      "description": "首次部署请选择一键脚本；深度定制时使用手动 Docker 模式。",
+      "quick": {
+        "recommended": "推荐",
+        "title": "一键部署",
+        "audience": "适合新手",
+        "description": "检查 Docker、创建配置、生成安全密钥和管理员密码并启动服务。"
+      },
+      "manual": {
+        "mode": "高级模式",
+        "title": "手动 Docker 部署",
+        "audience": "适合开发者",
+        "description": "手动维护 .env、Compose、域名、HTTPS 和升级流程。"
+      }
+    },
+    "commands": {
+      "copy": "复制命令",
+      "copied": "已复制",
+      "editEnvComment": "编辑 .env 并替换默认占位符",
+      "quickLabel": "Linux / macOS 终端",
+      "manualLabel": "高级 Docker Compose"
+    },
+    "requirements": {
+      "environmentTitle": "运行环境",
+      "environmentValue": "Linux 服务器或已安装 Docker Desktop 的电脑",
+      "resourcesTitle": "推荐配置",
+      "resourcesValue": "2 核 CPU、4 GB 内存、20 GB 可用磁盘",
+      "accessTitle": "访问地址",
+      "accessValue": "部署完成后打开 http://服务器IP:3000"
+    }
+  },
+  "header": {
+    "features": "功能特性",
+    "models": "支持模型",
+    "docs": "使用文档",
+    "contact": "联系我们",
+    "dashboard": "进入控制台",
+    "login": "登录",
+    "createAgent": "免费创建 Agent",
+    "openMenu": "打开菜单",
+    "closeMenu": "关闭菜单"
+  },
+  "footer": {
+    "desc": "麦贝让 AI Agent 智能体从部署到运行更简单，从接入到管理更可靠，让每一个智能体都能稳定在线、持续交付落地。",
+    "product": "产品",
+    "resources": "资源",
+    "support": "支持",
+    "features": "功能特性",
+    "dashboard": "控制台",
+    "models": "支持模型",
+    "demo": "体验中心",
+    "docs": "使用文档",
+    "guide": "接入指南",
+    "faq": "常见问题",
+    "techSupport": "技术支持",
+    "statusPage": "状态页",
+    "contact": "联系我们",
+    "changelog": "版本更新",
+    "privacy": "隐私政策",
+    "security": "安全与漏洞披露",
+    "terms": "服务条款",
+    "copyright": "麦贝开源版 · AGPL-3.0-only",
+    "channels": "渠道"
+  },
+  "contact": {
+    "title": "联系我们",
+    "subtitle": "我们随时为您提供支持。无论是技术咨询、商务合作，还是企业级私有化部署，欢迎随时与我们取得联系。",
+    "cards": {
+      "support": {
+        "title": "技术支持与诊断",
+        "desc": "无论是实例异常、部署失败、502 错误，还是登录、网络与版本升级问题，我们的技术团队都将为您提供专业的故障排查与解决支持。",
+        "response": "一般 1-2 小时内响应 (工作日)",
+        "action": "发送邮件"
+      },
+      "business": {
+        "title": "商务与大客户合作",
+        "desc": "咨询定制本地配置、团队协同版、企业专属客户服务，或商讨长期战略合作。",
+        "response": "24 小时内回复 (不限工作日)",
+        "action": "商谈合作"
+      },
+      "migration": {
+        "title": "部署与迁移专家服务",
+        "desc": "需要本地部署支持、旧版实例迁移、飞书集成定制或专属版本升级？技术团队可为您提供完整支持。",
+        "response": "一般当日提供迁移评估方案",
+        "action": "预约专家"
+      }
+    },
+    "preparation": {
+      "title": "提交咨询前准备清单",
+      "desc": "为了更高效地帮您定位和解决问题，建议您在联系我们时准备好以下信息：",
+      "items": [
+        "受影响的智能体实例 ID (Instance ID)",
+        "完整的报错信息、异常屏幕截图或录屏",
+        "实例的部署日志 (Deploy Logs) 或运行日志 (Runtime Logs)",
+        "触发问题的详细操作步骤",
+        "宿主节点的公网 IP 地址或节点标识名称",
+        "当前使用的 Hermes 引擎版本号"
+      ]
+    },
+    "troubleshooting": {
+      "title": "快速自助排查入口",
+      "desc": "如果您希望立即获得解答，欢迎查阅我们完善的文档与中心服务：",
+      "faq": "常见问题 (FAQ)",
+      "guide": "平台使用指南",
+      "instances": "实例控制中心",
+      "versions": "版本兼容库",
+      "nodes": "部署节点文档"
+    },
+    "security": {
+      "title": "安全隐私重要提醒",
+      "desc": "为了您的数据和资产安全，请**绝对不要**在任何沟通渠道中提供敏感 API Key（如 OpenAI / Anthropic 密钥）、平台密码、鉴权 Token 或完整的 Cookie。发送日志或配置文件前，建议先对机密部分进行脱敏处理。"
+    },
+    "mailSubjects": {
+      "support": "MyBay 技术支持咨询",
+      "business": "MyBay 商务合作咨询",
+      "migration": "MyBay 部署迁移服务咨询"
+    },
+    "role": "角色：",
+    "responseTime": "响应时间",
+    "suggestedInstanceIds": "建议提交的智能体实例 ID",
+    "suggestedInstanceIdsHelp": "复制对应实例 ID 提供给客服，我们可以更快定位故障和日志：",
+    "copyFullId": "复制完整 ID"
+  },
+  "mainLanding": {
+    "heroTitle1": "30 秒上线你的专属 ",
+    "heroTitle2": "",
+    "heroTitle3": "AI Agent",
+    "heroDesc": "无需复杂部署，几步即可创建一个持续在线的专属 AI Agent。连接常用的模型、工具与通讯渠道，随时接收并执行您的日常任务。",
+    "ctaText": "免费创建 Agent",
+    "dashboardText": "进入控制台",
+    "viewFlow": "查看部署流程",
+    "whyNeedHeader": "为什么很多 AI Agent 最后没有真正上线？",
+    "whyNeedDesc": "本地跑通一个 Demo 不难，难的是把它变成一个稳定、可长期运行、能随时接入用户的在线服务。配置环境、保存密钥、接入渠道、排查问题、后续升级，每一步都会消耗大量时间。麦贝把这些复杂工作收成一个可视化控制台。",
+    "traditionalTitle": "自己搭建方式",
+    "traditionalItems": [
+      "自己准备运行环境，手动处理各种配置",
+      "连接模型和工具时，常常要反复排查问题",
+      "接入外部渠道后，后续维护成本越来越高",
+      "出了问题只能自己一点点看日志定位",
+      "升级软件版本时，还要担心影响现有服务"
+    ],
+    "traditionalFooter": "更适合有时间折腾环境的技术团队",
+    "mybayTitle": "使用麦贝开源版管理",
+    "mybayItems": [
+      "选择模型、填写凭证、连接渠道，几步就能完成上线",
+      "本地控制面统一管理运行环境，减少重复配置",
+      "敏感凭证集中管理，降低泄露风险",
+      "运行状态、日志和交互情况都能直接查看",
+      "后续升级和调整更轻松，不用反复手动处理"
+    ],
+    "mybayFooter": "更适合想快速上线并长期运营 AI Agent 的团队",
+    "stepsHeader": "从配置到上线，只需四步",
+    "stepsDesc": "不用反复修改配置，也不用自己处理复杂环境。麦贝把上线流程变成清晰的可视化向导。",
+    "step1Title": "选择模型",
+    "step1Desc": "接入 OpenAI、DeepSeek、OpenRouter、Gemini 或兼容 OpenAI 的模型服务。",
+    "step2Title": "配置凭证",
+    "step2Desc": "安全填写 API Key 和相关凭证，平台统一管理，减少泄露风险。",
+    "step3Title": "连接渠道",
+    "step3Desc": "接入飞书、Telegram、Discord、Webhook 等常用入口，让 Agent 真正开始服务用户。",
+    "step4Title": "上线运行",
+    "step4Desc": "自动完成创建与启动，后续可随时查看状态、日志和版本更新。",
+    "capabilitiesHeader": "让 Agent 真正跑起来的运行平台",
+    "capabilitiesDesc": "麦贝不只是帮你创建一个 Agent，而是提供它上线、运行、管理、监控和升级所需的一整套环境。",
+    "audiencesHeader": "为谁而生",
+    "securityHeader": "为在线 Agent 设计的安全边界",
+    "securityDesc": "从凭证保护、实例隔离到管理员权限控制，麦贝帮你降低 Agent 上线后的运行风险，让团队更放心地长期使用。",
+    "securityBox1Title": "安全隔离机制",
+    "securityBox1Desc": "为每个运行实例分配独立的隔离环境，防止冲突与干扰。",
+    "securityBox2Title": "智能限额设计",
+    "securityBox2Desc": "支持独立资源限制，保障单个服务发生问题时，不牵扯平台其他业务。",
+    "securityBox3Title": "受保护的通讯",
+    "securityBox3Desc": "拦截非法跨域访问或未授权的接口调用，增强安全屏障。",
+    "faqHeader": "常见问题",
+    "faqDesc": "关于麦贝开源版本地控制面的重要答疑",
+    "ctaHeader": "准备好上线你的第一个 AI Agent 了吗？",
+    "ctaButton": "立即免费开始",
+    "capabilitiesList": {
+      "box": {
+        "title": "专属隔离环境",
+        "desc": "每个 Agent 都运行在独立容器环境中，帮助减少计算资源和存储路径之间的相互影响。"
+      },
+      "gateway": {
+        "title": "自动网络接入",
+        "desc": "网关系统检测实例运行状态并管理域名路由，简化网络接入配置。"
+      },
+      "auth": {
+        "title": "访问限权认证",
+        "desc": "一键开启 HTTP 访问认证，拦截外部未授权请求，保障专属调试接口不被刷量。"
+      },
+      "cpu": {
+        "title": "多模型轻松接入",
+        "desc": "支持海量主流 LLM 直接挂载，不需要繁复配置，随时无缝更换或升级底座模型。"
+      },
+      "chat": {
+        "title": "多渠道快速连接",
+        "desc": "配置一次之后，即可与飞书、Telegram、Discord、Webhook 轻松对接交互。"
+      },
+      "terminal": {
+        "title": "实时运行日志",
+        "desc": "在控制台实时查看 Agent 的执行输出、报错详情及网络连接报告。"
+      },
+      "activity": {
+        "title": "智能健康监控",
+        "desc": "配备高频运行探测，在 Agent 遇到异常失联时支持热重启或异常事件上报服务。"
+      },
+      "lifecycle": {
+        "title": "一站式运行管理",
+        "desc": "从实例创建、配置更新到版本升级，为 AI Agent 提供稳定、可靠的一站式本地管理。"
+      }
+    },
+    "audiencesList": {
+      "developer": {
+        "title": "AI 开发者",
+        "desc": "不想再折腾部署服务器的你"
+      },
+      "startup": {
+        "title": "AI 创业团队",
+        "desc": "需要快速上线和稳定交付的你"
+      },
+      "operations": {
+        "title": "自动化运营团队",
+        "desc": "想将 Agent 轻松接到常用工作群聊中的你"
+      },
+      "internal": {
+        "title": "企业内部助手",
+        "desc": "试图建立独立全天候内训客服的你"
+      },
+      "fullstack": {
+        "title": "全栈工程师",
+        "desc": "想把手上的 Demo 快步变成在线业务的你"
+      }
+    },
+    "coreCapabilities": [
+      {
+        "title": "专属隔离环境",
+        "desc": "每个 Agent 都运行在独立容器环境中，帮助减少计算资源和存储路径之间的相互影响。"
+      },
+      {
+        "title": "自动网络接入",
+        "desc": "网关系统检测实例运行状态并管理域名路由，简化网络接入配置。"
+      },
+      {
+        "title": "访问限权认证",
+        "desc": "一键开启 HTTP 访问认证，拦截外部未授权请求，保障专属调试接口不被刷量。"
+      },
+      {
+        "title": "多模型轻松接入",
+        "desc": "支持海量主流 LLM 直接挂载，不需要繁复配置，随时无缝更换或升级底座模型。"
+      },
+      {
+        "title": "多渠道快速连接",
+        "desc": "配置一次之后，即可与飞书、Telegram、Discord、Webhook 轻松对接交互。"
+      },
+      {
+        "title": "实时运行日志",
+        "desc": "在控制台实时查看 Agent 的执行输出、报错详情及网络连接报告。"
+      },
+      {
+        "title": "智能健康监控",
+        "desc": "配备高频运行探测，在 Agent 遇到异常失联时支持热重启或异常事件上报服务。"
+      },
+      {
+        "title": "一站式运行管理",
+        "desc": "从实例创建、配置更新到版本升级，为 AI Agent 提供稳定、可靠的一站式本地管理。"
+      }
+    ],
+    "audiences": [
+      {
+        "title": "AI 开发者",
+        "desc": "不想再折腾部署服务器的你"
+      },
+      {
+        "title": "AI 创业团队",
+        "desc": "需要快速上线和稳定交付的你"
+      },
+      {
+        "title": "自动化运营团队",
+        "desc": "想将 Agent 轻松接到常用工作群聊中的你"
+      },
+      {
+        "title": "企业内部助手",
+        "desc": "试图建立独立全天候内训客服的你"
+      },
+      {
+        "title": "全栈工程师",
+        "desc": "想把手上的 Demo 快步变成在线业务的你"
+      }
+    ],
+    "faqs": [
+      {
+        "q": "我的 API Key 会不会被别人看到？",
+        "a": "绝对不会。您配置的 API Key 均执行了加密存储。只在您的本地 Agent 容器启动时按需引入，前端页面不会返回或展示任何明文。"
+      },
+      {
+        "q": "每个 Agent 都是独立运行的吗？",
+        "a": "是的。每个 Agent 实例使用隔离的容器资源，一个实例发生故障不会改变其他实例的运行状态。"
+      },
+      {
+        "q": "可以接入飞书、Telegram 或 Discord 吗？",
+        "a": "完全支持。我们自动处理了各种外部渠道的连接鉴权、逻辑握手与格式转化。您只需要配置所需的 Bot Token 即可流畅对接。"
+      },
+      {
+        "q": "麦贝是否适合用于正式商业应用？",
+        "a": "麦贝开源版可依据 AGPL-3.0-only 用于商业用途。可用性、公网路由、HTTPS、备份与恢复由自托管管理员负责。"
+      },
+      {
+        "q": "与自己租服务器手动部署有什么区别？",
+        "a": "自己部署您必须操心运行环境配置、域名解析映射、异常闪退恢复等诸多 DevOps 工作。麦贝高度自动化了这些底座工作，让您最快 30 秒内就能上线可用的 Agent。"
+      }
+    ],
+    "interactiveDemoDescription": "这不是视频截图，而是轻量的前端交互 Mockup，用于展示 MyBay 如何创建、管理、监控和对话调试本地 AI Agent。"
+  },
+  "legacyLanding": {
+    "versionTip": "当前版本v1.2.2 (2026.6.4)",
+    "sec1Heading": "仅需 30 秒",
+    "sec1Sub": "即可拥有您专属的 24/7 AI Agent",
+    "sec1Desc": "麦贝开源版是面向 AI Agent 的本地优先自托管控制面。它通过 Docker 容器隔离与本地加密凭据管理，帮助管理员完成部署、配置、监控和多渠道接入。",
+    "featuresHeader": "核心服务特性",
+    "featuresList": {
+      "speed": {
+        "title": "秒级生产力交付",
+        "desc": "规避复杂的 Linux 环境初始化，一键拉起具备独立域名与 SSL 的生产级 Agent 容器。"
+      },
+      "routing": {
+        "title": "多供应商智能路由",
+        "desc": "中心化管理所有 AI 厂商凭据，支持不同任务间根据成本或性能自动路由模型能力。"
+      },
+      "channel": {
+        "title": "全渠道全栈式接入",
+        "desc": "从飞书到 Telegram，从 API 到 Webhook，麦贝已帮你解决了所有通信层的握手兼容难题。"
+      },
+      "isolation": {
+        "title": "企业级数据沙箱",
+        "desc": "每个实例运行在完全隔离 of Docker 容器中，API 调用独立、持久化存储独立，确保数据不出域。"
+      },
+      "self_healing": {
+        "title": "自愈式容器集群",
+        "desc": "内置精细化健康扫描，一旦探测到 Agent 逻辑异常或端口阻塞，网关将自动执行冷热重启。"
+      },
+      "audit": {
+        "title": "可回溯审计日志",
+        "desc": "不仅有运行日志，麦贝还记录了每一次部署变更、密钥更新的操作流水，满足高合规性要求。"
+      }
+    }
+  },
+  "features": {
+    "metaTitle": "功能特性 - 麦贝 MyBayAI",
+    "metaDesc": "了解麦贝的 AI Agent 部署、模型接入、多渠道连接、访问鉴权、日志监控、实例隔离与资源管理能力。",
+    "heroTitle": "让 AI Agent 真正上线所需的能力，",
+    "heroAccent": "麦贝一次配齐",
+    "heroDesc": "麦贝将实例部署、模型配置、渠道接入、访问鉴权、日志监控与实例管理整合到一个控制台中，让 Agent 不再停留在本地 Demo。",
+    "capabilitiesHeader": "开箱即用的高可用架构",
+    "audiencesHeader": "面向对象",
+    "deploymentTitle": "一键部署 Agent 实例",
+    "deploymentDesc": "从模板、模型、渠道到运行配置，几步完成在线 Agent 创建。",
+    "isolationTitle": "独立容器隔离",
+    "isolationDesc": "每个 Agent 拥有独立运行环境，降低实例之间互相影响的风险。",
+    "providersTitle": "多模型供应商接入",
+    "providersDesc": "支持 OpenAI、Claude、Gemini、DeepSeek 等主流模型配置，自带 Key 即可接入。",
+    "channelsTitle": "多渠道连接",
+    "channelsDesc": "支持 Web、飞书、Telegram、Discord 等渠道，让 Agent 出现在用户真正使用的地方。",
+    "authTitle": "访问鉴权与安全边界",
+    "authDesc": "支持 Basic Auth、独立访问地址与敏感配置保护，让每个实例有清晰的访问边界。",
+    "monitorTitle": "实时日志与健康监控",
+    "monitorDesc": "集中查看实例状态、启动日志、异常信息和健康检查结果，减少黑盒运行。",
+    "limitsTitle": "资源限制与实例管理",
+    "limitsDesc": "支持 CPU / 内存等资源限制，帮助控制单个 Agent 对宿主机资源的占用。",
+    "upgradeTitle": "升级与回滚基础",
+    "upgradeDesc": "为后续 Agent 镜像升级、配置变更...问题回退提供清晰的管理基础。",
+    "categories": {
+      "deploy": {
+        "title": "部署与运行",
+        "items": [
+          "自动容器部署",
+          "访问地址生成",
+          "反向代理配置",
+          "实例状态管理"
+        ]
+      },
+      "models": {
+        "title": "模型与渠道",
+        "items": [
+          "多模型 Provider",
+          "API Key 配置",
+          "Web / 飞书 / TG / Discord",
+          "模板化 Agent 创建"
+        ]
+      },
+      "security": {
+        "title": "安全与运维",
+        "items": [
+          "Basic Auth",
+          "独立实例隔离",
+          "日志查看与监控",
+          "资源限制与升级管理"
+        ]
+      }
+    },
+    "audiences": [
+      {
+        "title": "AI 开发者",
+        "desc": "将本地 Agent 快速变成可访问的线上服务。"
+      },
+      {
+        "title": "AI 创业团队",
+        "desc": "为客户或内部项目快速创建独立 Agent 实例。"
+      },
+      {
+        "title": "自动化运营团队",
+        "desc": "通过飞书、Telegram、Discord 等渠道让 Agent 长期在线运行。"
+      },
+      {
+        "title": "企业管理与独立开发者",
+        "desc": "寻求简单直接、开箱即用的本地 Agent 管理方案的用户"
+      }
+    ],
+    "coreFeatures": [
+      {
+        "title": "几步创建专属 Agent",
+        "desc": "无需写代码或配置服务器，按照引导完成设置，即可创建属于自己的 AI Agent。"
+      },
+      {
+        "title": "24 小时在线运行",
+        "desc": "部署完成后，Agent 会持续在线，随时接收来自网页或通讯工具的任务。"
+      },
+      {
+        "title": "接入常用大模型",
+        "desc": "支持连接 OpenAI、Claude、Gemini、DeepSeek 等模型，统一配置，按需切换。"
+      },
+      {
+        "title": "接入常用通讯工具",
+        "desc": "可连接飞书、Telegram、Discord 等工具，在熟悉的应用里直接使用 Agent。"
+      },
+      {
+        "title": "安全访问自动配置",
+        "desc": "系统自动生成独立访问地址，并配置 HTTPS 与访问保护，创建后即可安全打开使用。"
+      },
+      {
+        "title": "实例独立隔离运行",
+        "desc": "每个 Agent 拥有独立的数据、配置和运行环境，降低互相影响的风险。"
+      },
+      {
+        "title": "在线调整 Agent 设置",
+        "desc": "可随时修改模型、提示词和常用配置，让 Agent 持续适配你的任务需求。"
+      },
+      {
+        "title": "状态与日志清晰可见",
+        "desc": "可查看实例状态、任务记录和运行日志，方便快速定位和处理问题。"
+      }
+    ],
+    "capabilities": [
+      {
+        "title": "运行时隔离与网络",
+        "items": [
+          "单实例单容器架构，杜绝串网",
+          "云原生 VPC 封闭网络设计",
+          "系统级 3000 端口映射隔离",
+          "标准化的最新构建镜像预热",
+          "内置进程自愈探针检测"
+        ]
+      },
+      {
+        "title": "通讯渠道与路由",
+        "items": [
+          "自带 Telegram 签名校验功能",
+          "飞书租户验证与 Challenge",
+          "Discord Ed25519 密钥解析",
+          "微信企微 Token 路由保护",
+          "无缝接入第三方对话前端"
+        ]
+      },
+      {
+        "title": "密钥与凭证安全",
+        "items": [
+          "双向加密存取，拒绝明文",
+          "统一 Vault 管理支持轮转",
+          "隔离的用户 API 密钥体系",
+          "细粒度调用限制避免滥用",
+          "运行期环境变量隐藏脱敏"
+        ]
+      }
+    ],
+    "ctaTextConsole": "进入控制台",
+    "ctaTextCreate": "免费创建第一个 Agent",
+    "ctaReadDocs": "查看使用文档",
+    "overviewTitle": "核心能力总览",
+    "overviewDesc": "从创建、接入到运行监控，麦贝开源版帮你在自己的机器上管理 Agent。",
+    "capabilitiesDesc": "将复杂运维与安全隔离高度抽象，开箱即用",
+    "modulePrefix": "模块",
+    "metaParams": {
+      "title": "功能特性 - 麦贝 MyBay",
+      "desc": "了解麦贝 MyBay 的 AI Agent 部署、模型接入、多渠道连接、访问鉴权、日志监控、实例隔离与资源管理能力。"
+    },
+    "audiencesDesc": "不管你是独立开发者还是企业 IT，都能在这里找到合适的抓手",
+    "traditionalItems": [
+      "手动配置 Docker 和环境变量",
+      "自己处理 Nginx / Traefik / 端口转发",
+      "多模型和多渠道配置分散",
+      "日志、健康检查和升级依赖人工维护",
+      "多实例隔离和访问权限容易混乱"
+    ],
+    "mybayItems": [
+      "通过控制台创建独立 Agent 实例",
+      "自动写入配置并启动容器",
+      "自动生成访问地址与鉴权入口",
+      "集中管理模型、渠道、日志和状态",
+      "后续可以继续扩展资源限制、升级和监控能力"
+    ],
+    "ctaHeader": "准备好打包上线了吗？",
+    "ctaDesc": "从模型配置到实例运行，麦贝帮你把部署流程收进一个控制台。"
+  },
+  "models": {
+    "title": "支持的大模型生态",
+    "desc1": "麦贝原生兼容全球主流 AI 模型供应商。无论是",
+    "desc2": "复杂推理",
+    "desc3": "代码开发",
+    "desc4": "中文任务",
+    "desc5": "还是",
+    "desc6": "低成本运行",
+    "desc7": "，都可以为每个",
+    "desc8": "选择最合适的大模型引擎。",
+    "searchPlaceholder": "搜索您想接入的模型供应商（例如 OpenAI、DeepSeek）或具体的模型名称（如 gpt-5.5）...",
+    "tags": {
+      "all": "全部",
+      "zh": "中文友好",
+      "code": "编码",
+      "longContext": "长上下文",
+      "multimodal": "多模态",
+      "reasoning": "推理",
+      "lowCost": "低成本",
+      "aggregate": "开源聚合",
+      "direct": "免翻墙(部分)"
+    },
+    "getApiKey": "获取 API Key",
+    "tutorialHeadline": "快速启用指南",
+    "useCasesLabel": "最佳适用场景",
+    "difficultyLabel": "接入难度",
+    "difficulties": {
+      "easy": "简单",
+      "medium": "中等",
+      "complex": "复杂"
+    },
+    "stepNumber": "步骤 {{num}}",
+    "noResult": "未找到匹配的模型供应商",
+    "noResultDesc": "您可以尝试更换搜索关键词，或者使用通用“自定义支持 OpenAI 接口格式”渠道接入。",
+    "copied": "复制成功",
+    "copyLink": "复制文档链接",
+    "tutorialUrlTip": "官方凭证获取页面"
+  },
+  "docs": {
+    "title": "使用文档",
+    "breadcrumbsHome": "使用文档",
+    "breadcrumbsGuide": "接入指南",
+    "headline": "麦贝使用指南与架构解析",
+    "subtitle": "从一键快速创建实例、选择自选大模型底座、应用精选工作流模板到全方位渠道接入，助您零门槛完成首个 AI Agent 容器化部署。",
+    "backHome": "返回首页",
+    "console": "控制台首页",
+    "loginToStart": "登录并开始部署",
+    "footerText": "让 AI Agent 部署更简单",
+    "home": {
+      "title": "使用文档",
+      "subtitle": "按你正在做的事情选择入口。新用户可以从快速上手开始，管理员和高级用户可以直接进入部署、模型、文件、安全或错误排查文档。",
+      "cards": {
+        "quickStart": {
+          "title": "新用户快速开始",
+          "desc": "完成注册、了解新用户用量、创建第一个可对话的 Agent 实例。"
+        },
+        "deploy": {
+          "title": "部署第一个 Agent",
+          "desc": "选择 BYOK、BYOK 模型、模板部署或空白配置，理解每种方式适合什么场景。"
+        },
+        "workspace": {
+          "title": "使用实例对话工作台",
+          "desc": "了解快速模式、Agent 模式、执行过程、文件预览和生成结果下载。"
+        },
+        "credits": {
+          "title": "配置模型与用量",
+          "desc": "理解BYOK 模型、用量消耗、token 统计、余额不足和 BYOK 的差异。"
+        },
+        "files": {
+          "title": "文件空间清理",
+          "desc": "查看 Agent 生成的文件，预览或下载结果，并清理占用空间的大文件。"
+        },
+        "errors": {
+          "title": "常见错误排查",
+          "desc": "快速定位发送失败、UPSTREAM_RUN_NOT_FOUND、容量超额和 Agent 没响应。"
+        }
+      },
+      "pathTitle": "推荐阅读路径",
+      "pathDesc": "如果你是第一次使用，建议按“快速上手 -> 部署实例 -> 对话工作台”的顺序阅读。遇到问题时，再进入错误排查或文件空间文档。",
+      "path": {
+        "quickStart": "快速上手",
+        "deploy": "部署实例",
+        "workspace": "对话工作台"
+      }
+    },
+    "faq": "常见问答",
+    "terms": "服务条款",
+    "errTitle": "文档加载异常",
+    "errDesc": "由于沙箱环境内的安全限制或组件渲染发生冲突，文档视图暂无法直接加载。请尝试点击下方“刷新”以清空缓存，或者返回首页。",
+    "refresh": "刷新页面",
+    "backToHome": "返回首页",
+    "readingTime": "约 {{time}} 分钟",
+    "audienceLabel": "适用对象",
+    "difficultyLabel": "配置难度",
+    "accessMethodLabel": "接入方式",
+    "audiences": {
+      "new": "新用户",
+      "advanced": "进阶用户"
+    },
+    "difficulties": {
+      "easy": "🟢 入门级",
+      "medium": "🟡 进阶级",
+      "expert": "🔴 专业级"
+    },
+    "accessMethods": {
+      "gui": "✅ 图形化配置",
+      "env": "⚙️ 环境变量注入"
+    },
+    "nav": [
+      {
+        "group": "快速上手",
+        "items": [
+          {
+            "id": "getting_started",
+            "title": "快速上手：管理员登录、配置与第一个实例"
+          },
+          {
+            "id": "platform",
+            "title": "平台总览与自检说明"
+          },
+          {
+            "id": "create_agent",
+            "title": "创建第一个 Agent"
+          }
+        ]
+      },
+      {
+        "group": "部署实例",
+        "items": [
+          {
+            "id": "deploy_instance",
+            "title": "BYOK / BYOK 模型 / 模板 / 空白部署",
+            "isNew": true
+          },
+          {
+            "id": "access_agent",
+            "title": "部署后如何访问 Agent"
+          },
+          {
+            "id": "provider_choice",
+            "title": "如何选择模型供应商"
+          },
+          {
+            "id": "credential_usage",
+            "title": "如何使用预存模型凭证"
+          },
+          {
+            "id": "api_key_manual",
+            "title": "如何手动填写 API Key"
+          }
+        ]
+      },
+      {
+        "group": "实例对话工作台",
+        "items": [
+          {
+            "id": "chat_workspace",
+            "title": "快速模式、Agent 模式与执行过程"
+          }
+        ]
+      },
+      {
+        "group": "模型与用量",
+        "items": [
+          {
+            "id": "hot_update_llm",
+            "title": "修改运行中实例模型配置"
+          },
+          {
+            "id": "llm_errors",
+            "title": "常见模型连接错误"
+          }
+        ]
+      },
+      {
+        "group": "通道接入",
+        "items": [
+          {
+            "id": "web_console",
+            "title": "Web 独立控制台"
+          },
+          {
+            "id": "feishu",
+            "title": "飞书 / Lark"
+          },
+          {
+            "id": "telegram",
+            "title": "Telegram Bot"
+          },
+          {
+            "id": "discord",
+            "title": "Discord 机器人"
+          },
+          {
+            "id": "wecom",
+            "title": "企业微信 / WeCom"
+          },
+          {
+            "id": "webhook",
+            "title": "Webhook 接入"
+          }
+        ]
+      },
+      {
+        "group": "文件与空间",
+        "items": [
+          {
+            "id": "files_storage",
+            "title": "文件管理、容量限制与清理建议",
+            "isNew": true
+          },
+          {
+            "id": "resource_limits",
+            "title": "CPU / 内存 / 存储资源限制"
+          }
+        ]
+      },
+      {
+        "group": "安全说明",
+        "items": [
+          {
+            "id": "security_practices",
+            "title": "API Key、BYOK 模型与访问边界",
+            "isNew": true
+          },
+          {
+            "id": "security_skills",
+            "title": "高危技能权限说明"
+          },
+          {
+            "id": "credential_security",
+            "title": "凭证管理安全设计"
+          },
+          {
+            "id": "network_isolation",
+            "title": "多实例物理隔离说明"
+          },
+          {
+            "id": "basic_auth",
+            "title": "访问保护与密码管理"
+          }
+        ]
+      },
+      {
+        "group": "实例管理与运维",
+        "items": [
+          {
+            "id": "instance_status",
+            "title": "实例状态生命周期"
+          },
+          {
+            "id": "health_chain",
+            "title": "健康监测链路说明"
+          },
+          {
+            "id": "logs_troubleshooting",
+            "title": "日志与故障排障"
+          },
+          {
+            "id": "lifecycle_ops",
+            "title": "重启、删除与归档"
+          }
+        ]
+      },
+      {
+        "group": "版本与升级",
+        "items": [
+          {
+            "id": "runtime_versions",
+            "title": "Runtime 版本说明"
+          },
+          {
+            "id": "image_registry",
+            "title": "规格与 Latest 镜像"
+          },
+          {
+            "id": "image_prewarm",
+            "title": "镜像预热说明"
+          },
+          {
+            "id": "instance_upgrade",
+            "title": "实例升级与回滚"
+          }
+        ]
+      },
+      {
+        "group": "常见问题",
+        "items": [
+          {
+            "id": "error_troubleshooting",
+            "title": "发送失败、UPSTREAM_RUN_NOT_FOUND、容量超额",
+            "isNew": true
+          },
+          {
+            "id": "deploy_trouble",
+            "title": "常见部署失败原因"
+          },
+          {
+            "id": "faq",
+            "title": "综合疑难解答"
+          }
+        ]
+      }
+    ],
+    "groupNames": {
+      "快速开始": "快速开始",
+      "模型配置与凭证": "模型配置与凭证",
+      "通讯渠道接入": "通讯渠道接入",
+      "实例管理": "实例管理",
+      "版本与升级": "版本与升级",
+      "资源与安全": "资源与安全",
+      "常见问题": "常见问题"
+    },
+    "docsLayout": {
+      "searchPlaceholder": "搜索文档...",
+      "menuBtn": "目录",
+      "docsMenu": "文档目录",
+      "backToTop": "返回顶部",
+      "onThisPage": "本页目录",
+      "noHeadings": "暂无目录"
+    },
+    "appStrings": {
+      "needMoreHelp": "需要更多帮助？尝试访问在线社群或查阅 FAQ",
+      "viewKnowledgeBase": "前往知识库",
+      "guideTitle": "MyBay Open Source Guide: {{title}}",
+      "engGuideInfo": "You are currently viewing the English documentation segment for <strong>{{title}}</strong>. MyBay provides automated orchestration, sandboxed environment isolations, VPC container networks on port 3000, and comprehensive SSL proxies dynamically mapped.",
+      "goToConsole": "Go to Console and Begin deploying"
+    }
+  },
+  "faq": {
+    "title": "常见问题",
+    "subtitle": "面向单管理员、本地优先、自托管部署的安装、数据、安全与集成说明。",
+    "searchPlaceholder": "搜索部署、数据、密钥、Docker、渠道等问题...",
+    "resultsFound": "找到 {{count}} 个相关问题",
+    "categoryLabel": "分类：",
+    "tagLabel": "标签：",
+    "allCategories": "全部分类",
+    "categoryTitles": {
+      "quickstart": "快速开始",
+      "deployment": "部署与运行",
+      "data": "本地数据",
+      "integrations": "第三方集成",
+      "security": "安全",
+      "troubleshooting": "故障排查"
+    },
+    "ctaHeader": "仍有未解决的问题？",
+    "ctaDesc": "请先查看项目文档和本机日志；可复现的软件问题可以提交到 GitHub Issues。",
+    "technicalFaq": "分享日志前必须脱敏，不要公开 API Key、Token、密码或完整 .env。",
+    "readDocs": "查看技术文档",
+    "contactSupport": "联系项目维护者",
+    "noResult": "没有找到匹配的问题",
+    "noResultDesc": "请更换关键词或查阅部署与安全文档。",
+    "recommendedSearches": [
+      "部署",
+      "SQLite",
+      "对话记录",
+      "密钥",
+      "Docker",
+      "飞书"
+    ],
+    "categories": [
+      {
+        "id": "quickstart",
+        "name": "快速开始",
+        "description": "麦贝开源版的定位与边界",
+        "iconName": "Zap"
+      },
+      {
+        "id": "deployment",
+        "name": "部署与运行",
+        "description": "Docker、网络和实例生命周期",
+        "iconName": "Server"
+      },
+      {
+        "id": "data",
+        "name": "本地数据",
+        "description": "SQLite、文件、日志与备份",
+        "iconName": "FileText"
+      },
+      {
+        "id": "integrations",
+        "name": "第三方集成",
+        "description": "模型供应商与消息渠道",
+        "iconName": "MessageSquare"
+      },
+      {
+        "id": "security",
+        "name": "安全",
+        "description": "管理员、凭证和 Docker 权限",
+        "iconName": "Lock"
+      },
+      {
+        "id": "troubleshooting",
+        "name": "故障排查",
+        "description": "状态、日志和常见错误",
+        "iconName": "Wrench"
+      }
+    ],
+    "items": [
+      {
+        "id": "purpose",
+        "category": "quickstart",
+        "question": "麦贝开源版是什么？",
+        "answer": "麦贝开源版是按 AGPL-3.0-only 发布的自托管 AI Agent 控制面。它面向单管理员环境，在您自己的机器上通过 Docker 管理 Hermes Agent，不提供云端账号、订阅套餐、计费或多租户服务。",
+        "tags": [
+          "Local",
+          "开源",
+          "单管理员"
+        ]
+      },
+      {
+        "id": "install",
+        "category": "deployment",
+        "question": "如何安装和启动？",
+        "answer": "推荐使用 quick-start.sh 或 quick-start.ps1。脚本会检查 Docker、创建本地 .env、生成安全随机值并启动 Compose 服务。手动部署时必须先替换 .env.example 中的全部安全占位符。",
+        "tags": [
+          "安装",
+          "Quick Start",
+          "Docker"
+        ]
+      },
+      {
+        "id": "data",
+        "category": "data",
+        "question": "麦贝开源版会保存哪些数据？",
+        "answer": "控制面会在本机持久化管理员资料、实例配置、加密凭证、任务记录、conversations、chatMessages、chatRuns、chatMessageFeedback、上传文件和日志。结构化数据主要保存在 data/mybay.sqlite。麦贝开源版会保存对话历史，并非只在内存中短暂流转。",
+        "tags": [
+          "SQLite",
+          "对话记录",
+          "文件"
+        ]
+      },
+      {
+        "id": "third-party",
+        "category": "integrations",
+        "question": "所有数据都会留在本机吗？",
+        "answer": "不是。控制面采用本地优先存储，但当您主动配置 OpenAI、Anthropic、Gemini、DeepSeek、OpenRouter、Telegram、Discord、Feishu/Lark、Slack 或其他第三方服务时，完成请求所需的提示词、消息、文件或元数据可能发送给相应服务。",
+        "tags": [
+          "第三方",
+          "隐私",
+          "Provider"
+        ]
+      },
+      {
+        "id": "credentials",
+        "category": "security",
+        "question": "API Key 和渠道 Token 如何保存？",
+        "answer": "凭证使用 ENCRYPTION_KEY 在本机加密保存，API 不应把明文返回浏览器。您仍需保护 .env、data 目录、备份和宿主机权限，并定期轮换第三方凭证。",
+        "tags": [
+          "密钥",
+          "加密",
+          "凭证"
+        ]
+      },
+      {
+        "id": "docker",
+        "category": "security",
+        "question": "为什么控制面需要 Docker Socket？",
+        "answer": "实例生命周期管理需要控制 Docker daemon。能够管理麦贝开源版的管理员实际拥有高权限宿主机管理能力，因此不应把未受保护的控制面直接暴露到公网。",
+        "tags": [
+          "Docker Socket",
+          "权限",
+          "公网安全"
+        ]
+      },
+      {
+        "id": "cost",
+        "category": "integrations",
+        "question": "是否包含模型额度或第三方费用？",
+        "answer": "不包含。您自行选择第三方 AI Provider 和消息渠道，并承担其费用、配额和条款义务。麦贝开源版不提供 SaaS SLA，也不保证第三方服务持续可用。",
+        "tags": [
+          "BYOK",
+          "费用",
+          "第三方"
+        ]
+      },
+      {
+        "id": "troubleshoot",
+        "category": "troubleshooting",
+        "question": "实例无法启动或访问时如何排查？",
+        "answer": "查看部署事件、容器状态和实例日志，再确认 Docker daemon、镜像拉取、端口、磁盘、模型凭证与反向代理。提交 Issue 前请移除密码、Token、API Key、域名和用户数据。",
+        "tags": [
+          "日志",
+          "启动失败",
+          "排查"
+        ]
+      }
+    ],
+    "appStrings": {
+      "backHome": "返回首页",
+
+      "popularTags": "常用主题：",
+      "filterCategory": "按分类筛选",
+      "reset": "重置",
+      "allCoreQs": "全部问题",
+      "allSearchDesc": "Local 部署、数据、安全和集成说明",
+      "resultsFoundTag": "找到 {{count}} 条结果",
+      "noResult": "未找到匹配答案",
+      "noResultDesc": "没有匹配“{{query}}”的内容，请尝试其他关键词。",
+      "clearSearch": "清除搜索",
+      "viewGuidebooks": "查看使用文档",
+      "unresolvedHeader": "问题仍未解决？",
+      "unresolvedTitle": "检查本机日志或提交 Issue",
+      "unresolvedDesc": "请先查看部署日志和实例诊断；公开反馈前务必移除所有 Secret 与私有数据。",
+      "contactSupport": "联系维护者",
+      "contactSupportSub": "通过安全邮箱反馈",
+      "examineLogs": "查看实例日志",
+      "examineLogsSub": "前往控制台诊断",
+      "returnConsole": "返回控制台",
+      "returnConsoleSub": "管理本地实例",
+      "suggestFeatures": "提交功能建议",
+      "suggestFeaturesSub": "前往 GitHub Issues"
+    }
+  },
+  "changelog": {
+    "title": "麦贝开源版更新日志",
+    "subtitle": "仅记录麦贝开源版已经发布并经过验证的能力。",
+    "timelineTip": "Preview Release",
+    "releases": [
+      {
+        "version": "v0.1.0-preview",
+        "date": "2026.08.15",
+        "badge": "PREVIEW",
+        "summary": "麦贝开源版 v0.1.0-preview 是一次以安全、稳定和本地优先发布为目标的早期公开预览。",
+        "sections": [
+          {
+            "title": "稳定性补丁",
+            "type": "fix",
+            "items": [
+              "修复 JSON、文本及其他原始文件响应被业务 JSON 解析器误处理的问题。",
+              "为文件预览加入请求取消与代际校验，避免旧请求覆盖当前会话、实例或已关闭的预览。",
+              "统一 Quick、Assist 与异步对话的停止终态，确保取消和完成不会相互覆盖。",
+              "前后端统一单条消息限制与历史上下文预算，降低超长请求对服务、数据库和模型上下文的压力。"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "terms": {
+    "title": "麦贝开源版使用条款",
+    "subtitle": "适用于开源自托管软件的许可、部署、安全和第三方服务责任边界。",
+    "backHome": "返回首页",
+    "lastUpdated": "最后更新时间：{{date}}",
+    "suggestions": "对条款有疑问？",
+    "suggestionsDesc": "许可或安全问题请联系项目维护者。",
+    "footer": "麦贝开源版按 AGPL-3.0-only 提供，另可单独取得商业许可证。",
+    "sections": [
+      {
+        "id": "service",
+        "title": "1. 软件性质",
+        "content": [
+          "麦贝开源版是由用户自行部署、运行和维护的 self-hosted 开源软件，不是由项目维护者运营的 SaaS 服务。",
+          "软件按现状提供，不包含云端账号、计费、订阅套餐、多租户调度或 SaaS 服务等级协议。",
+          "用户自行负责服务器、Docker daemon、网络、域名、HTTPS、备份、更新和运行容量。"
+        ]
+      },
+      {
+        "id": "account",
+        "title": "2. 管理员与安全",
+        "content": [
+          "麦贝开源版采用单管理员模式。管理员应使用强密码和安全随机 Secret，并限制控制面的网络访问。",
+          "控制面需要访问 Docker Socket；MyBay 管理员权限应视为高权限宿主机管理能力。",
+          "用户自行管理模型 API Key、渠道 Token、.env、SQLite 数据和备份。"
+        ]
+      },
+      {
+        "id": "content",
+        "title": "3. 用户内容与第三方服务",
+        "content": [
+          "用户对提示词、文件、配置、自动化任务和 Agent 输出的使用负责，并应遵守适用法律。",
+          "用户自行选择第三方 AI Provider 和消息渠道，并承担相应费用、配额、数据处理和合规责任。",
+          "第三方服务受其自身条款约束；项目不保证任何 Provider、Channel、镜像仓库或网络服务持续可用。"
+        ]
+      },
+      {
+        "id": "prohibited",
+        "title": "4. 合法与安全使用",
+        "content": [
+          "不得利用软件实施未授权访问、恶意扫描、DDoS、垃圾信息、凭证窃取或其他违法行为。",
+          "不得移除必要的开源许可声明，或违反 AGPL-3.0-only 的源代码提供义务。",
+          "部署者应评估 Agent 工具权限和自动化风险，并实施最小权限和审计。"
+        ]
+      },
+      {
+        "id": "resources",
+        "title": "5. 无服务等级承诺",
+        "content": [
+          "项目不提供 SaaS SLA、可用性、响应时间、数据恢复或第三方 API 连通性的保证。",
+          "资源上限由宿主机和本地配置决定；磁盘、内存、CPU 或网络不足可能导致实例失败。",
+          "AI 输出可能不准确或产生幻觉，不应在缺少人工审核时用于高风险决策。"
+        ]
+      },
+      {
+        "id": "disclaimer",
+        "title": "6. 开源许可、商业许可与商标",
+        "content": [
+          "麦贝开源版可依据 AGPL-3.0-only 使用，包括商业使用，但必须遵守许可证的 copyleft 和源代码提供义务。",
+          "需要在不承担 AGPL copyleft 义务的情况下进行专有集成或再分发的组织，可以另行获得商业许可证。",
+          "MyBay 名称、标识及第三方品牌不因 AGPL 代码许可而获得商标授权；相关商标属于各自权利人。"
+        ]
+      }
+    ]
+  },
+  "privacy": {
+    "title": "麦贝开源版隐私说明",
+    "subtitle": "说明本地优先存储、第三方数据传输和自托管管理员的责任边界。",
+    "backHome": "返回首页",
+    "lastUpdated": "最后更新时间：{{date}}",
+    "questions": "有隐私或安全问题？",
+    "questionsDesc": "安全漏洞请按 SECURITY.md 私下报告，不要在公开 Issue 中提交 Secret 或私有数据。",
+    "footer": "本说明适用于麦贝开源版自托管版本。",
+    "sections": [
+      {
+        "id": "collection",
+        "title": "1. 本地存储的数据",
+        "content": [
+          "麦贝开源版主要在您自行部署的机器上保存数据，不要求使用麦贝云端账号或云端数据库。",
+          "本地数据可包括管理员资料、实例配置、加密凭证、任务记录、conversations、chatMessages、chatRuns、chatMessageFeedback、上传文件、运行日志及审计记录。",
+          "结构化数据主要保存在 SQLite 文件 data/mybay.sqlite。麦贝开源版会持久化对话历史，不能将其视为仅在内存中短暂流转。"
+        ]
+      },
+      {
+        "id": "usage",
+        "title": "2. 本地处理与安全",
+        "content": [
+          "凭证使用部署者配置的 ENCRYPTION_KEY 在本地加密保存；宿主机管理员、备份系统和拥有 Docker daemon 权限的人员仍处于高信任边界。",
+          "部署者负责访问控制、备份、保留周期、安全更新和日志脱敏。",
+          "本项目不包含遥测、云端计费或多租户数据汇总能力。"
+        ]
+      },
+      {
+        "id": "retention",
+        "title": "3. 保留、备份与删除",
+        "content": [
+          "数据保留时间由自托管管理员及第三方服务配置决定。请根据自身要求制定备份与清理策略。",
+          "删除实例可能清理相关容器、实例目录和记录。执行删除前应先验证备份；本项目不提供 SaaS 级恢复承诺。",
+          "删除麦贝开源版不会自动删除第三方供应商已经接收或保留的数据。"
+        ]
+      },
+      {
+        "id": "thirdparty",
+        "title": "4. 第三方服务",
+        "content": [
+          "配置模型供应商后，提示词、消息、文件或元数据可能发送给 OpenAI、Anthropic、Gemini、DeepSeek、OpenRouter 或其他供应商。",
+          "配置消息渠道后，消息和必要元数据可能发送给 Telegram、Discord、Feishu/Lark、Slack 或其他渠道。",
+          "第三方服务适用其自己的隐私政策、条款、费用和保留规则。"
+        ]
+      }
+    ]
+  }
+}

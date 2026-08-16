@@ -1,0 +1,1135 @@
+{
+  "systemSecurity": {
+    "loadError": "Could not load system diagnostics",
+    "loading": "Loading runtime environment and security diagnostics...",
+    "fetchFailed": "Could not load data",
+    "reload": "Reload",
+    "title": "System diagnostics and local security checks",
+    "description": "Review security protections, resource policies, and host configuration for this local deployment.",
+    "updateSuccess": "Policy updated",
+    "updateFailedTitle": "Update failed",
+    "updateFailedMessage": "Could not update the global security policy.",
+    "confirm": {
+      "title": "Confirm high-risk operation",
+      "message": "Enabling this option allows administrator instances to mount and access /var/run/docker.sock. Agents in those instances will be able to control host containers. Enable this feature?",
+      "enable": "Enable",
+      "cancel": "Cancel"
+    },
+    "adminPassword": {
+      "title": "Administrator password",
+      "default": "The default administrator password is still in use. Change it as soon as possible.",
+      "secure": "A custom strong password is configured and account security is healthy."
+    },
+    "encryption": {
+      "title": "Model and IM credential encryption",
+      "description": "A global 256-bit AES-GCM encryption key (ENCRYPTION_KEY) is configured, and sensitive data is encrypted at rest."
+    },
+    "resources": {
+      "title": "Local resource protection policy",
+      "description": "Maximum instances: {{max}} | Default disk limit per instance: {{disk}} MB"
+    },
+    "environmentGate": {
+      "title": "Host Docker mount gate (ENABLE_DOCKER_SOCKET_SKILL)",
+      "description": "This setting reflects the server environment's security requirement. When disabled, all Docker Socket mounts are blocked.",
+      "variable": "Environment variable",
+      "enabled": "Allowed by environment (Enabled)",
+      "disabled": "Not allowed by environment (Disabled)"
+    },
+    "dockerAuthorization": {
+      "title": "Host Docker mount authorization (admin_docker_socket_enabled)",
+      "description": "Allow administrator instances to mount the host <socket>/var/run/docker.sock</socket> when the <docker>docker</docker> or <dockerEngine>docker_engine</dockerEngine> skill is enabled.",
+      "toggleLabel": "Allow administrator instances to mount"
+    }
+  },
+    "preflightUi":  {
+                        "loadingTitle":  "Scanning the host runtime environment…",
+                        "loadingDescription":  "Checking Docker, network ports, security secrets, and system resources.",
+                        "groups":  {
+                                       "runtime":  "Runtime and resources",
+                                       "network":  "Network and access",
+                                       "security":  "Security configuration"
+                                   },
+                        "status":  {
+                                       "ok":  "OK",
+                                       "warn":  "Warning",
+                                       "fail":  "Failed"
+                                   },
+                        "toggleDetails":  "Expand or collapse diagnostic details",
+                        "problemLabel":  "Problem:",
+                        "solutionLabel":  "Solution:",
+                        "commandLabel":  "Diagnostic command:",
+                        "copyCommand":  "Copy diagnostic command",
+                        "copied":  "Copied",
+                        "recheck":  "Run checks",
+                        "summaryPassed":  "Pre-deployment checks passed",
+                        "summaryPassedDescription":  "Core runtime requirements are ready. You can continue configuring and deploying the Agent.",
+                        "summaryBlocked":  "{{count}} deployment blocker detected",
+                        "summaryBlocked_plural":  "{{count}} deployment blockers detected",
+                        "summaryBlockedDescription":  "Fix these items first: {{items}}.",
+                        "repairs":  {
+                                        "runtime":  {
+                                                        "reason":  "The control plane cannot reach Docker Engine and cannot create Agent containers.",
+                                                        "suggestion":  "Start Docker and verify that /var/run/docker.sock is mounted into the control-plane container with suitable permissions."
+                                                    },
+                                        "storage":  {
+                                                        "reason":  "Available host memory or disk space is low.",
+                                                        "suggestion":  "Free disk and memory resources, or reduce the number of Agent instances running at the same time."
+                                                    },
+                                        "connectivity":  {
+                                                             "reason":  "The current access address configuration needs attention.",
+                                                             "suggestion":  "Local mode can use localhost directly. Configure BASE_DOMAIN only when public access is required."
+                                                         },
+                                        "proxy":  {
+                                                      "reason":  "The proxy or local direct-access network is not ready.",
+                                                      "suggestion":  "In local mode, check the dedicated Docker network. In Traefik or Nginx mode, check the corresponding gateway service."
+                                                  },
+                                        "network":  {
+                                                        "reason":  "No dynamic port is available, or another process is using the target port.",
+                                                        "suggestion":  "Release ports in the 10000–19999 range, then run the checks again."
+                                                    },
+                                        "encryption":  {
+                                                           "reason":  "ENCRYPTION_KEY is missing or too weak to protect sensitive configuration.",
+                                                           "suggestion":  "Generate a 32-byte random secret, set ENCRYPTION_KEY in .env, and restart the control plane."
+                                                       },
+                                        "internal_routing":  {
+                                                                 "reason":  "MYBAY_INTERNAL_ROUTING_SECRET is missing.",
+                                                                 "suggestion":  "Generate a 32-byte random secret and save it in .env. Local direct mode should retain this secret for compatibility and security checks."
+                                                             },
+                                        "default":  {
+                                                        "reason":  "This host check does not meet the deployment requirement.",
+                                                        "suggestion":  "Check Docker, environment variables, and host resources, then run the checks again."
+                                                    }
+                                    }
+                    },
+    "firstRun":  {
+                     "title":  "First-run environment check",
+                     "description":  "Verify Docker, security secrets, networking, and host resources before creating your first Agent.",
+                     "loading":  "Checking the runtime environment…",
+                     "loadError":  "Environment checks failed. Confirm the service is running and try again.",
+                     "recheck":  "Run checks",
+                     "continue":  "Continue to console",
+                     "saving":  "Finishing…",
+                     "blocked":  "Fix the required items, then run the checks again.",
+                     "deploymentMode":  {
+                                            "title":  "Choose a deployment scenario",
+                                            "description":  "This setting controls instance URLs, Docker port binding, and preflight rules from one source of truth.",
+                                            "apply":  "Apply and run checks",
+                                            "settingsTitle":  "Instance access and deployment scenario",
+                                            "settingsDescription":  "Configure desktop, LAN, or server access. Redeploy existing instances after a change.",
+                                            "manage":  "Configure access mode",
+                                            "desktop":  {
+                                                            "title":  "Local desktop",
+                                                            "description":  "Accessible only from this computer. Ports bind to 127.0.0.1 by default."
+                                                        },
+                                            "lan":  {
+                                                        "title":  "Local network",
+                                                        "description":  "Share with devices on the same LAN through one selected interface IP."
+                                                    },
+                                            "server":  {
+                                                           "title":  "Server deployment",
+                                                           "description":  "Use a domain, HTTPS, and Traefik for access from a cloud server."
+                                                       },
+                                            "lanIp":  "LAN IPv4 address to bind",
+                                            "selectIp":  "Select a network interface",
+                                            "lanRestartRequired":  "The control panel is not bound to this LAN address. Run the command below from the project directory to recreate it, then reopen this page.",
+                                            "serverRequirement":  "The server gateway is not configured. Run the command below from the project directory and enter the console domain, Agent root domain, and certificate email.",
+                                            "serverReady":  "Traefik, a real domain, and HTTPS environment variables are configured. Apply server mode and continue the checks.",
+                                            "ready":  "Configured",
+                                            "notConfigured":  "Not configured",
+                                            "errors":  {
+                                                           "LAN_IP_INVALID":  "The selected IP is not available on this host. Select an active interface address.",
+                                                           "LAN_CONTROL_PANEL_RESTART_REQUIRED":  "Recreate the control panel with quick-start.sh --lan before applying this LAN address.",
+                                                           "SERVER_TRAEFIK_REQUIRED":  "Traefik is not enabled. Update the deployment environment and restart the service.",
+                                                           "SERVER_DOMAIN_REQUIRED":  "Server mode requires a real domain; localhost is not allowed.",
+                                                           "SERVER_CONTROL_PANEL_DOMAIN_REQUIRED":  "Server mode requires a real control-panel domain.",
+                                                           "SERVER_CERT_EMAIL_REQUIRED":  "Server mode requires a valid email address for HTTPS certificate notices.",
+                                                           "DEPLOYMENT_MODE_INVALID":  "The deployment scenario is invalid. Review the configuration and try again."
+                                                       }
+                                        },
+                     "checks":  {
+                                    "runtime":  {
+                                                    "title":  "Docker runtime",
+                                                    "ok":  "Docker Engine is reachable.",
+                                                    "warn":  "Docker status needs attention.",
+                                                    "fail":  "Docker Engine is unreachable. Start Docker and check Socket permissions."
+                                                },
+                                    "storage":  {
+                                                    "title":  "System resources",
+                                                    "ok":  "Available memory meets the requirement.",
+                                                    "warn":  "Available memory is low; multiple instances may be unstable.",
+                                                    "fail":  "System resources are insufficient."
+                                                },
+                                    "proxy":  {
+                                                  "title":  "Gateway network",
+                                                  "ok":  "Gateway networking is ready.",
+                                                  "warn":  "Gateway networking needs attention.",
+                                                  "fail":  "The gateway network is missing."
+                                              },
+                                    "network":  {
+                                                    "title":  "Port availability",
+                                                    "ok":  "An available port was found.",
+                                                    "warn":  "Few ports are available.",
+                                                    "fail":  "The port pool is exhausted."
+                                                },
+                                    "connectivity":  {
+                                                         "title":  "Access domain",
+                                                         "ok":  "The access domain is configured.",
+                                                         "warn":  "Localhost access is available; configure a domain later if public access is needed.",
+                                                         "fail":  "The access address is unavailable."
+                                                     },
+                                    "encryption":  {
+                                                       "title":  "Encryption key",
+                                                       "ok":  "The encryption key is configured.",
+                                                       "warn":  "The encryption key is too weak.",
+                                                       "fail":  "The encryption key is missing."
+                                                   },
+                                    "internal_routing":  {
+                                                             "title":  "Internal routing secret",
+                                                             "ok":  "The routing secret is configured.",
+                                                             "warn":  "Internal routing needs attention.",
+                                                             "fail":  "The routing secret is missing; instance deployment will fail."
+                                                         }
+                                }
+                 },
+    "steps":  {
+                  "preflight":  {
+                                    "title":  "Preflight",
+                                    "desc":  "Pre-deployment checks"
+                                },
+                  "basic":  {
+                                "title":  "Basic Info",
+                                "desc":  "Instance name \u0026 credentials"
+                            },
+                  "container":  {
+                                    "title":  "Container Info",
+                                    "desc":  "Ports and run configs"
+                                },
+                  "model":  {
+                                "title":  "LLM Settings",
+                                "desc":  "API keys and model details"
+                            },
+                  "channel":  {
+                                  "title":  "Channels",
+                                  "desc":  "Messenger bots integrations"
+                              },
+                  "skills":  {
+                                 "title":  "Skills",
+                                 "desc":  "Capabilities and tools tree"
+                             },
+                  "deploy":  {
+                                 "title":  "Review \u0026 Run",
+                                 "desc":  "Validate and boot container"
+                             },
+                  "complete":  {
+                                   "title":  "Finished",
+                                   "desc":  "Deployment completion status"
+                               }
+              },
+    "validation":  {
+                       "pwd_min":  "Password length must be at least 8 characters",
+                       "required_field":  "Please satisfy required field: {{field}}",
+                       "test_llm_first":  "Please configure LLM parameters and click test component before proceeding",
+                       "test_channel_first":  "Please click test connection and succeed before proceeding",
+                       "preflight_loading":  "Deep scanning host system, please wait...",
+                       "preflight_fail":  "Please fix Docker and other core FAIL check items first to proceed",
+                       "basic_info_missing":  "Please fill in the instance name and Dashboard access credentials",
+                       "basic_name_missing":  "Please enter an instance name",
+                       "dashboard_access_missing":  "When Dashboard access is enabled, enter a Dashboard username and password",
+                       "username_format":  "Web session account format only supports letters, numbers, underscores, and hyphens",
+                       "template_consent_required":  "You must check the safety and compliance confirmation at the bottom to accept risk of interface permissions.",
+                       "feishu_variant_required":  "No available Feishu variant image for current version, please switch to a Feishu-supported version.",
+                       "submit_error":  "An exception occurred while requesting the server to start the service, please check your configuration.",
+                       "platform_model_web_only":  "The local open-source edition uses BYOK by default. Use your own model API key.",
+                       "plan_channel_restricted":  "This channel is restricted by the local resource policy. Choose an enabled channel or ask the local administrator to adjust the policy.",
+                       "select_platform_model":  "Use BYOK model credentials in the local open-source edition."
+                   },
+    "path_selection":  {
+                           "title":  "Choose Your Deployment Path",
+                           "title_desc":  "Before starting the Agent container instance, please choose the creation path that best matches your business needs",
+                           "template_title":  "Start with Business Template",
+                           "template_desc":  "Best for quick start. Apply mature industry solutions \u0026 workflows directly. No need to worry about base images \u0026 parameters, get your digital worker in one click.",
+                           "template_features":  [
+                                                     "Out-of-the-box, fast deployment for core business scenarios",
+                                                     "Smart pre-filled configuration, beginner-friendly",
+                                                     "Built-in mature system contexts, messaging channels, and extra skills"
+                                                 ],
+                           "blank_title":  "Start from Scratch",
+                           "blank_desc":  "Best for advanced users with clear custom requirements. Full freedom to customize base container options, multiple models, and messaging gateway parameters.",
+                           "blank_features":  [
+                                                  "Full control over container image tags, CPU \u0026 memory specifications",
+                                                  "Custom system contexts, multi-model \u0026 multi-channel debugging",
+                                                  "Independent sandbox isolation run, fully autonomous hot reload"
+                                              ],
+                           "btn_select_template":  "Choose Path: Browse Templates",
+                           "btn_select_blank":  "Choose Path: Custom Deployment",
+                           "back_to_selection":  "Back to Path Selection",
+                           "template_browser_title":  "Select Business Template",
+                           "template_browser_desc":  "Click any mature industry scenario template or functional workflow below, and the system will automatically pre-fill the optimum environment and parameters.",
+                           "tab_all":  "All Templates",
+                           "tab_blueprints":  "Industry Blueprints",
+                           "tab_workflows":  "Agent Workflows"
+                       },
+    "custom_engine_badge":  "Custom Agent",
+    "wizard_header":  {
+                          "title":  "Deploy New Agent Instance",
+                          "desc":  "Full-link environment probing and distributed Agent container instance topology setup",
+                          "progress":  "Progress {{current}} / {{total}}",
+                          "restart":  "Restart"
+                      },
+    "template_banner":  {
+                            "blueprint_preset":  "Industry Solution Pre-fill",
+                            "workflow_preset":  "AI Workflow Pre-fill",
+                            "configuring_params":  "Configuring parameters (Step {{current}} / {{total}})",
+                            "exit_template":  "Exit template deployment, switch to custom creation"
+                        },
+    "footer_status":  {
+                          "preflight_loading":  "Deep scanning host system, please wait...",
+                          "preflight_fix":  "Required fixes: {{fields}}",
+                          "preflight_warning":  "Warnings present, but safe to proceed",
+                          "preflight_success":  "Preflight passed, safe to proceed",
+                          "basic_info":  "Required fields: instance alias and Dashboard access credentials",
+                          "basic_name":  "Required: instance alias",
+                          "dashboard_access":  "When Dashboard access is enabled, a Dashboard username and password are required",
+                          "dashboard_access_configured":  "Dashboard access is enabled and protected by Basic Auth",
+                          "dashboard_access_disabled":  "Dashboard access is disabled; the instance remains available through configured channels and the Agent workspace",
+                          "basic_format_error":  "Format error: Web session account name can only contain letters, numbers, and hyphens",
+                          "basic_pwd_error":  "Protective password length must be at least 8 characters",
+                          "basic_configured":  "Access protection and Basic Auth authentication parameters are configured",
+                          "container_traefik":  "Cluster-adaptive ingress gateway reverse proxy is ready",
+                          "container_port":  "Host port automatic allocation logic has been activated",
+                          "model_test_required":  "Please test LLM connectivity and pass before proceeding",
+                          "model_success":  "Large Language Model and Provider connection succeeded",
+                          "channel_test_required":  "⚠️ IM channel is not yet configured or tested. Please fill in the API credentials above and click \u0027Test Channel Connection\u0027 before proceeding.",
+                          "channel_empty_allowlist":  "Channel can connect, but no allowed users/chats configured; bot might not respond to any messages.",
+                          "channel_success":  "Third-party Instant Message bot channel connection succeeded",
+                          "channel_disabled":  "Instant messaging disabled, visualization console debugging only",
+                          "skills_checking":  "Verifying external skill extensions and plugins list",
+                          "review_success":  "Configuration checklist review complete, ready to deploy"
+                      },
+    "quota_check":  {
+                        "loading":  "Checking your instance quota...",
+                        "error_fail":  "Failed to check instance creation quota, please refresh later.",
+                        "error_title":  "Quota Verification Exception",
+                        "btn_retry":  "Retry Check",
+                        "quota_remaining":  "Instance quota: {{used}} / {{limit}} used, {{remaining}} instance(s) remaining.",
+                        "quota_unlimited":  "Instance quota: {{used}} instance(s) used, no active instance limit for this account.",
+                        "quota_full":  "Local instance limit reached: {{used}} / {{limit}} used. Delete or archive existing instances, or ask the local administrator to adjust the resource policy."
+                    },
+    "preflight_errors":  {
+                             "permission_title":  "Permission Error",
+                             "permission_msg":  "You do not have permission to execute low-level preflight scanning. Please contact administrator.",
+                             "system_title":  "System Error",
+                             "system_msg":  "Unable to retrieve preflight system information."
+                         },
+    "business_summary_card":  {
+                                  "title_blueprint":  "Industry Solution Blueprint Preset",
+                                  "title_workflow":  "Automated Business Workflow Configuration",
+                                  "step_hint":  "Configuration Progress (Step {{current}} of {{total}})",
+                                  "exit_btn":  "Exit Template Deployment, Switch to Custom",
+                                  "target_audience":  "Target Audience",
+                                  "target_audience_default":  "Applicable to all enterprise teams and business users",
+                                  "business_value":  "Expected Value / Automation Result",
+                                  "business_value_default":  "Reduce manual processing costs and achieve automation",
+                                  "coverage_title":  "Completion \u0026 Pending Checklist",
+                                  "auto_configured":  "Auto-configured:",
+                                  "pending_configure":  "Pending Confirmation:",
+                                  "status_model":  "Underlying LLM Engine",
+                                  "status_prompt":  "System Prompt Instructions",
+                                  "status_channel":  "Recommended Channels",
+                                  "status_skills":  "Integrated Skill Extensions",
+                                  "status_inputs":  "Business Environment Inputs",
+                                  "status_credentials":  "Safety Protection Credentials",
+                                  "status_consent":  "Compliance Confirmation",
+                                  "blueprint_desc_title":  "Industry Blueprint Business Summary",
+                                  "workflow_desc_title":  "Workflow Task Execution Rules",
+                                  "audience_label":  "Target Audience",
+                                  "business_value_label":  "Business Impact \u0026 Benefits",
+                                  "skills_label":  "Built-in Skill Plugins",
+                                  "channels_label":  "Recommended Channels",
+                                  "target_result_label":  "Expected Automation Outcome",
+                                  "required_inputs_section":  "Workflow-Specific Business Input Environment",
+                                  "platform_fields_section":  "Underlying Platform Security \u0026 Protection",
+                                  "no_extra_skills":  "No extra skills required",
+                                  "core_brain":  "Core LLM Brain",
+                                  "channel_telegram":  "Telegram",
+                                  "channel_feishu":  "Feishu"
+                              },
+    "advanced_config":  {
+                            "title":  "Underlying Container Advanced Config (Experts Only)",
+                            "desc":  "Contains low-level image version, CPU quota, and memory limit specifications. Folded by default in template mode to keep layout clean."
+                        },
+    "template_selection":  {
+                               "title":  "AI Workflow Template-Driven Selection",
+                               "reselect_workflow":  "← Change Workflow",
+                               "reselect_blueprint":  "← Change Solution Blueprint",
+                               "loading_templates":  "Fetching system preset workflow panel...",
+                               "retry_load":  "Reload Templates",
+                               "skip_template":  "Skip and Continue with Custom",
+                               "no_templates":  "No workflow templates available",
+                               "no_templates_sub":  "You can still create a basic Agent instance directly without templates",
+                               "intro_desc":  "We recommend choosing a productivity workflow. The system automatically pre-configures engines and communication ports to lower setup costs.",
+                               "activated":  "Activated",
+                               "env_section_title":  "Configure Workflow Environment Variables",
+                               "upload_unsupported":  "Format unsupported: Only standard .pdf files are allowed.",
+                               "upload_size_limit":  "Capacity exceeded: This file size is {{currentSize}}MB, which exceeds the secure limit of {{maxSize}}MB.",
+                               "upload_progress":  "Uploading verification file...",
+                               "upload_success":  "Secure file ready · {{fileSize}}",
+                               "upload_error":  "Network transfer or security validation exception",
+                               "clear_and_retry":  "Clear \u0026 Retry",
+                               "placeholder_json":  "Please input JSON formatted data...",
+                               "placeholder_textarea":  "Please enter relevant configuration details...",
+                               "placeholder_url":  "Enter target URLs, one per line...",
+                               "placeholder_boolean":  "Enable this configuration feature",
+                               "placeholder_input":  "Please enter...",
+                               "consent_title":  "System \u0026 Data Permissions Compliance Confirmation",
+                               "consent_list_title":  "List of security permissions needed for this workflow/solution:",
+                               "consent_checkbox":  "I am aware of and fully responsible for the system interfaces and potential external permission calls needed for this deployment model.",
+                               "basic_protection_title":  "Basic Naming \u0026 Dashboard Access",
+                               "basic_protection_desc":  "Assign a unique alias and choose whether to expose the Agent Runtime Dashboard.",
+                               "instance_alias":  "Agent Instance Alias",
+                               "assigned_path":  "Auto-Assigned Security Router Path",
+                               "access_username":  "Dashboard Username",
+                               "access_password":  "Dashboard Password (≥ 8 chars)",
+                               "protection_warning":  "Access to /agent/{{path}} is protected by Dashboard Basic Auth. Unauthorized requests receive a 401 response.",
+                               "enable_dashboard_label":  "Enable Dashboard Access",
+                               "enable_dashboard_desc":  "When enabled, the Agent Runtime Dashboard is available at the instance URL. When disabled, the instance still runs through configured channels and the Agent workspace.",
+                               "dashboard_access_disabled_notice":  "Dashboard access is disabled. The instance still runs through configured channels and the Agent workspace, but no Dashboard entry point is exposed.",
+                               "dashboard_check_label":  "Dashboard Access Protection (Basic Auth)",
+                               "dashboard_check_enabled":  "Enabled (username: {{username}})",
+                               "dashboard_check_disabled":  "Disabled; no Dashboard entry point is exposed",
+                               "blueprint_business_title":  "Industry Solution Business Summary",
+                               "workflow_business_title":  "Workflow Task Execution Rules",
+                               "blueprint_desc_label":  "Solution Business Value Description",
+                               "workflow_desc_label":  "Workflow Automation Scenario Description",
+                               "blueprint_auto_config_title":  "Solution Auto-configured Assets \u0026 Environment",
+                               "blueprint_auto_config_desc":  "This solution has been automatically pre-configured, including pre-installed core instruction prompts, recommended channels, and skill extension plugins. You do not need to write code or configure complex environment variables. You may proceed directly to the next phase.",
+                               "recommended_skills_label":  "Integrated Skill Plugins",
+                               "recommended_channels_label":  "Recommended Communication Channels",
+                               "target_result_label":  "Expected Automation Outcome",
+                               "required_inputs_section":  "Workflow-Specific Business Input Environment",
+                               "platform_fields_section":  "Underlying Platform Security \u0026 Protection",
+                               "blueprint_preset_badge":  "Industry Solution",
+                               "workflow_preset_badge":  "AI Workflow",
+                               "placeholder_file_click_drag":  "Click to upload or drag PDF file here",
+                               "placeholder_file_limits":  "Supported format: .pdf, max secure size limit: {{maxSize}}MB",
+                               "synced_100":  "100% Synced",
+                               "file_name_label":  "File name: {{name}} ({{size}})",
+                               "upload_err_server_dump":  "The server encountered an unknown error while saving the uploaded file.",
+                               "upload_err_invalid_json":  "Invalid server security response validation, JSON translation failed.",
+                               "upload_err_status_code":  "Upload failed, HTTP status code {{status}}",
+                               "upload_err_disconnect":  "Cloud transmission disconnected, HTTP error code {{status}}",
+                               "upload_err_network_interrupted":  "Upload network interrupted: unable to connect to the external transmission proxy layer, please check your local network.",
+                               "upload_err_aborted":  "The upload instruction was unexpectedly aborted.",
+                               "deploy_id_missing":  "Deployment task ID generation error. Please refresh the page and try again.",
+                               "remove_file_fail":  "Failed to delete uploaded file: {{message}}",
+                               "placeholder_instance_alias":  "e.g., MyBay Personal Research Assistant",
+                               "placeholder_instance_password":  "Set 401 intercept authentication password",
+                               "permission_scope_fallback":  "Privacy Permission",
+                               "permission_reason_fallback":  "Ensure necessary data access.",
+                               "upload_default_error":  "Validation failed, please check file format or size limits."
+                           },
+    "container_config":  {
+                             "title":  "Container Isolation \u0026 Port Allocation",
+                             "title_desc":  "Allocate intelligent process images and routing rules to support multi-tenant gateway proxying.",
+                             "image_label":  "Underlying Agent Image Code",
+                             "tag_label":  "Tag/Version",
+                             "latest_option":  "latest (Follow newest)",
+                             "feishu_warning_title":  "Feishu Compatibility Warning",
+                             "feishu_warning_desc":  "The selected official Hermes image {{tag}} does not declare Feishu/Lark capability. Select a compatible discovered version.",
+                             "prewarmed_ready":  "Image pre-warmed: This version exists in local Docker cache; deployment will be near-instant.",
+                             "traefik_title":  "⚡ Traefik Ingress Microservice Self-Discovery Mode",
+                             "traefik_desc":  "Detected system running high-availability distributed cluster governance (Traefik). Ingress routing is automatically mapped via shared Docker Socket.",
+                             "session_port_label":  "Session Management Port Configuration:",
+                             "traefik_ports":  "Auto-allocated, Port Pool 10100-19999",
+                             "advanced_details":  "⚙️ Advanced Parameters (Smart Allocation)",
+                             "start_port_scan":  "Start Scanning Port:",
+                             "end_port_scan":  "End Scanning Port:",
+                             "internal_rules":  "Internal Allocation Rule:",
+                             "port_auto_title":  "Host Port Auto-Allocation",
+                             "port_auto_desc":  "The system will dynamically bind an available host port based on the physical environment. No manual intervention or conflict resolution is required; details will display on the details page.",
+                             "internal_port_badge":  "Internal Port: 9119",
+                             "allocating_badge":  "Allocating...",
+                             "resource_limits_title":  "Physical Resource Quotas (Neighbor Guard)",
+                             "standard_shared_plan":  "Standard Shared Plan (Default)",
+                             "cpu_limit_label":  "CPU Core Allocation Limit",
+                             "cpu_option_01":  "0.1 Cores (Extremely restricted, keepalive tasks only)",
+                             "cpu_option_025":  "0.25 Cores (Moderate constraint)",
+                             "cpu_option_05":  "0.5 Cores (Recommended Default - Neighbor Guard)",
+                             "cpu_option_1":  "1.0 Cores (Standard dedicated single core)",
+                             "cpu_option_2":  "2.0 Cores (High throughput business mode)",
+                             "no_limit_option":  "No limit (Not recommended for multi-tenant environments)",
+                             "cpu_tip":  "Restricts the maximum CPU cores this container can consume to prevent runaway infinite loops from degrading the host.",
+                             "ram_limit_label":  "Physical Memory Limit (RAM)",
+                             "ram_option_128":  "128 MB RAM (Ultra-lightweight micro mode)",
+                             "ram_option_256":  "256 MB RAM (Low-power core mode)",
+                             "ram_option_512":  "512 MB RAM (Recommended Default - Neighbor Guard)",
+                             "ram_option_1":  "1.0 GB RAM (Standard instance)",
+                             "ram_option_2":  "2.0 GB RAM (Full-featured heavy instance)",
+                             "ram_no_limit_option":  "No limit (Highly susceptible to memory leak crashes)",
+                             "ram_tip":  "Container exceeding RAM limits will be safely rebooted by the Docker daemon to guard against memory leaks.",
+                             "enable_dashboard_label":  "Enable Dashboard Access",
+                             "enable_dashboard_desc":  "Expose the Agent Runtime Dashboard at the instance URL.",
+                             "advanced_panel_title":  "Underlying Container Parameters (Image / Port / Resources)",
+                             "hide_advanced_btn":  "Collapse Parameters",
+                             "show_advanced_btn":  "Expand Parameters for Fine-Tuning"
+                         },
+    "load_errors":  {
+                        "err_401":  "401: Login session expired, please log in again",
+                        "err_403":  "403: Current account is not authorized to read templates",
+                        "err_404":  "404: Template service is temporarily unavailable",
+                        "err_500":  "500: Template service exception, please try again later",
+                        "err_network":  "Network connection abnormality, please try again.",
+                        "err_fallback":  "Unable to load workflow templates. Check the local service or refresh and try again."
+                    },
+    "validation_errors":  {
+                              "json_format_err":  "JSON format error: {{message}}",
+                              "json_item_format_err":  "Input item 【{{label}}】 has JSON format error: {{message}}",
+                              "json_required_and_valid":  "Required, and must be valid JSON format",
+                              "template_input_required":  "Please fill in template required input: 【{{label}}】",
+                              "file_upload_required":  "Please upload the required file",
+                              "file_item_upload_required":  "Please upload the file required for 【{{label}}】",
+                              "field_required":  "This field is required"
+                          },
+    "trustPermission":  {
+                            "eyebrow":  "Security Gate",
+                            "title":  "Permission Confirmation",
+                            "description":  "Confirm the model, third-party channels, network, file, and high-risk capabilities this Agent will use before the instance is deployed.",
+                            "riskLabel":  "Risk",
+                            "risk":  {
+                                         "low":  "Low",
+                                         "medium":  "Medium",
+                                         "high":  "High"
+                                     },
+                            "model":  "Model access",
+                            "platformModel":  "BYOK model",
+                            "channels":  "Third-party channels",
+                            "externalNetwork":  "External network",
+                            "fileAccess":  "File read/write",
+                            "dockerAccess":  "Docker / high-risk capability",
+                            "sensitiveAssets":  "Sensitive assets",
+                            "sensitiveAssetsCount":  "{{count}} masked assets",
+                            "none":  "Not configured",
+                            "unspecified":  "No model selected",
+                            "webOnly":  "Web console only / no third-party channel",
+                            "externalNetworkEnabled":  "Model, skill, or channel may make external requests",
+                            "externalNetworkDisabled":  "No external network dependency detected",
+                            "fileAccessEnabled":  "Instance file space or file skills are enabled",
+                            "fileAccessDisabled":  "No file read/write capability detected",
+                            "dockerAccessEnabled":  "Docker-related capability detected and should be reviewed",
+                            "dockerAccessDisabled":  "No Docker or high-risk runtime capability detected",
+                            "confirmLabel":  "I have reviewed the permissions, sensitive assets, and risk level, and agree to deploy this Agent with the current configuration.",
+                            "confirmRequired":  "Please confirm the permission inventory before deploying."
+                        },
+    "wizardCopy":  {
+                       "footer":  {
+                                      "ready":  "Configuration ready",
+                                      "previous":  "Previous",
+                                      "deploying":  "Deploying…",
+                                      "start":  "Start instance",
+                                      "next":  "Next"
+                                  },
+                       "model":  {
+                                     "title":  "Large language model settings",
+                                     "description":  "Connect the model service used by this instance. Choose a model with stable response times.",
+                                     "testing":  "Testing connection…",
+                                     "testPassed":  "Connection passed (click to retest)",
+                                     "test":  "Test model connection",
+                                     "success":  "Model service connected. The configuration is valid.",
+                                     "successDetail":  "Connection test succeeded. The API configuration is valid.",
+                                     "failure":  "Model connection failed. Check the configuration.",
+                                     "unknownError":  "An unknown authentication or network error occurred.",
+                                     "byokTitle":  "Bring your own API key (BYOK)",
+                                     "byokDescription":  "Use your own model API key. Secrets are encrypted and stored locally.",
+                                     "savedCredential":  "Use a saved credential",
+                                     "manualKey":  "Enter an API key manually",
+                                     "savedCredentialHint":  "Select an encrypted secret from Credential Management.",
+                                     "provider":  "Model provider",
+                                     "selectProvider":  "Select a model provider…",
+                                     "apiKey":  "Model API key",
+                                     "usingSavedCredential":  "Using a saved credential",
+                                     "apiKeyPlaceholder":  "Enter an API key (for example, sk-…)",
+                                     "baseUrl":  "API endpoint (Base URL)",
+                                     "defaultBaseUrl":  "Default: {{url}}",
+                                     "baseUrlPlaceholder":  "Enter an API endpoint",
+                                     "model":  "Model version",
+                                     "customModel":  "Custom model name",
+                                     "customModelPlaceholder":  "Enter a custom model (for example, gemini-2.5-flash)",
+                                     "securityTitle":  "Security: ",
+                                     "securitySaved":  "The selected credential is encrypted before it is passed to the Agent container.",
+                                     "securityByok":  "The API key is encrypted with the server ENCRYPTION_KEY before storage.",
+                                     "securityVerify":  "Use the test button above to verify the configuration."
+                                 },
+                       "skills":  {
+                                      "dockerEnvDisabled":  "ENABLE_DOCKER_SOCKET_SKILL is disabled, so the high-risk Docker capability is unavailable.",
+                                      "dockerAdminDisabled":  "The local security policy does not allow mounting the Docker socket. Enable it in Security settings and acknowledge the risk first.",
+                                      "dockerAdminActivation":  "Docker socket access is not enabled for administrators. Enable it in System Settings.",
+                                      "comingSoon":  "Coming soon",
+                                      "riskCritical":  "Critical / Admin",
+                                      "riskHigh":  "High risk",
+                                      "riskMedium":  "Medium risk",
+                                      "securityDisabled":  "Security setting disabled",
+                                      "confirmTitle":  "Confirm high-risk capability",
+                                      "enabling":  "Enabling: {{name}}",
+                                      "dockerWarning":  "Security warning: this instance will be able to access the host Docker API. Only continue if the Agent instructions are fully trusted.",
+                                      "confirmPrompt":  "Enter the text below to confirm (administrators only)",
+                                      "confirmPlaceholder":  "Enter the confirmation text",
+                                      "cancel":  "Cancel",
+                                      "confirm":  "Enable",
+                                      "title":  "Enable skills and capabilities",
+                                      "description":  "Add system-level skills to this Agent. Enable high-risk capabilities carefully; sensitive actions are logged.",
+                                      "hideAdvanced":  "Hide high-risk settings",
+                                      "showAdvanced":  "Show high-risk capabilities",
+                                      "credentialsTitle":  "Advanced capability credentials",
+                                      "test":  "Test connection",
+                                      "blockedTitle":  "Security policy notice",
+                                      "acknowledge":  "Got it",
+                                      "catalog": {
+                                          "browser": {
+                                              "name": "Browser",
+                                              "desc": "Use built-in Chrome for advanced browsing, page extraction, simulated clicks, and full-page screenshots.",
+                                              "warning": "Restricted network access: private networks and metadata services are blocked, and a temporary browser profile is used."
+                                          },
+                                          "shell": {
+                                              "name": "Shell sandbox terminal",
+                                              "desc": "Run system shell commands, scripts, and dependency installation inside an isolated sandbox.",
+                                              "warning": "High-risk capability: commands must run in an isolated sandbox with workspace-only access and no Docker socket mount."
+                                          },
+                                          "file_system": {
+                                              "name": "File system access",
+                                              "desc": "Read, write, modify, and extract files in the dedicated instance workspace.",
+                                              "warning": "High-risk capability: access is limited to the instance workspace, sensitive system paths are blocked, and operations are audited."
+                                          },
+                                          "file_read": {
+                                              "name": "File reading and document analysis",
+                                              "desc": "Read and analyze supported user-uploaded media, documents, and scripts into structured content.",
+                                              "warning": "No sensitive system access; this capability only analyzes content explicitly uploaded by the user."
+                                          },
+                                          "docker": {
+                                              "name": "Docker Engine access",
+                                              "desc": "Connect to the host Docker socket to start and orchestrate other services dynamically.",
+                                              "warning": "Critical administrator capability: Docker Engine access may be equivalent to root access on the host. Enable it only in a controlled environment."
+                                          },
+                                          "crypto": {
+                                              "name": "Web3 and smart contract tools",
+                                              "desc": "Provide a sandbox for smart contract debugging, digital signing, and Ethereum/Solidity contract calls.",
+                                              "warning": ""
+                                          },
+                                          "custom_webhooks": {
+                                              "name": "HTTP webhook triggers",
+                                              "desc": "Call external webhook endpoints, send JSON payloads, and poll responses.",
+                                              "warning": "This capability may transmit data externally. Only use trusted webhook endpoints."
+                                          },
+                                          "tavily_search": {
+                                              "name": "Tavily AI Search",
+                                              "desc": "Use an AI-focused search engine to filter noise and produce clean, structured research material.",
+                                              "warning": "",
+                                              "label": "Tavily API Key",
+                                              "placeholder": "Leave blank to keep the current key (tvly-…)"
+                                          },
+                                          "google_search": {
+                                              "name": "Google Serper Search",
+                                              "desc": "Use the Serper API to retrieve global Google search results quickly.",
+                                              "warning": "",
+                                              "label": "Serper.dev API Key",
+                                              "placeholder": "Leave blank to keep the current key"
+                                          },
+                                          "github": {
+                                              "name": "GitHub repository and issue workflows",
+                                              "desc": "Diagnose issues, submit code changes, and create pull requests for configured repositories.",
+                                              "warning": "A personal access token will be used to access your repositories.",
+                                              "label": "GitHub Personal Access Token (PAT)",
+                                              "placeholder": "Leave blank to keep the current token (ghp_…)"
+                                          },
+                                          "feishu": {
+                                              "name": "Feishu / Lark integration",
+                                              "desc": "Connect a Feishu or Lark custom app for messaging, rich cards, and multidimensional table automation.",
+                                              "warning": "This capability can read and send Feishu/Lark messages. Verify the App ID and secret before enabling it."
+                                          }
+                                      }
+                                  },
+                       "webhookHelper": {
+                           "title": "Traefik reverse-proxy webhook callback URL",
+                           "gatewayIsolated": "Gateway isolation configured",
+                           "copy": "Copy URL",
+                           "copied": "Copied",
+                           "description": "Paste this URL into the event subscription callback or webhook settings of the corresponding platform, such as Feishu Open Platform, DingTalk Developer Console, or Telegram BotFather.",
+                           "validation": {
+                               "feishuAppId": "Feishu App ID usually starts with cli_.",
+                               "feishuAppSecret": "The Feishu App Secret is too short.",
+                               "dingtalkAppKey": "The DingTalk App Key / Client ID format appears invalid.",
+                               "telegramBotToken": "The Telegram Bot Token format appears invalid; it should contain an ID and secret separated by a colon.",
+                               "qqBotAppId": "QQ Bot AppID must contain digits only."
+                           }
+                       },
+                       "channel":  {
+                                       "restricted":  "This channel is disabled by the local configuration.",
+                                       "title":  "Agent conversations and messaging channels",
+                                       "description":  "Connect messaging channels for conversations, task notifications, and command execution.",
+                                       "hideGuide":  "Hide setup guide",
+                                       "showGuide":  "Show setup guide",
+                                       "connecting":  "Connecting…",
+                                       "connected":  "Connected",
+                                       "test":  "Test channel connection",
+                                       "success":  "Channel connection verified.",
+                                       "failure":  "Channel or network connection failed.",
+                                       "timeout":  "The handshake timed out. Check the token and whether this host can reach the channel.",
+                                       "bindLaterTitle":  "Bind after deployment (recommended)",
+                                       "bindLaterDesc":  "Capture the first message after deployment and create an authorization request that can be approved in instance details.",
+                                       "allowlistTitle":  "Allowlist only",
+                                       "allowlistDesc":  "Only the users and chats configured below can access the Agent.",
+                                       "allowAllTitle":  "Allow all users",
+                                       "allowAllDesc":  "Do not block unconfigured users. Recommended only for public demos or debugging.",
+                                       "disabledTitle":  "Disable bot channel",
+                                       "disabledDesc":  "Turn off messaging for this channel and keep console chat only.",
+                                       "production":  "Production",
+                                       "testing":  "Testing",
+                                       "feishuGuideTitle":  "Feishu / Lark version requirement",
+                                       "feishuGuideDescription":  "Feishu / Lark requires an Agent version that includes the corresponding channel capability.",
+                                       "feishuImageHint":  "Select an official Hermes version that declares Feishu/Lark capability.",
+                                       "latestWarningTitle":  "latest tag notice",
+                                       "latestWarningDescription":  "The latest tag is selected. Use an explicit Feishu-compatible version to avoid dependency drift.",
+                                       "switchRecommended":  "Switch to recommended Feishu version ({{tag}})",
+                                       "feishuSupportedTitle":  "Current version supports Feishu",
+                                       "feishuSupportedDescription":  "Version {{tag}} includes Feishu support. You can continue.",
+                                       "incompatibleTitle":  "Incompatible version",
+                                       "incompatibleDescription":  "Version {{tag}} does not support Feishu / Lark. Switch to a compatible version.",
+                                       "forceRecommended":  "Switch to recommended Feishu version ({{tag}})",
+                                       "accessPolicy":  "1. Channel access policy",
+                                       "autoBindTitle":  "Automatic binding enabled",
+                                       "autoBindStep1":  "You do not need to enter platform IDs in advance. Add the bot credentials and deploy the instance.",
+                                       "autoBindStep2":  "When a user first messages the bot, a binding request appears in instance details.",
+                                       "autoBindStep3":  "Approve the request in instance details to authorize the channel.",
+                                       "allowAllWarningTitle":  "Open-access security notice",
+                                       "allowAllWarning":  "Any user who can reach the bot may consume model resources. Use this only for testing or public demos.",
+                                       "credentials":  "2. Channel credentials",
+                                       "verifyTitle":  "Test the channel after configuration",
+                                       "verifyDescription":  "Verify the channel credentials and network access from this host.",
+                                       "emptyAllowlistTitle":  "Allowlist is empty",
+                                       "emptyAllowlistDescription":  "No users or chats are allowed yet. Add at least one User ID or Chat ID."
+                                   },
+                       "container":  {
+                                         "locked":  "Locked by system",
+                                         "imagePlaceholder":  "For example, nousresearch/hermes-agent",
+                                         "imageLockedHint":  "Regular users can only use images approved by the local administrator. Ask an administrator to maintain image versions.",
+                                         "feishuSupported":  " (Feishu supported)"
+                                     },
+                       "channelManual":  {
+                                             "common":  {
+                                                            "usersPlaceholder":  "Enter user IDs separated by commas",
+                                                            "betaTitle":  "Beta channel notice",
+                                                            "callbackUrl":  "Server callback URL"
+                                                        },
+                                             "qr":  {
+                                                        "title":  "Quick QR binding",
+                                                        "notice":  "Scanning securely retrieves and fills channel credentials. Manual configuration remains available below.",
+                                                        "start":  "Start scanning",
+                                                        "starting":  "Generating…",
+                                                        "scanHint":  "Scan and confirm with the matching Feishu, Lark, or personal WeChat client.",
+                                                        "completed":  "QR binding completed and credentials were filled.",
+                                                        "failed":  "QR binding failed. Generate a new code.",
+                                                        "errors": {
+                                                            "expired": "The QR code expired. Generate a new one.",
+                                                            "network": "The control-panel container cannot reach the WeChat service. Check Docker DNS or proxy settings and try again.",
+                                                            "service": "The WeChat QR service is temporarily unavailable. Try again later.",
+                                                            "generic": "The QR code could not be generated or bound. Try again."
+                                                        }
+                                                    },
+                                             "weixin":  {
+                                                            "title":  "WeChat iLink Bot",
+                                                            "notice":  "Connect a personal WeChat account through Tencent iLink Bot and the native Hermes Weixin adapter.",
+                                                            "accountId":  "iLink Bot account ID",
+                                                            "accountIdPlaceholder":  "Filled automatically after scanning",
+                                                            "token":  "iLink Bot token",
+                                                            "tokenPlaceholder":  "Filled automatically after scanning",
+                                                            "baseUrl":  "iLink API URL"
+                                                        },
+                                             "telegram":  {
+                                                              "botToken":  "Bot Token",
+                                                              "tokenPlaceholder":  "For example, 5820986161:AAH8t_N8…",
+                                                              "tokenHint":  "Request one from Telegram @BotFather",
+                                                              "allowedUsers":  "Allowed Telegram user IDs",
+                                                              "usersPlaceholder":  "For example, 10593856, 8295832",
+                                                              "usersHint":  "Only these Telegram users can send commands or direct messages",
+                                                              "allowedChats":  "Allowed Telegram group or channel IDs",
+                                                              "chatsPlaceholder":  "For example, -10018590623, -10015948013",
+                                                              "chatsHint":  "Restrict the bot to the specified groups or channels"
+                                                          },
+                                             "feishu":  {
+                                                            "region":  "Feishu / Lark service region",
+                                                            "regionChina":  "Feishu China (open.feishu.cn)",
+                                                            "regionGlobal":  "Lark Global (open.larksuite.com)",
+                                                            "appId":  "Feishu / Lark App ID",
+                                                            "appIdPlaceholder":  "App ID beginning with cli_",
+                                                            "appSecret":  "Feishu / Lark App Secret",
+                                                            "appSecretPlaceholder":  "Application App Secret",
+                                                            "allowedUsers":  "Allowed Feishu user OpenIDs",
+                                                            "usersPlaceholder":  "For example, ou_34739de8, ou_982cd73",
+                                                            "usersHint":  "Only allowlisted Feishu members can chat with the Agent",
+                                                            "allowedChats":  "Allowed Feishu Chat IDs",
+                                                            "chatsPlaceholder":  "For example, oc_12347de8",
+                                                            "chatsHint":  "Restrict the bot to the specified chats"
+                                                        },
+                                             "slack":  {
+                                                           "token":  "Slack Bot User OAuth Token",
+                                                           "tokenPlaceholder":  "Token beginning with xoxb-",
+                                                           "allowedUsers":  "Allowed Slack user IDs",
+                                                           "usersPlaceholder":  "For example, U12345678, U87654321",
+                                                           "usersHint":  "Only allowlisted Slack users can trigger actions",
+                                                           "allowedChannels":  "Allowed Slack channel IDs",
+                                                           "channelsPlaceholder":  "For example, C12345678",
+                                                           "channelsHint":  "Restrict the bot to the specified channels"
+                                                       },
+                                             "discord":  {
+                                                             "token":  "Discord Bot Token",
+                                                             "tokenPlaceholder":  "Enter the Discord developer portal Bot Token",
+                                                             "allowedGuilds":  "Allowed Discord server IDs",
+                                                             "guildsPlaceholder":  "Enter server IDs separated by commas",
+                                                             "allowedUsers":  "Allowed Discord user IDs",
+                                                             "allowedChannels":  "Allowed Discord channel IDs",
+                                                             "channelsPlaceholder":  "Enter channel IDs separated by commas"
+                                                         },
+                                             "webhook":  {
+                                                             "url":  "External payload URL",
+                                                             "allowedUsers":  "Allowed related users",
+                                                             "usersPlaceholder":  "Enter related user IDs separated by commas",
+                                                             "allowedChannels":  "Allowed related channels",
+                                                             "channelsPlaceholder":  "Enter related channel IDs separated by commas",
+                                                             "info":  "The webhook receiver uses port 8644 and is exposed under /webhooks/... on the instance domain. Configure WEBHOOK_SECRET signature verification on the caller."
+                                                         },
+                                             "api":  {
+                                                         "info":  "API mode provides programmatic instance access through the instance URL and an API key. If the Web UI is disabled, only explicitly allowlisted paths remain accessible.",
+                                                         "authInfo":  "The API service uses port 8642 and is exposed under /v1/... on the instance domain. Requests must include the API key in a header, for example Authorization: Bearer \u003cAPI_KEY\u003e."
+                                                     },
+                                             "whatsapp":  {
+                                                              "phoneId":  "WhatsApp Phone Number ID",
+                                                              "phoneIdPlaceholder":  "Enter the phone number ID from the Meta App",
+                                                              "token":  "WhatsApp Access Token (Meta Graph API)",
+                                                              "tokenPlaceholder":  "Enter the access token beginning with EAAG…",
+                                                              "allowedUsers":  "Allowed WhatsApp phone numbers",
+                                                              "usersPlaceholder":  "Enter numbers with country code, for example 86138…",
+                                                              "allowedChannels":  "Allowed WhatsApp groups",
+                                                              "channelsPlaceholder":  "Enter group or filter IDs (optional)"
+                                                          },
+                                             "dingtalk":  {
+                                                              "appKey":  "DingTalk AppKey",
+                                                              "appKeyPlaceholder":  "Enter the DingTalk application AppKey",
+                                                              "appSecret":  "DingTalk AppSecret",
+                                                              "appSecretPlaceholder":  "Enter the application AppSecret",
+                                                              "robotSecret":  "DingTalk robot signature secret (optional)",
+                                                              "robotSecretPlaceholder":  "Enter the signature secret beginning with SEC (optional)",
+                                                              "allowedUsers":  "Allowed DingTalk staff IDs",
+                                                              "usersPlaceholder":  "Enter StaffIDs separated by commas",
+                                                              "allowedChats":  "Allowed DingTalk chat IDs",
+                                                              "chatsPlaceholder":  "Enter OpenConversationIDs separated by commas"
+                                                          },
+                                             "qq":  {
+                                                        "appId":  "QQ Bot AppID",
+                                                        "appIdPlaceholder":  "Enter the bot AppID",
+                                                        "secret":  "QQ Bot Secret",
+                                                        "secretPlaceholder":  "Enter the bot Secret",
+                                                        "allowedUsers":  "Allowed QQ user OpenIDs",
+                                                        "usersPlaceholder":  "Enter user OpenIDs separated by commas",
+                                                        "allowedGuilds":  "Allowed QQ guild IDs",
+                                                        "guildsPlaceholder":  "Enter Guild IDs separated by commas",
+                                                        "allowedChannels":  "Allowed subchannel IDs (optional)",
+                                                        "channelsPlaceholder":  "Enter subchannel IDs separated by commas"
+                                                    },
+                                             "wechat":  {
+                                                            "betaDescription":  "WeChat Official Accounts use a platform callback. Configure the same Token and AESKey in the WeChat console and below.",
+                                                            "appId":  "WeChat Official Account AppID",
+                                                            "appIdPlaceholder":  "Enter the Official Account AppID",
+                                                            "appSecret":  "WeChat Official Account AppSecret",
+                                                            "appSecretPlaceholder":  "Enter the Official Account AppSecret",
+                                                            "token":  "WeChat Official Account Token",
+                                                            "tokenPlaceholder":  "Enter a custom Token",
+                                                            "aesKey":  "WeChat EncodingAESKey (optional)",
+                                                            "aesKeyPlaceholder":  "Enter the 43-character key generated for secure mode",
+                                                            "allowedUsers":  "Allowed follower OpenIDs",
+                                                            "usersPlaceholder":  "Enter follower OpenIDs separated by commas",
+                                                            "allowedChats":  "Allowed conversations",
+                                                            "chatsPlaceholder":  "Enter conversation filters separated by commas"
+                                                        },
+                                             "wecom":  {
+                                                           "betaDescription":  "WeCom uses a platform callback. Configure the same Token and AESKey in the custom application console and below.",
+                                                           "appId":  "WeCom CorpID / AppID",
+                                                           "appIdPlaceholder":  "Enter the CorpID",
+                                                           "appSecret":  "WeCom AppSecret",
+                                                           "appSecretPlaceholder":  "Enter the custom application Secret",
+                                                           "agentId":  "WeCom AgentID",
+                                                           "agentIdPlaceholder":  "For example, 1000002",
+                                                           "token":  "WeCom Token",
+                                                           "tokenPlaceholder":  "Enter the Token configured in WeCom",
+                                                           "aesKey":  "WeCom EncodingAESKey",
+                                                           "aesKeyPlaceholder":  "Enter the EncodingAESKey generated by the custom application",
+                                                           "allowedUsers":  "Allowed WeCom user accounts",
+                                                           "usersPlaceholder":  "Enter member accounts separated by commas",
+                                                           "allowedChats":  "Allowed WeCom chat IDs",
+                                                           "chatsPlaceholder":  "For example, chat_…, separated by commas"
+                                                       }
+                                         },
+                       "review":  {
+                                      "blueprintFallback":  "Industry blueprint",
+                                      "workflowFallback":  "Agent workflow",
+                                      "channelNone":  "Local only (no external channel)",
+                                      "channelConnected":  "Channel connection verified",
+                                      "channelUntested":  "Skipped or not yet verified",
+                                      "templateReference":  "Industry template in use:",
+                                      "templateName":  "{{name}} template",
+                                      "validationBlocked":  "Deployment safety validation failed:",
+                                      "allowlistWarningTitle":  "Allowlist security notice",
+                                      "allowlistWarning":  "The channel can connect, but no users are allowed, so the bot may not respond.",
+                                      "allowlistWarningDetail":  "No User ID or Chat ID is configured and Allow All is disabled. Return to the previous step and add allowlist entries.",
+                                      "readyTitle":  "Deployment configuration is ready",
+                                      "readyDescription":  "Starting the instance creates the container and configures its access route.",
+                                      "route":  "Instance path:",
+                                      "model":  "Model:",
+                                      "port":  "Access port:",
+                                      "portTraefik":  "Allocated by the gateway",
+                                      "portAuto":  "Automatically allocated",
+                                      "channel":  "Messaging channel:",
+                                      "localOnly":  "Local console only",
+                                      "skills":  "Enabled skills:",
+                                      "skillsEnabled":  "{{count}} enabled",
+                                      "noSkills":  "No external skills enabled",
+                                      "noSkillsDescription":  "No external plugins are enabled. The Agent will use its built-in model capabilities.",
+                                      "matchedTemplate":  "Runtime template matched:",
+                                      "templateInitialization":  "Scheduled triggers, event notifications, and the initial task queue are initialized when the instance is created.",
+                                      "startupNoticeTitle":  "Startup notice:",
+                                      "startupNotice":  "Container initialization usually takes 5–10 seconds. The instance route becomes available automatically after startup.",
+                                      "channelGuideReady":  "Messaging channel guide ready",
+                                      "channelGuideDescription":  "This instance uses {{channel}}. Open the dedicated guide to finish setup.",
+                                      "viewChannelGuide":  "View {{channel}} setup guide",
+                        "deploymentProgress":  {
+                            "title": "Deploying instance",
+                            "failedTitle": "Deployment incomplete",
+                            "processing": "Processing the deployment task",
+                            "genericFailure": "Deployment failed. Check Docker and try again.",
+                            "currentStage": "Current stage: {{stage}}",
+                            "retry": "Redeploy",
+                            "steps": {
+                                "queued": "Submitted and queued",
+                                "preparing": "Preparing resources",
+                                "port_reserved": "Port reserved",
+                                "network_creating": "Creating network",
+                                "network_ready": "Network ready",
+                                "image_pulling": "Pulling image",
+                                "image_ready": "Image ready",
+                                "container_creating": "Creating container",
+                                "container_created": "Container created",
+                                "container_starting": "Starting container",
+                                "health_checking": "Running readiness checks",
+                                "ready": "Instance ready"
+                            },
+                            "errors": {
+                                "PORT_CONFLICT": "The selected host port is in use. Another port will be selected before retrying.",
+                                "DOCKER_UNAVAILABLE": "Docker Engine is unavailable. Start Docker and redeploy.",
+                                "IMAGE_PULL_FAILED": "The Agent image could not be downloaded. Check the image name, network, and registry access.",
+                                "NETWORK_CREATE_FAILED": "The isolated Docker network for this instance could not be created.",
+                                "CONTAINER_CREATE_FAILED": "The instance container could not be created. Review the deployment log for the underlying cause and retry.",
+                                "CONTAINER_START_FAILED": "The instance container was created but could not be started.",
+                                "HEALTH_CHECK_FAILED": "The instance container started but did not pass its readiness checks.",
+                                "DEPLOYMENT_TIMEOUT": "Deployment exceeded its deadline and was cancelled.",
+                                "DEPLOYMENT_CANCELLED": "Deployment was cancelled.",
+                                "DEPLOYMENT_RETRY_EXHAUSTED": "Deployment reached the maximum number of automatic retries.",
+                                "CONTAINER_MISSING": "The instance exists in the database, but its Docker container is missing.",
+                                "CLEANUP_FAILED": "Some instance resources could not be cleaned up.",
+                                "QUOTA_EXCEEDED": "The instance quota has been reached.",
+                                "PATH_CONFLICT": "Another instance already uses this access path."
+                            }
+                        },
+                                      "deployedTitle":  "Deployment submitted",
+                                      "deployedDescription":  "Instance {{name}} is being created and started in the background. Use the checklist below to follow delivery status.",
+                                      "checklistTitle":  "{{name}} instance delivery checklist",
+                                      "basicAuth":  "Web console access protection",
+                                      "enabledAccount":  "Enabled (account: {{username}})",
+                                      "gatewayRoute":  "Instance access route",
+                                      "routing":  "Configuring route",
+                                      "channelMode":  "Channel mode",
+                                      "channelStatus":  "Channel connection status",
+                                      "allowlistTargets":  "Allowlist targets",
+                                      "targetCount":  "{{count}} targets",
+                                      "accessUrl":  "Instance URL:",
+                                      "chatGuideTitle":  "How do I chat through the messaging channel after deployment?",
+                                      "chatGuideDescription":  "Use the {{channel}} setup guide to configure the token and allowlist.",
+                                      "zeroTargetsTitle":  "The channel allowlist has 0 targets",
+                                      "zeroTargetsDescription":  "The channel can connect, but no users or groups are allowed, so the bot will remain silent. Add allowlist entries, or enable Allow All only after accepting the risk.",
+                                      "nextGuideTitle":  "{{name}} · Next-step guide",
+                                      "blueprintGuideDescription":  "This instance uses an industry blueprint. Complete these key settings before use.",
+                                      "workflowGuideDescription":  "This instance uses a workflow template. Complete these steps to keep automation reliable.",
+                                      "quickTestTitle":  "Quick verification: run the first instance test",
+                                      "quickTestDescription":  "After deployment, use these steps to complete the first functional test.",
+                                      "quickStep1Title":  "Open instance details",
+                                      "quickStep1Description":  "Select a recommended action below to open the relevant instance details page.",
+                                      "quickStep2Title":  "Open Files or Logs",
+                                      "quickStep2Description":  "Upload test material in Files or inspect execution in Real-time Logs.",
+                                      "quickStep3Title":  "Run a test and inspect logs",
+                                      "quickStep3Description":  "Upload a test file or enter test data, run the first task in the instance console, and inspect the live logs.",
+                                      "unnamedAction":  "Unnamed action",
+                                      "completeConfiguration":  "Complete configuration",
+                                      "completeConfigurationDescription":  "Complete the relevant settings in instance details.",
+                                      "recommendedActions":  "Recommended next actions",
+                                      "recommendedActionsDescription":  "The instance is starting in the background. Use the action cards below to finish the required setup.",
+                                      "recommended":  "Recommended",
+                                      "goNow":  "Open",
+                                      "finish":  "Finish and return to console",
+                                      "actions":  {
+                                                      "importCompetitors":  "Import competitor targets",
+                                                      "runPriceScraping":  "Run price scraping",
+                                                      "uploadProductGuide":  "Upload product guide",
+                                                      "configureWebhookUrl":  "Configure Webhook URL",
+                                                      "configureFeishuCredentials":  "Configure Feishu credentials",
+                                                      "runChatSummary":  "Run chat summary",
+                                                      "configureNiche":  "Configure content niche",
+                                                      "generateTopics":  "Generate topics",
+                                                      "runBriefing":  "Run industry briefing",
+                                                      "scheduleBriefing":  "Schedule briefing",
+                                                      "uploadScript":  "Upload video script",
+                                                      "analyzeScript":  "Run structured analysis",
+                                                      "uploadPdf":  "Upload research PDF",
+                                                      "runPdfSummary":  "Run PDF summary",
+                                                      "configureWebhook":  "Configure Webhook",
+                                                      "testPayload":  "Import test payload",
+                                                      "instanceSettings":  "Configure instance",
+                                                      "uploadReferences":  "Upload reference files",
+                                                      "testRun":  "Run test",
+                                                      "connectChannel":  "Connect notification channel",
+                                                      "scheduleJob":  "Schedule task"
+                                                  },
+                                      "genericGuideSteps":  [
+                                                                "Open instance details and confirm its status and URL.",
+                                                                "Check model credentials and complete the model connection test.",
+                                                                "If a messaging channel is configured, verify its permissions and allowlist.",
+                                                                "Send the first test message and use live logs to confirm that the task completes."
+                                                            ],
+                                      "defaultActions":  {
+                                                             "instance":  {
+                                                                              "label":  "Open instance management",
+                                                                              "description":  "Review instance status, URL, and runtime configuration."
+                                                                          },
+                                                             "credentials":  {
+                                                                                 "label":  "Check model credentials",
+                                                                                 "description":  "Confirm that model API credentials are configured and pass the connection test."
+                                                                             },
+                                                             "guide":  {
+                                                                           "label":  "View usage guide",
+                                                                           "description":  "Read the guides for instances, channels, and task execution."
+                                                                       }
+                                                         },
+                                      "actionDescriptions":  {
+                                                                 "input_urls":  "Import or update competitor URLs to monitor.",
+                                                                 "run_initial_scraping":  "Run the first price scrape manually and inspect the logs.",
+                                                                 "update_knowledge_base":  "Upload product documentation or knowledge-base files.",
+                                                                 "configure_webhook_url":  "View and configure the instance Webhook callback URL.",
+                                                                 "configure_credentials":  "Enter and verify the Feishu App ID and App Secret.",
+                                                                 "run_test_job":  "Run the first chat-summary task manually.",
+                                                                 "configure_niche":  "Configure the content niche, audience, and topic preferences.",
+                                                                 "generate_topics":  "Run the first batch topic-generation task.",
+                                                                 "trigger_manual_run":  "Run the first industry briefing manually.",
+                                                                 "set_cron_schedule":  "Set the scheduled briefing time.",
+                                                                 "upload_script":  "Upload a video script or subtitle file for analysis.",
+                                                                 "analyze_now":  "Run the first structured script analysis.",
+                                                                 "upload_pdf":  "Upload the PDF document to summarize.",
+                                                                 "run_pdf_summary":  "Run PDF summarization and start document Q\u0026A.",
+                                                                 "configure_webhook":  "Get and configure the order callback Webhook.",
+                                                                 "test_payload":  "Import test data to verify alerts and processing.",
+                                                                 "open_instance_settings":  "Open instance settings and adjust runtime parameters.",
+                                                                 "upload_reference_files":  "Upload reference files for the Agent.",
+                                                                 "test_run":  "Run the first test task and inspect live logs.",
+                                                                 "connect_channel":  "Open channel settings and connect a notification channel.",
+                                                                 "schedule_first_job":  "Configure the first automated task and recurring schedule."
+                                                             }
+                                  },
+                       "channelSelector":  {
+                                               "title":  "Choose a messaging channel",
+                                               "experimental":  "Experimental",
+                                               "restricted":  "Restricted",
+                                               "channels":  {
+                                                                "web":  {
+                                                                            "name":  "Web console",
+                                                                            "description":  "Use the local Web console without connecting an external messaging platform."
+                                                                        },
+                                                                "telegram":  {
+                                                                                 "name":  "Telegram Bot",
+                                                                                 "description":  "Chat with individuals, groups, or channels through the Telegram Bot API."
+                                                                             },
+                                                                "feishu":  {
+                                                                               "name":  "Feishu / Lark",
+                                                                               "description":  "Use the Agent in Feishu or Lark direct messages and group chats."
+                                                                           },
+                                                                "weixin":  {
+                                                                              "name":  "WeChat",
+                                                                              "description":  "Scan to connect Tencent iLink Bot and chat with the Agent from personal WeChat."
+                                                                          },
+                                                                "slack":  {
+                                                                              "name":  "Slack",
+                                                                              "description":  "Receive commands and replies in Slack channels and conversations."
+                                                                          },
+                                                                "discord":  {
+                                                                                "name":  "Discord Bot",
+                                                                                "description":  "Interact through Discord servers and channels."
+                                                                            },
+                                                                "webhook":  {
+                                                                                "name":  "Custom Webhook",
+                                                                                "description":  "Push Agent events and results to an HTTP endpoint."
+                                                                            },
+                                                                "whatsapp":  {
+                                                                                 "name":  "WhatsApp",
+                                                                                 "description":  "Connect WhatsApp conversations through the Meta Graph API."
+                                                                             },
+                                                                "dingtalk":  {
+                                                                                 "name":  "DingTalk",
+                                                                                 "description":  "Use the Agent in DingTalk group and direct chats."
+                                                                             },
+                                                                "qq_bot":  {
+                                                                               "name":  "QQ Bot",
+                                                                               "description":  "Connect direct messages, groups, or channels through the QQ Open Platform."
+                                                                           },
+                                                                "wechat_mp":  {
+                                                                                  "name":  "WeChat Official Account",
+                                                                                  "description":  "Receive and reply to messages through the Official Account callback."
+                                                                              },
+                                                                "wecom":  {
+                                                                              "name":  "WeCom",
+                                                                              "description":  "Connect messaging and group chats through a custom WeCom application."
+                                                                          },
+                                                                "api":  {
+                                                                            "name":  "API",
+                                                                            "description":  "Call the instance from third-party applications through standard API endpoints."
+                                                                        }
+                                                            }
+                                           },
+                       "channelGuide":  {
+                                            "unavailable":  "No dedicated guide is available for this channel. Refer to the official documentation.",
+                                            "difficulty":  "Difficulty: {{level}}",
+                                            "levels":  {
+                                                           "easy":  "Beginner",
+                                                           "medium":  "Intermediate",
+                                                           "hard":  "Expert"
+                                                       },
+                                            "estimatedTime":  "Estimated time: {{time}}",
+                                            "requirements":  "Requirements",
+                                            "steps":  "Setup steps",
+                                            "fillFields":  "Enter the generated fields in the form on the left:",
+                                            "collapse":  "Collapse steps",
+                                            "expand":  "Show {{count}} more steps",
+                                            "officialHome":  "Official website",
+                                            "tip":  "Tip"
+                                        },
+                       "instanceInfo":  {
+                                            "reupload":  "Upload again",
+                                            "runtimeType":  "Agent runtime type",
+                                            "hermesBadge":  "Standard / Full featured",
+                                            "hermesDescription":  "Classic full-featured runtime with the 9119 control API, Python executor, and multiple messaging channels.",
+                                            "piBadge":  "Experimental preview / Coming soon",
+                                            "piDescription":  "Pi Agent is currently an experimental preview and cannot be deployed yet. Select Hermes Agent instead."
+                                        },
+                       "preflight":  {
+                                         "localRuntime":  "Local runtime",
+                                         "localRuntimeReady":  "Local runtime is ready"
+                                     },
+                       "templateStatus":  {
+                                              "blueprint":  "Deploying with the {{name}} industry blueprint",
+                                              "workflow":  "Deploying with the {{name}} workflow"
+                                          }
+                   }
+}

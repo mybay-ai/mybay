@@ -1,0 +1,70 @@
+{
+  "title": "User Administration",
+  "subtitle": "Manage local users, roles, and status",
+  "template_data_loading": "Loading template data...",
+  "search_placeholder": "Search username or direct ID...",
+  "add_user": "Add User",
+  "edit_user": "Edit User",
+  "delete_user": "Hard Purge Delete User",
+  "delete_success": "Deletion completed. Associated local records, files, network routes, and managed containers were removed according to the cleanup policy.",
+  "delete_error_reason": "Please choose a deletion reason",
+  "delete_confirm_delete": "Enter 'DELETE' to confirm permanent deletion",
+  "reset_password": "Reset local password",
+  "reset_email_confirm": "Reset the local password for {username}?",
+  "reset_email_sent": "Local password reset successfully",
+  "role_all": "All Roles",
+  "role_admin": "Admin (admin)",
+  "role_user": "Standard User (user)",
+  "status_all": "All Statuses",
+  "status_active": "Active",
+  "status_disabled": "Suspended/Disabled",
+  "table": {
+    "user": "User",
+    "role": "Role",
+    "status": "Status",
+    "instances": "Instances Usage",
+    "created_at": "Joined At",
+    "actions": "Actions",
+    "credits": "Local Usage"
+  },
+  "no_matched_users": "No users found matching query filters",
+  "loading_error": "Failed to sync system users list, please try again",
+  "subscription": {
+    "label": "Local profile",
+    "planHelp": "Local profile changes update instance quota, channel access, backup export access, and the user disk policy.",
+    "plans": {
+      "free": "Community Base - 1 instance / 512 MB",
+      "personal": "Standard Profile - 2 instances / 2 GB",
+      "pro": "Expanded Profile - 5 instances / 10 GB"
+    }
+  },
+  "credits": {
+    "balance": "Usage balance",
+    "adjust": "Adjust usage records",
+    "adjustTitle": "Adjust user usage records",
+    "amount": "Amount",
+    "amountHelp": "Use a positive number to grant quota or usage, or a negative number to deduct.",
+    "reason": "Reason",
+    "reasonPlaceholder": "For example: manual adjustment, local testing allowance...",
+    "confirm": "Apply adjustment",
+    "cancel": "Cancel",
+    "updated": "Usage records updated",
+    "updateFailed": "Failed to update usage records",
+    "loadFailed": "Failed to load usage balances",
+    "noAccount": "No account",
+    "positive": "Grant Quota",
+    "negative": "Deduct",
+    "recentTransactions": "Recent transactions",
+    "loadingTransactions": "Loading...",
+    "noTransactions": "No usage records yet",
+    "transactionKinds": {
+      "admin_grant": "Admin Quota Grant",
+      "admin_deduct": "Admin deduction",
+      "model_usage": "Model usage",
+      "refund": "Refund",
+      "adjustment": "Adjustment",
+      "reservation": "Reservation",
+      "reservation_release": "Reservation release"
+    }
+  }
+}

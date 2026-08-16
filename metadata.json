@@ -1,0 +1,11 @@
+{
+    "name":  "MyBay Open Source",
+    "description":  "A single-administrator, self-hosted control plane for deploying, managing, and chatting with AI Agent runtimes through Docker.",
+    "requestFramePermissions":  [
+
+                                ],
+    "majorCapabilities":  [
+                              "LOCAL_DOCKER_AGENT_RUNTIME_MANAGEMENT",
+                              "BYOK_CHAT_WORKSPACE"
+                          ]
+}

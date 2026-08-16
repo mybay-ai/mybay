@@ -1,0 +1,5215 @@
+{
+  "version": 1,
+  "sections": {
+    "i18n-hardcode": [
+      {
+        "fingerprint": "src/components/AppSettingsLLMSection.tsx|jsx-placeholder|https://api.openai.com/v1",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/AppSettingsSkillsSection.tsx|jsx-placeholder|确认文本",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/AppSettingsSkillsSection.tsx|jsx-text|4. 激活高阶扩展技能与能力树",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/AppSettingsSkillsSection.tsx|jsx-text|高危",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/AppSettingsSkillsSection.tsx|jsx-text|即将推出",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/AppSettingsSkillsSection.tsx|jsx-text|平台安全拦截与提醒",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/AppSettingsSkillsSection.tsx|jsx-text|启用高危能力？",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/AppSettingsSkillsSection.tsx|jsx-text|取消",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/AppSettingsSkillsSection.tsx|jsx-text|确认激活",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/AppSettingsSkillsSection.tsx|jsx-text|未配置",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/AppSettingsSkillsSection.tsx|jsx-text|我知道了",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/AppSettingsSkillsSection.tsx|jsx-text|选中的扩展支持在挂载时自动引入为微服务函数。请谨慎评估高危技能的暴露风险。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/BackToTop.tsx|jsx-aria-label|Back to top",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/BrandLogo.tsx|jsx-alt|MyBay Icon",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/BrandLogo.tsx|jsx-alt|MyBay Logo",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/BrandLogo.tsx|locale-branch|/assets/logos/mybay_logo-en.png | /assets/logos/mybay_logo-cn.png",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatInputBar.tsx|jsx-text|Enter",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatMessageBubble.tsx|jsx-text|Code",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatWorkspaceHeader.tsx|copy-property:label|Assist",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/ContainerStats.tsx|jsx-text|Base URL:",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/CredentialsSection.tsx|jsx-placeholder|https://api.your-provider.com/v1",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Dashboard.tsx|copy-property:description|Access guides, GitHub repository, and community support",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Dashboard.tsx|copy-property:description|Browse Agent releases and compatibility guides",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Dashboard.tsx|copy-property:description|Configure high-risk permissions and system security",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Dashboard.tsx|copy-property:description|Manage and monitor local Agent instances",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Dashboard.tsx|copy-property:description|Manage and publish workflows and blueprint templates",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Dashboard.tsx|copy-property:description|Monitor asynchronous worker tasks and queues",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Dashboard.tsx|copy-property:description|Securely manage API keys, OAuth credentials, and channel tokens",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Dashboard.tsx|copy-property:title|Agent Instances",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Dashboard.tsx|copy-property:title|Agent Versions",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Dashboard.tsx|copy-property:title|Background Tasks",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Dashboard.tsx|copy-property:title|Credentials & Secrets",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Dashboard.tsx|copy-property:title|Open Source Community",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Dashboard.tsx|copy-property:title|System Security",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Dashboard.tsx|copy-property:title|Template Management",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/dashboardTabs.config.ts|copy-property:description|Browse local Agent image versions and compatibility notes",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/dashboardTabs.config.ts|copy-property:description|Configure local host and container security switches",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/dashboardTabs.config.ts|copy-property:description|Documentation, support links, and project information",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/dashboardTabs.config.ts|copy-property:description|Manage local Hermes Agent instances",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/dashboardTabs.config.ts|copy-property:description|Manage local workflows and blueprint templates",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/dashboardTabs.config.ts|copy-property:description|Manage your own model API keys and OpenAI-compatible endpoints",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/dashboardTabs.config.ts|copy-property:description|Monitor local background jobs and instance operations",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/dashboardTabs.config.ts|copy-property:label|Contact",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/dashboardTabs.config.ts|copy-property:label|Credentials",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/dashboardTabs.config.ts|copy-property:label|Instances",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/dashboardTabs.config.ts|copy-property:label|System",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/dashboardTabs.config.ts|copy-property:label|Tasks",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/dashboardTabs.config.ts|copy-property:label|Templates",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/dashboardTabs.config.ts|copy-property:label|Versions",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/dashboardTabs.config.ts|copy-property:title|Agent Instances",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/dashboardTabs.config.ts|copy-property:title|Agent Versions",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/dashboardTabs.config.ts|copy-property:title|Background Tasks",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/dashboardTabs.config.ts|copy-property:title|BYOK Credentials",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/dashboardTabs.config.ts|copy-property:title|Local Security",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/dashboardTabs.config.ts|copy-property:title|Project Links",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/dashboardTabs.config.ts|copy-property:title|Template Management",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/DashboardTabs.tsx|jsx-aria-label|Tabs",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/ImportArchivePreviewModal.tsx|jsx-placeholder|例如: MyAgent-CLONE",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/ImportArchivePreviewModal.tsx|jsx-placeholder|placeholder: 例如: my-agent-clone",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/ImportArchivePreviewModal.tsx|jsx-text|，您需要手动进入新实例的“设置”中重新补齐配置。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/ImportArchivePreviewModal.tsx|jsx-text|“未启动（待补配置）”",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/ImportArchivePreviewModal.tsx|jsx-text|导入为新智能体实例",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/ImportArchivePreviewModal.tsx|jsx-text|新访问路径 (Slug)",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/ImportArchivePreviewModal.tsx|jsx-text|新实例名称",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/ImportArchivePreviewModal.tsx|jsx-text|正在克隆导入...",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceDiagnosticsWorkspace.tsx|copy-property:label|访问保护",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceDiagnosticsWorkspace.tsx|copy-property:label|模型配置",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceDiagnosticsWorkspace.tsx|jsx-text|当前筛选条件下暂无事件",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceDiagnosticsWorkspace.tsx|jsx-text|建议：",
+        "count": 2
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceDiagnosticsWorkspace.tsx|jsx-text|警告",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceDiagnosticsWorkspace.tsx|jsx-text|容器诊断",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceDiagnosticsWorkspace.tsx|jsx-text|失败",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceDiagnosticsWorkspace.tsx|jsx-text|实例事件",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceDiagnosticsWorkspace.tsx|jsx-text|通过",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceDiagnosticsWorkspace.tsx|jsx-text|只读检查容器、端口、网络、磁盘、网关、认证和模型状态。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceDiagnosticsWorkspace.tsx|jsx-text|重新检测",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceGrid.tsx|jsx-text|面板访问密码不可用，实例无法完成 Dashboard 登录配置。请重置访问密码后重新部署。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceGrid.tsx|jsx-text|展开技术详情",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceGrid.tsx|jsx-title|已配置的通讯渠道",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceSetup.tsx|browser-copy:showToast|业务配置已保存",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceSetup.tsx|copy-property:message|未能保存您的业务配置。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceSetup.tsx|copy-property:title|保存失败",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceSetup.tsx|copy-property:title|验证失败",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstancesPanel.tsx|browser-copy:showToast|`已提交 ${successCount} 个实例的清理请求`",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstancesPanel.tsx|copy-property:cancelText|取消",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstancesPanel.tsx|copy-property:confirmText|确定删除",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstancesPanel.tsx|copy-property:title|确认删除实例",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstancesPanel.tsx|copy-property:title|删除失败",
+        "count": 2
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceTable.tsx|jsx-text|密码未配置/重置",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceTable.tsx|jsx-title|`面板访问密码不可用，实例无法完成 Dashboard 登录配置。请重置访问密码后重新部署。\\n\\n技术详情: ${inst.deployment_error}`",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceTable.tsx|jsx-title|已配置的通讯渠道",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/DashboardLayout.tsx|jsx-alt|Avatar",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Docs.tsx|copy-property:title|获取回调地址",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Docs.tsx|copy-property:title|进入模型配置步骤",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Docs.tsx|copy-property:title|开启 Webhook 技能",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Docs.tsx|copy-property:title|录入密钥与接入点",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Docs.tsx|copy-property:title|通讯渠道联动",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Docs.tsx|copy-property:title|修改配置并保存",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Docs.tsx|copy-property:title|自动重启重载",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Docs.tsx|copy-property:title|Web 独立控制台",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Docs.tsx|copy-property:title|Webhooks 指南",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Docs.tsx|jsx-text|将智能聊天大脑装进办公软件与自建社群",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Docs.tsx|jsx-text|接入模型供应商",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Docs.tsx|jsx-text|了解完整六步快速下发流程方案",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Docs.tsx|jsx-text|配置飞书机器人",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Docs.tsx|jsx-text|Core Summary",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Docs.tsx|jsx-text|Deploy without manual Docker compile steps or Nginx settings.",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Docs.tsx|jsx-text|Instant connection sync with Lark (Feishu), Telegram, and Discord endpoints.",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Docs.tsx|jsx-text|Integrated Environment:",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Docs.tsx|jsx-text|Local configuration is stored safely on the current machine.",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Docs.tsx|jsx-text|Webhook Tunnels:",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Docs.tsx|jsx-text|Zero CLI Configuration:",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Docs.tsx|locale-branch|出错了 | Error",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Docs.tsx|locale-branch|返回文档总览 | Back to Docs Overview",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Docs.tsx|locale-branch|您访问的文档 URL 包含无效或已失效的 guide 参数。请通过左侧导航栏浏览现有的技术指南。 | The document URL you accessed contains an invalid or obsolete guide parameter. Please use the sidebar to browse available guides.",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Docs.tsx|locale-branch|文档未找到 | Document Not Found",
+        "count": 2
+      },
+      {
+        "fingerprint": "src/components/Docs.tsx|locale-branch|文档未找到，请从左侧目录选择其他指南。 | The requested document guide could not be found.",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Docs.tsx|locale-branch|无法加载指定指南 | Unable to load guide",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/DocsUI.tsx|copy-property:error|bg-red-50/50 border-red-200 text-red-800",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/DocsUI.tsx|jsx-text|操作步骤",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/DocsUI.tsx|jsx-text|尝试重新加载",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/DocsUI.tsx|jsx-text|常见错误排查",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/DocsUI.tsx|jsx-text|官方参考链接",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/DocsUI.tsx|jsx-text|很抱歉，该部分指南目前无法正常显示。我们的运维团队已收到错误报告。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/DocsUI.tsx|jsx-text|控制台路径",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/DocsUI.tsx|jsx-text|文档渲染出错",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/DocsUI.tsx|jsx-text|下一步建议",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/DocsUI.tsx|jsx-text|验证是否成功",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/DocsUI.tsx|jsx-text|验证指标：",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/DocsUI.tsx|jsx-text|准备事项 Checklist",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|copy-property:title|`配置步骤 ${i + 1}`",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|copy-property:title|阿里云百炼 (Qwen)",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|copy-property:title|版本升级建议",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|copy-property:title|创建预存凭证",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|copy-property:title|飞书开放平台",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|copy-property:title|飞书自建应用创建指南",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|copy-property:title|高危技能权限管控",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|copy-property:title|更新凭证",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|copy-property:title|火山引擎 (DeepSeek/Doubao)",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|copy-property:title|镜像预热机制",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|copy-property:title|理解健康监测链路",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|copy-property:title|配置模型大脑",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|copy-property:title|配置修改（热更新）",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|copy-property:title|企业微信服务商后台",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|copy-property:title|前往凭证管理",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|copy-property:title|实例列表控制台",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|copy-property:title|事件订阅配置说明",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|copy-property:title|填写实例基础信息",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|copy-property:title|新建部署向导",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|copy-property:title|选择 Provider 与 Model",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|copy-property:title|选择 Runtime 版本",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|copy-property:title|选择通讯渠道与技能",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|copy-property:title|在部署流程中引用",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|copy-property:title|重启与自愈",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|copy-property:title|自建应用回调配置",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|copy-property:title|Base URL 的作用",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|copy-property:title|Basic Auth 访问边界",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|copy-property:title|DeepSeek 控制台",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|copy-property:title|Discord Bot 权限设置说明",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|copy-property:title|Discord Developer Portal",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|copy-property:title|SiliconFlow 硅基流动",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|copy-property:title|Telegram Bot API 文档",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|copy-property:title|Telegram BotFather",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|jsx-text|# 典型配置示例",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|jsx-text|1. 确认实例正在运行 (Running)；",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|jsx-text|2. 确认健康检查链路中 Feishu 节点为绿；",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|jsx-text|3. 检查飞书应用的 Allowed Users 是否包含您的 ID；",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|jsx-text|4. 确认您的飞书应用是否已发布版本且机器人选项已开启。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|jsx-text|安全隔离设计",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|jsx-text|建议先在",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|jsx-text|链路包含：Internal Port (容器监听)、Supervised (监控守护)、Proxy (网关配置)、Reconciler (状态对齐)。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|jsx-text|每一个由麦贝部署的 Agent 实例都运行在独立的容器沙箱中，具备物理级别的资源限制与网络隔离，双重加密保障您的 API Key 不会泄露。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|jsx-text|平台会持续监控底层 Docker 引擎及 Nginx 网关状态。如果您发现实例无法拉起，请优先检查“系统状态”看板，确认 Runtime 服务是否在线。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|jsx-text|凭证管理",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|jsx-text|请不要在公共网络环境下将 Basic Auth 密码设置为 123456 等简单组合。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|jsx-text|如果 Proxy 为红，通常意味着您的 Slug 存在冲突或 Nginx 配置正在同步中。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|jsx-text|输入实例名称（如：行业调研助手）和访问路径（Slug）。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|jsx-text|所有 Agent Web 控制台强制启用 HTTP Basic Auth，通过用户名密码拦截未授权的爬虫与访问。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|jsx-text|系统自检说明",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|jsx-text|选择模型供应商并填入 API Key。您可以参考下面的供应商文档：",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|jsx-text|这可能是因为该渠道尚未在您的 Runtime 版本中完全启用。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|jsx-text|中预存您的模型 API Key，这将极大简化后续的部署流程。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|jsx-text|DeepSeek ↗",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|jsx-text|Google AI Studio ↗",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|jsx-text|Model: deepseek-ai/DeepSeek-V3",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|jsx-text|Provider 决定了通讯协议（如 OpenAI, Gemini, Claude），Model 决定了具体的模型版本。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|jsx-text|Provider: SiliconFlow",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|jsx-text|Slug 必须是全英文或数字，且在您的账户下唯一。这将生成您的私有访问地址。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|jsx-title|快速上手提示",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/docs/PlatformGuides.tsx|jsx-title|重要提醒",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/ErrorBoundary.tsx|jsx-text|返回首页",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/ErrorBoundary.tsx|jsx-text|界面组件渲染异常",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/ErrorBoundary.tsx|jsx-text|立即刷新页面",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/ErrorBoundary.tsx|jsx-text|由于部分数据状态同步不一致或 React Hook 调用异常，当前面板渲染失败。这可能是由于实例状态正在剧烈切换导致的（如正在重启或配置同步中）。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/ErrorBoundary.tsx|jsx-text|Error Trace (React #300 Check)",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/FAQ.tsx|jsx-title|Clear search",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/FeedbackProvider.tsx|jsx-text|查看技术错误详情",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/InstanceSettingsModal.tsx|copy-property:message|`当前所选通讯渠道 [${channel}] 已被本地配置禁用。请切换为已启用的渠道后再保存。`",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/InstanceSettingsModal.tsx|copy-property:message|未能成功保存您的实例配置。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/InstanceSettingsModal.tsx|copy-property:title|保存失败",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/InstanceSettingsModal.tsx|jsx-text|(Custom)",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/InstanceSettingsModal.tsx|jsx-text|Bunny",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/InstanceSettingsModal.tsx|jsx-text|Image",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/InstanceSettingsModal.tsx|jsx-text|Panda",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/InstanceSettingsModal.tsx|jsx-text|Web UI (Dashboard)",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/LanguageToggle.tsx|jsx-text|English",
+        "count": 2
+      },
+      {
+        "fingerprint": "src/components/LanguageToggle.tsx|locale-branch|<dynamic> | English",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/LanguageToggle.tsx|locale-branch|<dynamic> | Language",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/LanguageToggle.tsx|locale-branch|bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-400/30 text-blue-600 dark:text-blue-300 shadow-sm | bg-[var(--mybay-control-bg)] border-[var(--mybay-border-soft)] text-[var(--mybay-text-secondary)] hover:bg-[var(--mybay-cont",
+        "count": 2
+      },
+      {
+        "fingerprint": "src/components/LanguageToggle.tsx|locale-branch|text-blue-600 dark:text-blue-300 font-bold bg-blue-50/40 dark:bg-blue-500/10 | text-[var(--mybay-text-secondary)] font-medium",
+        "count": 2
+      },
+      {
+        "fingerprint": "src/components/LocalResourcePolicyCard.tsx|browser-copy:showToast|Local resource policy saved. Redeploy instances to apply it.",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/LocalResourcePolicyCard.tsx|copy-property:title|Resource policy load failed",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/LocalResourcePolicyCard.tsx|copy-property:title|Save failed",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/LocalResourcePolicyCard.tsx|jsx-text|Controls default CPU, memory, disk, and instance limits for new deployments.",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/LocalResourcePolicyCard.tsx|jsx-text|Default CPU cores",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/LocalResourcePolicyCard.tsx|jsx-text|Default disk (MB)",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/LocalResourcePolicyCard.tsx|jsx-text|Default memory (MB)",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/LocalResourcePolicyCard.tsx|jsx-text|Loading local resource policy...",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/LocalResourcePolicyCard.tsx|jsx-text|Local instance resource policy",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/LocalResourcePolicyCard.tsx|jsx-text|Max active instances",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/LocalResourcePolicyCard.tsx|jsx-text|Max CPU cores",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/LocalResourcePolicyCard.tsx|jsx-text|Max memory (MB)",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/LocalResourcePolicyCard.tsx|jsx-text|Save",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/LocalResourcePolicyCard.tsx|jsx-text|Unlimited",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/marketing/DocsPage.tsx|locale-branch|`${docTitle} - 使用文档 - 麦贝 MyBayAI` | `${docTitle} - Docs - MyBay`",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/marketing/DocsPage.tsx|locale-branch|返回首页 | Back to Home",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/marketing/DocsPage.tsx|locale-branch|您请求的文档指南未找到。请通过导航栏浏览现有的技术指南。 | The requested document guide could not be found. Please use the navigation to browse our guides.",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/marketing/DocsPage.tsx|locale-branch|使用文档 | Docs",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/marketing/DocsPage.tsx|locale-branch|首页 | Home",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/marketing/DocsPage.tsx|locale-branch|刷新页面 | Refresh Page",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/marketing/DocsPage.tsx|locale-branch|文档加载异常 | Document Loading Interrupted",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/marketing/DocsPage.tsx|locale-branch|文档未找到 - 使用指南 - 麦贝 MyBayAI | Document Not Found - Docs - MyBay",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/marketing/DocsPage.tsx|locale-branch|由于沙箱环境内的安全限制或组件渲染发生冲突，文档视图暂无法直接加载。请尝试点击下方“刷新”以清空缓存，或者返回首页。 | Due to sandbox security restrictions or component conflicts, the document viewport failed to render. Try refreshing or going back home.",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/NotFound.tsx|locale-branch|抱歉，您访问的页面不存在。 | Sorry, the page you are looking for does not exist.",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/NotFound.tsx|locale-branch|抱歉，您访问的页面不存在。它可能已被删除、更名，或暂时不可用。 | Sorry, the page you are looking for does not exist. It might have been removed, had its name changed, or is temporarily unavailable.",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/NotFound.tsx|locale-branch|返回上一页 | Go Back",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/NotFound.tsx|locale-branch|返回首页 | Back to Home",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/NotFound.tsx|locale-branch|页面未找到 - 麦贝 MyBayAI | Page Not Found - MyBay",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/NotFound.tsx|locale-branch|页面未找到 | Page Not Found",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Privacy.tsx|jsx-text|support@mybay.ai",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/SecurityPage.tsx|copy-property:description|从网络入口、响应策略和容器边界实施纵深防护。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/SecurityPage.tsx|copy-property:description|降低敏感配置在存储和传输过程中的暴露风险。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/SecurityPage.tsx|copy-property:description|敏感入口实施分层速率限制，降低自动化攻击风险。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/SecurityPage.tsx|copy-property:description|依据身份、角色、邮箱状态及资源所有权保护受限操作。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/SecurityPage.tsx|copy-property:description|Defense in depth across ingress, response policy, and container boundaries.",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/SecurityPage.tsx|copy-property:description|Layered rate limits protect sensitive entry points from automated abuse.",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/SecurityPage.tsx|copy-property:description|Reducing exposure of sensitive configuration at rest and in transit.",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/SecurityPage.tsx|copy-property:description|Restricted operations are protected by identity, role, verification, and resource ownership checks.",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/SecurityPage.tsx|copy-property:subtitle|MyBay applies security controls across credential storage, authentication, instance isolation, and runtime monitoring. This page describes safeguards currently in place and how to report vulnerabilities responsibly.",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/SecurityPage.tsx|copy-property:title|基础设施与浏览器防护",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/SecurityPage.tsx|copy-property:title|滥用与暴力破解防护",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/SecurityPage.tsx|copy-property:title|身份与访问控制",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/SecurityPage.tsx|copy-property:title|数据与凭证保护",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/SecurityPage.tsx|copy-property:title|以可验证的措施保护平台与用户数据",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/SecurityPage.tsx|copy-property:title|Abuse and brute-force protection",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/SecurityPage.tsx|copy-property:title|Data and credential protection",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/SecurityPage.tsx|copy-property:title|Identity and access control",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/SecurityPage.tsx|copy-property:title|Infrastructure and browser safeguards",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/SecurityPage.tsx|copy-property:title|Verifiable safeguards for the platform and user data",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/SEOHead.tsx|copy-property:description|安全管理您的 API Key 和平台对接凭证。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TaskCenter.tsx|copy-property:actionText|去配置",
+        "count": 2
+      },
+      {
+        "fingerprint": "src/components/TaskCenter.tsx|jsx-text|· 文件：",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TaskCenter.tsx|jsx-text|“文件管理器”",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TaskCenter.tsx|jsx-text|报告加载失败",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TaskCenter.tsx|jsx-text|此面板同步了由数据库工作流模板驱动生成的任务执行管线及定时计划触发器。无需让用户手动编写执行输入参数，调度底层服务将自动直接读取合并变量值。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TaskCenter.tsx|jsx-text|待完成配置：",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TaskCenter.tsx|jsx-text|当部署实例启用支持「定时调度」类型的工作流模板时，匹配的工作日程将在此列表展示。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TaskCenter.tsx|jsx-text|定时触发调度器列表 (",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TaskCenter.tsx|jsx-text|对接目标实例:",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TaskCenter.tsx|jsx-text|该实例列表中暂未挂载任何数据库工作流配置。选择或使用模板部署实例后，其附属初始化作业将自动载入本区。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TaskCenter.tsx|jsx-text|关闭策划盘点报告",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TaskCenter.tsx|jsx-text|关联实例：",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TaskCenter.tsx|jsx-text|麦贝 任务流与定时自动触发中心",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TaskCenter.tsx|jsx-text|麦贝本地实例存储写入成功",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TaskCenter.tsx|jsx-text|没有配置中的定时计划",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TaskCenter.tsx|jsx-text|模板:",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TaskCenter.tsx|jsx-text|您可以随时通过实例详情的",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TaskCenter.tsx|jsx-text|去自由下载、预览或进行持久化备份管理。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TaskCenter.tsx|jsx-text|刷新状态列表",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TaskCenter.tsx|jsx-text|提示信息",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TaskCenter.tsx|jsx-text|完成运行于：",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TaskCenter.tsx|jsx-text|我们已成功将该大模型生成报告真实落盘至该实例的物理工作目录：",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TaskCenter.tsx|jsx-text|暂无自动化配置任务",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TaskCenter.tsx|jsx-text|正在从麦贝物理隔离 outputs 目录同步拉取原始 Markdown 文件...",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TaskCenter.tsx|jsx-text|正在同步任务调度信息...",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TaskCenter.tsx|jsx-text|执行失败原因：",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TaskCenter.tsx|jsx-text|状态:",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TaskCenter.tsx|jsx-text|自动生成的任务流水线 (",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TaskCenter.tsx|jsx-text|data/instances/",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/BasicInfoSection.tsx|jsx-placeholder|对模板功能与效果的极简概括...",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/BasicInfoSection.tsx|jsx-placeholder|仅限小写字母、数字 and 连字符(-)",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/BasicInfoSection.tsx|jsx-placeholder|仅限小写字母、数字和连字符(-)",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/BasicInfoSection.tsx|jsx-placeholder|请输入模板展示名称",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/BasicInfoSection.tsx|jsx-placeholder|如 ecommerce, social, utility",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/BasicInfoSection.tsx|jsx-placeholder|数字越小，在模版中心展示越靠前",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/BasicInfoSection.tsx|jsx-text|标签分类",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/BasicInfoSection.tsx|jsx-text|核心方案描述",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/BasicInfoSection.tsx|jsx-text|基础属性配置",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/BasicInfoSection.tsx|jsx-text|仅支持小写字母、数字和连字符(-)",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/BasicInfoSection.tsx|jsx-text|立即对所有用户生效发布 (is_active)",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/BasicInfoSection.tsx|jsx-text|模板唯一 Slug *",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/BasicInfoSection.tsx|jsx-text|展示名称",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/BasicInfoSection.tsx|jsx-text|展示排序权重",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/ListItemsConfigSection.tsx|jsx-placeholder|步骤一：前往渠道设置连接你的飞书自建应用&#10;步骤二：前往文件管理上传你的竞品大纲&#10;步骤三：确认定时自动任务分发",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/ListItemsConfigSection.tsx|jsx-placeholder|准备 API 密钥&#10;准备目标渠道 Webhook 链接&#10;设定库存警戒数值",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/ListItemsConfigSection.tsx|jsx-text|(每行输入一个条目)",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/ListItemsConfigSection.tsx|jsx-text|部署成功指南 (post_deploy_guide)",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/ListItemsConfigSection.tsx|jsx-text|部署准备清单 (readiness_checklist)",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/ListItemsConfigSection.tsx|jsx-text|成功指南有序步骤预览:",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/ListItemsConfigSection.tsx|jsx-text|技术局限性说明 (limitations)",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/ListItemsConfigSection.tsx|jsx-text|局限性警示条目预览:",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/ListItemsConfigSection.tsx|jsx-text|列表项精细配置",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/ListItemsConfigSection.tsx|jsx-text|清单视觉呈现预览:",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/NextActionsEditorSection.tsx|jsx-text|部署成功页推荐动作(深链卡片)即时预览:",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/NextActionsEditorSection.tsx|jsx-text|部署下一步推荐动作协议 (next_actions)",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/NextActionsEditorSection.tsx|jsx-text|动作深链键:",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/NextActionsEditorSection.tsx|jsx-text|控制部署成功后的推荐深链卡片。支持这 5 种预设 actionKey 进行深链路由：",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/NextActionsEditorSection.tsx|jsx-text|执行前往",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/NextActionsEditorSection.tsx|jsx-text|主要推荐",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/NextActionsEditorSection.tsx|jsx-text|connect_channel",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/NextActionsEditorSection.tsx|jsx-text|JSON Array",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/NextActionsEditorSection.tsx|jsx-text|open_instance_settings",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/NextActionsEditorSection.tsx|jsx-text|schedule_first_job",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/NextActionsEditorSection.tsx|jsx-text|test_run",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/NextActionsEditorSection.tsx|jsx-text|upload_reference_files",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/OperationalContentSection.tsx|jsx-placeholder|如: 已自动执行 1,420 次跑批，成功提炼 28 个分析话题...",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/OperationalContentSection.tsx|jsx-placeholder|用克制、专业的话术描述降本增效成果，切忌夸大其词",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/OperationalContentSection.tsx|jsx-text|商业价值 (business_value)",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/OperationalContentSection.tsx|jsx-text|商业运营字段 (标准治理)",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/OperationalContentSection.tsx|jsx-text|适合人群 (target_audience)",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/OperationalContentSection.tsx|jsx-text|自动化成果 (automation_result)",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateAuditPanel.tsx|jsx-text|变更时间",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateAuditPanel.tsx|jsx-text|操作人",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateAuditPanel.tsx|jsx-text|动作类型",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateAuditPanel.tsx|jsx-text|暂无相关模板变更记录",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateAuditPanel.tsx|jsx-text|展示最近 10 条记录",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateAuditPanel.tsx|jsx-text|正在加载变更日志...",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateAuditPanel.tsx|jsx-text|最近模板变更审计 (Recent Template Changes)",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateEditorPanel.tsx|copy-property:cancelText|返回补充",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateEditorPanel.tsx|copy-property:confirmText|仍要发布",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateEditorPanel.tsx|copy-property:message|`当前模板仍缺少 ${fs.missingLabels.join(\"、\")}等推荐运营字段，确认仍要强制发布吗？`",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateEditorPanel.tsx|copy-property:title|模板发布内容确认",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateEditorPanel.tsx|jsx-text|🗑️ 删除模板",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateEditorPanel.tsx|jsx-text|本次修改了:",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateEditorPanel.tsx|jsx-text|编辑模板:",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateEditorPanel.tsx|jsx-text|当前缺少:",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateEditorPanel.tsx|jsx-text|当前为草稿修改，尚未发布",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateEditorPanel.tsx|jsx-text|取消编辑",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateEditorPanel.tsx|jsx-text|最近一次发布/更新:",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateListPanel.tsx|browser-copy:showToast|已成功提交上架",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateListPanel.tsx|browser-copy:showToast|已成功提交下架",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateListPanel.tsx|copy-property:cancelText|取消",
+        "count": 2
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateListPanel.tsx|copy-property:confirmText|确定上架",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateListPanel.tsx|copy-property:confirmText|确定下架",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateListPanel.tsx|copy-property:message|`您确定要将当前已选的 ${visibleSelectedIds.length} 个模板批量上架（启用）吗？`",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateListPanel.tsx|copy-property:message|`您确定要将当前已选的 ${visibleSelectedIds.length} 个模板批量下架（停用）吗？`",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateListPanel.tsx|copy-property:title|确认批量上架",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateListPanel.tsx|copy-property:title|确认批量下架",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateListPanel.tsx|jsx-text|⚫️ 仅看已下架",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateListPanel.tsx|jsx-text|⚫️ 批量下架",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateListPanel.tsx|jsx-text|🟢 仅看生效中",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateListPanel.tsx|jsx-text|🟢 批量上架",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateListPanel.tsx|jsx-text|编辑",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateListPanel.tsx|jsx-text|标签分类",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateListPanel.tsx|jsx-text|操作",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateListPanel.tsx|jsx-text|分类 / 排序",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateListPanel.tsx|jsx-text|复制",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateListPanel.tsx|jsx-text|模板名称",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateListPanel.tsx|jsx-text|清除",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateListPanel.tsx|jsx-text|取消选择",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateListPanel.tsx|jsx-text|生效中",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateListPanel.tsx|jsx-text|生效状态",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateListPanel.tsx|jsx-text|未找到匹配的模板内容项",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateListPanel.tsx|jsx-text|显示全部分类",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateListPanel.tsx|jsx-text|显示全部状态",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateListPanel.tsx|jsx-text|已下架",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateListPanel.tsx|jsx-text|已选择当前筛选模板项目",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateListPanel.tsx|jsx-text|状态",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateListPanel.tsx|jsx-title|点击快速切换启停状态",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateListPanel.tsx|jsx-title|克隆此模板",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-content-admin/TemplateListPanel.tsx|jsx-title|全选当前筛选结果",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TemplateContentAdmin.tsx|browser-copy:showToast|模板已删除",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TemplateContentAdmin.tsx|copy-property:cancelText|取消",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TemplateContentAdmin.tsx|copy-property:confirmText|确定删除",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TemplateContentAdmin.tsx|copy-property:message|`您确定要删除/归档自定义工作流模板「${item.name || item.id}」吗？\\n\\n删除后该模板将从管理可见列表中隐藏并停用，此操作不可逆。`",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TemplateContentAdmin.tsx|copy-property:title|确认删除模板",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TemplateContentAdmin.tsx|jsx-text|此页面仅限平台管理员访问。若有疑问，请联系 system 用户组。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TemplateContentAdmin.tsx|jsx-text|访问受限",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TemplateContentAdmin.tsx|jsx-text|工作流 (Workflows)",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TemplateContentAdmin.tsx|jsx-text|模板内容管理台",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TemplateContentAdmin.tsx|jsx-text|实时修改 Workflow（自定义多任务流）与 Blueprint（行业预装方案）的核心文案及深链策略",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TemplateContentAdmin.tsx|jsx-text|新建工作流模板",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/TemplateContentAdmin.tsx|jsx-text|行业预设 (Blueprints)",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Terms.tsx|jsx-text|support@mybay.ai",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionLogsModal.tsx|jsx-text|版本生命周期及滚动升级审计专线终端 (",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionLogsModal.tsx|jsx-text|关闭",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionLogsModal.tsx|jsx-text|刷新日志",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionLogsModal.tsx|jsx-text|暂无升级相关的原子级审计日志。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionLogsModal.tsx|jsx-text|正在调配读取后台回滚审计专线审计行...",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionLogsModal.tsx|jsx-title|关闭",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/config/seo.ts|copy-property:description|安全管理您的 API Key 和平台对接凭证。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/config/seo.ts|copy-property:description|查看麦贝开源版 v0.1.0-preview 已发布并验证的 Preview 能力。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/config/seo.ts|copy-property:description|查看麦贝开源版的 AGPL-3.0-only 许可、自托管安全责任、第三方服务与商业许可边界。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/config/seo.ts|copy-property:description|查看麦贝使用文档，了解如何部署 Hermes Agent、配置模型、连接飞书、Telegram、Discord、微信和 QQBot 等渠道。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/config/seo.ts|copy-property:description|了解麦贝当前实施的数据保护、身份认证、访问控制、速率限制和基础设施安全措施，以及负责任的漏洞报告方式。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/config/seo.ts|copy-property:description|了解麦贝的一键部署、实例隔离、API Key 加密托管、日志监控、一键升级和多渠道 Agent 接入能力。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/config/seo.ts|copy-property:description|了解麦贝开源版的本地优先存储、对话历史持久化、第三方数据传输和自托管责任边界。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/config/seo.ts|copy-property:description|麦贝 MyBayAI 支持多种大模型供应商配置，让 Agent 智能体可灵活接入，支持 OpenAI、DeepSeek、Gemini、OpenRouter 等主流模型服务。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/config/seo.ts|copy-property:description|麦贝开源版（MyBay Open Source） 提供 Local-first 的 AI Agent 控制平面，支持 Docker 私有部署、BYOK、日志监控和飞书、Telegram、Discord、微信等多渠道接入。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/config/seo.ts|copy-property:description|深入理解对话工作台的通信架构，揭秘 8642、9119 端口职能以及在各种网络/渠道配置下的健康度就绪逻辑。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/config/seo.ts|copy-property:description|Contact us for technical support, deployment help, business cooperation, and enterprise AI Agent solutions.",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/config/seo.ts|copy-property:title|安全与漏洞披露 - 麦贝 MyBayAI",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/config/seo.ts|copy-property:title|本地初始化 - 麦贝开源版（MyBay Open Source）",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/config/seo.ts|copy-property:title|部署新实例 - 麦贝 MyBayAI",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/config/seo.ts|copy-property:title|部署指南 - 麦贝 MyBayAI",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/config/seo.ts|copy-property:title|登录 - 麦贝 MyBayAI",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/config/seo.ts|copy-property:title|对话工作台架构解析与异常诊断 - 使用文档 - 麦贝 MyBayAI",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/config/seo.ts|copy-property:title|功能特性 - 麦贝 MyBayAI",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/config/seo.ts|copy-property:title|控制台 - 麦贝 MyBayAI",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/config/seo.ts|copy-property:title|快速上手麦贝平台 - 使用文档 - 麦贝 MyBayAI",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/config/seo.ts|copy-property:title|联系我们 - 麦贝 MyBayAI",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/config/seo.ts|copy-property:title|麦贝开源版（MyBay Open Source） - 本地部署 AI Agent",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/config/seo.ts|copy-property:title|麦贝开源版更新日志",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/config/seo.ts|copy-property:title|麦贝开源版使用条款",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/config/seo.ts|copy-property:title|麦贝开源版隐私说明",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/config/seo.ts|copy-property:title|模板中心 - 麦贝 MyBayAI",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/config/seo.ts|copy-property:title|模型与供应商 - 麦贝 MyBayAI",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/config/seo.ts|copy-property:title|凭证管理 - 麦贝 MyBayAI",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/config/seo.ts|copy-property:title|实例列表 - 麦贝 MyBayAI",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/config/seo.ts|copy-property:title|使用文档 - 麦贝 MyBayAI",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/constants/diskLimitOptions.ts|copy-property:label|无限制 (unlimited)",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/docs.registry.ts|copy-property:title|8642 与 9119",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/docs.registry.ts|copy-property:title|本地管理员",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/docs.registry.ts|copy-property:title|初始化失败排查",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/docs.registry.ts|copy-property:title|第二步：完成部署前检测",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/docs.registry.ts|copy-property:title|第四步：访问实例",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/docs.registry.ts|copy-property:title|第一步：启动控制面板",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/docs.registry.ts|copy-property:title|对话工作台与任务运行",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/docs.registry.ts|copy-property:title|快速上手麦贝开源版",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/docs.registry.ts|copy-property:title|任务运行体验",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/docs.registry.ts|copy-property:title|通信与鉴权链路",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/docs.registry.ts|copy-property:title|Chat Workspace and Task Runs",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/docs.registry.ts|copy-property:title|Communication and Authentication",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/docs.registry.ts|copy-property:title|Get Started with MyBay Open Source",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/docs.registry.ts|copy-property:title|Initialization Failures",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/docs.registry.ts|copy-property:title|Local Administrator",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/docs.registry.ts|copy-property:title|Ports 8642 and 9119",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/docs.registry.ts|copy-property:title|Run Experience",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/docs.registry.ts|copy-property:title|Step 1: Start the Control Panel",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/docs.registry.ts|copy-property:title|Step 2: Complete Preflight",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/docs.registry.ts|copy-property:title|Step 3: Configure and Deploy an Agent",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/docs.registry.ts|copy-property:title|Step 4: Access the Instance",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|部署与验收",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|常见错误排查",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|单管理员边界",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|端口与就绪",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|规范文件",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|脚本和控制面板",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|麦贝开源版安全实践",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|敏感文件保护",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|内部路由和对话",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|配置实例",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|容量与备份",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|生成文件",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|生成文件、预览与本地存储",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|完成 Preflight",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|网络与备份",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|先选择正确的部署场景",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|验证",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|Agent Runtime 接入规范",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|Agent Runtime Specification",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|Capacity and Backup",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|Choose the Deployment Scenario",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|Common Error Troubleshooting",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|Complete Preflight",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|Configure the Instance",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|Deploy an Agent Instance",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|Deploy and Verify",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|Generated Files",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|Generated Files, Preview, and Local Storage",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|Instance URL Is Unreachable",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|Internal Routing and Chat",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|Network and Backup",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|Ports and Readiness",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|Script and Control Panel",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|Secrets and Docker",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|Security Practices for the MyBay Open Source",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|Sensitive File Protection",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|Single-Administrator Boundary",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|Specification Files",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/data/docs/taskDocs.registry.ts|copy-property:title|Validation",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/deploy/ChannelManualConfigForm.tsx|jsx-placeholder|https://yourserver.com/api/hermes-listener",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/deploy/ChannelManualConfigForm.tsx|jsx-text|https://[your-instance-domain]/callback/wechat_mp",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/deploy/ChannelManualConfigForm.tsx|jsx-text|https://[your-instance-domain]/callback/wecom",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/deploy/ChannelSetupGuidePanel.tsx|jsx-text|Guided Setup v1.0",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/deploy/ChannelStep.tsx|jsx-text|External channels are disabled in this local deployment. Enable them in the local configuration before selecting an IM channel.",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/deploy/ContainerConfigStep.tsx|jsx-text|internal_web_port:",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/deploy/DeployLimitReached.tsx|jsx-text|active Agent instance(s). Manage an existing instance, stop one, or delete one before creating another.",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/deploy/DeployLimitReached.tsx|jsx-text|Active instances",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/deploy/DeployLimitReached.tsx|jsx-text|Adjust the local instance limit in your deployment settings if this machine has enough CPU, memory, and disk capacity.",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/deploy/DeployLimitReached.tsx|jsx-text|Back to console",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/deploy/DeployLimitReached.tsx|jsx-text|Local capacity",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/deploy/DeployLimitReached.tsx|jsx-text|Local instance limit reached",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/deploy/DeployLimitReached.tsx|jsx-text|Manage instances",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/deploy/DeployLimitReached.tsx|jsx-text|No active instances found",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/deploy/DeployLimitReached.tsx|jsx-text|This local deployment allows",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/deploy/DeployLimitReached.tsx|jsx-text|Used instances",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/deploy/DeployLimitReached.tsx|jsx-title|Refresh capacity",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/deploy/DeployReviewStep.tsx|jsx-text|Mode",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/deploy/DeployWizard.tsx|copy-property:message|Local administrator can deploy instances.",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/deploy/InstanceInfoStep.tsx|jsx-text|Pi Agent",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/deploy/InstanceInfoStep.tsx|jsx-text|Port: 9119 | nousresearch/hermes-agent",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/deploy/InstanceInfoStep.tsx|jsx-text|Preview only | Production create disabled",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/first-run/FirstRunSetupPage.tsx|jsx-text|./quick-start.sh --lan",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/first-run/FirstRunSetupPage.tsx|jsx-text|./quick-start.sh --server",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/ConsoleMockup.tsx|jsx-text|24/7 Online",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/ConsoleMockup.tsx|jsx-text|安全访问",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/ConsoleMockup.tsx|jsx-text|安全凭证 Secrets",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/ConsoleMockup.tsx|jsx-text|独立实例",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/ConsoleMockup.tsx|jsx-text|概览 Dashboard",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/ConsoleMockup.tsx|jsx-text|监控状态",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/ConsoleMockup.tsx|jsx-text|内部日报总结特工",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/ConsoleMockup.tsx|jsx-text|平台配置 Config",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/ConsoleMockup.tsx|jsx-text|生产实例列表",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/ConsoleMockup.tsx|jsx-text|实例管理 Instances",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/ConsoleMockup.tsx|jsx-text|实例总数",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/ConsoleMockup.tsx|jsx-text|实时监控",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/ConsoleMockup.tsx|jsx-text|新建实例 +",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/ConsoleMockup.tsx|jsx-text|运行中",
+        "count": 5
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/ConsoleMockup.tsx|jsx-text|DeepSeek V3",
+        "count": 2
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/ConsoleMockup.tsx|jsx-text|Feishu",
+        "count": 2
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/ConsoleMockup.tsx|jsx-text|localhost:3000 / console",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/ConsoleMockup.tsx|jsx-text|OpenAI GPT-4o",
+        "count": 2
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/ConsoleMockup.tsx|jsx-text|Uptime: 24d 10h",
+        "count": 2
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/ConsoleMockup.tsx|jsx-text|Uptime: 5d 2h",
+        "count": 2
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/ConsoleMockup.tsx|jsx-text|Webhook",
+        "count": 2
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/InteractiveAgentDemo.tsx|jsx-text|agent-nova-2026.localhost",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/InteractiveAgentDemo.tsx|jsx-text|Content Ops Agent",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/InteractiveAgentDemo.tsx|locale-branch|安全访问 | Secure",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/InteractiveAgentDemo.tsx|locale-branch|创建实例 | Provision",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/InteractiveAgentDemo.tsx|locale-branch|打开对话 | Open Chat",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/InteractiveAgentDemo.tsx|locale-branch|点击切换模型与渠道，感受真实控制台流程 | Click through models and channels like a real control plane",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/InteractiveAgentDemo.tsx|locale-branch|对话 API | Chat API",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/InteractiveAgentDemo.tsx|locale-branch|对话工作台就绪 | Chat workspace ready",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/InteractiveAgentDemo.tsx|locale-branch|检测链路 | Check Route",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/InteractiveAgentDemo.tsx|locale-branch|交互式产品演示 | Interactive product demo",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/InteractiveAgentDemo.tsx|locale-branch|接入渠道 | Connected channels",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/InteractiveAgentDemo.tsx|locale-branch|模型供应商 | Model providers",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/InteractiveAgentDemo.tsx|locale-branch|模型引擎 | Model Engine",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/InteractiveAgentDemo.tsx|locale-branch|配置模型与密钥 | Configure model and key",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/InteractiveAgentDemo.tsx|locale-branch|生成隔离实例 | Create isolated instance",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/InteractiveAgentDemo.tsx|locale-branch|实例保持独立隔离，平台只通过受保护的内部路由转发控制指令。 | Each instance stays isolated; the platform only forwards control commands through protected internal routes.",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/InteractiveAgentDemo.tsx|locale-branch|实时运行摘要 | Live runtime summary",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/InteractiveAgentDemo.tsx|locale-branch|通讯渠道 | Channel",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/InteractiveAgentDemo.tsx|locale-branch|一键部署 | Deploy",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/InteractiveAgentDemo.tsx|locale-branch|已暂停 | Paused",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/InteractiveAgentDemo.tsx|locale-branch|运行中 | Running",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/InteractiveAgentDemo.tsx|locale-branch|注入安全访问链 | Inject secure access chain",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/InteractiveAgentDemo.tsx|locale-branch|Agent 部署进程 | Agent deployment flow",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/components/InteractiveAgentDemo.tsx|locale-branch|MyBay Agent 控制台 | MyBay Agent Console",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:desc|不仅有运行日志，麦贝还记录了每一次部署变更、密钥更新的操作流水，满足高合规性要求。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:desc|从飞书到 Telegram，从 API 到 Webhook，麦贝已帮你解决了所有通信层的握手兼容难题。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:desc|从模型配置、访问域名到容器启动，平台自动完成部署流程。无需手动登录服务器，也不用重复编写部署脚本。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:desc|访问 Web UI 端口，即刻交付具备生产能力的 Agent",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:desc|告别凌乱的环境变量，实现 AI 模型 Key 的中心化安全管控。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:desc|根据 .env.example 声明平台运行所需的关键变量",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:desc|规避复杂的 Linux 环境初始化，一键拉起具备独立域名与 SSL 的生产级 Agent 容器。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:desc|快速把本地 Agent Demo 部署成在线稳定服务。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:desc|内建秒级健康自检与进程监控，确保您的 Agent 7x24 小时在线。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:desc|通过容器化引擎一键初始化控制面板与数据库",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:desc|统一管理模型密钥、运行参数、数据库与持久化路径，让部署配置更清晰、更安全。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:desc|一键配置反向代理与 Basic Auth 鉴权，精准掌控每一次 API 调用。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:desc|在本机拉起控制台服务，完成容器编排、端口映射与后台运行，减少重复操作。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:desc|git clone 并在本地安装 npm 基础依赖环境",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:label|极致高可用保障",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:label|密钥预存管理",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:label|企业级访问安全",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:label|全渠道统一接入",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:title|本地管理",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:title|独立访问与权限保护",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:title|多供应商智能路由",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:title|服务拉起",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:title|个人开发者",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:title|环境配置",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:title|接入项目",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:title|可回溯审计日志",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:title|可视化管理",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:title|面向生产环境的稳定架构",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:title|秒级生产力交付",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:title|配置注入",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:title|企业级数据沙箱",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:title|企业内部团队",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:title|全渠道全栈式接入",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:title|统一管理所有运行实例",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:title|托管运行",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:title|源码获取",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:title|自动化服务商",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|copy-property:title|自愈式容器集群",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|[ACM] Incoming request from TG-Webhook (Authenticated: true)",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|[INF] Docker container mybay-agent-v1 started successfully.",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|[INF] Setting up internal reverse proxy on port 9119...",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|[LLM] Routing prompt to DeepSeek-V3 (Token Check OK)",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|[LOG] Streaming response chunks (210 tokens/sec)...",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|[SUC] Health Check passed: All systems operational.",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|1.5 小时 + 不稳定的本地环境",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|30 秒",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|保护您的",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|本地配置",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|查看部署流程",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|常见问题",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|传统本地/手动部署方式",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|从创建到交付，所需能力一次配齐",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|打破部署瓶颈，",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|大模型供应商",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|访问凭证管理",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|关于麦贝平台，您可能想了解的更多细节",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|健康检查",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|将传统长达数小时的部署工作，压缩至极致的秒数。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|仅需",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|连接每一位业务终端用户",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|麦贝极速部署",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|麦贝开源版提供本地管理员认证、凭证加密存储、实例路径校验和容器资源限制。Docker Socket 仍具有高权限，部署者必须限制控制面访问并妥善保护宿主机。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|敏捷交付",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|模型凭证使用应用层加密后保存，控制面记录相关管理操作。具体合规要求仍需部署者根据自身环境评估。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|凭证存储与操作记录",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|清晰的安全边界，",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|生产节点 A",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|实例状态",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|适合多种业务场景",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|为什么选择麦贝?",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|为受管实例生成和保存访问凭证，并在支持的运行路径中应用认证配置；管理员仍需限制公网访问。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|无缝接入全球顶级模型服务与开源权重，统一接口随心切换。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|信任驱动 · 完美兼容主流生态",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|验证",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|一次接入，即可跨越沟通终端边界",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|预计总耗时：",
+        "count": 2
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|约 30 秒",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|运行中",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|agent-alpha.xxx.com",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|Auto-Healing: Restarting Webhook",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|Basic Auth Active",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|DeepSeek / OpenAI",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|Deployment Self-Healing",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|Instance \"MyBay-Agent\" online",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|Instance Logs Streaming",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|Passed (32ms)",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|Proactive...",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|Server 模式使用 Traefik 提供域名路由和 HTTPS 终止，并通过动态配置连接受管 Agent 服务。实际可用性仍取决于主机、网络和运维配置。",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/features/landing-pages/variants/LegacyLandingPage.tsx|jsx-text|Syncing config.yaml...",
+        "count": 1
+      }
+    ],
+    "i18n-fallbacks": [
+      {
+        "fingerprint": "src/components/AppSettingsChannelSection.tsx|t-second-argument|\"API 模式用于 program 模式调用实例；需要使用实例 URL 的 API 入口和 API Key；如果 Web UI 被关闭，只有明确白名单路径可访问。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/auth/ProfileModal.tsx|t-default-value|\"Back to dashboard\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Changelog.tsx|t-default-value|\"Back to Home\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/ChannelPendingAuthPanel.tsx|t-second-argument|\"检测通道状态失败，正在后台继续重试...\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/ChannelPendingAuthPanel.tsx|t-second-argument|\"实例未运行，已保存白名单，将在实例下次启动时生效。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/ChannelPendingAuthPanel.tsx|t-second-argument|\"通道已成功连接并激活！\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/ChannelPendingAuthPanel.tsx|t-second-argument|\"已授权，但暂未检测到通道连接。请让用户再次发送消息，或点击重新检测。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/ChannelPendingAuthPanel.tsx|t-second-argument|\"已授权，正在重新检测通道...\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/ChannelPendingAuthPanel.tsx|t-second-argument|\"已写入白名单，等待通道侧下一次消息确认。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/ChannelPendingAuthPanel.tsx|t-second-argument|\"重新检测通道\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatInputBar.tsx|t-default-value|\"附件\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatInputBar.tsx|t-default-value|\"附件上传中...\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatInputBar.tsx|t-default-value|\"模式\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatInputBar.tsx|t-default-value|\"请先新建或选择一个会话\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatInputBar.tsx|t-default-value|\"上轮\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatInputBar.tsx|t-default-value|\"实例\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatInputBar.tsx|t-default-value|\"推理\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatInputBar.tsx|t-default-value|\"未选择\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatInputBar.tsx|t-default-value|\"运行中\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatMessageBubble.tsx|t-default-value|\"编辑\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatMessageBubble.tsx|t-default-value|\"错误码\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatMessageBubble.tsx|t-default-value|\"已停止，可编辑后重新发送\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatMessageBubble.tsx|t-default-value|\"Agent tool-call details are shown in the workspace timeline.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatMessageBubble.tsx|t-default-value|\"Copied\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatMessageBubble.tsx|t-default-value|\"Copy\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatMessageBubble.tsx|t-default-value|\"Diagnose with Assist\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatMessageBubble.tsx|t-default-value|\"Dislike\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatMessageBubble.tsx|t-default-value|\"Edit\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatMessageBubble.tsx|t-default-value|\"Like\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatMessageBubble.tsx|t-default-value|\"Tokens used\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatToolProgress.tsx|t-default-value|\"工具\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatToolProgress.tsx|t-default-value|\"结果\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatToolProgress.tsx|t-default-value|\"来源\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatToolProgress.tsx|t-default-value|\"收起\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatToolProgress.tsx|t-default-value|\"搜索\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatToolProgress.tsx|t-default-value|\"网页\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatToolProgress.tsx|t-default-value|\"文件\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatToolProgress.tsx|t-default-value|\"展开\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatWorkspaceHeader.tsx|t-default-value|\"Agent\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatWorkspaceHeader.tsx|t-default-value|\"Quick\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatWorkspacePanel.tsx|t-default-value|\"本次允许\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatWorkspacePanel.tsx|t-default-value|\"本会话允许\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatWorkspacePanel.tsx|t-default-value|\"步骤\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatWorkspacePanel.tsx|t-default-value|\"当前会话文件（Agent 生成或用户上传）\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatWorkspacePanel.tsx|t-default-value|\"调试\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatWorkspacePanel.tsx|t-default-value|\"工具\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatWorkspacePanel.tsx|t-default-value|\"进行中\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatWorkspacePanel.tsx|t-default-value|\"拒绝\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatWorkspacePanel.tsx|t-default-value|\"模型\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatWorkspacePanel.tsx|t-default-value|\"全部\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatWorkspacePanel.tsx|t-default-value|\"失败\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatWorkspacePanel.tsx|t-default-value|\"始终允许\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatWorkspacePanel.tsx|t-default-value|\"搜索\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatWorkspacePanel.tsx|t-default-value|\"完成\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatWorkspacePanel.tsx|t-default-value|\"文件\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatWorkspacePanel.tsx|t-default-value|\"异常\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatWorkspacePanel.tsx|t-default-value|\"执行任务步骤\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/ChatWorkspacePanel.tsx|t-default-value|\"Agent 正在调用工具，执行细节已在工作区 Timeline 中展示。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/useChatRuns.ts|t-default-value|\"审批提交失败\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/useChatRuns.ts|t-default-value|\"审批已提交\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/useChatRuns.ts|t-default-value|\"Failed to send stop request\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/useChatRuns.ts|t-default-value|\"Stop request sent\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/useChatWorkspaceFiles.ts|t-default-value|\"此文件类型暂不支持内嵌预览，可以打开或下载查看。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/useChatWorkspaceFiles.ts|t-default-value|\"当前消息最多支持 5 个附件，请先移除部分附件\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/useChatWorkspaceFiles.ts|t-default-value|\"附件正在上传中，请稍候...\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/useChatWorkspaceFiles.ts|t-default-value|\"请先新建或选择一个会话，再上传附件。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/useChatWorkspaceFiles.ts|t-default-value|\"上传失败\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/useChatWorkspaceFiles.ts|t-default-value|\"文件预览加载失败，请稍后重试。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/useChatWorkspaceFiles.ts|t-default-value|\"暂不支持上传文件夹，请选择具体文件上传\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/useChatWorkspaceFiles.ts|t-default-value|\"Failed to load file preview. Please try again later.\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/useChatWorkspaceFiles.ts|t-default-value|\"This file type cannot be previewed inline yet. Open or download it to view.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/useChatWorkspaceFiles.ts|t-default-value|`文件 \"${file.name}\" 超出单文件上限 (5MB)`",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/useChatWorkspaceFiles.ts|t-default-value|`文件 \"${file.name}\" 格式不支持`",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/useChatWorkspaceFiles.ts|t-default-value|`文件 \"${file.name}\" 为 0 字节空文件，无法上传`",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/useChatWorkspaceFiles.ts|t-default-value|`最多还可添加 ${remainingSlots} 个附件，已自动忽略 ${ignoredCount} 个多余文件`",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceDebugTab.tsx|t-default-value|\"查看本轮 Agent 运行的结构化状态、工具输入输出和元数据。敏感信息以后端脱敏结果为准。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceDebugTab.tsx|t-default-value|\"当 Agent 返回工具输入、输出或元数据时，会显示在这里。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceDebugTab.tsx|t-default-value|\"高级调试\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceDebugTab.tsx|t-default-value|\"工具\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceDebugTab.tsx|t-default-value|\"耗时\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceDebugTab.tsx|t-default-value|\"进行中\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceDebugTab.tsx|t-default-value|\"输出\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceDebugTab.tsx|t-default-value|\"输入\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceDebugTab.tsx|t-default-value|\"完成\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceDebugTab.tsx|t-default-value|\"异常\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceDebugTab.tsx|t-default-value|\"元数据\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceDebugTab.tsx|t-default-value|\"暂无调试事件\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceDebugTab.tsx|t-default-value|\"状态\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceDebugTab.tsx|t-default-value|\"Run ID\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceDebugTab.tsx|t-default-value|\"Token\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceResultTab.tsx|t-default-value|\"工具调用\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceResultTab.tsx|t-default-value|\"耗时\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceResultTab.tsx|t-default-value|\"审批已提交，Agent 正在继续执行。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceResultTab.tsx|t-default-value|\"未提供\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceResultTab.tsx|t-default-value|\"需要你审批后继续\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceResultTab.tsx|t-default-value|\"Agent 请求执行一个需要确认的操作。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceResultTab.tsx|t-default-value|\"Token\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceStepsTab.tsx|t-default-value|\"{{count}} 项\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceStepsTab.tsx|t-default-value|\"暂无执行步骤\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceStepsTab.tsx|t-default-value|\"正在等待 Agent 返回执行事件。本轮如果没有调用工具，系统会在完成时归档最终步骤。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceStepsTab.tsx|t-default-value|\"执行过程\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceStepsTab.tsx|t-default-value|\"Agent 的搜索、读取、调用和生成步骤会归档在这里，不进入聊天气泡。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceStepsTab.tsx|t-default-value|\"Agent 开始执行后，步骤会实时出现在这里。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceStepsTab.tsx|t-default-value|\"Agent 正在建立执行流\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/ChatWorkspace.tsx|t-default-value|\"附件正在上传中，请稍候...\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/ChatWorkspace.tsx|t-default-value|\"已停止，可编辑后重新发送\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceDetailPanel.tsx|t-second-argument|\"部署日志\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceDetailPanel.tsx|t-second-argument|\"上下文\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceDetailPanel.tsx|t-second-argument|\"审计日志\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceDetailPanel.tsx|t-second-argument|\"实时运行日志\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceGrid.tsx|t-or-fallback|\"导出\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceGrid.tsx|t-or-fallback|\"点击查看实例详情\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceGrid.tsx|t-or-fallback|\"归档实例\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceGrid.tsx|t-or-fallback|\"删除实例\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceGrid.tsx|t-or-fallback|\"实例设置\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceGrid.tsx|t-or-fallback|\"重命名\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"错误信息\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"当前实例未使用受支持的模板，业务配置中心已降级为通用存储模式。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"当前实例已成功读取并注入模板运行上下文\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"店铺链接\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"告警阈值(时)\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"获取运行记录失败\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"监控 SKU 数量\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"模板识别结果\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"您可以基于当前业务配置，手动触发首次验证任务。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"生成的执行步骤\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"通用运行模式\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"推送渠道就绪\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"完成时间\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"无摘要信息\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"下一步建议\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"校验结果摘要\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"业务目标\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"业务配置已生效\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"业务任务触发成功\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"业务任务触发失败\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"业务任务触发中...\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"业务任务执行\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"已完成 {{completed}} / {{total}}\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"运行结果发现\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"运行上下文摘要\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"运行首次监控任务\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"暂无运行记录\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"正在加载记录...\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"执行类型\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"执行时间\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"最近一次执行结果\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"最近运行记录\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"Context unavailable\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"Loading runtime context...\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceSetup.tsx|t-or-fallback|`请填写以下必填项: ${fieldNames}`",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstancesPanel.tsx|t-or-fallback|\"所选实例正在删除中，无需重复操作。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/InstanceTable.tsx|t-or-fallback|\"点击查看实例详情\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "src/components/dashboard/MobileInstanceList.tsx|t-or-fallback|\"点击展开/收起摘要\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/MobileInstanceSheet.tsx|t-second-argument|\"上下文\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/useInstanceActions.ts|t-or-fallback|\"您的操作频率过高，请稍后再试。\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "src/components/dashboard/useInstanceActions.ts|t-or-fallback|\"确定要归档此实例吗？\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/dashboard/useInstanceActions.ts|t-or-fallback|\"确定要删除此实例吗？该操作不可逆。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/DashboardLayout.tsx|t-default-value|\"对话工作台\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "src/components/DashboardLayout.tsx|t-default-value|\"开源社区\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "src/components/DashboardLayout.tsx|t-default-value|\"Agent 对话已完成，点击查看结果\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/InstanceSettingsModal.tsx|t-or-fallback|\"密码长度不能少于 8 位\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/InstanceSettingsModal.tsx|t-or-fallback|\"配置已保存\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/InstanceSettingsModal.tsx|t-second-argument|\"-- Select --\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/InstanceSettingsModal.tsx|t-second-argument|\"Display a virtual pet character\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/InstanceSettingsModal.tsx|t-second-argument|\"Enable Pet\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/InstanceSettingsModal.tsx|t-second-argument|\"Pet Display\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/InstanceSettingsModal.tsx|t-second-argument|\"Pet Slug\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/InstanceSettingsModal.tsx|t-second-argument|\"Render Mode\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/InstanceSettingsModal.tsx|t-second-argument|\"Scale\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/marketing/Footer.tsx|t-default-value|\"Security\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/OverviewSection.tsx|t-default-value|\"浏览文件\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/OverviewSection.tsx|t-default-value|\"模型\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/OverviewSection.tsx|t-default-value|\"启动中\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/OverviewSection.tsx|t-default-value|\"渠道\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/OverviewSection.tsx|t-default-value|\"任务中心\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/OverviewSection.tsx|t-default-value|\"实例中心\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/OverviewSection.tsx|t-default-value|\"需要处理\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/OverviewSection.tsx|t-default-value|\"已停止\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/OverviewSection.tsx|t-default-value|\"运行中\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/OverviewSection.tsx|t-default-value|\"暂无运行中的 Agent\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Privacy.tsx|t-default-value|\"Have questions?\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Privacy.tsx|t-default-value|\"If you have any queries regarding credentials security or storage policies, let us know.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-center/BlueprintDetailModal.tsx|t-or-fallback|\"Close\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-center/DetailAudienceValueSection.tsx|t-second-argument|\"部署后你将获得的核心结果：\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-center/DetailAudienceValueSection.tsx|t-second-argument|\"核心商业价值\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-center/DetailAudienceValueSection.tsx|t-second-argument|\"适合哪些团队 / 用户\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-center/DetailAudienceValueSection.tsx|t-second-argument|\"推荐提效团队\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-center/DetailAudienceValueSection.tsx|t-second-argument|\"预期自动化运行结果：\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-center/DetailPromptSection.tsx|t-second-argument|\"系统自带高度优化的核心 logic，本工作流无需定制提示词。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-center/DetailSourceBadge.tsx|t-second-argument|\"当前部分内容仍使用静态兜底，建议在模板管理台补齐\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-center/DetailSourceBadge.tsx|t-second-argument|\"当前内容来源：数据库已发布内容\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-center/utils.ts|t-second-argument|\"待解析文档\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-center/utils.ts|t-second-argument|\"待授权通讯渠道\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-center/utils.ts|t-second-argument|\"敬请期待\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-center/utils.ts|t-second-argument|\"配置 Webhook 触发\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-center/utils.ts|t-second-argument|\"沙箱模拟 (前端虚拟流)\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-center/utils.ts|t-second-argument|\"真实执行就绪\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "src/components/template-center/utils.ts|t-second-argument|\"智能报告生成 (不触发后台底层真实操作)\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/template-center/WorkflowDetailModal.tsx|t-or-fallback|\"Close\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Terms.tsx|t-default-value|\"Have suggestions?\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/Terms.tsx|t-default-value|\"We are tailoring rules to safeguard standard compliance benchmarks. Reach out with feedback.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Agent version\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Audit logs\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Available\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Basic information\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Close\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Current version\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Failure reason\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Image tag\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Instance ID\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Instance name\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Last upgraded at\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Latest\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Pending upgrade\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Previous version / rollback target\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Resolved version\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Rollback availability\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Rollback\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Runtime status\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"System tags\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Unavailable\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Upgrade and rollback\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Upgrade details\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Upgrade failed\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Upgrade task status\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Upgrade to latest\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Version status\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionFilters.tsx|t-second-argument|\"All statuses\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionFilters.tsx|t-second-argument|\"All system tags\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionFilters.tsx|t-second-argument|\"All versions\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionFilters.tsx|t-second-argument|\"Latest\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionFilters.tsx|t-second-argument|\"Pending upgrade\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionFilters.tsx|t-second-argument|\"Rollback available\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionFilters.tsx|t-second-argument|\"Search and filters\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionFilters.tsx|t-second-argument|\"Search instance name / ID\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionFilters.tsx|t-second-argument|\"Showing {{visible}} / {{total}}\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionFilters.tsx|t-second-argument|\"Upgrade failed\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionFilters.tsx|t-second-argument|\"Upgrade success\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionOfficialCard.tsx|t-second-argument|\"Latest\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionOfficialCard.tsx|t-second-argument|\"Prewarm cache\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionOfficialCard.tsx|t-second-argument|\"Ready\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionOfficialCard.tsx|t-second-argument|\"Recommended official version\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionOfficialCard.tsx|t-second-argument|\"Sync releases\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionOverviewCards.tsx|t-second-argument|\"items\"",
+        "count": 4
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionOverviewCards.tsx|t-second-argument|\"Latest batch upgrade\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionOverviewCards.tsx|t-second-argument|\"Latest version instances\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionOverviewCards.tsx|t-second-argument|\"No record\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionOverviewCards.tsx|t-second-argument|\"Pending upgrade\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionOverviewCards.tsx|t-second-argument|\"Refresh upgrade statistics\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionOverviewCards.tsx|t-second-argument|\"Total instances\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "src/components/version-management/VersionOverviewCards.tsx|t-second-argument|\"Upgrade failed / abnormal\"",
+        "count": 1
+      }
+    ],
+    "api-error-contract": [
+      {
+        "fingerprint": "server.ts|api-error-without-code|\"该任务正在执行中，请勿重复触发。\"",
+        "count": 7
+      },
+      {
+        "fingerprint": "server.ts|api-error-without-code|\"Feishu image variants are disabled in the local open-source edition.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server.ts|api-error-without-code|\"Image prewarming is disabled in the local open-source edition.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server.ts|api-error-without-code|\"No official version discovered yet.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server.ts|api-error-without-code|\"Not Found\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server.ts|api-error-without-code|\"Only platform administrators can create global workflow templates.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server.ts|api-error-without-code|\"Only platform administrators can manually build Feishu variants.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server.ts|api-error-without-code|\"Only platform administrators can manually trigger version discovery.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server.ts|api-error-without-code|\"Only platform administrators can perform dependency checks.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server.ts|api-error-without-code|\"Only platform administrators can trigger image pre-warming.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server.ts|api-error-without-code|\"Only platform administrators can update global workflow templates.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server.ts|api-error-without-code|\"Scheduled job not found or not editable.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server.ts|api-error-without-code|\"Security policy blocked this request because the file path is outside the allowed directory.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server.ts|api-error-without-code|\"Security policy blocked this request. Only text or Markdown reports can be viewed.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server.ts|api-error-without-code|\"Task not found or access denied.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server.ts|api-error-without-code|\"Task not found or permission denied.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server.ts|api-error-without-code|\"Template center is currently disabled\"",
+        "count": 6
+      },
+      {
+        "fingerprint": "server.ts|api-error-without-code|\"This task has not generated report content yet.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server.ts|api-error-without-code|\"Version discovery is disabled in the local open-source edition.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server.ts|api-error-without-code|\"Workflow template not found.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server.ts|api-error-without-code|e.message",
+        "count": 16
+      },
+      {
+        "fingerprint": "server.ts|api-error-without-code|readiness.message",
+        "count": 2
+      },
+      {
+        "fingerprint": "server.ts|api-error-without-code|sanitizeErrorMessage(e.message) || \"Failed to build Feishu variant.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/middlewares/auth.ts|api-error-without-code|\"Access denied. Admin role required.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/middlewares/auth.ts|api-error-without-code|\"Authentication server error\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/middlewares/auth.ts|api-error-without-code|\"Unauthorized\"",
+        "count": 4
+      },
+      {
+        "fingerprint": "server/routes/auth.ts|api-error-without-code|\"File content does not match an allowed image format.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/auth.ts|api-error-without-code|\"Invalid username or password.\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/auth.ts|api-error-without-code|\"Login failed.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/auth.ts|api-error-without-code|\"No file uploaded.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/auth.ts|api-error-without-code|\"Username and password are required.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/auth.ts|api-error-without-code|err.code === \"LIMIT_FILE_SIZE\" ? \"Image exceeds the 1 MB limit.\" : err.message",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/deployments.ts|api-error-without-code|\"Deployment task not found.\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/deployments.ts|api-error-without-code|\"Forbidden\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/deployments.ts|api-error-without-code|\"Instance not found.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/deployments.ts|api-error-without-code|\"Only failed deployments can be retried.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/actions.routes.ts|api-error-without-code|\"服务器内部异常，健康检查失败\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/actions.routes.ts|api-error-without-code|\"服务器内部异常\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/actions.routes.ts|api-error-without-code|\"密码不能为空\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/actions.routes.ts|api-error-without-code|\"面板访问密码不可用，实例无法完成 Dashboard 登录配置。请重置访问密码后重新部署。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/actions.routes.ts|api-error-without-code|\"清除部署日志失败，服务器异常\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/actions.routes.ts|api-error-without-code|\"容量超额拦截\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/actions.routes.ts|api-error-without-code|\"网关请求异常\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/actions.routes.ts|api-error-without-code|\"Bad Request\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/actions.routes.ts|api-error-without-code|\"Forbidden: Access denied\"",
+        "count": 7
+      },
+      {
+        "fingerprint": "server/routes/instances/actions.routes.ts|api-error-without-code|\"Forbidden\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/actions.routes.ts|api-error-without-code|\"Instance not found\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/actions.routes.ts|api-error-without-code|\"Invalid action\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/actions.routes.ts|api-error-without-code|\"Not found\"",
+        "count": 7
+      },
+      {
+        "fingerprint": "server/routes/instances/actions.routes.ts|api-error-without-code|\"Server error\"",
+        "count": 5
+      },
+      {
+        "fingerprint": "server/routes/instances/actions.routes.ts|api-error-without-code|readiness.message",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/channels.routes.ts|api-error-without-code|\"白名单写入 / 网关配置重载失败，服务器内部异常\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/channels.routes.ts|api-error-without-code|\"忽略通道授权事件失败，服务器内部异常\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/channels.routes.ts|api-error-without-code|\"获取通道状态失败，服务器内部异常\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/instances/channels.routes.ts|api-error-without-code|\"没有该实例的管理权限\"",
+        "count": 3
+      },
+      {
+        "fingerprint": "server/routes/instances/channels.routes.ts|api-error-without-code|\"扫描授权事件失败，服务器内部异常\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/channels.routes.ts|api-error-without-code|\"实例不存在\"",
+        "count": 3
+      },
+      {
+        "fingerprint": "server/routes/instances/channels.routes.ts|api-error-without-code|\"通道授权申请事件不存在\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/channels.routes.ts|api-error-without-code|\"原生快速配置已停用，请使用平台授权向导和手动配置。\"",
+        "count": 3
+      },
+      {
+        "fingerprint": "server/routes/instances/channels.routes.ts|api-error-without-code|\"Forbidden: Access denied\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/instances/channels.routes.ts|api-error-without-code|\"Not found\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/instances/chat.routes.ts|api-error-without-code|\"后端工作台代理模块执行异常，请联系管理员。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat.routes.ts|api-error-without-code|\"内部探测服务异常，请稍后再试。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat.routes.ts|api-error-without-code|\"您没有访问该实例的权限。\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/instances/chat.routes.ts|api-error-without-code|\"请求体中缺少必要的 messages 数组，或数组为空。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat.routes.ts|api-error-without-code|\"未找到目标实例。\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/instances/chat.routes.ts|api-error-without-code|`实例目前处于 [${instance.status || \"未知\"}] 状态，请确保其已完全启动并就绪后再进行对话。`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat.routes.ts|api-error-without-code|`实例目前处于 [${instance.status || \"未知\"}] 状态，尚未启动。`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/assist.routes.ts|api-error-without-code|\"不合法的辅助技能标识符。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/assist.routes.ts|api-error-without-code|\"初始化聊天回合失败，数据库未确认挂起态。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/assist.routes.ts|api-error-without-code|\"单条用户输入最多 4000 字符。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/assist.routes.ts|api-error-without-code|\"当前会话存在正在处理的挂起请求，请稍候再试。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/assist.routes.ts|api-error-without-code|\"对话会话不存在或无权访问。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/assist.routes.ts|api-error-without-code|\"附件读取失败，请重新上传后再试。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/assist.routes.ts|api-error-without-code|\"回复生成超时。此请求已被超时判定引擎自动丢弃，无法提交对话库。\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/assist.routes.ts|api-error-without-code|\"聊天附件关联所需的数据库函数尚未升级，请先执行 begin_chat_turn 的 metadata 迁移后再发送带附件消息。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/assist.routes.ts|api-error-without-code|\"您没有访问该实例的权限。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/assist.routes.ts|api-error-without-code|\"数据库并发冲突：无法获取连续的序列号，请重试。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/assist.routes.ts|api-error-without-code|\"未找到目标实例。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/assist.routes.ts|api-error-without-code|\"温度值非法。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/assist.routes.ts|api-error-without-code|\"消息内容不可为空。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/assist.routes.ts|api-error-without-code|\"重复的请求 Request ID，该请求已被处理。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/assist.routes.ts|api-error-without-code|\"AI 对话接口参数架构不匹配，请检查 Runtime 版本的参数规范。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/assist.routes.ts|api-error-without-code|`实例目前处于 [${instance.status || \"未知\"}] 状态，请确保其已完全启动并就绪后再进行对话。`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/assist.routes.ts|api-error-without-code|routeErr.message",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/conversation.routes.ts|api-error-without-code|\"标题不可为空。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/conversation.routes.ts|api-error-without-code|\"标题长度不能超过 100 个字符。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/conversation.routes.ts|api-error-without-code|\"创建对话会话失败。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/conversation.routes.ts|api-error-without-code|\"对话会话不存在或无权访问。\"",
+        "count": 3
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/conversation.routes.ts|api-error-without-code|\"获取会话列表失败。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/conversation.routes.ts|api-error-without-code|\"获取会话详情失败。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/conversation.routes.ts|api-error-without-code|\"获取消息列表失败。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/conversation.routes.ts|api-error-without-code|\"您没有访问该实例的权限。\"",
+        "count": 5
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/conversation.routes.ts|api-error-without-code|\"删除会话失败。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/conversation.routes.ts|api-error-without-code|\"未找到目标实例。\"",
+        "count": 5
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/limiters.ts|api-error-without-code|\"异步对话任务请求过于频繁，请稍后再试。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/quick.routes.ts|api-error-without-code|\"初始化聊天回合失败，数据库未确认挂起态。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/quick.routes.ts|api-error-without-code|\"单条用户输入最多 4000 字符。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/quick.routes.ts|api-error-without-code|\"当前会话存在正在处理的挂起请求，请稍候再试。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/quick.routes.ts|api-error-without-code|\"对话会话不存在或无权访问。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/quick.routes.ts|api-error-without-code|\"附件读取失败，请重新上传后再试。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/quick.routes.ts|api-error-without-code|\"回复生成超时。此请求已被超时判定引擎自动丢弃，无法提交对话库。\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/quick.routes.ts|api-error-without-code|\"聊天附件关联所需的数据库函数尚未升级，请先执行 begin_chat_turn 的 metadata 迁移后再发送带附件消息。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/quick.routes.ts|api-error-without-code|\"您没有访问该实例的权限。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/quick.routes.ts|api-error-without-code|\"数据库并发冲突：无法获取连续的序列号，请重试。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/quick.routes.ts|api-error-without-code|\"未找到目标实例。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/quick.routes.ts|api-error-without-code|\"温度值非法。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/quick.routes.ts|api-error-without-code|\"消息内容不可为空。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/quick.routes.ts|api-error-without-code|\"重复的请求 Request ID，该请求已被处理。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/quick.routes.ts|api-error-without-code|\"AI 对话接口参数架构不匹配，请检查 Runtime 版本的参数规范。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/quick.routes.ts|api-error-without-code|\"Platform-hosted models are not included in the local open-source edition. Use BYOK credentials instead.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/quick.routes.ts|api-error-without-code|`实例目前处于 [${instance.status || \"未知\"}] 状态，请确保其已完全启动并就绪后再进行对话。`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/quick.routes.ts|api-error-without-code|routeErr.message",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/runEvents.routes.ts|api-error-without-code|\"您的并发连接数过多，请稍后再试。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/runEvents.routes.ts|api-error-without-code|\"您没有访问该实例的权限。\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/runEvents.routes.ts|api-error-without-code|\"审批选择无效。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/runEvents.routes.ts|api-error-without-code|\"审批指令提交失败，请重试。\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/runEvents.routes.ts|api-error-without-code|\"未找到目标任务或无权访问。\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/runEvents.routes.ts|api-error-without-code|\"未找到目标实例。\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/runs.routes.ts|api-error-without-code|\"初始化异步任务失败。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/runs.routes.ts|api-error-without-code|\"创建异步任务失败，请重试。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/runs.routes.ts|api-error-without-code|\"当前实例存在正在运行的异步对话任务，请稍候再试。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/runs.routes.ts|api-error-without-code|\"该实例不支持异步任务执行。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/runs.routes.ts|api-error-without-code|\"获取任务状态失败。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/runs.routes.ts|api-error-without-code|\"获取实例服务支持度失败。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/runs.routes.ts|api-error-without-code|\"您没有访问该实例的权限。\"",
+        "count": 4
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/runs.routes.ts|api-error-without-code|\"缺少 Request ID。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/runs.routes.ts|api-error-without-code|\"未找到目标任务或无权访问。\"",
+        "count": 3
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/runs.routes.ts|api-error-without-code|\"未找到目标实例。\"",
+        "count": 4
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/runs.routes.ts|api-error-without-code|\"消息内容不可为空。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/runs.routes.ts|api-error-without-code|\"异步对话任务执行功能当前未启用。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/runs.routes.ts|api-error-without-code|\"中止任务失败，请重试。\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/runs.routes.ts|api-error-without-code|\"重复的 Run ID，该任务已被处理。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/runs.routes.ts|api-error-without-code|\"重复的请求 Request ID，该请求已被处理。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/runs.routes.ts|api-error-without-code|\"Failed to attach files to this Agent run. Please retry.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/runs.routes.ts|api-error-without-code|\"Platform-hosted models are not included in the local open-source edition. Use BYOK credentials instead.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/runs.routes.ts|api-error-without-code|`无法中止处于 ${stopResult.run_status} 状态的任务。`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chat/runs.routes.ts|api-error-without-code|managedGuard.message",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"当前消息最多上传 5 个附件。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"该文件不属于当前会话\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"该文件不属于当前实例\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"该文件已被删除\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"会话不存在或不属于当前实例。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"会话不存在或不属于当前实例\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"获取文件列表失败，请稍后重试。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"没有上传文件\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"删除文件失败: \" + e.message",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"实例不存在。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"实例不存在\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"文件不存在。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"文件不属于当前会话。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"文件记录存在，但物理文件不存在。\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"文件路径不在当前会话目录内。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"文件路径未通过安全校验。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"文件下载失败，请稍后重试。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"文件已删除。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"无权访问此实例。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"无权访问此文件。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"无权访问此文件\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"无权限访问此实例\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"验证权限失败: \" + err.message",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"找不到该文件记录\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|err.message",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"安全拦截：备份包中包含绝对路径的文件\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"安全拦截：备份包中包含路径穿越字符\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"安全拦截：无效的备份包，只能导入安全的脱敏备份（redacted: true）\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"安全拦截：无效的备份包，Platform 必须是 MyBay\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"保存配置失败，服务器内部异常\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"备份包损坏或不是有效的 zip 压缩文件\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"当前没有可用的已预热 Feishu 专版镜像。请先在版本库中拉取或构建 Feishu Variant 后再升级飞书实例。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"访问路径（Slug）格式不正确：仅允许使用小写字母、数字和连字符(-)\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"飞书 App ID 格式不正确，不得使用邮箱地址，必须以 cli_ 开头的 App ID。\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"飞书 App Secret 不能为空。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"该访问路径（Slug）已经被占用，请换用其他路径\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"解析备份包失败，服务器内部异常\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"面板访问密码不可用，实例无法完成 Dashboard 登录配置。请重置访问密码后重新部署。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"模型 API Key 格式不正确，检测到被自动填充为了您的账号邮箱，请重新输入。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"配置格式验证错误：'baseUrl' (base_url) 必须是 string 字符串类型。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"配置格式验证错误：'enableDashboard' 必须是 boolean 布尔类型。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"配置格式验证错误：'model' (current_model) 必须是 string 字符串类型。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"配置格式验证错误：'provider' (current_provider) 必须是 string 字符串类型。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"配置格式验证错误：'providerApiKey' (apiKey) 必须是 string 字符串类型。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"配置格式验证错误：自定义 API Base URL 必须是 http: 或 https: 协议的合法 URL。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"配置格式验证错误：自定义 API Base URL 不是一个合法的 URL 格式。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"请选择需要上传并克隆的备份包文件\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"请选择需要上传并校验的备份包文件\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"容器定位自检判定：由于该实例在数据库中没有容器标识（container_id 与 container_name 均为空），暂无法进行配置热更新保存并重启。请确认实例已被成功初次部署上线。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"容器定位自检判定异常，服务器内部异常\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"生产环境下启用对话工作台/API模式时，必须配置内部 API Key (hermesApiKey 或 chatApiKey)\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"无效的备份包：缺少 config.redacted.json 脱敏配置文件\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"无效的备份包：缺少 config.redacted.json\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"无效的备份包：缺少 manifest.json 描述文件\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"无效的备份包：缺少 manifest.json\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"新实例访问路径不能为空\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"新实例名称不能为空\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"应用打包导出失败，服务器内部异常\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"应用导出失败，服务器内部异常\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"business-config.json 大小超过了 2MB 限制\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"business-config.json 大小超限\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"business-config.json 解析失败，不是合法的 JSON 格式\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"config.redacted.json 大小超过了 2MB 限制\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"config.redacted.json 大小超限\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"config.redacted.json 解析失败，不是合法的 JSON 格式\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"Forbidden: Access denied\"",
+        "count": 7
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"Invalid allowMode\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"Invalid or forged ZIP archive.\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"manifest.json 大小超过了 2MB 限制\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"manifest.json 大小超限\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"manifest.json 解析失败，不是合法的 JSON 格式\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"Not found\"",
+        "count": 7
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"Server error\"",
+        "count": 4
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"template-inputs.json 大小超过了 2MB 限制\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"template-inputs.json 大小超限\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"template-inputs.json 解析失败，不是合法的 JSON 格式\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|`安全拦截：不支持的备份包版本 (v${manifestData.archive_version || '未知'})`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|`配置格式验证错误：不支持的模型供应商 \"${data.provider}\"，或该提供商已被废弃/下线。`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|`配置格式验证错误：模型供应商 \"${regConf.label}\" 不包含选中的模型 \"${data.model}\"。如果您欲使用其他自定义模型，请勾选“自定义模型”。`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|`容器定位安全拦截：数据库指向的 container_id (${dbContainerId.substring(0, 12)}) 与其宿主中的物理容器名称不相符，这可能是属于其他实体的残留，为防范越权或配置误覆盖，更新操作已被熔断。`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|`容器定位安全拦截：数据库中存储的特定 container_id (${dbContainerId.substring(0, 12)}) 关联的物理容器在宿主机中已不复存在。`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|`容器定位安全拦截：无法在宿主引擎中匹配到任何名称为 \"${localExpectedName}\" (来自数据库 container_name) 的有效运行期或静默态物理容器。请检查并确认其已被部署初始化。`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|policyResult.message",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"当前没有可用的已预热 Feishu 专版镜像。请先在版本库中拉取或构建 Feishu Variant 后再部署飞书实例。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"飞书 App ID 格式不正确，不得使用邮箱地址，必须以 cli_ 开头的 App ID。\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"飞书 App Secret 不能为空。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"服务器安全策略未启用 Docker Socket 挂载。请先由服务器管理员在部署环境中设置 ENABLE_DOCKER_SOCKET_SKILL=true\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"服务器内部错误：无法生成有效的实例唯一标识符(generatedId)。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"后台安全设置未允许管理员实例挂载 Docker Socket。请先在管理员后台的安全设置中开启此项\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"面板访问密码不可用，实例无法完成 Dashboard 登录配置。请重置访问密码后重新部署。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"模型 API Key 格式不正确，检测到被自动填充为了您的账号邮箱，请重新输入。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"配置格式验证错误：'apiKey' 必须是 string 字符串类型。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"配置格式验证错误：'baseUrl' (base_url) 必须是 string 字符串类型。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"配置格式验证错误：'model' (current_model) 必须是 string 字符串类型。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"配置格式验证错误：'provider' (current_provider) 必须是 string 字符串类型。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"配置格式验证错误：'providerApiKey' (apiKey) 必须是 string 字符串类型。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"缺少必填的文件输入。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"上传文件的物理存储已丢失，请重新上传。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"无法自动分配可用端口，系统内部异常\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"校验预上传文件异常，文件可能损坏或被拦截\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"应用创建或部署调度失败: \" + e.message",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"找不到可以绑定的有效上传文件或权限不足。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|`该 Blueprint 已被禁用: ${blueprint.name}`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|`高危技能拦截：该部署请求包含了需要您手动确认授权的敏感技能插件：[${names}]。您必须在创建请求中确认并同意授予对此技能的直接开启权限(confirmed_skill_ids 需包含对应 ID)。`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|`技能插件 [${policy.name}] 尚未开发完成或尚未上线。`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|`模板已被禁用: ${template.name}`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|`配置格式验证错误：不支持的模型供应商 \"${data.provider}\"，或该提供商已被废弃/下线。`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|`配置格式验证错误：模型供应商 \"${regConf.label}\" 不包含选中的模型 \"${data.model}\"。如果您欲使用其他自定义模型，请勾选“自定义模型”。`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|`配置模板失败：缺少必填输入参数：${missingInputs.join(\"、\")}。\\n请返回“模板配置”步骤，确认上述内容已填写后重试。`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|`未找到指定的工作流模板: ${data.template_id}`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|`未找到指定的行业场景 Blueprint: ${data.blueprint_id}`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|`未知的技能插件: ${skillId}`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|`无权开启管理员专用技能: ${policy.name}`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|error.message",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/files.routes.ts|api-error-without-code|\"安全审计违规：您无权对此实例部署上传文件资源。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/files.routes.ts|api-error-without-code|\"不能预览目录\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/files.routes.ts|api-error-without-code|\"不能直接下载目录\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/files.routes.ts|api-error-without-code|\"存储容量同步校验失败，未能确认配额，为了安全已撤销此文件的落盘保存，请稍后刷新重试！\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/files.routes.ts|api-error-without-code|\"服务器内部错误: \" + sanitizeErrorMessage(e.message)",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/files.routes.ts|api-error-without-code|\"该文件类型暂不支持预览，请下载查看\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/files.routes.ts|api-error-without-code|\"列表获取失败: \" + sanitizeErrorMessage(e.message)",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/files.routes.ts|api-error-without-code|\"批量删除失败: \" + sanitizeErrorMessage(e.message)",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/files.routes.ts|api-error-without-code|\"请求的路径不是一个目录\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/files.routes.ts|api-error-without-code|\"实例不存在\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/files.routes.ts|api-error-without-code|\"未接收到任何有效的多媒体上传文件内容，请重试。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/files.routes.ts|api-error-without-code|\"未指定文件路径\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/instances/files.routes.ts|api-error-without-code|\"文件不存在或已经被删除\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/files.routes.ts|api-error-without-code|\"文件过大，请下载查看\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/files.routes.ts|api-error-without-code|\"文件删除失败: \" + sanitizeErrorMessage(err.message)",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/files.routes.ts|api-error-without-code|\"文件占用分析失败: \" + sanitizeErrorMessage(e.message)",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/files.routes.ts|api-error-without-code|\"无法删除：可能是一个目录或无权限\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/files.routes.ts|api-error-without-code|\"下载失败: \" + sanitizeErrorMessage(e.message)",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/files.routes.ts|api-error-without-code|\"预览失败: \" + sanitizeErrorMessage(e.message)",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/files.routes.ts|api-error-without-code|\"File download transfer failed\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/files.routes.ts|api-error-without-code|\"File preview transfer failed\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/files.routes.ts|api-error-without-code|`存储空间已超额 (${limitLabel} 上限)，禁止上传新文件。`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/files.routes.ts|api-error-without-code|`上传该文件后实例存储空间已超额 (${limitLabel} 上限)，禁止上传新文件。`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/files.routes.ts|api-error-without-code|`文件上传或保存失败: ${sanitizeErrorMessage(err.message)}`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/index.ts|api-error-without-code|\"Failed to fetch instance details\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/index.ts|api-error-without-code|\"Forbidden: You do not have permission to view this instance\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/index.ts|api-error-without-code|\"Instance not found\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/lifecycle.routes.ts|api-error-without-code|\"您没有权限修改此实例的名称\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/lifecycle.routes.ts|api-error-without-code|\"实例名称不能为空\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/lifecycle.routes.ts|api-error-without-code|\"实例名称参数不合法\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/lifecycle.routes.ts|api-error-without-code|\"实例名称长度不能超过 50 个字符\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/lifecycle.routes.ts|api-error-without-code|\"未找到指定的实例\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/lifecycle.routes.ts|api-error-without-code|\"重命名实例失败，请稍后重试。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/lifecycle.routes.ts|api-error-without-code|\"Forbidden: Access denied\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/lifecycle.routes.ts|api-error-without-code|\"Not found\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/lifecycle.routes.ts|api-error-without-code|\"Operation failed: \" + sanitizeErrorMessage(e.message || String(e))",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/list.routes.ts|api-error-without-code|\"Failed to check quota\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/list.routes.ts|api-error-without-code|\"Failed to fetch instances\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/list.routes.ts|api-error-without-code|\"Failed to fetch usage summary\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/list.routes.ts|api-error-without-code|\"Quota fetch fail\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/telemetry.routes.ts|api-error-without-code|\"Forbidden: You do not have permission to view these logs\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/telemetry.routes.ts|api-error-without-code|\"Forbidden\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/telemetry.routes.ts|api-error-without-code|\"Instance not found\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/telemetry.routes.ts|api-error-without-code|\"Not found\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/telemetry.routes.ts|api-error-without-code|\"Server error\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/telemetry.routes.ts|api-error-without-code|`获取容器底层运行指标失败: ${sanitizeErrorMessage(err.message)}`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/telemetry.routes.ts|api-error-without-code|sanitizeErrorMessage(err.message)",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/telemetry.routes.ts|api-error-without-code|sanitizeErrorMessage(error.message)",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/templateFiles.routes.ts|api-error-without-code|\"此文件已绑定到实例，不允许在此删除。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/templateFiles.routes.ts|api-error-without-code|\"没有上传文件\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/templateFiles.routes.ts|api-error-without-code|\"删除文件记录失败: \" + e.message",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/templateFiles.routes.ts|api-error-without-code|\"文件记录创建失败: \" + e.message",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/templateFiles.routes.ts|api-error-without-code|\"无权访问此文件\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/templateFiles.routes.ts|api-error-without-code|\"物理文件删除失败，无法同步清除数据库记录。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/templateFiles.routes.ts|api-error-without-code|\"找不到该文件记录\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/templateFiles.routes.ts|api-error-without-code|err.message",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/templates.routes.ts|api-error-without-code|\"此实例并不是由工作流模板创建的，无法执行重新应用模板操作\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/templates.routes.ts|api-error-without-code|\"该实例没有绑定任何模板，无法执行模板升级\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/templates.routes.ts|api-error-without-code|\"您没有配置该实例的权限\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/instances/templates.routes.ts|api-error-without-code|`工作流新版本模板包含了管理员专用特权技能 [${policy.name}]，请联系系统管理员代为升级。`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/templates.routes.ts|api-error-without-code|`目标升级模板中包含了未知的技能插件: ${skillId}`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/templates.routes.ts|api-error-without-code|`未能在模板库中找到关联的模板: ${config.template_id}`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/templates.routes.ts|api-error-without-code|`未找到指定的实例：${id}`",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/instances/versions.routes.ts|api-error-without-code|\"请提供目标镜像 tag 版本。\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/instances/versions.routes.ts|api-error-without-code|err.message",
+        "count": 4
+      },
+      {
+        "fingerprint": "server/routes/instanceSessionAuth.ts|api-error-without-code|\"Missing slug\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instanceSessionAuth.ts|api-error-without-code|\"mybay_dashboard_path_forbidden\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instanceSessionAuth.ts|api-error-without-code|\"mybay_hermes_session_required\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instanceSessionAuth.ts|api-error-without-code|\"mybay_logout_internal_error\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instanceSessionAuth.ts|api-error-without-code|\"Unauthorized\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"参数格式错误：admin_docker_socket_enabled 必须为明确的布尔值 (true 或 false)\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"此渠道暂不支持真实测试环境连通性\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"达到速率限制 (429): 请求过于频繁或账户配额不足。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"端口号无效\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"对接渠道或网络握手异常，请检查配置\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"飞书 App Secret 校验失败 (10014)。请确认您的 App ID 与 App Secret 隶属于同一个应用，且填入的是开放平台‘凭证与基础信息’项下的‘App Secret’，而不是‘Event Subscription(事件订阅)’中的 Verification Token 或 Encrypt Key。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"该技能没有测试器\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"获取工作台概览数据失败，服务器内部异常\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"获取今日任务统计失败，服务器内部异常\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"获取用户列表失败，服务器内部异常\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"获取资源策略失败，服务器内部异常\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"检测到输入的 App Secret 是安全遮罩（星号/点号）。“测试通道连接”需要输入真实且即时的 App Secret 私钥，不能使用本地带有的遮罩。请在输入框中重新填入来自飞书开放平台的 App Secret 真实值，然后再进行连通测试。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"鉴权失败：API Key 无效\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"接口检测失败，服务器异常\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"请提供 admin_docker_socket_enabled 状态\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"权限不足 (403): 请检查该 API Key 是否有权访问所选模型。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"权限不足，仅管理员可读取系统设置\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"权限不足，仅管理员可修改系统设置\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"缺少 钉钉 必填参数: AppKey 或 AppSecret\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"缺少 企业微信 必填参数: CorpID, AppSecret 或 AgentID\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"缺少 微信公众号 必填参数: AppID 或 AppSecret\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"缺少 API Key\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"缺少 App ID (例如以 cli_ 开头)\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"缺少 App Secret 安全私钥\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"缺少 Bot Token\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"缺少 GitHub Token\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"缺少 QQ 机器人 必填参数: AppID 或 Secret\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"缺少 Webhook URL\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"缺少 WhatsApp 必填参数: Phone Number ID 或 Access Token\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"缺少必填参数: apiKey, model 或 baseUrl\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"缺少必填参数: provider\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"缺少技能信息\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"认证失败 (401): API Key 可能无效或已过期。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"Access denied: Admin only\"",
+        "count": 4
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"Access denied: Admin privileges required\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"Access denied\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"Admin role required\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"Advanced resource configuration is disabled\"",
+        "count": 6
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"Default per-instance disk quota cannot exceed the max per-instance disk quota.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"Failed to apply resource policy.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"Failed to fetch admin overview\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"Failed to fetch stats\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"Failed to update resource policy.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"Invalid resource policy values\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"Missing required parameter: user_id\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"No resource policy found for this user.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|\"SSRF 安全验证未通过: WhatsApp API 端点不合法\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|`${isLark ? 'Lark' : '飞书'}接口返回: ${data.msg || '未知错误'} (代号: ${data.code})`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|`钉钉 API 校验失败 code ${data.errcode}: ${data.errmsg}`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|`模型服务返回错误 [${status}]: ${errorMsg}`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|`模型服务商 \"${conf ? conf.label : provider}\" 设置了 no-predeploy-test 策略，不支持运行预配置连通性测试。`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|`内部错误: ${formatError(err)}`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|`企业微信校验失败 code ${data.errcode}: ${data.errmsg}`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|`网络请求失败: ${formatError(err)}`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|`网络异常: ${formatError(err)}`",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|`微信公众号校验失败 code ${data.errcode}: ${data.errmsg}`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|`资源未找到 (404): 请检查 Base URL 或模型名称 (${model}) 是否正确。`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|`Slack 失败: ${JSON.stringify(data).substring(0, 500)}`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|`Webhook 请求失败 HTTP ${resp.status}`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|`WhatsApp 校验失败 HTTP ${resp.status}: ${JSON.stringify(data).substring(0, 500)}`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|sanitizeErrorMessage(error.message) || \"更新系统设置失败\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|sanitizeErrorMessage(error.message) || \"获取系统设置失败\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/system.ts|api-error-without-code|sanitizeErrorMessage(error.message) || \"Failed to save local resource policy\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/webhooks.ts|api-error-without-code|\"Internal server error while processing webhook payload.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/webhooks.ts|api-error-without-code|\"Invalid ecommerce order schema: order_id is required.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/webhooks.ts|api-error-without-code|\"Invalid lead form schema: name, email, or phone must be provided.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/webhooks.ts|api-error-without-code|\"Invalid payload: JSON body is required.\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/webhooks.ts|api-error-without-code|\"Invalid payload: JSON object body is required.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/webhooks.ts|api-error-without-code|\"Missing instance_id in webhook route parameter.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/webhooks.ts|api-error-without-code|\"Missing template_slug. Could not identify which workflow to trigger.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/webhooks.ts|api-error-without-code|\"Target instance not found.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/webhooks.ts|api-error-without-code|\"Unauthorized: Webhook Secret is missing or invalid in headers (X-Webhook-Secret is required).\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/webhooks.ts|api-error-without-code|\"Unauthorized: Webhook secret is required but not configured on this instance.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/webhooks.ts|api-error-without-code|\"Unauthorized: Webhook secret is required for this instance but not configured. Please configure a Webhook Secret in the instance settings.\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/webhooks.ts|api-error-without-code|\"Unauthorized: Webhook Secret verification failed.\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/webhooks.ts|api-error-without-code|`The target workflow template '${targetSlug}' is currently disabled or inactive.`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/webhooks.ts|api-error-without-code|`The target workflow template '${targetSlug}' was not found in the repository.`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/webhooks.ts|api-error-without-code|`The template_slug '${targetSlug}' is not associated with this instance (Allowed: ${allowedSlugs.join(\", \")}).`",
+        "count": 1
+      }
+    ]
+  }
+}

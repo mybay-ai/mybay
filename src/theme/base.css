@@ -1,0 +1,39 @@
+:root {
+  /* Backward-compatible aliases for modules already using the first token set. */
+  --mybay-app-bg: var(--theme-canvas);
+  --mybay-sidebar-bg: var(--theme-sidebar);
+  --mybay-header-bg: var(--theme-header);
+  --mybay-popover-bg: var(--theme-popover);
+  --mybay-control-bg: var(--theme-control);
+  --mybay-control-hover-bg: var(--theme-control-hover);
+  --mybay-nav-active-bg: var(--theme-nav-active);
+  --mybay-nav-hover-bg: var(--theme-nav-hover);
+  --mybay-avatar-bg: var(--theme-avatar);
+  --mybay-border-soft: var(--theme-outline);
+  --mybay-border-strong: var(--theme-outline-strong);
+  --mybay-text-primary: var(--theme-content);
+  --mybay-text-secondary: var(--theme-content-secondary);
+  --mybay-text-muted: var(--theme-content-muted);
+}
+
+body {
+  background-color: var(--theme-canvas);
+  color: var(--theme-content);
+  font-family: var(--font-sans);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+@layer utilities {
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "running": "Running",
+  "channelReady": "Channel Ready",
+  "archived": "Archived",
+  "storageExceeded": "Storage Exceeded (Paused)",
+  "deploying": "Deploying...",
+  "restarting": "Restarting...",
+  "stopped": "Paused",
+  "failed": "Deployment Failed",
+  "starting": "Starting...",
+  "gatewayStarting": "Building...",
+  "unhealthy": "Unhealthy",
+  "dashboardReady": "Console Ready",
+  "partialRunning": "Partially Started"
+}
