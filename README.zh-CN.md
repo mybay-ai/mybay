@@ -1,4 +1,5 @@
 # 麦贝开源版（MyBay Open Source）
+<img width="1672" height="941" alt="512139158125125" src="https://github.com/user-attachments/assets/1ad9f507-6913-4b5d-9694-ede1d858a3a0" />
 
 [![CI](https://github.com/mybay-ai/mybay/actions/workflows/ci.yml/badge.svg)](https://github.com/mybay-ai/mybay/actions/workflows/ci.yml)
 [![Security](https://github.com/mybay-ai/mybay/actions/workflows/security.yml/badge.svg)](https://github.com/mybay-ai/mybay/actions/workflows/security.yml)
