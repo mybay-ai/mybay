@@ -34,8 +34,7 @@ COPY --from=production-dependencies /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/package.json ./package.json
 
-RUN apk add --no-cache curl \
-    && mkdir -p /app/data
+RUN apk add --no-cache curl && rm -rf /usr/local/lib/node_modules/npm && rm -f /usr/local/bin/npm /usr/local/bin/npx && mkdir -p /app/data
 
 EXPOSE 3000
 

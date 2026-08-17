@@ -66,7 +66,7 @@ describe.runIf(enabled)("real Docker lifecycle", () => {
     await container.remove({ force: true });
     createdNames.splice(createdNames.indexOf(name), 1);
     await expect(container.inspect()).rejects.toMatchObject({ statusCode: 404 });
-  });
+  }, 30_000);
 
   it("feeds a real Docker host-port conflict into the unified classifier", async () => {
     const port = await getFreePort();
@@ -83,5 +83,5 @@ describe.runIf(enabled)("real Docker lifecycle", () => {
     }
     expect(dockerError).toBeTruthy();
     expect(classifyDockerError(dockerError)).toMatchObject({ code: "PORT_CONFLICT", retryable: true });
-  });
+  }, 30_000);
 });

@@ -195,4 +195,9 @@ jobs:
 
       - name: Clean up Docker Compose
         if: always()
-        run: docker compose down -v
+        run: |
+          if [ -f .env ]; then
+            docker compose down -v
+          else
+            echo "Skipping Compose cleanup because no Compose environment was prepared."
+          fi
