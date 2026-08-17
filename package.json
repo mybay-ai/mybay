@@ -83,7 +83,7 @@
         "esbuild": "^0.25.0",
         "eslint": "^9.39.5",
         "eslint-plugin-react-hooks": "^5.2.0",
-        "globals": "^16.5.0",
+        "globals": "^17.11.0",
         "i18next": "^26.3.6",
         "lucide-react": "^0.546.0",
         "motion": "^12.43.0",
