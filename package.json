@@ -82,7 +82,7 @@
         "clsx": "^2.1.1",
         "esbuild": "^0.25.0",
         "eslint": "^9.39.5",
-        "eslint-plugin-react-hooks": "^5.2.0",
+        "eslint-plugin-react-hooks": "^7.1.1",
         "globals": "^16.5.0",
         "i18next": "^26.3.6",
         "lucide-react": "^0.546.0",
