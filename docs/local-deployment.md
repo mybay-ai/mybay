@@ -7,7 +7,7 @@ MyBay Open Source supports desktop-only, LAN, and public-server deployment. For 
 - Docker Engine or Docker Desktop
 - Docker Compose v2 (`docker compose`)
 - Bash
-- Node.js 22.13.0 or later and npm only for source development
+- Node.js 22.16.0 or later and npm only for source development
 - Access to `/var/run/docker.sock` from the control-panel container
 
 ## Mode 1: Local Desktop
@@ -89,7 +89,7 @@ cp .env.example .env
 npm run dev
 ```
 
-The project requires Node.js >= 22.13.0. Use `npm run build && npm start` for a production source build.
+The project requires Node.js >= 22.16.0. Use `npm run build && npm start` for a production source build.
 
 ## Backup and Upgrade
 

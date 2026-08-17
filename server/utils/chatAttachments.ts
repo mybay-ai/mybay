@@ -10,7 +10,7 @@ export type ChatAttachmentRecord = {
   owner_id: string;
   instance_id: string;
   conversation_id: string;
-  deleted_at: string | null;
+  deleted_at?: string | null;
   original_name: string | null;
   filename: string | null;
   mime_type: string | null;
@@ -56,6 +56,11 @@ export function isValidChatAttachmentId(val: any): boolean {
   return typeof val === "string" && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(val);
 }
 
+export function isChatAttachmentDeleted(file: Pick<ChatAttachmentRecord, "deleted_at">): boolean {
+  const deletedAt = file?.deleted_at;
+  return deletedAt !== undefined && deletedAt !== null && String(deletedAt).trim().length > 0;
+}
+
 export async function loadAndValidateChatAttachments(params: {
   attachmentIds?: any;
   userId: string;
@@ -89,7 +94,7 @@ export async function loadAndValidateChatAttachments(params: {
     if (file.owner_id !== userId || file.instance_id !== instanceId || file.conversation_id !== conversationId) {
       throw { status: 403, error: "FORBIDDEN", message: "You do not have access to one or more attachments." };
     }
-    if (file.deleted_at !== null) {
+    if (isChatAttachmentDeleted(file)) {
       throw { status: 400, error: "ATTACHMENT_DELETED", message: "One or more attachments have been deleted." };
     }
   }

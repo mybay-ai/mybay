@@ -21,6 +21,14 @@ quick_start_set_env_value() {
   fi
 }
 
+quick_start_assert_encryption_key_generation_safe() {
+  local data_store_path="$1"
+  if [ -s "$data_store_path" ]; then
+    printf '%s\n' "Existing local data was found, but ENCRYPTION_KEY is missing or invalid. Restore the original ENCRYPTION_KEY instead of generating a new one." >&2
+    return 1
+  fi
+}
+
 quick_start_reset_server_env() {
   local env_path="$1"
   local public_url="$2"

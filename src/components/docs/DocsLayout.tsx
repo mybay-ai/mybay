@@ -5,8 +5,7 @@ import { useTranslation } from "react-i18next";
 import { getStructuredDocById } from "../../data/docs/docs.registry";
 import { DocsErrorBoundary } from "./DocsUI";
 import { Menu, X, Search, ChevronRight, Hash, BookOpen } from "lucide-react";
-import { Button } from "../ui";
-import { cn } from "../ui";
+import { Button, cn } from "../ui";
 
 export interface NavItem {
   id: string;

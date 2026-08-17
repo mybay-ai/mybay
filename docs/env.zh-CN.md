@@ -26,6 +26,7 @@ openssl rand -hex 32
 | 变量 | 说明 | 默认值 |
 | --- | --- | --- |
 | `DEPLOYMENT_MODE` | 访问场景：`desktop`、`lan`、`server` | `desktop` |
+| `MYBAY_ALLOW_LEGACY_OPEN_WEBHOOKS` | 仅用于实例已显式保存为 `legacy-open` 的不安全兼容；启动时按模式告警 | `false` |
 | `PROXY_MODE` | 实例路由：`local`、`lan`、`traefik` | `local` |
 | `PORT` | 控制台监听端口 | `3000` |
 | `CONTROL_PANEL_BIND_IP` | 控制台宿主机绑定地址 | `127.0.0.1` |

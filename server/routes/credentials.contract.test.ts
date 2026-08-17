@@ -116,6 +116,23 @@ describe("credentials API error contract", () => {
     expect(body).toMatchObject({ code: ErrorCodes.CREDENTIAL_DELETE_FAILED });
   });
 
+  it("allows deletion when only deleted instances retain a stale credential reference", async () => {
+    getInstances.mockResolvedValueOnce([
+      {
+        id: "deleted-instance",
+        name: "Deleted Agent",
+        status: "deleted",
+        config_json: JSON.stringify({ providerCredentialId: "credential-id" }),
+      },
+    ]);
+
+    const { response, body } = await request("DELETE", "/credential-id");
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({ success: true });
+    expect(deleteCredential).toHaveBeenCalledWith("credential-id", userId);
+  });
+
   it("blocks deletion while a credential is referenced by an instance", async () => {
     getInstances.mockResolvedValueOnce([
       {

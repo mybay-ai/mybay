@@ -4,22 +4,27 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const REQUIRED_TARGETS = [
-  "src/locales", "src/components", "src/features", "src/config", "server", "README.md", "README.zh-CN.md",
+  "src/locales", "src/components", "src/features", "src/config", "server", "docs", "content/docs", "README.md", "README.zh-CN.md",
 ];
 const OPTIONAL_TARGETS = ["src/pages"];
 const EXCLUDED_DIRECTORY_NAMES = new Set([".git", "build", "coverage", "dist", "fixtures", "node_modules", "release"]);
 const EXTENSIONS = new Set([".ts", ".tsx", ".json", ".md"]);
 export const FORBIDDEN_PHRASES = [
+  "cloud transmission", "cloud proxy", "hosted gateway", "managed gateway", "external transmission proxy",
+  "multi-tenant gateway", "multi-tenant environments", "distributed cluster governance", "managed instance", "hosted service",
   "云端部署与托管平台", "在线托管与运行平台", "生产级托管平台", "安全云托管", "用户等级", "会员等级", "平台账号", "注册账号", "封禁账号", "托管实例", "云端数据库", "平台集群", "订阅套餐", "平台资源配额",
+  "云端传输", "群居集群", "tenant environment isolation", "tenant demos",
   "云端模板", "云端工作流", "企业级实例", "超出限额 of", "cloud template", "cloud workflow", "enterprise instance",
   "cloud hosting platform", "online hosting and execution platform", "MyBay hosting platform", "manually setting up cloud servers", "hosted Agent", "subscription plan", "membership tier", "platform account", "register an account", "account suspension", "hosted instance", "cloud database", "managed cluster", "MyBay Local", "麦贝 Local", "麦贝Local", "麦贝本地版",
 ];
 const ALLOWED_NEGATIVE_CONTEXTS = [
+  /没有.*?(?:云端账号|订阅套餐|云端数据库|托管实例|平台集群)/,
   /不(?:提供|包含|要求|依赖).*?(?:云端账号|订阅套餐|云端数据库|托管实例|平台集群)/,
   /(?:does not|do not|doesn't|is not|are not|no longer)\s+.*?(?:cloud accounts?|subscription plans?|cloud databases?|hosted instances?|managed clusters?)/i,
+  /(?:does not|do not|doesn't|is not|are not|not intended for|not recommended for|no longer)\s+.*?(?:cloud accounts?|subscription plans?|cloud databases?|hosted instances?|managed clusters?|multi-tenant(?:\s+(?:environments?|deployments?|services?|scheduling|isolation))?|hosted services?)/i,
 ];
 const LEGACY_BRAND_PHRASES = new Set(["mybay local", "麦贝 local", "麦贝local", "麦贝本地版"]);
-const ALLOWED_SELF_HOSTED_PHRASES = new Set(["hosted agent", "hosted instance"]);
+const ALLOWED_SELF_HOSTED_PHRASES = new Set(["hosted agent", "hosted gateway", "hosted instance"]);
 
 function containsForbiddenPhrase(line, phrase) {
   const normalizedLine = line.toLowerCase();

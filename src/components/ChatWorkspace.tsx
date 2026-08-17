@@ -17,7 +17,15 @@ import { ChatWorkspaceHeader } from "./chat-workspace/ChatWorkspaceHeader";
 import { ChatWorkspacePanel } from "./chat-workspace/ChatWorkspacePanel";
 import { useChatWorkspaceFiles } from "./chat-workspace/useChatWorkspaceFiles";
 import { useChatConversations } from "./chat-workspace/useChatConversations";
+import { recoverActiveRunMessages } from "./chat-workspace/run/runRecovery";
+import { markRunMessagesStopped } from "./chat-workspace/run/runTerminalMessages";
+import { getRetryAttachments } from "./chat-workspace/run/retryAttachments";
 import { MAX_CHAT_USER_MESSAGE_CHARS, countChatMessageCharacters } from "../../shared/chatMessageContract";
+import {
+  isConcurrencyTakeoverError,
+  normalizeStoredMessageError,
+  normalizeStoredMessageStatus
+} from "./chat-workspace/chatMessagePolicy";
 
 import {
   ChatMessage,
@@ -57,48 +65,6 @@ export function generateUUIDv4(): string {
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 const ACTIVE_CHAT_RUN_STATUSES = new Set(["queued", "dispatching", "running", "stopping", "stop_requested"]);
-const CONCURRENCY_TAKEOVER_ERRORS = new Set([
-  "TOO_MANY_CONCURRENT_RUNS",
-  "CONCURRENT_REQUEST",
-  "CONCURRENT_RUN",
-  "ACTIVE_RUN_EXISTS",
-  "RUN_ALREADY_ACTIVE"
-]);
-
-const getBackendErrorCode = (err: any): string => String(err?.data?.error || err?.code || err?.message || "");
-
-const isConcurrencyTakeoverError = (err: any): boolean => {
-  const code = getBackendErrorCode(err);
-  if (CONCURRENCY_TAKEOVER_ERRORS.has(code)) return true;
-  if ((err?.status === 409 || err?.status === 429) && /CONCURRENT|ACTIVE_RUN|RUNNING|TOO_MANY/i.test(code)) return true;
-  if ((err?.status === 409 || err?.status === 429) && /concurrent|active run|running async/i.test(String(err?.data?.message || ""))) return true;
-  return false;
-};
-
-const isConcurrencyTakeoverCode = (code?: string | null): boolean => (
-  !!code && (CONCURRENCY_TAKEOVER_ERRORS.has(code) || /CONCURRENT|ACTIVE_RUN|RUN_ALREADY|TOO_MANY/i.test(code))
-);
-
-const STOPPED_RUN_ERROR_CODES = new Set(["RUN_STOPPED", "CANCELLED_UPSTREAM", "CANCELLED_BY_USER", "RUN_CANCELLED"]);
-
-const isStoppedRunCode = (code?: string | null): boolean => (
-  !!code && STOPPED_RUN_ERROR_CODES.has(code)
-);
-
-const normalizeStoredMessageStatus = (status?: string, errorCode?: string | null): ChatMessage["status"] => {
-  if ((status === "failed" || status === "cancelled") && isStoppedRunCode(errorCode)) return "stopped";
-  if (status === "failed" && isConcurrencyTakeoverCode(errorCode)) return "superseded";
-  return (status as ChatMessage["status"]) || "completed";
-};
-
-const normalizeStoredMessageError = (status?: string, errorCode?: string | null, errorMessage?: string | null): string | undefined => {
-  if ((status === "failed" || status === "cancelled") && isStoppedRunCode(errorCode)) return undefined;
-  if (status === "failed" && isConcurrencyTakeoverCode(errorCode)) return undefined;
-  if (status === "failed") return errorMessage || errorCode || undefined;
-  return errorMessage || undefined;
-};
-
-
 type QueuedFollowUp = {
   id: string;
   content: string;
@@ -392,13 +358,17 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     runsCapabilityState,
     runsSupported,
     activeRunId,
+    stopPending,
     runCapabilities,
     approvalRequests,
+    runExecutionState,
     runMetrics,
     toolSteps,
     setRunMetrics,
     setActiveRunId,
     setToolSteps,
+    initializeRunExecution,
+    finalizeActiveRunUi,
     streamActiveRun,
     handleStopRun,
     respondToApproval,
@@ -604,7 +574,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
           return;
         }
         if (res && res.success && Array.isArray(res.messages)) {
-          const mapped = res.messages.map((m: any) => ({
+          let mapped: ChatMessage[] = res.messages.map((m: any) => ({
             id: m.id,
             role: m.role as "user" | "assistant",
             content: m.content || "",
@@ -623,26 +593,34 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
           }));
 
           if (res.activeRun) {
+            const recovered = recoverActiveRunMessages(mapped, res.activeRun, initialConvId);
+            mapped = recovered.messages;
             setSending(true);
             setActiveRunId(res.activeRun.id);
-            // Append optimistic streaming placeholder if last message is from user
-            const lastMsg = mapped[mapped.length - 1];
-            if (lastMsg && lastMsg.role === 'user') {
-              mapped.push({
-                id: `assistant-stream-${res.activeRun.id}`,
-                role: 'assistant',
-                content: res.activeRun.partialOutput || "",
-                status: 'pending',
-                conversation_id: initialConvId
-              });
-            }
-            // Trigger streaming reconnection
+            setActiveRunConversationId(initialConvId);
+            setRunMetrics({
+              runId: res.activeRun.id,
+              status: recovered.status,
+              startedAt: res.activeRun.startedAt || res.activeRun.createdAt || null,
+              completedAt: null,
+              durationMs: null
+            });
+            initializeRunExecution({
+              runId: res.activeRun.id,
+              conversationId: initialConvId,
+              requestId: recovered.requestId,
+              assistantMessageId: recovered.assistantMessageId,
+              status: recovered.status,
+              recoveryTextBaseline: recovered.partialOutput
+            });
+            // Trigger streaming reconnection from the beginning of the local event cache.
             setTimeout(() => {
-              streamActiveRun(res.activeRun.id);
+              streamActiveRun(res.activeRun.id, initialSelectedId, initialConvId);
             }, 100);
           } else {
-            setActiveRunId(null);
-            setToolSteps([]);
+            stopActiveRunStreams();
+            resetRunState();
+            setActiveRunConversationId(null);
           }
 
           setMessages(prev => reconcileConversationMessages(mapped, prev, optimisticChatContextRef.current, selectedConversationIdRef.current));
@@ -1240,7 +1218,14 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
           setActiveRunId(runRes.runId);
           setActiveRunConversationId(activeConvId);
           const queuedAt = Date.now();
-          setToolSteps([{ id: `queued-${runRes.runId}`, name: "chatWorkspace.toolStepAgentTaskQueued", status: "running", stepType: "tool_call", startedAt: queuedAt }]);
+          initializeRunExecution({
+            runId: runRes.runId,
+            conversationId: activeConvId,
+            requestId,
+            assistantMessageId: tempAssistantMsgId,
+            status: "queued",
+            initialStep: { id: `queued-${runRes.runId}`, tool: "agent", label: t("dashboard:chatWorkspace.toolStepAgentTaskQueued"), stepType: "tool_call", startedAt: queuedAt }
+          });
           setRunMetrics({ runId: runRes.runId, status: "queued", startedAt: queuedAt });
           if (isInterruptingActiveRun) {
             setMessages(prev => prev.map(message => (
@@ -1604,35 +1589,19 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     setShowSettings(true);
   };
 
-  const markStoppedRunMessages = () => {
-    setMessages(prev => {
-      let latestUserIndex = -1;
-      for (let index = prev.length - 1; index >= 0; index -= 1) {
-        if (prev[index].role === "user") {
-          latestUserIndex = index;
-          break;
-        }
-      }
-
-      return prev.map((message, index) => {
-        if (message.role === "assistant" && message.status === "pending") {
-          return {
-            ...message,
-            status: "completed",
-            content: message.content || t("dashboard:chatWorkspace.previousTaskInterrupted")
-          };
-        }
-        if (index === latestUserIndex) {
-          return {
-            ...message,
-            status: "stopped",
-            error_code: "RUN_STOPPED",
-            error_message: t("dashboard:chatWorkspace.messageStopped", { defaultValue: "已停止，可编辑后重新发送" })
-          };
-        }
-        return message;
-      });
-    });
+  const markStoppedRunMessages = (runId: string, conversationId: string) => {
+    const execution = runExecutionState?.runId === runId ? runExecutionState : {
+      runId,
+      conversationId,
+      status: "running" as const,
+      blocks: [],
+      lastProcessedSeq: 0
+    };
+    setMessages(prev => markRunMessagesStopped(
+      prev,
+      execution,
+      t("dashboard:chatWorkspace.messageStopped", { defaultValue: "已停止，可编辑后重新发送" })
+    ));
   };
 
   const scheduleSyncCancellationReconciliation = (instanceId: string, conversationId: string) => {
@@ -1679,23 +1648,39 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
 
   const handleStopActiveRun = async () => {
     const runId = activeRunId;
-    await handleStopRun();
-    if (selectedId && runId) {
-      await waitForRunRelease(selectedId, runId);
+    const instanceId = selectedIdRef.current;
+    const conversationId = selectedConversationIdRef.current;
+    if (!instanceId || !conversationId || !runId) return;
+    const stopResult = await handleStopRun(runId, instanceId);
+    if (!stopResult.ok) return;
+    const released = await waitForRunRelease(instanceId, runId);
+    if (!released) {
+      setRunMetrics(prev => prev?.runId === runId ? { ...prev, status: "status_unknown" } : prev);
+      return;
     }
+    if (selectedIdRef.current !== instanceId || selectedConversationIdRef.current !== conversationId) return;
+    finalizeActiveRunUi(runId, "stopped");
     stopActiveRunStreams();
-    resetRunState();
     setActiveRunConversationId(null);
     activeChatGenerationRef.current += 1;
     activeChatRequestIdRef.current = null;
     setSending(false);
-    setToolSteps([]);
-    markStoppedRunMessages();
+    markStoppedRunMessages(runId, conversationId);
+    scheduleSyncCancellationReconciliation(instanceId, conversationId);
   };
 
   const handleRetry = (msg: ChatMessage) => {
     const retryContent = msg.content?.trim();
     if (!retryContent) return;
+    if (!isChatReady) {
+      showToast(t("dashboard:chatWorkspace.dropFilesNotReady"), "warning");
+      return;
+    }
+    const retryAttachments = getRetryAttachments(msg, conversationFiles);
+    if (retryAttachments.unavailableIds.length > 0) {
+      showToast(t("dashboard:chatWorkspace.attachmentUnavailable"), "warning");
+      return;
+    }
 
     setMessages(prev => prev.map(message => (
       message.id === msg.id
@@ -1705,7 +1690,8 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     setError(null);
     void handleSend(undefined, retryContent, {
       suppressOptimisticUser: true,
-      replaceMessageId: msg.id
+      replaceMessageId: msg.id,
+      attachments: retryAttachments.attachments
     });
   };
 
@@ -1713,7 +1699,13 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     const editContent = msg.content?.trim();
     if (!editContent) return;
 
+    const retryAttachments = getRetryAttachments(msg, conversationFiles);
+    if (retryAttachments.unavailableIds.length > 0) {
+      showToast(t("dashboard:chatWorkspace.attachmentUnavailable"), "warning");
+      return;
+    }
     editingRetryMessageIdRef.current = msg.id;
+    setPendingAttachments(retryAttachments.attachments);
     setInput(editContent);
     setError(null);
   };
@@ -1733,6 +1725,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return;
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -1742,6 +1735,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
   const selectedConversationIsRunning = sending && Boolean(selectedConversationId) && (!activeRunConversationId || activeRunConversationId === selectedConversationId);
   const selectedActiveRunId = selectedConversationIsRunning ? activeRunId : null;
   const selectedRunMetrics = (!activeRunConversationId || activeRunConversationId === selectedConversationId) ? runMetrics : null;
+  const selectedRunExecution = runExecutionState?.conversationId === selectedConversationId ? runExecutionState : null;
 
   return (
     <div
@@ -1927,7 +1921,11 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
             sending={selectedConversationIsRunning}
             activeRunId={selectedActiveRunId}
             toolSteps={toolSteps}
+            runExecutionState={selectedRunExecution}
             runMetrics={selectedRunMetrics}
+            approvalRequests={approvalRequests}
+            canRespondToApproval={runCapabilities.runApprovalResponse}
+            onRespondToApproval={respondToApproval}
             error={error}
             onGoToInstanceManage={() => navigate(APP_ROUTES.INSTANCES)}
             onUsePrompt={setInput}
@@ -1951,6 +1949,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
               input={input}
               sending={selectedConversationIsRunning}
               activeRunId={selectedActiveRunId}
+              stopPending={Boolean(selectedActiveRunId && stopPending)}
               isChatReady={isChatReady}
               hasActiveConversation={Boolean(selectedConversationId)}
               selectedChannel={selectedInstance?.configSummary?.channel || "web"}

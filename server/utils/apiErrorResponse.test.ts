@@ -22,7 +22,7 @@ describe("API error response contract", () => {
   it("sends the requested HTTP status and JSON payload", () => {
     const json = vi.fn();
     const status = vi.fn(() => ({ json }));
-    const response = { status } as any;
+    const response = { status, locals: {}, getHeader: vi.fn(() => undefined) } as any;
 
     sendApiError(response, { status: 401, code: ErrorCodes.INSTANCE_SESSION_UNAUTHORIZED });
 
@@ -30,6 +30,24 @@ describe("API error response contract", () => {
     expect(json).toHaveBeenCalledWith({
       code: ErrorCodes.INSTANCE_SESSION_UNAUTHORIZED,
       error: ErrorCodes.INSTANCE_SESSION_UNAUTHORIZED,
+    });
+  });
+
+  it("adds the request correlation id from response locals", () => {
+    const json = vi.fn();
+    const status = vi.fn(() => ({ json }));
+    const response = {
+      status,
+      locals: { requestId: "req-123" },
+      getHeader: vi.fn(() => undefined),
+    } as any;
+
+    sendApiError(response, { status: 404, code: ErrorCodes.INSTANCE_NOT_FOUND });
+
+    expect(json).toHaveBeenCalledWith({
+      code: ErrorCodes.INSTANCE_NOT_FOUND,
+      error: ErrorCodes.INSTANCE_NOT_FOUND,
+      requestId: "req-123",
     });
   });
 });

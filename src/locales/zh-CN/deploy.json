@@ -417,7 +417,7 @@
                                "upload_err_server_dump":  "服务端转储上传文件时遇到未知阻碍。",
                                "upload_err_invalid_json":  "无效的服务端安全响应校验，JSON 转译出错。",
                                "upload_err_status_code":  "上传失败，状态码 HTTP {{status}}",
-                               "upload_err_disconnect":  "云端传输断开，错误代码 HTTP {{status}}",
+                               "upload_err_disconnect":  "文件传输断开，错误代码 HTTP {{status}}",
                                "upload_err_network_interrupted":  "上传网络中断：无法连通外部传输代理层，请检查本地物理网络。",
                                "upload_err_aborted":  "上传指令被意外中止。",
                                "deploy_id_missing":  "部署任务 ID 构建异常，请刷新选件页面重新同步配置。",
@@ -430,7 +430,7 @@
                            },
     "container_config":  {
                              "title":  "实例底架隔离与端口分配",
-                             "title_desc":  "分配智能进程镜像和路由规则，支持群居集群代理。",
+                             "title_desc":  "分配 Agent Runtime 镜像和本机路由规则。",
                              "image_label":  "底层 Agent 镜像代码",
                              "tag_label":  "标签/版本 (Tag)",
                              "latest_option":  "latest (跟随最新)",

@@ -247,7 +247,7 @@
       },
       "startup": {
         "title": "AI Startups",
-        "desc": "Needing clean tenant environment isolation for client deliveries"
+        "desc": "Needing isolated environments for client deliveries"
       },
       "operations": {
         "title": "Automated Teams",
@@ -303,7 +303,7 @@
       },
       {
         "title": "AI Startups",
-        "desc": "Needing clean tenant environment isolation for client deliveries"
+        "desc": "Needing isolated environments for client deliveries"
       },
       {
         "title": "Automated Teams",
@@ -435,7 +435,7 @@
       },
       {
         "title": "AI Startup Crews",
-        "desc": "Provisioning completely isolated Agent container environments for tenant demos."
+        "desc": "Provisioning completely isolated Agent container environments for local demos."
       },
       {
         "title": "DevOps & Automations",

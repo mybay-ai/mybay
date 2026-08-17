@@ -36,6 +36,15 @@ function Set-QuickStartEnvValue([string]$Path, [string]$Key, [string]$Value) {
     Write-QuickStartUtf8Lines $Path $lines.ToArray()
 }
 
+function Assert-QuickStartEncryptionKeyGenerationSafe([string]$DataStorePath) {
+    if (Test-Path -LiteralPath $DataStorePath) {
+        $dataStore = Get-Item -LiteralPath $DataStorePath
+        if ($dataStore.Length -gt 0) {
+            throw "Existing local data was found, but ENCRYPTION_KEY is missing or invalid. Restore the original ENCRYPTION_KEY instead of generating a new one."
+        }
+    }
+}
+
 function Reset-QuickStartServerEnv([string]$Path, [string]$PublicUrl) {
     Set-QuickStartEnvValue $Path "CONTROL_PANEL_DOMAIN" ""
     Set-QuickStartEnvValue $Path "BASE_DOMAIN" "localhost"

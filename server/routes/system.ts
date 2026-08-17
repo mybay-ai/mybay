@@ -4,9 +4,6 @@ import { checkPortInUse, isPortTaken, findAvailablePort } from "../utils";
 import Docker from "dockerode";
 import os from "os";
 import crypto from "crypto";
-import dns from "dns";
-import { promisify } from "util";
-import { URL } from "url";
 import { providerRegistry } from "../../shared/providerRegistry";
 import { ErrorCodes } from "../../shared/errorCodes";
 import { resolveProviderRegistryKey } from "../../shared/providerRegistryUtils";
@@ -18,66 +15,14 @@ import { getClientIp } from "../utils/ip";
 import { parseTraefikEnv } from "../infrastructure/traefik/traefikConfig";
 import { getDeploymentModeConfig, saveDeploymentModeConfig } from "../services/deploymentMode";
 import { sanitizeErrorMessage } from "../utils/sanitizer";
-import { resolveStoredCredentialApiKey } from "../utils/savedProviderCredential";
+import { applySavedProviderCredential, resolveStoredCredentialApiKey, SavedProviderCredentialError } from "../utils/savedProviderCredential";
 import { DEFAULT_INSTANCE_DISK_MB, DEFAULT_MAX_SINGLE_INSTANCE_DISK_MB, DEFAULT_USER_DISK_LIMIT_MB, ALLOWED_DISK_LIMITS } from "../constants/resourceLimits";
 import { isAdvancedResourceConfigEnabled } from "../utils/advancedResourceConfigFeature";
 import { readStore } from "../localStore";
 import { buildDeploymentJourney } from "../services/deploymentJourneyService";
-
-const lookupAsync = promisify(dns.lookup);
+import { formatSystemRequestError as formatError, isSafeUrl } from "../services/system/systemNetworkPolicy";
 
 export { resolveStoredCredentialApiKey };
-
-async function isSafeUrl(urlStr: string, allowPrivateNetwork = false): Promise<boolean> {
-  try {
-    const parsed = new URL(urlStr);
-    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-      return false;
-    }
-    
-    if (allowPrivateNetwork) {
-      return true;
-    }
-
-    const host = parsed.hostname.toLowerCase();
-    if (host === "localhost" || host === "127.0.0.1" || host === "0.0.0.0" || host === "::1" || host === "[]") {
-      return false;
-    }
-
-    try {
-      const res = await lookupAsync(host);
-      const ip = res.address;
-      
-      const parts = ip.split(".").map(Number);
-      if (parts.length === 4) {
-        const [a, b, c, d] = parts;
-        // 10.0.0.0/8
-        if (a === 10) return false;
-        // 172.16.0.0/12
-        if (a === 172 && (b >= 16 && b <= 31)) return false;
-        // 192.168.0.0/16
-        if (a === 192 && b === 168) return false;
-        // Loopback / link-local / broadcast
-        if (a === 127 || (a === 169 && b === 254) || a >= 224) return false;
-      }
-    } catch {
-      // If we can't resolve the DNS host, let's treat it safely or throw
-    }
-
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function formatError(err: any): string {
-  let msg = err.message ? err.message.substring(0, 500) : String(err).substring(0, 500);
-  if (err.cause) {
-    const causeMsg = err.cause.message || String(err.cause);
-    msg += ` (原因: ${causeMsg})`;
-  }
-  return msg;
-}
 
 const router = Router();
 const docker = new Docker({ socketPath: process.env.DOCKER_SOCKET || "/var/run/docker.sock" });
@@ -652,17 +597,33 @@ router.post("/test-llm", authenticateToken, testLimiter, async (req: Authenticat
   if (credentialId) {
     try {
       const cred = await dbAdapter.getCredentialById(credentialId, req.user.id);
-      if (cred) {
-        apiKey = resolveStoredCredentialApiKey(cred.key);
-        if (!baseUrl) baseUrl = cred.base_url;
-        if (!provider) provider = cred.type;
-      }
+      const credentialData = {
+        providerCredentialId: credentialId,
+        provider,
+        baseUrl,
+        providerApiKey: apiKey,
+        apiKey: ""
+      };
+      applySavedProviderCredential(credentialData, cred);
+      provider = credentialData.provider;
+      baseUrl = credentialData.baseUrl;
+      apiKey = credentialData.providerApiKey;
     } catch (err: any) {
-      console.error("Failed to decrypt saved credential for LLM test:", err?.message || String(err));
+      const code = err instanceof SavedProviderCredentialError
+        ? err.code
+        : "CREDENTIAL_DECRYPT_FAILED";
+      const message = code === "CREDENTIAL_NOT_FOUND"
+        ? "The selected saved credential no longer exists. Select another credential."
+        : "The saved credential cannot be decrypted with the current ENCRYPTION_KEY. Restore the original .env, or save this credential's API Key again.";
+      console.error("Failed to resolve saved credential for LLM test:", {
+        code,
+        credentialId
+      });
       return res.status(400).json({
         success: false,
-        code: "CREDENTIAL_DECRYPT_FAILED",
-        error: "保存的凭据无法解密，请重新保存该凭据后再试。"
+        code,
+        error: message,
+        message
       });
     }
   }

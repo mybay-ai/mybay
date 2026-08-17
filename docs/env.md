@@ -26,6 +26,7 @@ Plan credential migration before changing `ENCRYPTION_KEY`; otherwise existing e
 | Variable | Purpose | Default |
 | --- | --- | --- |
 | `DEPLOYMENT_MODE` | Access scenario: `desktop`, `lan`, or `server` | `desktop` |
+| `MYBAY_ALLOW_LEGACY_OPEN_WEBHOOKS` | Unsafe compatibility for instances explicitly stored as `legacy-open`; startup warns by mode | `false` |
 | `PROXY_MODE` | Instance routing: `local`, `lan`, or `traefik` | `local` |
 | `PORT` | Control-panel port | `3000` |
 | `CONTROL_PANEL_BIND_IP` | Host address for the control panel | `127.0.0.1` |

@@ -1,10 +1,9 @@
 import { getAuthToken } from "../../lib/auth";
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "../ui";
+import { Button, Card } from "../ui";
 import { CheckCircle2, AlertCircle, Info, Settings } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Card } from "../ui";
 
 interface InstanceRuntimeContextViewerProps {
   instanceId: string;

@@ -97,9 +97,9 @@ export function TemplateEditorPanel({
   checkFieldsStatus,
   lastPublishedAt
 }: TemplateEditorPanelProps) {
-  if (!isEditing && !isCreating) return null;
-
   const { showToast, showAlert, showConfirm } = useFeedback();
+
+  if (!isEditing && !isCreating) return null;
 
   const changedFields: string[] = [];
   if (isEditing && selectedItem) {

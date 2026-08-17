@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildChatAttachmentMetadata } from "./chatAttachments";
+import { buildChatAttachmentMetadata, isChatAttachmentDeleted } from "./chatAttachments";
 
 describe("chat attachment message metadata", () => {
   it("stores an immutable display snapshot alongside attachment ids", () => {
@@ -19,5 +19,13 @@ describe("chat attachment message metadata", () => {
       attachmentIds: ["file-id"],
       attachments: [{ id: "file-id", originalName: "report.pdf", mimeType: "application/pdf", size: 123 }],
     });
+  });
+
+  it("does not treat legacy local records without deleted_at as deleted", () => {
+    expect(isChatAttachmentDeleted({})).toBe(false);
+    expect(isChatAttachmentDeleted({ deleted_at: undefined })).toBe(false);
+    expect(isChatAttachmentDeleted({ deleted_at: null })).toBe(false);
+    expect(isChatAttachmentDeleted({ deleted_at: "" })).toBe(false);
+    expect(isChatAttachmentDeleted({ deleted_at: "2026-08-16T12:00:00.000Z" })).toBe(true);
   });
 });

@@ -1,5 +1,9 @@
 # MyBay Open Source Control Plane
 
+[![CI](https://github.com/mybay-ai/mybay/actions/workflows/ci.yml/badge.svg)](https://github.com/mybay-ai/mybay/actions/workflows/ci.yml)
+[![Security](https://github.com/mybay-ai/mybay/actions/workflows/security.yml/badge.svg)](https://github.com/mybay-ai/mybay/actions/workflows/security.yml)
+[![License: AGPL-3.0-only](https://img.shields.io/badge/license-AGPL--3.0--only-blue.svg)](./LICENSE)
+
 Languages: [English](./README.md) | [简体中文](./README.zh-CN.md)
 
 A self-hosted control plane for deploying and managing AI agent runtimes with Docker.
@@ -117,7 +121,7 @@ The script asks for the control-panel domain, Agent root domain, and certificate
 ### Method 4: Local Node.js Development
 
 #### Prerequisites
-- Node.js 22.13.0 or later and npm
+- Node.js 22.16.0 or later and npm
 - Docker Engine / Docker Desktop installed and running (required for spawning Agent containers)
 
 1. **Install Dependencies:**
@@ -201,6 +205,40 @@ data/
 The full Pi backend deployment path is planned for a future release.
 
 ---
+## Architecture
+
+```mermaid
+flowchart TD
+  B[Browser] --> C[MyBay Control Plane]
+  C --> S[(SQLite)]
+  C --> D[Docker Engine]
+  C --> T[Traefik - server mode]
+  D --> R[Hermes Agent Runtime Container]
+  R --> A[Runtime API and UI]
+  R --> M[Model Providers]
+```
+
+SQLite uses WAL journaling, transactional migrations, and explicit schema versioning. The control plane manages containers through the Docker socket; server mode places Traefik in front of the console and Agent runtimes. See the [architecture source of truth](./docs/architecture.md).
+
+## Backup and diagnostics
+
+```bash
+npm run doctor
+npm run doctor -- --json
+npm run backup -- --output /secure/path/mybay-backup
+npm run backup:verify -- --backup /secure/path/mybay-backup
+```
+
+Backup creates a consistent SQLite snapshot rather than copying a live WAL database. It includes instance workspaces and uploads when present, writes a checksummed manifest, and excludes `.env`, logs, caches, and container images. Treat backups as sensitive. See [self-host operations](./docs/self-host-operations.md).
+
+Webhook authentication is `secret-required` by default in desktop, LAN, and server modes. Historical unauthenticated webhooks require both a stored `legacy-open` setting and the explicit unsafe `MYBAY_ALLOW_LEGACY_OPEN_WEBHOOKS=true` opt-in.
+
+## Release and roadmap
+
+Version tags run the full quality gate, create a clean checksummed source archive and SBOM, publish a multi-architecture GHCR image, and mark prerelease tags without moving stable `latest`.
+
+See [ROADMAP.md](./ROADMAP.md) for completed work and the focused next milestones.
+
 ## Agent Runtime Specification (`mybay.runtime.yaml`)
 
 MyBay includes an extensible **Agent Runtime Specification** for future runtime integrations. Hermes Agent is the currently supported runtime; the Pi manifest is an experimental reference only:

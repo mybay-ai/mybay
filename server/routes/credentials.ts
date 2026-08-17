@@ -144,6 +144,9 @@ router.delete("/:id", authenticateToken, credentialsWriteLimiter, async (req: an
   try {
     const instances = await dbAdapter.getInstances(req.user.id, req.user.role);
     const referencingInstances = instances.filter((instance: any) => {
+      if (instance.status === "deleted" || instance.status === "archived" || instance.deleted_at || instance.archived_at || instance.archived) {
+        return false;
+      }
       try {
         return JSON.parse(instance.config_json || "{}").providerCredentialId === req.params.id;
       } catch {

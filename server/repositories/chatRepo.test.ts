@@ -148,4 +148,27 @@ describe("chatRepo local status contract", () => {
     expect(finished.status).toBe("success");
     expect((await chatRepo.finishChatRun({ runId: "run-1", status: "completed" })).status).toBe("already_terminal");
   });
+
+  it("merges message metadata without losing the run association", async () => {
+    const conversation = await chatRepo.createConversation("user-1", "instance-1", "Test");
+    const started = await chatRepo.beginChatRun({
+      conversationId: conversation.id,
+      userId: "user-1",
+      instanceId: "instance-1",
+      content: "inspect this file",
+      requestId: "run-with-attachment",
+      runId: "run-with-attachment",
+    });
+
+    await chatRepo.updateChatMessageMetadata(started.user_message_id!, {
+      attachmentIds: ["file-1"],
+      attachments: [{ fileId: "file-1", filename: "notes.txt" }],
+    });
+
+    const message = readStore().chatMessages.find(item => item.id === started.user_message_id);
+    expect(message?.metadata).toMatchObject({
+      run_id: "run-with-attachment",
+      attachmentIds: ["file-1"],
+    });
+  });
 });

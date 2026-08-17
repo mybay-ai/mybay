@@ -36,8 +36,11 @@ assert_env() {
 }
 
 cp "$PROJECT_ROOT/.env.example" "$TEST_ENV"
+SENTINEL_ENCRYPTION_KEY="$(printf 'ab%.0s' {1..32})"
+quick_start_set_env_value "$TEST_ENV" ENCRYPTION_KEY "$SENTINEL_ENCRYPTION_KEY"
 quick_start_apply_deployment_env "$TEST_ENV" server "" 3000 console.old.example agents.old.example ops@example.com
 quick_start_apply_deployment_env "$TEST_ENV" desktop localhost 3000
+assert_env ENCRYPTION_KEY "$SENTINEL_ENCRYPTION_KEY"
 assert_env DEPLOYMENT_MODE desktop
 assert_env PROXY_MODE local
 assert_env TRUST_PROXY false
@@ -70,5 +73,11 @@ assert_env CONTROL_PANEL_DOMAIN console.new.example
 assert_env MYBAY_INSTANCE_ROOT_DOMAIN agents.new.example
 assert_env PUBLIC_APP_URL https://console.new.example
 assert_env INSTANCE_PUBLIC_PROTOCOL https
+
+printf 'existing-data' > "$TEST_ROOT/mybay.sqlite"
+if quick_start_assert_encryption_key_generation_safe "$TEST_ROOT/mybay.sqlite"; then
+  printf '[FAIL] Existing local data must prevent automatic ENCRYPTION_KEY replacement.\n' >&2
+  exit 1
+fi
 
 printf '[PASS] quick-start.sh has no host Node.js invocation and retains Docker/openssl preflight checks.\n'

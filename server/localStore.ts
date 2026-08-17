@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
 import { DatabaseSync } from "node:sqlite";
+import schemaVersion from "../shared/schema-version.json";
 
 export type LocalStoreData = {
   users: any[];
@@ -72,7 +73,7 @@ const defaultData = (): LocalStoreData => ({
 
 let activeDb: DatabaseSync | null = null;
 let activeDbPath = "";
-const CURRENT_SCHEMA_VERSION = 5;
+const CURRENT_SCHEMA_VERSION = schemaVersion.current;
 
 export function getLocalDatabasePath() {
   if (process.env.MYBAY_SQLITE_PATH) return path.resolve(process.cwd(), process.env.MYBAY_SQLITE_PATH);

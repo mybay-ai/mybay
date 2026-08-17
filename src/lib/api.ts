@@ -1,4 +1,5 @@
 import { getAuthToken } from "./auth";
+import { shouldBroadcastUnauthorized } from "./authNavigation";
 import { humanizeChatError } from "./chatRuntimeErrors";
 
 export interface ApiError extends Error {
@@ -43,7 +44,7 @@ async function fetchApiResponse(path: string, options: RequestInit = {}): Promis
     error.data = errorData;
     
     // Global 401 handling could go here (e.g., redirect to login)
-    if (response.status === 401) {
+    if (shouldBroadcastUnauthorized(path, response.status)) {
       // Dispatch a custom event or use a global state to handle logout
       window.dispatchEvent(new CustomEvent("api-unauthorized"));
     }

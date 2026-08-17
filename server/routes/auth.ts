@@ -24,6 +24,20 @@ const adminPassword = () => {
   return "mybay-local-development-password";
 };
 
+let synchronizedAdminPassword: string | undefined;
+
+export function reconcileConfiguredAdminPassword(
+  currentHash: string | undefined,
+  configuredPassword: string,
+): string | null {
+  const verification = currentHash
+    ? verifyPassword(configuredPassword, currentHash)
+    : { match: false, needsRehash: false };
+
+  if (verification.match && !verification.needsRehash) return null;
+  return hashPassword(configuredPassword);
+}
+
 export async function ensureLocalAdmin() {
   const username = adminUsername();
   const normalizedUsername = username.trim().toLowerCase();
@@ -64,15 +78,31 @@ export async function ensureLocalAdmin() {
       });
     }
   } else {
-    // If username in .env changed, update admin username
-    if (admin.username !== username || admin.username_normalized !== normalizedUsername) {
-      await dbAdapter.updateUserProfile(admin.id, {
-        username,
-        username_normalized: normalizedUsername
-      });
-      admin.username = username;
-      admin.username_normalized = normalizedUsername;
+    const updates: Record<string, string> = {};
+
+    // Reconcile the persisted hash once per configured password and process.
+    // This makes .env password changes effective without deleting local data.
+    const configuredPassword = adminPassword();
+    const shouldSynchronizePassword = synchronizedAdminPassword !== configuredPassword;
+    if (shouldSynchronizePassword) {
+      const passwordHash = reconcileConfiguredAdminPassword(
+        admin.password_hash,
+        configuredPassword,
+      );
+      if (passwordHash) updates.password_hash = passwordHash;
     }
+
+    // If username in .env changed, update admin username.
+    if (admin.username !== username || admin.username_normalized !== normalizedUsername) {
+      updates.username = username;
+      updates.username_normalized = normalizedUsername;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await dbAdapter.updateUserProfile(admin.id, updates);
+      Object.assign(admin, updates);
+    }
+    if (shouldSynchronizePassword) synchronizedAdminPassword = configuredPassword;
   }
 
   return admin;

@@ -259,7 +259,9 @@ export const chatRepo = {
   async updateChatMessageMetadata(messageId: string, metadata: Record<string, any>): Promise<void> {
     mutateStore((data) => {
       const msg = data.chatMessages.find((m: any) => m.id === messageId);
-      if (msg) Object.assign(msg, { metadata, updated_at: nowIso() });
+      if (!msg) return;
+      const existingMetadata = msg.metadata && typeof msg.metadata === "object" ? msg.metadata : {};
+      Object.assign(msg, { metadata: { ...existingMetadata, ...metadata }, updated_at: nowIso() });
     });
   },
 

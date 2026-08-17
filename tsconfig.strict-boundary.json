@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "allowJs": false,
+    "skipLibCheck": true
+  },
+  "include": [
+    "shared/errorCodes.ts",
+    "shared/chatAttachmentContract.ts",
+    "server/services/webhookAuthPolicy.ts",
+    "server/utils/apiErrorResponse.ts",
+    "server/routes/legacyRouteRegistry.ts"
+  ]
+}

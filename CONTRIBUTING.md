@@ -28,7 +28,7 @@ To keep PR review smooth, please refrain from adding these features without prio
 ## Getting Started
 
 ### Prerequisites
-- Node.js 22.13.0 or later
+- Node.js 22.16.0 or later
 - Docker Engine / Docker Desktop (running locally)
 
 ### Setup Development Environment

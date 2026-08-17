@@ -6,7 +6,7 @@
 
 - 不提供公开注册、邮箱验证和多租户 RBAC
 - 所有平台数据均保存在本机，不依赖商业云主节点、托管计费或平台模型网关
-- 使用本地 JSON 状态存储和本地 `data/` 目录
+- 使用 `data/mybay.sqlite`、SQLite WAL 与事务 migration 持久化平台状态；完整架构以 [`docs/architecture.md`](../docs/architecture.md) 为准
 - 通过 Docker Engine 创建和管理一个或多个独立 Agent Runtime 容器
 
 ## 2. 主要组件

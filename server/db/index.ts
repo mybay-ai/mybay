@@ -246,7 +246,7 @@ export const dbAdapter = {
   async updateCredential(id: string, userId: string, updates: any) { return mutateStore((data) => { const cred = data.credentials.find((c) => c.id === id && (c.user_id === userId || c.owner_id === userId)); if (cred) Object.assign(cred, updates, { updated_at: nowIso() }); return cred || null; }); },
   async deleteCredential(id: string, userId: string) { return mutateStore((data) => { data.credentials = data.credentials.filter((c) => !(c.id === id && (c.user_id === userId || c.owner_id === userId))); return { changes: 1 }; }); },
 
-  async createFileRecord(file: any) { return mutateStore((data) => upsertById(data.files, file)); },
+  async createFileRecord(file: any) { return mutateStore((data) => upsertById(data.files, { deleted_at: null, ...file })); },
   async getFileRecordById(id: string) { return readStore().files.find((f) => f.id === id) || null; },
   async updateFileRecord(id: string, updates: any) { return mutateStore((data) => { const file = data.files.find((f) => f.id === id); if (file) Object.assign(file, updates, { updated_at: nowIso() }); return file || null; }); },
   async deleteFileRecord(id: string) { return mutateStore((data) => { data.files = data.files.filter((f) => f.id !== id); }); },

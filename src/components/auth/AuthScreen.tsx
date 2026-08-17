@@ -380,8 +380,6 @@ export function AuthScreen({ onLogin }: { onLogin: (user: any) => void }) {
                   {view === 'login' ? t("legal_login_prefix") : t("legal_register_prefix")}{" "}
                   <Link
                     to="/terms"
-                    target="_blank"
-                    rel="noopener noreferrer"
                     className="text-blue-600 dark:text-blue-300 hover:underline transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 rounded px-0.5"
                     id="terms-link"
                   >
@@ -390,8 +388,6 @@ export function AuthScreen({ onLogin }: { onLogin: (user: any) => void }) {
                   {t("legal_and")}{" "}
                   <Link
                     to="/privacy"
-                    target="_blank"
-                    rel="noopener noreferrer"
                     className="text-blue-600 dark:text-blue-300 hover:underline transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 rounded px-0.5"
                     id="privacy-link"
                   >

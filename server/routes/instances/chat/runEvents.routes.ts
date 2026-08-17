@@ -13,6 +13,7 @@ export function registerRunEventRoutes(router: Router) {
   // ======================================================================
   const activeUserConnections = new Map<string, number>();
   const MAX_CONCURRENT_SSE_PER_USER = 5;
+  const SSE_HEARTBEAT_INTERVAL_MS = 20_000;
 
   router.post("/:id/runs/:runId/approval", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     const { id, runId } = req.params;
@@ -95,9 +96,14 @@ export function registerRunEventRoutes(router: Router) {
     activeUserConnections.set(userIdStr, currentConns + 1);
 
     let cleanedUp = false;
+    let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
     const cleanup = () => {
       if (cleanedUp) return;
       cleanedUp = true;
+      if (heartbeatTimer) {
+        clearInterval(heartbeatTimer);
+        heartbeatTimer = null;
+      }
       runsEventsEmitter.off(`event:${runId}`, handler);
       const conns = activeUserConnections.get(userIdStr) || 0;
       if (conns > 1) {
@@ -119,7 +125,7 @@ export function registerRunEventRoutes(router: Router) {
       if (evt.event === 'status') {
         try {
           const parsed = JSON.parse(evt.data);
-          if (['completed', 'failed', 'cancelled', 'expired'].includes(parsed.status)) {
+          if (['completed', 'failed', 'cancelled', 'stopped', 'expired'].includes(parsed.status)) {
             terminalSent = true;
             res.end();
             cleanup();
@@ -152,6 +158,12 @@ export function registerRunEventRoutes(router: Router) {
       res.setHeader('X-Accel-Buffering', 'no');
 
       res.write(`: ok\n\n`);
+      heartbeatTimer = setInterval(() => {
+        if (!res.writableEnded && !res.destroyed) {
+          res.write(`: ping\n\n`);
+        }
+      }, SSE_HEARTBEAT_INTERVAL_MS);
+      heartbeatTimer.unref?.();
 
       if (!isNaN(lastEventId)) {
         const { events: cachedEvts, recoveryOutOfBounds } = getEventsFromCache(runId, lastEventId);
@@ -169,7 +181,7 @@ export function registerRunEventRoutes(router: Router) {
           if (evt.event === 'status') {
             try {
               const parsed = JSON.parse(evt.data);
-              if (['completed', 'failed', 'cancelled', 'expired'].includes(parsed.status)) {
+              if (['completed', 'failed', 'cancelled', 'stopped', 'expired'].includes(parsed.status)) {
                 terminalSent = true;
               }
             } catch (e) {}
@@ -177,7 +189,7 @@ export function registerRunEventRoutes(router: Router) {
         }
       }
 
-      if (!terminalSent && ['completed', 'failed', 'cancelled', 'expired'].includes(run.status)) {
+      if (!terminalSent && ['completed', 'failed', 'cancelled', 'stopped', 'expired'].includes(run.status)) {
         res.write(`event: status\n`);
         res.write(`data: ${JSON.stringify({ status: run.status })}\n\n`);
         terminalSent = true;

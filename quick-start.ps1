@@ -234,6 +234,7 @@ try {
     }
     $encryptionKey = Get-EnvValue "ENCRYPTION_KEY"
     if ($encryptionKey -notmatch '^[0-9a-fA-F]{64}$') {
+        Assert-QuickStartEncryptionKeyGenerationSafe (Join-Path $ProjectRoot "data\mybay.sqlite")
         Set-EnvValue "ENCRYPTION_KEY" (New-RandomHex 32)
     }
     $routingSecret = Get-EnvValue "MYBAY_INTERNAL_ROUTING_SECRET"

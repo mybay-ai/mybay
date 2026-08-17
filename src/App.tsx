@@ -11,6 +11,7 @@ import { OpenSourceLandingPage } from "./features/landing-pages";
 import { FirstRunSetupPage } from "./features/first-run/FirstRunSetupPage";
 import { getStoredUser, setStoredUser, clearStoredUser } from "./lib/auth";
 import { api } from "./lib/api";
+import { isProtectedAppPath } from "./lib/authNavigation";
 import { APP_ROUTES } from "./constants/routes";
 import { VALID_GUIDES } from "./data/docs/docs.registry";
 import { SEOHead } from "./components/SEOHead";
@@ -196,11 +197,15 @@ function AppContent() {
 
   useEffect(() => {
     const handleUnauthorized = () => {
-      handleLogout();
+      clearStoredUser();
+      setCurrentUser(null);
+      if (isProtectedAppPath(window.location.pathname)) {
+        navigate("/login", { replace: true });
+      }
     };
     window.addEventListener("api-unauthorized", handleUnauthorized);
     return () => window.removeEventListener("api-unauthorized", handleUnauthorized);
-  }, [handleLogout]);
+  }, [navigate]);
 
   useEffect(() => {
     if (currentUser) {

@@ -156,6 +156,8 @@ fi
 
 ENCRYPTION_KEY_VALUE="$(get_env_value ENCRYPTION_KEY)"
 if ! [[ "$ENCRYPTION_KEY_VALUE" =~ ^[0-9a-fA-F]{64}$ ]]; then
+  quick_start_assert_encryption_key_generation_safe "data/mybay.sqlite" ||
+    fail "Refusing to replace ENCRYPTION_KEY while existing local data is present."
   set_env_value "ENCRYPTION_KEY" "$(openssl rand -hex 32)"
 fi
 

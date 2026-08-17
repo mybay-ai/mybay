@@ -136,7 +136,6 @@ export function Dashboard({ instances, loading, fetchInstances, socket, currentU
     window.dispatchEvent(new CustomEvent("dashboard-tab-changed", { detail: activeTab }));
   }, [activeTab]);
 
-  const handleTabChange = (key: string) => {
   useEffect(() => {
     if (!isValidTab(activeTab, isAdmin, templateWorkflowsEnabled)) {
       setActiveTab("overview");
@@ -144,6 +143,7 @@ export function Dashboard({ instances, loading, fetchInstances, socket, currentU
     }
   }, [activeTab, isAdmin, navigate, templateWorkflowsEnabled]);
 
+  const handleTabChange = (key: string) => {
     if (!isValidTab(key, isAdmin, templateWorkflowsEnabled)) {
       setActiveTab('overview');
       navigate(APP_ROUTES.DASHBOARD);

@@ -5,7 +5,7 @@ import { createHash } from "crypto";
 import { parseTraefikEnv } from "../../infrastructure/traefik/traefikConfig";
 import fs from "fs";
 import path from "path";
-import { executeDeployment, buildDeploymentContext } from "../../deployment";
+import { executeDeployment, buildDeploymentContext, rebuildProxyConfig } from "../../deployment";
 import { getDirectorySizeBytes } from "../../utils/storageQuota";
 import { isQuotaConsumingStatus, resolveInstanceLimit } from "../../utils/quota";
 import { parseCpuToNum, parseMemoryToMb, formatMemoryStr, resolveResourceLimitsForInstance } from "../../utils/instances/instanceResourceLimits";
@@ -22,7 +22,6 @@ import { isMaskedSecretPlaceholder, redactSecretsDeep } from "../../utils/saniti
 import bcrypt from "bcryptjs";
 import { findAvailablePort, listInstancePortCandidates } from "../../utils";
 import { execFile } from "child_process";
-import { rebuildProxyConfig } from "../../deployment"; // Used maybe? Assumed in configWriter
 import { runInstanceHealthChecks } from "../../healthCheck";
 import { startPeriodicAgentDbSync } from "../../sqliteAgentSync";
 import { providerRegistry as registry } from "../../../shared/providerRegistry";

@@ -8,7 +8,7 @@ import http from "http";
 import { sanitizeConfig, sanitizeErrorMessage } from "../../utils/sanitizer";
 import { supportsNativeDashboardBasicAuth } from "../../utils/hermesVersionCapabilities";
 import path from "path";
-import { executeDeployment, buildDeploymentContext } from "../../deployment";
+import { executeDeployment, buildDeploymentContext, rebuildProxyConfig } from "../../deployment";
 import { getDirectorySizeBytes } from "../../utils/storageQuota";
 import { isQuotaConsumingStatus, resolveInstanceLimit } from "../../utils/quota";
 import { parseCpuToNum, parseMemoryToMb, formatMemoryStr, resolveResourceLimitsForInstance } from "../../utils/instances/instanceResourceLimits";
@@ -21,7 +21,6 @@ import { encrypt, decrypt, tryResolvePlainInstancePassword, isEncryptionKeyConfi
 import bcrypt from "bcryptjs";
 import { findAvailablePort } from "../../utils";
 import { execFile } from "child_process";
-import { rebuildProxyConfig } from "../../deployment"; // Used maybe? Assumed in configWriter
 import { runInstanceHealthChecks } from "../../healthCheck";
 import { startPeriodicAgentDbSync } from "../../sqliteAgentSync";
 import { resolveInstanceDiskLimitMb, formatDiskLimitLabel } from "../../services/instances/instanceStorageQuotaService";
@@ -32,6 +31,7 @@ import { tasksRepo } from "../../repositories/tasksRepo";
 import { evaluateInstanceWorkflowReadiness } from "../../services/workflowReadinessService";
 import { executeTaskInBackground } from "../../workers/taskRunner";
 import { isTemplateWorkflowsEnabled } from "../../utils/templateWorkflowsFeature";
+import { requiresDashboardCredentialsForRedeploy } from "./redeployValidation";
 
 const instanceActionLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -127,8 +127,7 @@ export function createActionsRoutes(deps: RouterDependencies) {
 
       if (action === "redeploy" || action === "restore") {
         const config = JSON.parse(instance.config_json);
-        const isWeb = config.channel === "web" || !config.channel;
-        if (isWeb) {
+        if (requiresDashboardCredentialsForRedeploy(config)) {
           const plainPass = tryResolvePlainInstancePassword(config);
           if (!plainPass || !config.webPasswordHash || !config.dashboardAuthSecret || !config.hermesDashboardAuthSecret) {
             return res.status(400).json({

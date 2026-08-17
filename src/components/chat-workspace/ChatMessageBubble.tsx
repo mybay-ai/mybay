@@ -11,9 +11,14 @@ import { sanitizeChatDisplayContent } from "../../lib/chatProtocolSanitizer";
 import { humanizeChatError } from "../../lib/chatRuntimeErrors";
 import type { PendingAttachment } from "./ChatInputBar";
 import { api } from "../../lib/api";
+import type { ChatApprovalChoice, ChatApprovalRequest, ChatRunMetrics } from "./useChatRuns";
+import type { RunExecutionState } from "./run/runTypes";
+import { InlineRunTimeline } from "./run/InlineRunTimeline";
+import { InlineApprovalCard } from "./run/InlineApprovalCard";
 
 interface ChatMessageBubbleProps {
   message: ChatMessage;
+  retrySourceMessage?: ChatMessage;
   currentUser?: UserType | null;
   selectedConversationId: string | null;
   sending: boolean;
@@ -26,6 +31,11 @@ interface ChatMessageBubbleProps {
   fallbackModelLabel?: string;
   instanceId?: string;
   onMessageFeedbackChange?: (messageId: string, feedback: "like" | "dislike" | null) => void;
+  runExecutionState?: RunExecutionState | null;
+  runMetrics?: ChatRunMetrics | null;
+  approvalRequest?: ChatApprovalRequest | null;
+  canRespondToApproval?: boolean;
+  onRespondToApproval?: (choice: ChatApprovalChoice, approvalId?: string, resolveAll?: boolean) => void | Promise<void>;
 }
 
 
@@ -456,6 +466,7 @@ function MarkdownChatContent({
 }
 export function ChatMessageBubble({
   message,
+  retrySourceMessage,
   currentUser,
   selectedConversationId,
   sending,
@@ -467,7 +478,12 @@ export function ChatMessageBubble({
   onOpenInstanceFilePath,
   fallbackModelLabel,
   instanceId,
-  onMessageFeedbackChange
+  onMessageFeedbackChange,
+  runExecutionState,
+  runMetrics,
+  approvalRequest,
+  canRespondToApproval = false,
+  onRespondToApproval
 }: ChatMessageBubbleProps) {
   const { t } = useTranslation("dashboard");
   const [copied, setCopied] = useState(false);
@@ -475,6 +491,8 @@ export function ChatMessageBubble({
   const [feedback, setFeedback] = useState<"up" | "down" | null>(initialFeedback);
   const [feedbackSaving, setFeedbackSaving] = useState(false);
   const isUser = message.role === "user";
+  const retryTarget = isUser ? message : retrySourceMessage;
+  const terminalActionClass = isUser ? "border-white/30 bg-white/15 text-white hover:bg-white/25" : "border-outline bg-surface text-content-secondary hover:bg-surface-muted";
   const canSaveFeedback = !isUser && !!instanceId && !!selectedConversationId && UUID_PATTERN.test(message.id || "");
   const displayContent = sanitizeChatDisplayContent(
     message.content,
@@ -543,6 +561,12 @@ export function ChatMessageBubble({
           ? "bg-slate-950 text-white rounded-tr-md font-normal dark:bg-indigo-600"
           : "bg-surface/95 border border-outline/80 text-content rounded-tl-md whitespace-pre-wrap leading-relaxed"
       } ${message.status === "failed" ? "border-red-350 bg-red-50/20" : ""} ${message.status === "stopped" ? "border-amber-300 bg-amber-50/20" : ""} ${message.status === "queued" ? "border-amber-200 bg-amber-50/20" : ""} ${message.status === "superseded" ? "opacity-65" : ""}`}>
+        {!isUser && runExecutionState && (
+          <InlineRunTimeline execution={runExecutionState} metrics={runMetrics} hideApprovalBlocks={Boolean(approvalRequest)} />
+        )}
+        {!isUser && approvalRequest && (
+          <InlineApprovalCard approval={approvalRequest} canRespond={canRespondToApproval} onRespond={onRespondToApproval} />
+        )}
         {isUser ? (
           <LinkedChatContent
             content={displayContent}
@@ -623,22 +647,22 @@ export function ChatMessageBubble({
               <span className="leading-relaxed">{failureMessage}</span>
               {message.error_code && <code className="rounded bg-red-100/70 px-1.5 py-0.5 text-[10px] font-mono text-red-700" title={t("chatWorkspace.errorCodeHelp")}>{t("chatWorkspace.errorCodeLabel")}: {message.error_code}</code>}
             </div>
-            {isUser && (
+            {retryTarget && (
               <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   type="button"
-                  onClick={() => onRetry(message)}
+                  onClick={() => onRetry(retryTarget)}
                   disabled={sending}
-                  className="rounded-md border border-white/30 bg-white/15 px-2 py-0.5 text-[11px] font-semibold text-white hover:bg-white/25 disabled:cursor-not-allowed disabled:opacity-60"
+                  className={`rounded-md border px-2 py-0.5 text-[11px] font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${terminalActionClass}`}
                 >
                   {t("chatWorkspace.retryMessage")}
                 </button>
                 {onEdit && (
                   <button
                     type="button"
-                    onClick={() => onEdit(message)}
+                    onClick={() => onEdit(retryTarget)}
                     disabled={sending}
-                    className="rounded-md border border-white/30 bg-white/15 px-2 py-0.5 text-[11px] font-semibold text-white hover:bg-white/25 disabled:cursor-not-allowed disabled:opacity-60 inline-flex items-center gap-1"
+                    className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${terminalActionClass}`}
                   >
                     <Edit3 className="w-3 h-3" />
                     {t("chatWorkspace.editAndResend")}
@@ -649,7 +673,7 @@ export function ChatMessageBubble({
                     type="button"
                     onClick={onSwitchToAssistAndDiagnose}
                     disabled={sending}
-                    className="rounded-md border border-white/30 bg-white/15 px-2 py-0.5 text-[11px] font-semibold text-white hover:bg-white/25 disabled:cursor-not-allowed disabled:opacity-60"
+                    className={`rounded-md border px-2 py-0.5 text-[11px] font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${terminalActionClass}`}
                   >
                     {t("chatWorkspace.diagnoseWithAssist")}
                   </button>
@@ -664,22 +688,22 @@ export function ChatMessageBubble({
               <Clock3 className="w-3.5 h-3.5 shrink-0" />
               <span className="leading-relaxed">{message.error_message || t("chatWorkspace.messageStopped")}</span>
             </div>
-            {isUser && (
+            {retryTarget && (
               <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   type="button"
-                  onClick={() => onRetry(message)}
+                  onClick={() => onRetry(retryTarget)}
                   disabled={sending}
-                  className="rounded-md border border-white/30 bg-white/15 px-2 py-0.5 text-[11px] font-semibold text-white hover:bg-white/25 disabled:cursor-not-allowed disabled:opacity-60"
+                  className={`rounded-md border px-2 py-0.5 text-[11px] font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${terminalActionClass}`}
                 >
                   {t("chatWorkspace.retryMessage")}
                 </button>
                 {onEdit && (
                   <button
                     type="button"
-                    onClick={() => onEdit(message)}
+                    onClick={() => onEdit(retryTarget)}
                     disabled={sending}
-                    className="rounded-md border border-white/30 bg-white/15 px-2 py-0.5 text-[11px] font-semibold text-white hover:bg-white/25 disabled:cursor-not-allowed disabled:opacity-60 inline-flex items-center gap-1"
+                    className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${terminalActionClass}`}
                   >
                     <Edit3 className="w-3 h-3" />
                     {t("chatWorkspace.editAndResend")}

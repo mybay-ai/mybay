@@ -1,0 +1,129 @@
+import { useEffect, useMemo, useState } from "react";
+import { CheckCircle2, ChevronDown, ChevronRight, CircleStop, LoaderCircle, ShieldQuestion, Wrench, XCircle } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import type { ChatRunMetrics } from "../useChatRuns";
+import type { RunBlock, RunExecutionState, ToolRunBlock } from "./runTypes";
+import { isTerminalExecutionStatus } from "./runReducer";
+import { resolveRunDurationMs } from "./runDuration";
+import { translateToolStepLabel } from "./toolStepI18n";
+
+
+function formatDuration(durationMs: number | null): string {
+  if (durationMs === null || durationMs < 0) return "";
+  if (durationMs < 1000) return Math.round(durationMs) + "ms";
+  const seconds = Math.round(durationMs / 1000);
+  if (seconds < 60) return seconds + "s";
+  return Math.floor(seconds / 60) + "m " + (seconds % 60) + "s";
+}
+
+
+function ToolBlock({ block, execution }: { block: ToolRunBlock; execution: RunExecutionState }) {
+  const { t } = useTranslation("dashboard");
+  const stopped = (execution.status === "stopped" || execution.status === "cancelled") && block.status === "failed";
+  const Icon = block.status === "running" ? LoaderCircle : block.status === "completed" ? CheckCircle2 : stopped ? CircleStop : XCircle;
+  const statusLabel = block.status === "running"
+    ? t("chatWorkspace.timelineRunning")
+    : block.status === "completed"
+      ? t("chatWorkspace.timelineCompleted")
+      : stopped ? t("chatWorkspace.timelineStopped") : t("chatWorkspace.timelineFailed");
+  const iconClass = "mt-0.5 h-3.5 w-3.5 shrink-0 " + (
+    block.status === "running" ? "animate-spin text-indigo-500" :
+      block.status === "completed" ? "text-emerald-500" :
+        stopped ? "text-amber-500" : "text-rose-500"
+  );
+  return (
+    <div className="flex items-start gap-2 rounded-xl border border-outline/80 bg-surface-muted/55 px-3 py-2 text-[12px]">
+      <Icon className={iconClass} />
+      <div className="min-w-0 flex-1">
+        <div className="truncate font-medium text-content">{translateToolStepLabel(t, block.label || block.tool, block.tool)}</div>
+        <div className="text-content-muted">{statusLabel}</div>
+      </div>
+    </div>
+  );
+}
+
+function TimelineBlock({ block, execution }: { block: RunBlock; execution: RunExecutionState }) {
+  const { t } = useTranslation("dashboard");
+  if (block.type === "tool") return <ToolBlock block={block} execution={execution} />;
+  if (block.type === "approval") {
+    return (
+      <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50/70 px-3 py-2 text-[12px] text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+        <ShieldQuestion className="h-4 w-4" />
+        {block.status === "pending" ? t("chatWorkspace.timelineApprovalPending") : t("chatWorkspace.timelineApprovalResolved")}
+      </div>
+    );
+  }
+  if (block.type === "status" && isTerminalExecutionStatus(block.status)) {
+    return (
+      <div className="flex items-center gap-2 px-1 text-[12px] text-content-muted">
+        {block.status === "completed" ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <CircleStop className="h-3.5 w-3.5 text-amber-500" />}
+        {block.status === "completed"
+          ? t("chatWorkspace.timelineRunCompleted")
+          : block.status === "stopped" || block.status === "cancelled"
+            ? t("chatWorkspace.timelineRunStopped")
+            : t("chatWorkspace.timelineRunFailed")}
+      </div>
+    );
+  }
+  return null;
+}
+
+export function InlineRunTimeline({
+  execution,
+  metrics,
+  hideApprovalBlocks = false
+}: { execution: RunExecutionState; metrics?: ChatRunMetrics | null; hideApprovalBlocks?: boolean }) {
+  const { t } = useTranslation("dashboard");
+  const terminal = isTerminalExecutionStatus(execution.status);
+  const [collapsed, setCollapsed] = useState(false);
+  const [now, setNow] = useState(Date.now());
+  const visibleBlocks = useMemo(() => execution.blocks.filter(block => block.type !== "text" && (!hideApprovalBlocks || block.type !== "approval")), [execution.blocks, hideApprovalBlocks]);
+  const stepCount = execution.blocks.filter(block => block.type === "tool").length;
+  const duration = formatDuration(resolveRunDurationMs({
+    metrics,
+    startCandidates: execution.blocks.filter((block): block is ToolRunBlock => block.type === "tool").map(block => block.startedAt),
+    completedCandidates: execution.blocks.filter((block): block is ToolRunBlock => block.type === "tool").map(block => block.completedAt),
+    active: !terminal,
+    nowMs: now
+  }));
+  const statusLabel = execution.status === "completed"
+    ? t("chatWorkspace.timelineRunCompleted")
+    : execution.status === "failed" || execution.status === "expired"
+      ? t("chatWorkspace.timelineRunFailed")
+      : execution.status === "stopped" || execution.status === "cancelled"
+        ? t("chatWorkspace.timelineRunStopped")
+        : execution.status === "stopping"
+          ? t("chatWorkspace.timelineStopping")
+          : execution.status === "waiting_for_approval"
+            ? t("chatWorkspace.timelineApprovalPending")
+            : execution.status === "queued"
+              ? t("chatWorkspace.timelineRunPreparing")
+              : t("chatWorkspace.timelineRunRunning");
+
+  useEffect(() => {
+    setCollapsed(false);
+  }, [execution.runId]);
+
+  useEffect(() => {
+    if (terminal) {
+      const timer = window.setTimeout(() => setCollapsed(true), 1200);
+      return () => window.clearTimeout(timer);
+    }
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [terminal]);
+
+  if (execution.blocks.length === 0) return null;
+  return (
+    <div className="mb-3 space-y-2.5 border-b border-outline pb-3" data-run-id={execution.runId}>
+      <button type="button" onClick={() => setCollapsed(value => !value)} className="flex w-full items-center gap-2 rounded-xl bg-surface-muted/70 px-3 py-2 text-left text-[12px] font-medium text-content-secondary hover:bg-surface-muted">
+        {terminal ? <Wrench className="h-3.5 w-3.5 text-content-muted" /> : <LoaderCircle className="h-3.5 w-3.5 animate-spin text-indigo-500" />}
+        <span className="min-w-0 flex-1 truncate">{[statusLabel, stepCount + " " + t("chatWorkspace.timelineSteps"), duration].filter(Boolean).join(" · ")}</span>
+        {collapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+      </button>
+      {!collapsed && visibleBlocks.length > 0 && (
+        <div className="space-y-2">{visibleBlocks.map(block => <TimelineBlock key={block.id} block={block} execution={execution} />)}</div>
+      )}
+    </div>
+  );
+}

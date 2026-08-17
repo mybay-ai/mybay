@@ -515,5 +515,18 @@
   "deleteProjectFailed": "删除项目失败。",
   "renameProjectFailed": "重命名项目失败。",
   "noProjectsForMove": "暂无项目，可先新建项目后再归类该对话。",
+  "timelineRunning": "进行中",
+  "timelineCompleted": "已完成",
+  "timelineStopped": "已停止",
+  "timelineFailed": "失败",
+  "timelineApprovalPending": "等待审批",
+  "timelineApprovalResolved": "审批已处理",
+  "timelineRunCompleted": "任务已完成",
+  "timelineRunStopped": "任务已停止",
+  "timelineRunFailed": "任务失败",
+  "timelineStopping": "正在停止",
+  "timelineRunPreparing": "正在准备",
+  "timelineRunRunning": "正在执行",
+  "timelineSteps": "个步骤",
   "messageTooLong": "单条消息最多支持 {{max}} 字符，请拆分内容或作为文件上传。"
 }

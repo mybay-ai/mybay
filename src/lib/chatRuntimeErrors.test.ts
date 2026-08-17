@@ -14,6 +14,17 @@ describe("chatRuntimeErrors", () => {
     expect(humanizeChatError(new Error("Failed to fetch")).message).toContain("网络连接失败");
   });
 
+  it("preserves structured backend messages instead of replacing them with Bad Request", () => {
+    const result = humanizeChatError({
+      status: 400,
+      data: {
+        code: "CREDENTIAL_DECRYPT_FAILED",
+        error: "The saved credential cannot be decrypted. Save its API Key again.",
+      },
+    }, "Bad Request");
+    expect(result.code).toBe("CREDENTIAL_DECRYPT_FAILED");
+    expect(result.message).toBe("The saved credential cannot be decrypted. Save its API Key again.");
+  });
   it("keeps a safe fallback for unknown errors", () => {
     const result = humanizeChatError({ data: { error: "SOME_NEW_ERROR" } }, "自定义失败提示");
     expect(result.message).toBe("自定义失败提示");

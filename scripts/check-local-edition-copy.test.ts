@@ -44,4 +44,19 @@ describe("MyBay Open Source copy guard", () => {
     expect(findMissingRequiredTargets(root)).toEqual([]);
     expect(collectScanTargets(root)).toHaveLength(REQUIRED_TARGETS.length);
   });
+
+  it.each([
+    "Cloud transmission disconnected",
+    "multi-tenant gateway proxying",
+  ])("rejects product-capability copy: %s", (copy) => {
+    expect(findLocalEditionCopyIssues("fixture.json", copy)).not.toHaveLength(0);
+  });
+
+  it.each([
+    "MyBay does not support multi-tenant environments.",
+    "MyBay is not a hosted service.",
+    "Use a self-hosted gateway.",
+  ])("allows explicit open-source non-goals: %s", (copy) => {
+    expect(findLocalEditionCopyIssues("fixture.md", copy)).toHaveLength(0);
+  });
 });

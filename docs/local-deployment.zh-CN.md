@@ -7,7 +7,7 @@
 - Docker Engine 或 Docker Desktop
 - Docker Compose v2（使用 `docker compose` 命令）
 - Bash
-- 仅在源码开发时需要 Node.js 22.13.0 或更高版本和 npm
+- 仅在源码开发时需要 Node.js 22.16.0 或更高版本和 npm
 - 控制面板容器需要访问 `/var/run/docker.sock`，用于创建和管理 Agent 容器
 
 ## 模式一：本机桌面
@@ -88,7 +88,7 @@ cp .env.example .env
 npm run dev
 ```
 
-项目要求 Node.js >= 22.13.0。生产构建使用 `npm run build && npm start`。
+项目要求 Node.js >= 22.16.0。生产构建使用 `npm run build && npm start`。
 
 ## 数据备份与升级
 

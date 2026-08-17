@@ -1,8 +1,7 @@
 import { useEffect, useState, useRef, type FormEvent, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Activity, Brain, ChevronDown, Clock3, CornerDownLeft, Gauge, HelpCircle, Layers, Paperclip, Send, Sparkles, X, Zap } from "lucide-react";
+import { Activity, Brain, ChevronDown, Clock3, CornerDownLeft, FileText, Gauge, HelpCircle, Image as ImageIcon, Layers, Paperclip, Send, Sparkles, X, Zap } from "lucide-react";
 
-import { FileText, Image as ImageIcon } from "lucide-react";
 import type { ChatRunMetrics, RunsCapabilityState } from "./useChatRuns";
 import { DIRECT_CHAT_ATTACHMENT_EXTENSIONS, type ChatAttachmentConfig, isChatAttachmentLimitReached } from "../../../shared/chatAttachmentContract";
 export type PendingAttachment = {
@@ -24,6 +23,7 @@ type ChatInputBarProps = {
   input: string;
   sending: boolean;
   activeRunId: string | null;
+  stopPending?: boolean;
   isChatReady: boolean;
   selectedChannel: string;
   selectedInstanceName?: string;
@@ -42,10 +42,15 @@ type ChatInputBarProps = {
   onInputFocus?: () => void;
 };
 
+export function shouldIgnoreComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>): boolean {
+  return event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229;
+}
+
 export function ChatInputBar({
   input,
   sending,
   activeRunId,
+  stopPending = false,
   isChatReady,
   selectedChannel,
   selectedInstanceName,
@@ -103,6 +108,9 @@ export function ChatInputBar({
       : t(isCompactInput ? "dashboard:chatWorkspace.sendPlaceholderMobile" : "dashboard:chatWorkspace.sendPlaceholder"));
 
   const handleKeyDownInternal = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (shouldIgnoreComposerKeyDown(e)) {
+      return;
+    }
     if (e.key === "Enter" && !e.shiftKey && isUploading) {
       e.preventDefault();
       return;
@@ -372,7 +380,8 @@ export function ChatInputBar({
               <button
                 type="button"
                 onClick={onStopRun}
-                className="h-8 w-8 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-all inline-flex items-center justify-center border border-rose-200 shadow-xs cursor-pointer dark:bg-rose-950/40 dark:hover:bg-rose-900/60 dark:text-rose-300 dark:border-rose-500/40"
+                disabled={stopPending}
+                className="h-8 w-8 bg-rose-50 hover:bg-rose-100 disabled:cursor-wait disabled:opacity-60 text-rose-600 rounded-lg transition-all inline-flex items-center justify-center border border-rose-200 shadow-xs cursor-pointer dark:bg-rose-950/40 dark:hover:bg-rose-900/60 dark:text-rose-300 dark:border-rose-500/40"
                 title={t("dashboard:chatWorkspace.stopTaskTitle")}
               >
                 <X className="w-4 h-4 shrink-0" />

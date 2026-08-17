@@ -9,12 +9,12 @@ if (typeof dns.setDefaultResultOrder === "function") {
 
 import path from "path";
 import fs from "fs";
-import { createServer as createViteServer } from "vite";
 import { Server as SocketIOServer } from "socket.io";
 import { createServer } from "http";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 
 import { resolveServerPort } from "./server/utils/portResolver";
+import { isKnownClientRoute } from "./server/utils/clientRoutes";
 
 // Import modular routers and socket handlers
 import authRouter from "./server/routes/auth";
@@ -48,6 +48,8 @@ import { isAdvancedResourceConfigEnabled } from "./server/utils/advancedResource
 import { getClientIp } from "./server/utils/ip";
 import { validateProductionSecurityConfig } from "./server/utils/productionSecurityConfig";
 import { STANDARD_API_JSON_BODY_LIMIT } from "./shared/chatMessageContract";
+import { warnIfLegacyOpenWebhooksEnabled } from "./server/services/webhookAuthPolicy";
+import { requestCorrelation } from "./server/middlewares/requestCorrelation";
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
@@ -104,6 +106,7 @@ async function startServer() {
 
   const app = express();
   app.disable("x-powered-by");
+  app.use(requestCorrelation);
   const PORT = resolveServerPort(process.env.PORT);
   const httpServer = createServer(app);
   
@@ -113,6 +116,7 @@ async function startServer() {
   console.log(`[Config] 运行模式: ${process.env.NODE_ENV || 'development'}`);
   console.log(`[Config] 基础目录: ${process.cwd()}`);
   console.log(`[Config] Local SQLite: ${getLocalDatabasePath()}`);
+  warnIfLegacyOpenWebhooksEnabled();
   
   // Verify encryption key configuration
   let keyConfigured = false;
@@ -740,6 +744,7 @@ async function startServer() {
   // Vite dynamic asset pipeline integration
   if (process.env.NODE_ENV !== "production") {
     console.log("[System] MyBay Open Source starting...");
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
@@ -763,34 +768,6 @@ async function startServer() {
         }
         next();
       });
-
-      const isKnownClientRoute = (urlPath: string): boolean => {
-        const pathname = urlPath.split('?')[0];
-        
-        if (pathname === "/app" || pathname.startsWith("/app/")) {
-          return true;
-        }
-        
-        if (
-          pathname === "/login" ||
-          pathname === "/register" ||
-          pathname.startsWith("/auth/")
-        ) {
-          return true;
-        }
-        
-        if (
-          pathname === "/instance-login" ||
-          pathname === "/landing/legacy" ||
-          pathname === "/landing/main" ||
-          pathname === "/demo" ||
-          pathname.startsWith("/demo/")
-        ) {
-          return true;
-        }
-        
-        return false;
-      };
 
       const hasFileExtension = (urlPath: string): boolean => {
         const p = urlPath.split('?')[0];

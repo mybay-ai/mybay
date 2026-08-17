@@ -10,7 +10,7 @@ import { hasZipMagic } from "../../utils/uploadSecurity";
 import AdmZip from "adm-zip";
 import * as archiver from "archiver";
 import { resolveArchiverFactory } from "../../utils/resolveArchiverFactory";
-import { executeDeployment, buildDeploymentContext } from "../../deployment";
+import { executeDeployment, buildDeploymentContext, rebuildProxyConfig } from "../../deployment";
 import { getDirectorySizeBytes } from "../../utils/storageQuota";
 import { isQuotaConsumingStatus, resolveInstanceLimit } from "../../utils/quota";
 import { parseCpuToNum, parseMemoryToMb, formatMemoryStr, resolveResourceLimitsForInstance } from "../../utils/instances/instanceResourceLimits";
@@ -32,33 +32,12 @@ import { checkSSRFSafe } from "../../utils/ssrfValidator";
 import { skillPolicyRegistry } from "../../../shared/skillPolicyRegistry";
 import { findAvailablePort } from "../../utils";
 import { execFile } from "child_process";
-import { rebuildProxyConfig } from "../../deployment"; // Used maybe? Assumed in configWriter
 import { runInstanceHealthChecks } from "../../healthCheck";
 import { startPeriodicAgentDbSync } from "../../sqliteAgentSync";
 import { ensureEncryptedDashboardAuthSecret } from "../../utils/dashboardAuthSecret";
 import { applySavedProviderCredential, SavedProviderCredentialError } from "../../utils/savedProviderCredential";
 import { validateConfigArchiveEntries } from "../../utils/configArchiveSecurity";
-
-function parseInstanceConfigJson(raw: any): any {
-  if (raw === null || raw === undefined || raw === "") {
-    return {};
-  }
-  if (typeof raw === "string") {
-    try {
-      return JSON.parse(raw);
-    } catch (e: any) {
-      throw new Error(`[parseInstanceConfigJson] Failed to parse config JSON string: ${e.message}`);
-    }
-  }
-  if (typeof raw === "object" && !Array.isArray(raw)) {
-    return raw;
-  }
-  return {};
-}
-
-function isPrivilegedUser(user: any): boolean {
-  return user?.role === "admin" || user?.role === "super_admin";
-}
+import { isPrivilegedUser, parseInstanceConfigJson } from "../../services/instanceConfig/instanceConfigRoutePolicy";
 
 export function createConfigRoutes(deps: RouterDependencies) {
   const router = Router();

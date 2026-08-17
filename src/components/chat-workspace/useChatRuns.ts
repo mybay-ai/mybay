@@ -5,7 +5,14 @@ import { getAuthToken } from "../../lib/auth";
 import { markChatRunCompleted } from "../../lib/chatWorkspaceNotifications";
 import type { ChatMessage } from "../../lib/chatWorkspaceState";
 import type { ChatToolStep } from "./ChatToolProgress";
-import { canExecutePollingCallback, finalizeRunMetrics, finalizeRunSteps, isTerminalRunStatus, normalizeRunDurationMs, shouldApplyRunUpdate } from "./runUiLifecycle";
+import { canExecutePollingCallback, finalizeRunMetrics, finalizeRunSteps, isTerminalRunStatus, normalizeRunDurationMs, shouldApplyRunUpdate, type TerminalRunStatus } from "./runUiLifecycle";
+import { observeRunSseEventId } from "./runSseCursor";
+import { createRunExecutionState, deriveAssistantText, deriveToolSteps } from "./run/runReducer";
+import { consumeRunSseFrame } from "./run/runStreamCoordinator";
+import { chooseMostCompleteStreamingContent, mergeRecoveredStreamingContent } from "./run/runTextReconciliation";
+import type { RunExecutionState, RunExecutionStatus, ToolEventPayload } from "./run/runTypes";
+import { findRunAssistantMessageIndex } from "./run/runSelectors";
+import { finalizeRunExecution } from "./run/runFinalizer";
 
 export type RunsCapabilityState = "checking" | "supported" | "explicitly_unsupported" | "unavailable" | "disabled";
 
@@ -85,15 +92,25 @@ export function useChatRuns({
   const [runCapabilities, setRunCapabilities] = useState<RunsCapabilityDetails>(defaultRunCapabilities);
   const [approvalRequests, setApprovalRequests] = useState<ChatApprovalRequest[]>([]);
   const [runMetrics, setRunMetrics] = useState<ChatRunMetrics | null>(null);
+  const [runExecutionState, setRunExecutionState] = useState<RunExecutionState | null>(null);
+  const [stopPending, setStopPendingState] = useState(false);
+  const stopPendingRef = useRef(false);
+  const approvalResponsePendingRef = useRef(new Set<string>());
   const activeSSEControllerRef = useRef<AbortController | null>(null);
   const activePollingIntervalRef = useRef<any>(null);
   const currentRunIdRef = useRef<string | null>(null);
   const pollingGenerationRef = useRef(0);
   const toolStepsRef = useRef<ChatToolStep[]>([]);
   const lastEventIdRef = useRef<number>(0);
+  const runExecutionRef = useRef<RunExecutionState | null>(null);
   const pendingTextRef = useRef("");
+  const recoveryTextBaselineRef = useRef("");
   const pendingTextConversationIdRef = useRef<string | null>(null);
   const textFlushTimerRef = useRef<any>(null);
+  const setStopPending = useCallback((pending: boolean) => {
+    stopPendingRef.current = pending;
+    setStopPendingState(pending);
+  }, []);
   const setActiveRunId = useCallback((runId: string | null) => {
     currentRunIdRef.current = runId;
     setActiveRunIdState(runId);
@@ -109,6 +126,47 @@ export function useChatRuns({
 
   const toolSteps = toolStepsState;
 
+  const finalizeActiveRunUi = useCallback((targetRunId: string, status: TerminalRunStatus) => {
+    const currentExecution = runExecutionRef.current;
+    if (currentExecution?.runId === targetRunId) {
+      const finalizedExecution = finalizeRunExecution(currentExecution, status);
+      runExecutionRef.current = finalizedExecution;
+      setRunExecutionState(finalizedExecution);
+      setToolSteps(finalizeRunSteps(deriveToolSteps(finalizedExecution.blocks), status));
+    } else {
+      setToolSteps(previous => finalizeRunSteps(previous, status));
+    }
+    setRunMetrics(previous => finalizeRunMetrics(targetRunId, previous, status));
+    setStopPending(false);
+    if (currentRunIdRef.current === targetRunId) setActiveRunId(null);
+  }, [setActiveRunId, setStopPending, setToolSteps]);
+
+  const initializeRunExecution = useCallback((params: {
+    runId: string;
+    conversationId?: string;
+    requestId?: string;
+    assistantMessageId?: string;
+    status?: RunExecutionStatus;
+    initialText?: string;
+    initialStep?: ToolEventPayload;
+    recoveryTextBaseline?: string;
+  }) => {
+    if (textFlushTimerRef.current) {
+      clearTimeout(textFlushTimerRef.current);
+      textFlushTimerRef.current = null;
+    }
+    pendingTextRef.current = "";
+    pendingTextConversationIdRef.current = null;
+    recoveryTextBaselineRef.current = params.recoveryTextBaseline || "";
+    lastEventIdRef.current = 0;
+    setApprovalRequests([]);
+    const state = createRunExecutionState(params);
+    runExecutionRef.current = state;
+    setRunExecutionState(state);
+    setToolSteps(deriveToolSteps(state.blocks));
+    return state;
+  }, [setToolSteps]);
+
   const flushPendingText = useCallback(() => {
     if (textFlushTimerRef.current) {
       clearTimeout(textFlushTimerRef.current);
@@ -120,17 +178,20 @@ export function useChatRuns({
     if (!pendingText) return;
     pendingTextRef.current = "";
     pendingTextConversationIdRef.current = null;
+    const execution = runExecutionRef.current;
+    setRunExecutionState(execution);
 
     setMessages(prev => {
       if (prev.length === 0) return prev;
-      const last = prev[prev.length - 1];
-      if (last && last.role === "assistant" && (!pendingTextConversationId || last.conversation_id === pendingTextConversationId)) {
-        return [
-          ...prev.slice(0, -1),
-          { ...last, content: last.content + pendingText }
-        ];
-      }
-      return prev;
+      const explicitIndex = execution ? findRunAssistantMessageIndex(prev, execution) : -1;
+      const targetIndex = explicitIndex >= 0 ? explicitIndex : prev.length - 1;
+      const target = prev[targetIndex];
+      if (!target || target.role !== "assistant" || (pendingTextConversationId && target.conversation_id !== pendingTextConversationId)) return prev;
+      const content = chooseMostCompleteStreamingContent(target.content || "", pendingText);
+      if (content === target.content) return prev;
+      const updated = [...prev];
+      updated[targetIndex] = { ...target, content };
+      return updated;
     });
   }, [setMessages]);
 
@@ -164,8 +225,18 @@ export function useChatRuns({
     toolStepsRef.current = [];
     setApprovalRequests([]);
     setRunMetrics(null);
+    setStopPending(false);
     lastEventIdRef.current = 0;
-  }, []);
+    pendingTextRef.current = "";
+    pendingTextConversationIdRef.current = null;
+    recoveryTextBaselineRef.current = "";
+    if (textFlushTimerRef.current) {
+      clearTimeout(textFlushTimerRef.current);
+      textFlushTimerRef.current = null;
+    }
+    runExecutionRef.current = null;
+    setRunExecutionState(null);
+  }, [setActiveRunId, setStopPending, setToolSteps]);
 
   useEffect(() => {
     return () => {
@@ -270,38 +341,49 @@ export function useChatRuns({
     }
   }, [normalizeRunMetrics]);
 
-  const handleParsedSSEEvent = useCallback((event: string, data: string, boundInstanceId: string | null, boundConversationId: string | null, boundRunId?: string | null) => {
-    if (!boundInstanceId || !boundConversationId) return;
-    if (boundRunId && currentRunIdRef.current !== boundRunId) return;
+  const handleParsedSSEEvent = useCallback((eventId: number, event: string, data: string, boundInstanceId: string | null, boundConversationId: string | null, boundRunId?: string | null): boolean => {
+    if (!boundInstanceId || !boundConversationId) return false;
+    if (boundRunId && currentRunIdRef.current !== boundRunId) return false;
 
-    if (selectedIdRef.current !== boundInstanceId || selectedConversationIdRef.current !== boundConversationId) return;
+    if (selectedIdRef.current !== boundInstanceId || selectedConversationIdRef.current !== boundConversationId) return false;
+
+    const runId = boundRunId || currentRunIdRef.current;
+    if (!runId) return false;
+    let currentExecution = runExecutionRef.current;
+    if (!currentExecution || currentExecution.runId !== runId) {
+      currentExecution = createRunExecutionState({ runId, conversationId: boundConversationId, status: "running" });
+      runExecutionRef.current = currentExecution;
+      setRunExecutionState(currentExecution);
+    }
+    const frameResult = consumeRunSseFrame(currentExecution, {
+      currentEventId: 0,
+      lastCommittedEventId: lastEventIdRef.current
+    }, {
+      eventId,
+      event,
+      data,
+      runId,
+      conversationId: boundConversationId,
+      requestId: currentExecution.requestId
+    });
+    lastEventIdRef.current = frameResult.cursor.lastCommittedEventId;
+    if (!frameResult.consumed) return false;
+    const nextExecution = frameResult.state;
+    runExecutionRef.current = nextExecution;
+    if (event !== "text") setRunExecutionState(nextExecution);
 
     try {
       if (event === "text") {
         pendingTextConversationIdRef.current = boundConversationId;
-        pendingTextRef.current += data;
+        pendingTextRef.current = mergeRecoveredStreamingContent(recoveryTextBaselineRef.current, deriveAssistantText(nextExecution.blocks));
         scheduleTextFlush();
+        return true;
       } else if (event === "step") {
-        const stepInfo = JSON.parse(data);
-        const normalizedStep = {
-          ...stepInfo,
-          name: stepInfo.title || stepInfo.safe_summary || stepInfo.name || stepInfo.tool_name || "Running task step",
-          title: stepInfo.title || stepInfo.safe_summary,
-          stepType: stepInfo.stepType || stepInfo.step_type || "tool_call",
-          metadata: stepInfo.metadata && typeof stepInfo.metadata === "object" ? stepInfo.metadata : {}
-        };
-        setToolSteps(prev => {
-          const idx = prev.findIndex(s => s.id === normalizedStep.id);
-          if (idx >= 0) {
-            const updated = [...prev];
-            updated[idx] = { ...updated[idx], ...normalizedStep };
-            return updated;
-          }
-          return [...prev, { ...normalizedStep, status: normalizedStep.status || "running" }];
-        });
+        setToolSteps(deriveToolSteps(nextExecution.blocks));
+        return true;
       } else if (event === "approval") {
         const approval = JSON.parse(data) as ChatApprovalRequest;
-        if (!approval?.id) return;
+        if (!approval?.id) return false;
         setApprovalRequests(prev => {
           const normalized = {
             ...approval,
@@ -315,16 +397,15 @@ export function useChatRuns({
           }
           return [normalized, ...prev].slice(0, 5);
         });
+        return true;
       } else if (event === "status") {
         const parsed = JSON.parse(data);
         if (isTerminalRunStatus(parsed.status)) {
           flushPendingText();
           pollingGenerationRef.current += 1;
-          setToolSteps(prev => finalizeRunSteps(prev, parsed.status));
-          setRunMetrics(prev => finalizeRunMetrics(boundRunId || prev?.runId || null, { ...prev, ...parsed }, parsed.status));
+          if (boundRunId) finalizeActiveRunUi(boundRunId, parsed.status);
           if (parsed.status === "completed" && notificationUserId && boundRunId) markChatRunCompleted(notificationUserId, boundRunId);
           setSending(false);
-          setActiveRunId(null);
           if (activeSSEControllerRef.current) {
             activeSSEControllerRef.current.abort();
             activeSSEControllerRef.current = null;
@@ -334,11 +415,14 @@ export function useChatRuns({
           }
           refreshAuthoritativeHistory(boundInstanceId, boundConversationId);
         }
+        return true;
       }
     } catch (e) {
       console.error("[SSE Event processing error]", e);
+      return false;
     }
-  }, [flushPendingText, refreshAuthoritativeHistory, refreshRunMetrics, scheduleTextFlush, selectedConversationIdRef, selectedIdRef, setSending, notificationUserId]);
+    return false;
+  }, [finalizeActiveRunUi, flushPendingText, refreshAuthoritativeHistory, refreshRunMetrics, scheduleTextFlush, selectedConversationIdRef, selectedIdRef, setSending, notificationUserId]);
 
   const startFallbackPolling = useCallback((runId: string, boundInstanceId = selectedIdRef.current, boundConversationId = selectedConversationIdRef.current) => {
     const runGeneration = pollingGenerationRef.current;
@@ -350,6 +434,13 @@ export function useChatRuns({
     let pollAttempts = 0;
     const maxPollAttempts = 40;
     let pollDelayMs = 2000; // Smart exponential backoff starting at 2s
+    let statusUnknownPublished = false;
+    const publishStatusUnknown = () => {
+      if (statusUnknownPublished) return;
+      statusUnknownPublished = true;
+      setRunMetrics(prev => prev?.runId === runId ? { ...prev, status: "status_unknown" } : prev);
+      setStopPending(false);
+    };
 
     const scheduleNextPoll = () => {
       const currentSelectedId = boundInstanceId;
@@ -372,17 +463,7 @@ export function useChatRuns({
 
         pollAttempts++;
         if (pollAttempts > maxPollAttempts) {
-          if (activePollingIntervalRef.current) {
-            clearTimeout(activePollingIntervalRef.current);
-            activePollingIntervalRef.current = null;
-          }
-          pollingGenerationRef.current += 1;
-          setToolSteps(prev => finalizeRunSteps(prev, "expired"));
-          setRunMetrics(prev => finalizeRunMetrics(runId, prev || {}, "expired"));
-
-          setSending(false);
-          setActiveRunId(null);
-          return;
+          pollDelayMs = 30_000;
         }
 
         try {
@@ -393,42 +474,50 @@ export function useChatRuns({
 
           if (res && res.success && res.run) {
             const run = res.run;
+            if (run.status && !isTerminalRunStatus(run.status)) {
+              statusUnknownPublished = false;
+              setRunMetrics(prev => prev?.runId === runId ? { ...prev, status: run.status } : prev);
+            }
             if (run.partialOutput) {
               setMessages(prev => {
                 if (prev.length === 0) return prev;
-                const last = prev[prev.length - 1];
-                if (last && last.role === "assistant" && last.conversation_id === currentConvId) {
-                  return [
-                    ...prev.slice(0, -1),
-                    { ...last, content: run.partialOutput, conversation_id: currentConvId }
-                  ];
-                }
-                return prev;
+                const execution = runExecutionRef.current;
+                const explicitIndex = execution ? findRunAssistantMessageIndex(prev, execution) : -1;
+                const targetIndex = explicitIndex >= 0 ? explicitIndex : prev.length - 1;
+                const target = prev[targetIndex];
+                if (!target || target.role !== "assistant" || target.conversation_id !== currentConvId) return prev;
+                const content = chooseMostCompleteStreamingContent(target.content || "", run.partialOutput);
+                if (content === target.content) return prev;
+                const updated = [...prev];
+                updated[targetIndex] = { ...target, content, conversation_id: currentConvId };
+                return updated;
               });
             }
 
             if (isTerminalRunStatus(run.status)) {
               if (activePollingIntervalRef.current) {
               pollingGenerationRef.current += 1;
-              setToolSteps(prev => finalizeRunSteps(prev, run.status));
-              setRunMetrics(prev => finalizeRunMetrics(runId, { ...prev, ...run }, run.status));
+              finalizeActiveRunUi(runId, run.status);
               if (run.status === "completed" && notificationUserId) markChatRunCompleted(notificationUserId, runId);
                 clearTimeout(activePollingIntervalRef.current);
                 activePollingIntervalRef.current = null;
               }
               setSending(false);
-              setActiveRunId(null);
               void refreshRunMetrics(currentSelectedId, runId, run);
               refreshAuthoritativeHistory(currentSelectedId, currentConvId);
               return;
             }
           }
+          if (pollAttempts > maxPollAttempts && !(res?.success && typeof res?.run?.status === "string" && res.run.status)) {
+            publishStatusUnknown();
+          }
         } catch (e) {
           console.error("[Polling Fallback Error]", e);
+          if (pollAttempts > maxPollAttempts) publishStatusUnknown();
         }
 
         // Exponential backoff up to 10s max
-        pollDelayMs = Math.min(10000, Math.round(pollDelayMs * 1.5));
+        pollDelayMs = pollAttempts > maxPollAttempts ? 30_000 : Math.min(10000, Math.round(pollDelayMs * 1.5));
         scheduleNextPoll();
       }, pollDelayMs);
     };
@@ -441,7 +530,7 @@ export function useChatRuns({
         activePollingIntervalRef.current = null;
       }
     });
-  }, [refreshAuthoritativeHistory, refreshRunMetrics, selectedConversationIdRef, selectedIdRef, setMessages, setSending, notificationUserId]);
+  }, [finalizeActiveRunUi, refreshAuthoritativeHistory, refreshRunMetrics, selectedConversationIdRef, selectedIdRef, setMessages, setSending, setStopPending, notificationUserId]);
 
   const streamActiveRun = useCallback(async (runId: string, boundInstanceId = selectedIdRef.current, boundConversationId = selectedConversationIdRef.current) => {
     const streamGeneration = pollingGenerationRef.current;
@@ -507,6 +596,7 @@ export function useChatRuns({
         let buffer = "";
         let currentEvent = "";
         let currentData = "";
+        let currentEventId = 0;
 
         resetAttemptTimeoutId = setTimeout(() => {
           attempt = 0;
@@ -532,12 +622,13 @@ export function useChatRuns({
               } else if (dispEvent === "status") {
                 try {
                   const parsed = JSON.parse(currentData);
-                  if (["completed", "failed", "cancelled", "expired"].includes(parsed.status)) {
+                  if (["completed", "failed", "cancelled", "stopped", "expired"].includes(parsed.status)) {
                     isTerminal = true;
                   }
                 } catch {}
               }
-              handleParsedSSEEvent(dispEvent, currentData, boundInstanceId, boundConversationId, runId);
+              handleParsedSSEEvent(currentEventId, dispEvent, currentData, boundInstanceId, boundConversationId, runId);
+              currentEventId = 0;
             }
             currentEvent = "";
             currentData = "";
@@ -547,7 +638,7 @@ export function useChatRuns({
           if (line.startsWith("id:")) {
             const idVal = parseInt(line.slice(3).trim(), 10);
             if (!isNaN(idVal)) {
-              lastEventIdRef.current = idVal;
+              currentEventId = observeRunSseEventId({ currentEventId, lastCommittedEventId: lastEventIdRef.current }, idVal).currentEventId;
             }
           } else if (line.startsWith("event:")) {
             currentEvent = line.slice(6).trim();
@@ -643,21 +734,41 @@ export function useChatRuns({
     }
   }, [handleParsedSSEEvent, selectedConversationIdRef, selectedIdRef, startFallbackPolling]);
 
-  const handleStopRun = useCallback(async () => {
-    if (!activeRunId || !runCapabilities.runStop) return;
+  const handleStopRun = useCallback(async (targetRunId = activeRunId, targetInstanceId = selectedId) => {
+    if (!targetRunId || !targetInstanceId || !runCapabilities.runStop) return { ok: false as const, error: "RUN_STOP_UNAVAILABLE" };
+    if (stopPendingRef.current) return { ok: false as const, error: "RUN_STOP_ALREADY_PENDING" };
+    setStopPending(true);
     try {
-      const res = await api.post(`/api/instances/${selectedId}/runs/${activeRunId}/stop`);
+      const res = await api.post(`/api/instances/${targetInstanceId}/runs/${targetRunId}/stop`);
       if (res && res.success) {
         showToast(t("dashboard:chatWorkspace.stopRequestSent"), "success");
+        const status = String(res.status || res.runStatus || res.run_status || "stopping").toLowerCase();
+        if (currentRunIdRef.current === targetRunId) {
+          setRunMetrics(prev => prev?.runId === targetRunId ? { ...prev, status } : prev);
+          const currentExecution = runExecutionRef.current;
+          if (currentExecution?.runId === targetRunId && status === "stopping") {
+            const stoppingExecution = { ...currentExecution, status: "stopping" as const };
+            runExecutionRef.current = stoppingExecution;
+            setRunExecutionState(stoppingExecution);
+          }
+        }
+        return { ok: true as const, status };
       }
+      return { ok: false as const, error: String(res?.error || "RUN_STOP_FAILED") };
     } catch (e: any) {
       showToast(getChatErrorMessage(e, t("dashboard:chatWorkspace.stopRequestFailed")), "error");
+      return { ok: false as const, error: String(e?.message || "RUN_STOP_FAILED") };
+    } finally {
+      setStopPending(false);
     }
-  }, [activeRunId, runCapabilities.runStop, selectedId, showToast, t]);
+  }, [activeRunId, runCapabilities.runStop, selectedId, setStopPending, showToast, t]);
 
 
   const respondToApproval = useCallback(async (choice: ChatApprovalChoice, approvalId?: string, resolveAll = false) => {
     if (!activeRunId || !runCapabilities.runApprovalResponse) return;
+    const submissionKey = activeRunId + ":" + (approvalId || (resolveAll ? "all" : "current"));
+    if (approvalResponsePendingRef.current.has(submissionKey)) return;
+    approvalResponsePendingRef.current.add(submissionKey);
     try {
       const res = await api.post(`/api/instances/${selectedId}/runs/${activeRunId}/approval`, {
         choice,
@@ -672,19 +783,25 @@ export function useChatRuns({
       }
     } catch (e: any) {
       showToast(getChatErrorMessage(e, t("dashboard:chatWorkspace.approvalSubmitFailed")), "error");
+    } finally {
+      approvalResponsePendingRef.current.delete(submissionKey);
     }
   }, [activeRunId, runCapabilities.runApprovalResponse, selectedId, showToast, t]);
   return {
     runsCapabilityState,
     runsSupported,
     activeRunId,
+    stopPending,
     runCapabilities,
     approvalRequests,
     runMetrics,
     toolSteps,
+    runExecutionState,
     setRunMetrics,
     setActiveRunId,
     setToolSteps,
+    initializeRunExecution,
+    finalizeActiveRunUi,
     streamActiveRun,
     handleStopRun,
     respondToApproval,

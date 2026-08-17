@@ -15,8 +15,11 @@ try {
     New-Item -ItemType Directory -Path $testRoot | Out-Null
     Copy-Item -LiteralPath (Join-Path $projectRoot ".env.example") -Destination $testEnv
 
+    $sentinelEncryptionKey = "ab" * 32
+    Set-QuickStartEnvValue $testEnv "ENCRYPTION_KEY" $sentinelEncryptionKey
     Set-QuickStartDeploymentEnv $testEnv "server" "" "3000" "console.old.example" "agents.old.example" "ops@example.com"
     Set-QuickStartDeploymentEnv $testEnv "desktop" "localhost" "3000"
+    Assert-EnvValue $testEnv "ENCRYPTION_KEY" $sentinelEncryptionKey
     Assert-EnvValue $testEnv "DEPLOYMENT_MODE" "desktop"
     Assert-EnvValue $testEnv "PROXY_MODE" "local"
     Assert-EnvValue $testEnv "TRUST_PROXY" "false"
@@ -49,6 +52,18 @@ try {
     Assert-EnvValue $testEnv "MYBAY_INSTANCE_ROOT_DOMAIN" "agents.new.example"
     Assert-EnvValue $testEnv "PUBLIC_APP_URL" "https://console.new.example"
     Assert-EnvValue $testEnv "INSTANCE_PUBLIC_PROTOCOL" "https"
+
+    $existingDatabase = Join-Path $testRoot "mybay.sqlite"
+    [IO.File]::WriteAllText($existingDatabase, "existing-data")
+    $guardRejectedReplacement = $false
+    try {
+        Assert-QuickStartEncryptionKeyGenerationSafe $existingDatabase
+    } catch {
+        $guardRejectedReplacement = $true
+    }
+    if (-not $guardRejectedReplacement) {
+        throw "Existing local data must prevent automatic ENCRYPTION_KEY replacement."
+    }
 
     $launcherSource = [IO.File]::ReadAllText((Join-Path $projectRoot "quick-start.ps1"))
     if ($launcherSource -notmatch '"--remove-orphans"') {

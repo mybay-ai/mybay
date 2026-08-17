@@ -35,3 +35,4 @@ tmp/
 *.sqlite-wal
 *.sqlite-shm
 *.migration-complete
+backups/

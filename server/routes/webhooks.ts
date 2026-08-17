@@ -3,6 +3,7 @@ import { dbAdapter } from "../db";
 import { decrypt } from "../crypto";
 import { tasksRepo } from "../repositories/tasksRepo";
 import { executeTaskInBackground } from "../workers/taskRunner";
+import { isLegacyOpenWebhookOptInEnabled, isWebhookSecretValid, resolveWebhookAuthMode } from "../services/webhookAuthPolicy";
 
 const router = Router();
 
@@ -106,8 +107,13 @@ router.post("/incoming/:instance_id/:template_slug?", async (req: Request, res: 
 
     const requiresWebhook = targetTemplate?.readiness === "requires_webhook";
     
-    // Check webhookAuthMode. If webhookSecret exists but authMode is missing, implicit upgrade.
-    const authMode = config.webhookAuthMode || (config.webhookSecret ? "secret-required" : "legacy-open");
+    // Missing auth configuration is secure by default. Historical legacy-open instances
+    // require both their persisted compatibility mode and an explicit process-level opt-in.
+    const authMode = resolveWebhookAuthMode({
+      configuredMode: config.webhookAuthMode,
+      hasSecret: Boolean(decryptedSecret),
+      legacyOptIn: isLegacyOpenWebhookOptInEnabled(),
+    });
 
     if (requiresWebhook && !decryptedSecret) {
       return res.status(401).json({ error: "Unauthorized: Webhook secret is required but not configured on this instance." });
@@ -118,23 +124,12 @@ router.post("/incoming/:instance_id/:template_slug?", async (req: Request, res: 
     }
 
     if (!decryptedSecret && authMode === "legacy-open") {
-      console.warn(`[Webhook Receiver] WARNING: Instance ${instance_id} is using legacy-open webhook auth mode. This is insecure and will be deprecated. Please configure a webhookSecret.`);
+      console.warn(`[Webhook Receiver] SECURITY WARNING: Instance ${instance_id} accepted an unauthenticated webhook through explicit legacy compatibility. Configure a webhookSecret and disable MYBAY_ALLOW_LEGACY_OPEN_WEBHOOKS.`);
     }
 
     if (decryptedSecret) {
       const receivedSecret = req.headers["x-webhook-secret"];
-      if (!receivedSecret || typeof receivedSecret !== "string") {
-        return res.status(401).json({ error: "Unauthorized: Webhook Secret is missing or invalid in headers (X-Webhook-Secret is required)." });
-      }
-
-      // Timing-safe equal implementation
-      const crypto = await import("crypto");
-      const a = Buffer.from(receivedSecret);
-      const b = Buffer.from(decryptedSecret);
-      if (a.length !== b.length) {
-        return res.status(401).json({ error: "Unauthorized: Webhook Secret verification failed." });
-      }
-      if (!crypto.timingSafeEqual(a, b)) {
+      if (!isWebhookSecretValid(receivedSecret, decryptedSecret)) {
         return res.status(401).json({ error: "Unauthorized: Webhook Secret verification failed." });
       }
     }

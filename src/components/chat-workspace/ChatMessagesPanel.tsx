@@ -1,14 +1,18 @@
 import { useTranslation } from "react-i18next";
 import { AlertCircle, LoaderCircle } from "lucide-react";
 import type { RefObject } from "react";
+import { findRetrySourceMessage } from "./run/retrySelectors";
 import type { AgentInstance, User as UserType } from "../../types";
 import type { ChatMessage } from "../../lib/chatWorkspaceState";
 import { ChatMessageBubble } from "./ChatMessageBubble";
 import { ChatNoInstancesEmptyState, ChatMessagesLoadingState, ChatWelcomeEmptyState } from "./ChatEmptyStates";
 import { ChatReadinessBanner } from "./ChatReadinessBanner";
-import { ChatToolProgress, type ChatToolStep } from "./ChatToolProgress";
-import type { ChatRunMetrics } from "./useChatRuns";
+import type { ChatToolStep } from "./ChatToolProgress";
+import type { ChatApprovalChoice, ChatApprovalRequest, ChatRunMetrics } from "./useChatRuns";
 import type { PendingAttachment } from "./ChatInputBar";
+import type { RunExecutionState } from "./run/runTypes";
+import { findRunAssistantMessageIndex, shouldShowLegacyRunLoading } from "./run/runSelectors";
+import { selectInlineApproval } from "./run/approvalSelectors";
 
 type ReadinessState = {
   ready: boolean;
@@ -34,7 +38,11 @@ type ChatMessagesPanelProps = {
   sending: boolean;
   activeRunId: string | null;
   toolSteps: ChatToolStep[];
+  runExecutionState?: RunExecutionState | null;
   runMetrics?: ChatRunMetrics | null;
+  approvalRequests?: ChatApprovalRequest[];
+  canRespondToApproval?: boolean;
+  onRespondToApproval?: (choice: ChatApprovalChoice, approvalId?: string, resolveAll?: boolean) => void | Promise<void>;
   error: string | null;
   onGoToInstanceManage: () => void;
   onUsePrompt: (prompt: string) => void;
@@ -66,7 +74,11 @@ export function ChatMessagesPanel({
   sending,
   activeRunId,
   toolSteps,
+  runExecutionState,
   runMetrics,
+  approvalRequests = [],
+  canRespondToApproval = false,
+  onRespondToApproval,
   error,
   onGoToInstanceManage,
   onUsePrompt,
@@ -92,6 +104,10 @@ export function ChatMessagesPanel({
         ? t("dashboard:chatWorkspace.agentRunning", { name: agentDisplayName })
         : t("dashboard:chatWorkspace.agentThinking", { name: agentDisplayName });
   const shouldShowBlockingHistoryLoader = loadingMessages && messages.length === 0;
+  const runAssistantIndex = runExecutionState ? findRunAssistantMessageIndex(messages, runExecutionState) : -1;
+  const inlineApproval = runExecutionState ? selectInlineApproval(approvalRequests) : null;
+  const runAssistantHasContent = runAssistantIndex >= 0 && Boolean(messages[runAssistantIndex]?.content.trim());
+  const shouldShowLegacyLoading = shouldShowLegacyRunLoading(sending, runExecutionState) && !runAssistantHasContent;
 
   return (
     <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.06),_transparent_34%),linear-gradient(180deg,_rgba(248,250,252,0.92),_#ffffff_42%)] text-content p-3 sm:p-5 space-y-4 sm:space-y-5 dark:bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.12),_transparent_34%),linear-gradient(180deg,_rgba(15,23,42,0.98),_#020617_55%)]">
@@ -123,11 +139,12 @@ export function ChatMessagesPanel({
             </div>
           )}
 
-          {messages.map((msg) => (
+          {messages.map((msg, messageIndex) => (
             <ChatMessageBubble
               key={msg.id || `${selectedConversationId}-${msg.sequence_no}`}
               message={msg}
               currentUser={currentUser}
+              retrySourceMessage={msg.role === "assistant" ? findRetrySourceMessage(messages, messageIndex) : undefined}
               selectedConversationId={selectedConversationId}
               sending={sending}
               onRetry={onRetry}
@@ -139,12 +156,15 @@ export function ChatMessagesPanel({
               fallbackModelLabel={fallbackModelLabel}
               instanceId={selectedId}
               onMessageFeedbackChange={onMessageFeedbackChange}
+              runExecutionState={msg.role === "assistant" && messageIndex === runAssistantIndex ? runExecutionState : null}
+              runMetrics={runMetrics}
+              approvalRequest={msg.role === "assistant" && messageIndex === runAssistantIndex ? inlineApproval : null}
+              canRespondToApproval={canRespondToApproval}
+              onRespondToApproval={onRespondToApproval}
             />
           ))}
 
-          {toolSteps.length > 0 && (sending || ["completed", "failed", "cancelled", "stopped", "expired"].includes(runMetrics?.status || "")) && <ChatToolProgress toolSteps={toolSteps} agentName={agentDisplayName} runMetrics={runMetrics} />}
-
-          {sending && (
+          {shouldShowLegacyLoading && (
             <div className="flex gap-3.5 justify-start animate-pulse">
               <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center shrink-0 dark:bg-indigo-500/15 dark:text-indigo-300 dark:border-indigo-400/30">
                 <LoaderCircle className="w-4 h-4 animate-spin" />

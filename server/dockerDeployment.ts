@@ -33,6 +33,10 @@ import tar from "tar-fs";
 import { skillPolicyRegistry } from "../shared/skillPolicyRegistry";
 import { assertRuntimeSatisfiesSkillPolicy, createRuntimeSecurityManifest } from "./services/skillPolicyEnforcer";
 import { resolveHermesProvider, VALID_HERMES_PROVIDERS } from "./providerEnv";
+import { getDockerProfile, getResourceLimits } from "./services/docker/dockerResourcePolicy";
+
+export { getDockerProfile, getResourceLimits } from "./services/docker/dockerResourcePolicy";
+export type { DockerProfile } from "./services/docker/dockerResourcePolicy";
 
 // Global map to track in-progress builds to prevent concurrent redundant builds
 const pendingBuilds = new Map<string, Promise<string>>();
@@ -75,107 +79,6 @@ export function getHostPath(containerPath: string): Promise<string> {
       }
     });
   });
-}
-
-function parseBytes(memStr: string | undefined): number {
-  if (!memStr || memStr === '0') return 0;
-  memStr = memStr.toLowerCase().trim();
-  const val = parseFloat(memStr);
-  if (isNaN(val)) return 0;
-  if (memStr.endsWith('g') || memStr.endsWith('gb')) return val * 1024 * 1024 * 1024;
-  if (memStr.endsWith('m') || memStr.endsWith('mb')) return val * 1024 * 1024;
-  if (memStr.endsWith('k') || memStr.endsWith('kb')) return val * 1024;
-  return val;
-}
-
-export function getResourceLimits(config?: any) {
-  const limits: any = {};
-  
-  // Use instance-specific Memory limit if defined in config, otherwise fallback to system default env variable or safe default "512MB"
-  let memLimitStr = (config?.limitsMem !== undefined && config?.limitsMem !== null && config?.limitsMem !== "") ? config.limitsMem : process.env.DEFAULT_INSTANCE_MEMORY || process.env.INSTANCE_MEMORY_LIMIT;
-  if (!memLimitStr || memLimitStr === "") {
-    memLimitStr = "1024MB";
-  }
-  let memLimit = parseBytes(memLimitStr);
-  
-  // Security normalization: Memory must be >= 512MB
-  const minMemory = 512 * 1024 * 1024;
-  if (memLimit <= 0 || memLimit < minMemory) {
-    memLimit = minMemory;
-  }
-  
-  limits.Memory = memLimit;
-  // Set MemorySwap to Memory * 2 to provide breathing room and prevent OOM during peak
-  limits.MemorySwap = memLimit * 2;
-  
-  // Use instance-specific CPU limit if defined in config, otherwise fallback to system default env variable or safe default "0.5"
-  let cpuLimitStr = (config?.limitsCpu !== undefined && config?.limitsCpu !== null && config?.limitsCpu !== "") ? config.limitsCpu : process.env.DEFAULT_INSTANCE_CPUS || process.env.INSTANCE_CPU_LIMIT;
-  if (!cpuLimitStr || cpuLimitStr === "") {
-    cpuLimitStr = "1";
-  }
-  
-  let cpus = parseFloat(cpuLimitStr);
-  if (isNaN(cpus) || cpus <= 0) {
-    cpus = 1;
-  }
-  
-  limits.NanoCPUs = Math.floor(cpus * 1000000000);
-  limits.NanoCpus = Math.floor(cpus * 1000000000);
-  
-  limits.LogConfig = {
-    Type: "json-file",
-    Config: {
-      "max-size": "50m",
-      "max-file": "3"
-    }
-  };
-  
-  // Security normalization: PidsLimit >= 512 uniformly to prevent Cannot fork / s6-overlay issues
-  limits.PidsLimit = 512;
-  
-  // Security normalization: Ulimits nproc >= 512
-  limits.Ulimits = [
-    {
-      Name: "nproc",
-      Soft: 512,
-      Hard: 512
-    }
-  ];
-  
-  return limits;
-}
-
-export interface DockerProfile {
-  CapDrop: string[];
-  SecurityOpt: string[];
-  ReadonlyRootfs: boolean;
-  User: string;
-}
-
-export function getDockerProfile(runtimeType: "console-runtime" | "mybay-agent-runtime" | "sandbox-skill-runtime"): DockerProfile {
-  if (runtimeType === "console-runtime") {
-    return {
-      CapDrop: ["ALL"],
-      SecurityOpt: ["no-new-privileges"],
-      ReadonlyRootfs: false,
-      User: "root"
-    };
-  } else if (runtimeType === "sandbox-skill-runtime") {
-    return {
-      CapDrop: ["ALL"],
-      SecurityOpt: ["no-new-privileges"],
-      ReadonlyRootfs: true,
-      User: "sandbox"
-    };
-  } else {
-    // mybay-agent-runtime - must be compatible with s6-overlay
-    return {
-      CapDrop: [],
-      SecurityOpt: [],
-      ReadonlyRootfs: false,
-      User: "root"
-    };
-  }
 }
 
 export async function buildDockerHostConfig(

@@ -7,6 +7,8 @@ import type { ChatToolStep } from "./ChatToolProgress";
 import type { ChatApprovalChoice, ChatApprovalRequest, ChatRunMetrics } from "./useChatRuns";
 import { sanitizeChatDisplayContent } from "../../lib/chatProtocolSanitizer";
 import { WorkspaceDebugTab, WorkspaceFilesTab, WorkspacePreviewTab, WorkspaceResultTab, WorkspaceStepsTab } from "./workspace-panel-tabs";
+import { isTerminalRunStatus } from "./runUiLifecycle";
+import { resolveRunDurationMs } from "./run/runDuration";
 
 type WorkspaceTab = "result" | "steps" | "files" | "preview" | "debug";
 type TimelineFilter = "all" | "tool" | "search" | "file" | "model" | "failed";
@@ -44,8 +46,10 @@ const TOOL_STEP_EVENT_KEYS: Record<string, string> = {
   "agent task queued": "toolStepAgentTaskQueued",
   "deployment worker claimed the agent task": "toolStepDeploymentWorkerClaimed",
   "connecting to hermes agent runtime": "toolStepConnectingRuntime",
+  "connecting to hermesagent runtime": "toolStepConnectingRuntime",
   "connecting to agent runtime": "toolStepConnectingRuntime",
   "connected to hermes agent runtime": "toolStepConnectedRuntime",
+  "connected to hermesagent runtime": "toolStepConnectedRuntime",
   "connected to agent runtime": "toolStepConnectedRuntime",
   "agent is processing the request": "toolStepAgentProcessing",
   "task step completed": "toolStepCompleted",
@@ -108,12 +112,21 @@ export function ChatWorkspacePanel({ selectedId, selectedConversationId, selecte
   const [activeTab, setActiveTab] = useState<WorkspaceTab>("result");
   const [timelineFilter, setTimelineFilter] = useState<TimelineFilter>("all");
   const [copiedFileId, setCopiedFileId] = useState<string | null>(null);
+  const [durationNowMs, setDurationNowMs] = useState(() => Date.now());
 
   useEffect(() => {
     if (conversationFilePreview) {
       setActiveTab("preview");
     }
   }, [conversationFilePreview]);
+
+  const runIsActive = Boolean(activeRunId && !isTerminalRunStatus(runMetrics?.status));
+  useEffect(() => {
+    setDurationNowMs(Date.now());
+    if (!runIsActive) return;
+    const timerId = window.setInterval(() => setDurationNowMs(Date.now()), 1000);
+    return () => window.clearInterval(timerId);
+  }, [activeRunId, runIsActive]);
 
   const latestAssistantMessage = useMemo(() => {
     return [...messages].reverse().find((message) => message.role === "assistant" && message.content?.trim());
@@ -127,18 +140,16 @@ export function ChatWorkspacePanel({ selectedId, selectedConversationId, selecte
   const failedToolCount = toolSteps.filter((step) => step.status === "failed").length;
   const hasActiveRunWithoutSteps = Boolean(activeRunId && toolSteps.length === 0);
   const runningToolCount = toolSteps.filter((step) => step.status === "running").length;
-  const runStartedAt = useMemo(() => {
-    const values = toolSteps.map((step) => step.startedAt).filter((value): value is number => typeof value === "number");
-    return values.length > 0 ? Math.min(...values) : null;
-  }, [toolSteps]);
-  const runCompletedAt = useMemo(() => {
-    const values = toolSteps.map((step) => step.completedAt).filter((value): value is number => typeof value === "number");
-    return values.length > 0 ? Math.max(...values) : null;
-  }, [toolSteps]);
-  const inferredDurationMs = runStartedAt && runCompletedAt ? Math.max(0, runCompletedAt - runStartedAt) : null;
+  const resolvedDurationMs = resolveRunDurationMs({
+    metrics: runMetrics,
+    startCandidates: toolSteps.map(step => step.startedAt),
+    completedCandidates: toolSteps.map(step => step.completedAt),
+    active: runIsActive,
+    nowMs: durationNowMs
+  });
   const effectiveRunMetrics: ChatRunMetrics = {
     ...runMetrics,
-    durationMs: runMetrics?.durationMs ?? inferredDurationMs
+    durationMs: resolvedDurationMs
   };
   const totalToolCallCount = toolSteps.filter((step) => step.stepType !== "model_reasoning" && step.stepType !== "final").length;
   const latestAssistantUrls = useMemo(() => extractUrlsFromText(latestAssistantContent).slice(0, 3), [latestAssistantContent]);

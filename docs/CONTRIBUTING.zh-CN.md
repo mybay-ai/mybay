@@ -28,7 +28,7 @@
 ## 本地开发指南
 
 ### 前置要求
-- Node.js 22.13.0 或更高版本
+- Node.js 22.16.0 或更高版本
 - Docker Engine / Docker Desktop（本地运行中）
 
 ### 开发环境配置

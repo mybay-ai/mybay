@@ -1,5 +1,9 @@
 # 麦贝开源版（MyBay Open Source）
 
+[![CI](https://github.com/mybay-ai/mybay/actions/workflows/ci.yml/badge.svg)](https://github.com/mybay-ai/mybay/actions/workflows/ci.yml)
+[![Security](https://github.com/mybay-ai/mybay/actions/workflows/security.yml/badge.svg)](https://github.com/mybay-ai/mybay/actions/workflows/security.yml)
+[![License: AGPL-3.0-only](https://img.shields.io/badge/license-AGPL--3.0--only-blue.svg)](./LICENSE)
+
 语言：[English](./README.md) | [简体中文](./README.zh-CN.md)
 
 一个用于通过 Docker 部署和管理 AI Agent Runtime 的本地自托管控制平台。
@@ -117,7 +121,7 @@ chmod +x quick-start.sh
 ### 方式四：Node.js 本地开发与运行
 
 #### 前置要求
-- Node.js 22.13.0 或更高版本及 npm
+- Node.js 22.16.0 或更高版本及 npm
 - 已安装并启动 Docker Engine / Docker Desktop（用于管理 Agent 容器）
 
 1. **安装依赖：**
@@ -201,6 +205,40 @@ data/
 完整 Pi 后端部署链路计划在后续版本提供。
 
 ---
+## 架构
+
+```mermaid
+flowchart TD
+  B[浏览器] --> C[MyBay 控制面]
+  C --> S[(SQLite)]
+  C --> D[Docker Engine]
+  C --> T[Traefik - server 模式]
+  D --> R[Hermes Agent Runtime 容器]
+  R --> A[Runtime API 与 UI]
+  R --> M[模型提供商]
+```
+
+SQLite 使用 WAL、事务 migration 和明确的 schema version。控制面通过 Docker socket 管理容器；server 模式由 Traefik 统一承载控制台与 Agent Runtime 路由。详见[架构 Source of Truth](./docs/architecture.md)。
+
+## 备份与诊断
+
+```bash
+npm run doctor
+npm run doctor -- --json
+npm run backup -- --output /secure/path/mybay-backup
+npm run backup:verify -- --backup /secure/path/mybay-backup
+```
+
+Backup 会生成一致的 SQLite 快照，而不是直接复制正在使用 WAL 的数据库；存在时一并保存实例工作区与上传文件，生成带校验和的 manifest，并排除 `.env`、日志、缓存和容器镜像。备份应按敏感数据保护。详见[自托管运维](./docs/self-host-operations.md)。
+
+desktop、LAN、server 三种模式的 Webhook 默认都要求 secret。历史无鉴权 Webhook 必须同时满足实例已保存 `legacy-open` 且管理员显式设置不安全兼容项 `MYBAY_ALLOW_LEGACY_OPEN_WEBHOOKS=true`。
+
+## 发布与路线图
+
+版本 tag 会运行完整质量门、生成干净源码归档、SHA-256 校验和与 SBOM，发布 GHCR 多架构镜像；预发布 tag 不会更新稳定 `latest`。
+
+已完成事项和下一阶段重点见 [ROADMAP.md](./ROADMAP.md)。
+
 ## Agent 运行态接入规范 (`mybay.runtime.yaml`)
 
 MyBay 提供可扩展的 **Agent Runtime Specification（运行态接入规范）**，用于未来接入更多开源 Agent。当前支持的 Runtime 为 Hermes Agent；Pi 规范仅是实验参考：

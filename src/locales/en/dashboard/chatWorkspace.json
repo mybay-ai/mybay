@@ -515,5 +515,18 @@
   "deleteProjectFailed": "Failed to delete project.",
   "renameProjectFailed": "Failed to rename project.",
   "noProjectsForMove": "No projects yet. Create a project first to organize this chat.",
+  "timelineRunning": "Running",
+  "timelineCompleted": "Completed",
+  "timelineStopped": "Stopped",
+  "timelineFailed": "Failed",
+  "timelineApprovalPending": "Waiting for approval",
+  "timelineApprovalResolved": "Approval resolved",
+  "timelineRunCompleted": "Run completed",
+  "timelineRunStopped": "Run stopped",
+  "timelineRunFailed": "Run failed",
+  "timelineStopping": "Stopping",
+  "timelineRunPreparing": "Preparing",
+  "timelineRunRunning": "Running",
+  "timelineSteps": "steps",
   "messageTooLong": "A single message can contain up to {{max}} characters. Split it or upload it as a file."
 }

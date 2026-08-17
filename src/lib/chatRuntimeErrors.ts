@@ -10,6 +10,7 @@ type ErrorInput = {
   message?: unknown;
   status?: unknown;
   data?: {
+    code?: unknown;
     error?: unknown;
     errorCode?: unknown;
     error_code?: unknown;
@@ -93,8 +94,12 @@ function inferMessage(code: string, rawMessage: string, status: number): string 
 export function humanizeChatError(input: ErrorInput | unknown, fallback = "请求失败，请稍后重试。"): HumanizedChatError {
   const source = (input && typeof input === "object" ? input : {}) as ErrorInput;
   const data = source.data || {};
-  const code = normalizeCode(data.error || data.errorCode || data.error_code || source.code);
-  const rawMessage = String(data.message || source.message || "").trim();
+  const errorText = typeof data.error === "string" ? data.error.trim() : "";
+  const legacyErrorCode = /^[A-Z][A-Z0-9_]+$/.test(errorText) ? errorText : "";
+  const code = normalizeCode(data.code || data.errorCode || data.error_code || source.code || legacyErrorCode);
+  const rawMessage = String(
+    data.message || (!legacyErrorCode ? errorText : "") || source.message || "",
+  ).trim();
   const status = Number(source.status || 0);
   const mapped = code ? ERROR_MESSAGES[code] : undefined;
   const inferred = inferMessage(code, rawMessage, status);

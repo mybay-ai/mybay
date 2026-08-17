@@ -74,12 +74,18 @@ jobs:
 
       - name: Check Release Version Consistency
         run: npm run check:version
+      - name: Lint
+        run: npm run lint
+
 
       - name: Typecheck
         run: npm run typecheck
 
       - name: Strict Typecheck Lifecycle Core
         run: npm run typecheck:strict-core
+      - name: Strict Typecheck Migration Boundary
+        run: npm run typecheck:strict-boundary
+
 
       - name: Run Unit Tests
         run: npm test

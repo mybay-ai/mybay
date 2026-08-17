@@ -253,7 +253,8 @@ router.post("/:id/conversations/:conversationId/files", authenticateToken, async
           filename: file.filename,
           mime_type: file.mimetype,
           size: file.size,
-          storage_path: file.path
+          storage_path: file.path,
+          deleted_at: null
         };
 
         const data = await filesRepo.create(insertData as any);

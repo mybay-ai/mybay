@@ -17,6 +17,10 @@ type WorkspaceDebugTabProps = {
 const formatMetricValue = (value?: string | number | null) => (
   value === undefined || value === null || value === "" ? "-" : String(value)
 );
+const formatDurationMetric = (value?: number | null) => (
+  typeof value === "number" && Number.isFinite(value) ? `${Math.max(0, Math.round(value))} ms` : "-"
+);
+
 
 const safePreview = (value?: string) => {
   if (!value) return "";
@@ -38,10 +42,14 @@ export function WorkspaceDebugTab({
   const formatRunStatus = (value?: string | null) => {
     const normalized = String(value || "").toLowerCase();
     if (!normalized) return "-";
-    if (normalized === "completed") return t("dashboard:chatWorkspace.toolCompleted");
-    if (normalized === "running" || normalized === "queued" || normalized === "dispatching") return t("dashboard:chatWorkspace.toolRunning");
-    if (normalized === "failed" || normalized === "cancelled" || normalized === "expired") return t("dashboard:chatWorkspace.toolFailed");
-    return value || "-";
+    if (normalized === "completed") return t("dashboard:chatWorkspace.timelineRunCompleted");
+    if (normalized === "running" || normalized === "dispatching") return t("dashboard:chatWorkspace.timelineRunRunning");
+    if (normalized === "queued") return t("dashboard:chatWorkspace.timelineRunPreparing");
+    if (normalized === "stopping") return t("dashboard:chatWorkspace.timelineStopping");
+    if (normalized === "waiting_for_approval") return t("dashboard:chatWorkspace.timelineApprovalPending");
+    if (normalized === "stopped" || normalized === "cancelled") return t("dashboard:chatWorkspace.timelineRunStopped");
+    if (normalized === "failed" || normalized === "expired") return t("dashboard:chatWorkspace.timelineRunFailed");
+    return t("dashboard:chatWorkspace.metricUnavailable");
   };
 
   return (
@@ -71,7 +79,7 @@ export function WorkspaceDebugTab({
           </div>
           <div className="rounded-lg bg-surface-muted px-2.5 py-2">
             <span className="text-slate-400">{t("dashboard:chatWorkspace.debugDuration")}</span>
-            <p className="mt-1 font-mono text-content-secondary">{formatMetricValue(runMetrics.durationMs)} ms</p>
+            <p className="mt-1 font-mono text-content-secondary">{formatDurationMetric(runMetrics.durationMs)}</p>
           </div>
           <div className="rounded-lg bg-surface-muted px-2.5 py-2">
             <span className="text-slate-400">{t("dashboard:chatWorkspace.debugTokens")}</span>
