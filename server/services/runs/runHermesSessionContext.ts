@@ -14,6 +14,10 @@ export interface HermesSessionBindingResult {
   state: "existing" | "created" | "fallback";
 }
 
+function isTransientSessionCreateFailure(statusCode: number): boolean {
+  return statusCode === 0 || [408, 429, 500, 502, 503, 504].includes(statusCode);
+}
+
 export interface BuildRunPayloadOptions {
   userContent: string;
   currentUserMessageId?: string | null;
@@ -51,7 +55,7 @@ export interface RunHermesSessionContextController {
     instanceId: string,
     conversationId: string,
     title?: string | null,
-    options?: { bindImmediately?: boolean }
+    options?: { bindImmediately?: boolean; allowTransientFallback?: boolean }
   ): Promise<HermesSessionBindingResult>;
   ensureForConversation(run: RunSessionTarget): Promise<HermesSessionBindingResult>;
   buildPayload(options: BuildRunPayloadOptions): Record<string, unknown>;
@@ -64,9 +68,8 @@ export function createRunHermesSessionContextController(
     instanceId: string,
     conversationId: string,
     title?: string | null,
-    options: { bindImmediately?: boolean } = {}
+    options: { bindImmediately?: boolean; allowTransientFallback?: boolean } = {}
   ): Promise<HermesSessionBindingResult> {
-    void options;
     const createResult = await dependencies.requestRuns({
       instanceId,
       method: "POST",
@@ -88,6 +91,7 @@ export function createRunHermesSessionContextController(
     if (
       missingSessionIdFromSuccessfulCreate
       || shouldFallbackSessionCreate(createResult.statusCode, createResult.error)
+      || (options.allowTransientFallback === true && isTransientSessionCreateFailure(createResult.statusCode))
     ) {
       const fallbackSessionId = buildFallbackHermesSessionId(conversationId);
       dependencies.logFallback(conversationId, instanceId, createResult.statusCode);
@@ -114,7 +118,9 @@ export function createRunHermesSessionContextController(
       };
     }
 
-    return createBinding(run.instance_id, run.conversation_id, conversation.title);
+    return createBinding(run.instance_id, run.conversation_id, conversation.title, {
+      allowTransientFallback: true,
+    });
   }
 
   function buildPayload(options: BuildRunPayloadOptions): Record<string, unknown> {

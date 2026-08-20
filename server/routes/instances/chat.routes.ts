@@ -16,6 +16,9 @@ import { registerRunEventRoutes } from "./chat/runEvents.routes";
 import { registerQuickRoutes } from "./chat/quick.routes";
 import { registerAssistRoutes } from "./chat/assist.routes";
 import { registerFeedbackRoutes } from "./chat/feedback.routes";
+import {
+  resolveLocalChatLifecycleReadiness,
+} from "../../../shared/chatReadinessContract";
 export { runsLimiter, runsLimiterStore, cleanupRunsLimiterStore } from "./chat/limiters";
 
 const chatLimiter = rateLimit({
@@ -64,9 +67,21 @@ export function createChatRoutes(deps: RouterDependencies) {
         return res.status(403).json({ success: false, error: "FORBIDDEN", message: "您没有访问该实例的权限。" });
       }
 
-      const allowedStatuses = ["running", "gateway_ready", "partial_running", "dashboard_ready"];
-      const currentStatus = String(instance.status || "").toLowerCase();
-      if (!allowedStatuses.includes(currentStatus)) {
+      let config: any = {};
+      if (instance.config_json) {
+        try {
+          config = typeof instance.config_json === "string"
+            ? JSON.parse(instance.config_json)
+            : instance.config_json;
+        } catch (e) {
+          config = {};
+        }
+      }
+      const lifecycleReadiness = resolveLocalChatLifecycleReadiness({
+        status: instance.status,
+        dashboardEnabled: config.enableDashboard,
+      });
+      if (lifecycleReadiness) {
         return res.status(409).json({
           success: false,
           error: "INSTANCE_NOT_READY",
@@ -95,14 +110,6 @@ export function createChatRoutes(deps: RouterDependencies) {
       promptLength = bodyStr.length;
       messagesCount = messages.length;
 
-      let config: any = {};
-      if (instance.config_json) {
-        try {
-          config = JSON.parse(instance.config_json);
-        } catch (e) {
-          config = {};
-        }
-      }
 
       let enabledChannels: string[] = [];
       if (config.channel) {
@@ -226,23 +233,27 @@ export function createChatRoutes(deps: RouterDependencies) {
         return res.status(403).json({ success: false, error: "FORBIDDEN", message: "您没有访问该实例的权限。" });
       }
 
-      const allowedStatuses = ["running", "gateway_ready", "partial_running", "dashboard_ready"];
+      let config: any = {};
+      if (instance.config_json) {
+        try {
+          config = typeof instance.config_json === "string"
+            ? JSON.parse(instance.config_json)
+            : instance.config_json;
+        } catch (e) {}
+      }
+      const lifecycleReadiness = resolveLocalChatLifecycleReadiness({
+        status: instance.status,
+        dashboardEnabled: config.enableDashboard,
+      });
       const currentStatus = String(instance.status || "").toLowerCase();
-      if (!allowedStatuses.includes(currentStatus)) {
+      if (lifecycleReadiness) {
         return res.json({
           success: true,
-          ready: false,
-          error: "INSTANCE_NOT_RUNNING",
+          ...lifecycleReadiness,
           message: `实例目前处于 [${instance.status || "未知"}] 状态，尚未启动。`
         });
       }
 
-      let config: any = {};
-      if (instance.config_json) {
-        try {
-          config = JSON.parse(instance.config_json);
-        } catch (e) {}
-      }
 
       let enabledChannels: string[] = [];
       if (config.channel) {
@@ -263,6 +274,11 @@ export function createChatRoutes(deps: RouterDependencies) {
         return res.json({
           success: true,
           ready: false,
+          runtimeReady: false,
+          sendable: false,
+          wakeable: false,
+          runtimeState: currentStatus || "unknown",
+          reason: "CHAT_API_NOT_ENABLED",
           error: "CHAT_API_NOT_ENABLED",
           message: "该实例未启用内部对话 API 渠道。"
         });
@@ -273,6 +289,11 @@ export function createChatRoutes(deps: RouterDependencies) {
         return res.json({
           success: true,
           ready: false,
+          runtimeReady: false,
+          sendable: false,
+          wakeable: false,
+          runtimeState: currentStatus || "unknown",
+          reason: keyResolution.error || "HERMES_INTERNAL_API_KEY_MISSING",
           error: keyResolution.error || "HERMES_INTERNAL_API_KEY_MISSING",
           message: keyResolution.error === "HERMES_INTERNAL_API_KEY_DECRYPT_FAILED" ? "Hermes internal API key decrypt failed." : "Instance is missing Hermes internal API key."
         });
@@ -324,6 +345,11 @@ export function createChatRoutes(deps: RouterDependencies) {
       return res.json({
         success: true,
         ready,
+        runtimeReady: ready,
+        sendable: ready,
+        wakeable: false,
+        runtimeState: ready ? "running" : (currentStatus || "unknown"),
+        reason: error,
         error,
         message
       });
