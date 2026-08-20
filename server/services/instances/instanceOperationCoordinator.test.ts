@@ -33,6 +33,16 @@ describe("InstanceOperationCoordinator", () => {
     expect(coordinator.getActive("instance-1")).toBeNull();
   });
 
+  it("only lets a background worker release the operation types it owns", () => {
+    const coordinator = new InstanceOperationCoordinator(() => 1_000, () => "lease-one");
+    expect(coordinator.tryAcquire("instance-1", "delete").acquired).toBe(true);
+
+    expect(coordinator.releaseActive("instance-1", ["upgrade", "rollback"])).toBe(false);
+    expect(coordinator.getActive("instance-1")?.operation).toBe("delete");
+    expect(coordinator.releaseActive("instance-1", ["delete", "archive"])).toBe(true);
+    expect(coordinator.getActive("instance-1")).toBeNull();
+  });
+
   it("expires abandoned operations so a local restart cannot block forever", () => {
     let now = 1_000;
     let token = 0;

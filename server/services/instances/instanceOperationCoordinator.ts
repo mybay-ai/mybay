@@ -72,6 +72,14 @@ export class InstanceOperationCoordinator {
     return true;
   }
 
+  releaseActive(instanceId: string, allowedOperations: readonly InstanceOperation[]): boolean {
+    const normalizedId = String(instanceId || "").trim();
+    const existing = this.getActive(normalizedId);
+    if (!existing || !allowedOperations.includes(existing.operation)) return false;
+    this.active.delete(normalizedId);
+    return true;
+  }
+
   clearForTests(): void {
     this.active.clear();
   }

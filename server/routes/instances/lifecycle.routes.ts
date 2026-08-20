@@ -21,6 +21,10 @@ import { startPeriodicAgentDbSync } from "../../sqliteAgentSync";
 import rateLimit from "express-rate-limit";
 import { getClientIp } from "../../utils/ip";
 import { sanitizeErrorMessage } from "../../utils/sanitizer";
+import {
+  INSTANCE_OPERATION_IN_PROGRESS,
+  instanceOperationCoordinator,
+} from "../../services/instances/instanceOperationCoordinator";
 
 const deleteLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
@@ -53,6 +57,22 @@ export function createLifecycleRoutes(deps: RouterDependencies) {
         return res.status(403).json({ error: "Forbidden: Access denied" });
       }
 
+      const operation = isArchive ? "archive" : "delete";
+      const acquisition = instanceOperationCoordinator.tryAcquire(instance.id, operation);
+      if (acquisition.acquired === false) {
+        return res.status(409).json({
+          error: INSTANCE_OPERATION_IN_PROGRESS,
+          code: INSTANCE_OPERATION_IN_PROGRESS,
+          message: `实例正在执行 ${acquisition.active.operation}，请等待当前操作完成后重试。`,
+          activeOperation: acquisition.active.operation,
+          startedAt: acquisition.active.startedAt,
+        });
+      }
+      const operationLease = acquisition.lease;
+      let cleanupOwnsLease = false;
+
+      try {
+
       if (!isArchive) {
         await dbAdapter.updateInstanceRecord(instance.id, {
           desired_state: "deleted",
@@ -62,6 +82,7 @@ export function createLifecycleRoutes(deps: RouterDependencies) {
         });
         await dbAdapter.cancelDeploymentTasksForInstance(instance.id);
         const cleanupTask = await dbAdapter.createCleanupTask(instance.id, "delete");
+        cleanupOwnsLease = true;
         await dbAdapter.insertAuditLog({ instance_id: instance.id, action: "delete_requested", user_id: req.user.id, timestamp: new Date().toISOString(), details: "Deletion requested; cleanup saga queued." });
         io.emit("instances_updated", { id: instance.id, status: "deleting" });
         return res.status(202).json({
@@ -79,6 +100,7 @@ export function createLifecycleRoutes(deps: RouterDependencies) {
       });
       await dbAdapter.cancelDeploymentTasksForInstance(instance.id);
       const cleanupTask = await dbAdapter.createCleanupTask(instance.id, "archive");
+      cleanupOwnsLease = true;
       await dbAdapter.insertAuditLog({
         instance_id: instance.id, action: "archive_requested", user_id: req.user.id,
         timestamp: new Date().toISOString(),
@@ -90,6 +112,9 @@ export function createLifecycleRoutes(deps: RouterDependencies) {
         cleanupTaskId: cleanupTask.id,
         status: "archiving",
       });
+      } finally {
+        if (!cleanupOwnsLease) instanceOperationCoordinator.release(operationLease);
+      }
     } catch (e: any) {
       console.error("Instance operation error:", e);
       res.status(500).json({ error: "Operation failed: " + sanitizeErrorMessage(e.message || String(e)) });

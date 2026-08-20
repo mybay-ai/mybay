@@ -11,6 +11,7 @@ import {
 } from "../dockerDeployment";
 import { deploymentEventsRepo } from "../repositories/deploymentEventsRepo";
 import { scheduledJobsRepo } from "../repositories/scheduledJobsRepo";
+import { instanceOperationCoordinator } from "./instances/instanceOperationCoordinator";
 
 const docker = new Docker({ socketPath: process.env.DOCKER_SOCKET || "/var/run/docker.sock" });
 
@@ -85,6 +86,7 @@ export async function executeCleanupTask(task: any, io?: SocketIOServer) {
   if (!instance) {
     await dbAdapter.releasePortReservation(task.instance_id);
     await dbAdapter.updateCleanupTask(task.id, "success", null, null, { current_step: "deleted" });
+    instanceOperationCoordinator.releaseActive(task.instance_id, ["delete", "archive"]);
     return;
   }
   try {
@@ -108,6 +110,7 @@ export async function executeCleanupTask(task: any, io?: SocketIOServer) {
       await dbAdapter.updateCleanupTask(task.id, "success", null, null, { current_step: "deleted" });
       io?.emit("instances_updated", { id: instance.id, status: "deleted", action: "delete" });
     }
+    instanceOperationCoordinator.releaseActive(instance.id, ["delete", "archive"]);
   } catch (error: any) {
     const errorMessage = String(error?.message || error);
     const maxAttempts = Math.max(1, Number(process.env.MYBAY_CLEANUP_MAX_ATTEMPTS || 3));
@@ -132,6 +135,7 @@ export async function executeCleanupTask(task: any, io?: SocketIOServer) {
       message: "Instance cleanup exhausted its retry budget.",
       metadata: { taskId: task.id, attempt: task.attempt, errorCode: "CLEANUP_FAILED" },
     }).catch(() => {});
+    instanceOperationCoordinator.releaseActive(instance.id, ["delete", "archive"]);
     throw error;
   }
 }

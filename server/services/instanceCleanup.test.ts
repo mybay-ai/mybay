@@ -30,10 +30,12 @@ vi.mock("../repositories/scheduledJobsRepo", () => ({
 }));
 
 import { compensateDeployment, executeCleanupTask } from "./instanceCleanup";
+import { instanceOperationCoordinator } from "./instances/instanceOperationCoordinator";
 
 describe("cleanup task recovery", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    instanceOperationCoordinator.clearForTests();
     process.env.MYBAY_CLEANUP_MAX_ATTEMPTS = "3";
     state.dbAdapter.getInstanceById.mockResolvedValue({
       id: "instance-1",
@@ -50,6 +52,7 @@ describe("cleanup task recovery", () => {
   });
 
   it("requeues a transient cleanup failure before the attempt budget is exhausted", async () => {
+    expect(instanceOperationCoordinator.tryAcquire("instance-1", "delete").acquired).toBe(true);
     await expect(executeCleanupTask({ id: "cleanup-1", instance_id: "instance-1", attempt: 1 })).resolves.toBeUndefined();
     expect(state.dbAdapter.updateCleanupTask).toHaveBeenCalledWith(
       "cleanup-1", "retry_wait", "CLEANUP_RETRY_SCHEDULED", "temporary Docker cleanup failure",
@@ -58,9 +61,11 @@ describe("cleanup task recovery", () => {
     expect(state.dbAdapter.updateInstanceRecord).toHaveBeenCalledWith(
       "instance-1", expect.objectContaining({ status: "deleting" })
     );
+    expect(instanceOperationCoordinator.getActive("instance-1")?.operation).toBe("delete");
   });
 
   it("marks cleanup and instance failed after the final attempt", async () => {
+    expect(instanceOperationCoordinator.tryAcquire("instance-1", "delete").acquired).toBe(true);
     await expect(executeCleanupTask({ id: "cleanup-1", instance_id: "instance-1", attempt: 3 }))
       .rejects.toThrow("temporary Docker cleanup failure");
     expect(state.dbAdapter.updateCleanupTask).toHaveBeenCalledWith(
@@ -70,6 +75,7 @@ describe("cleanup task recovery", () => {
     expect(state.dbAdapter.updateInstanceRecord).toHaveBeenCalledWith(
       "instance-1", expect.objectContaining({ status: "cleanup_failed" })
     );
+    expect(instanceOperationCoordinator.getActive("instance-1")).toBeNull();
   });
 
   it("deployment compensation preserves active scheduled jobs", async () => {
@@ -85,6 +91,7 @@ describe("cleanup task recovery", () => {
   it("recovers an archive task and archives only after runtime cleanup succeeds", async () => {
     state.cleanOldContainersOfInstance.mockResolvedValue(undefined);
     state.dbAdapter.archiveInstance.mockResolvedValue(undefined);
+    expect(instanceOperationCoordinator.tryAcquire("instance-1", "archive").acquired).toBe(true);
     await executeCleanupTask({
       id: "cleanup-archive-1", instance_id: "instance-1",
       cleanup_mode: "archive", attempt: 2,
@@ -97,5 +104,6 @@ describe("cleanup task recovery", () => {
     expect(state.dbAdapter.updateInstanceRecord).toHaveBeenCalledWith(
       "instance-1", expect.objectContaining({ desired_state: "archived" }),
     );
+    expect(instanceOperationCoordinator.getActive("instance-1")).toBeNull();
   });
 });
