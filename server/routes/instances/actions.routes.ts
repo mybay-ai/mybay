@@ -32,6 +32,11 @@ import { evaluateInstanceWorkflowReadiness } from "../../services/workflowReadin
 import { executeTaskInBackground } from "../../workers/taskRunner";
 import { isTemplateWorkflowsEnabled } from "../../utils/templateWorkflowsFeature";
 import { requiresDashboardCredentialsForRedeploy } from "./redeployValidation";
+import {
+  INSTANCE_OPERATION_IN_PROGRESS,
+  instanceOperationCoordinator,
+  type InstanceOperation,
+} from "../../services/instances/instanceOperationCoordinator";
 
 const instanceActionLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -39,6 +44,16 @@ const instanceActionLimiter = rateLimit({
   keyGenerator: (req: any) => `inst_action:ip:${getClientIp(req)}:user:${req.user?.id || 'anon'}`,
   message: { error: "操作过于频繁，请稍候再试。" }
 });
+
+function releaseOperationAfter(
+  operationPromise: Promise<unknown>,
+  release: () => boolean,
+  label: string,
+): void {
+  void operationPromise
+    .catch((error) => console.error(`[Instance Action Error] ${label} failed:`, error))
+    .finally(release);
+}
 
 export function createActionsRoutes(deps: RouterDependencies) {
   const router = Router();
@@ -65,6 +80,23 @@ export function createActionsRoutes(deps: RouterDependencies) {
           return res.status(400).json({ error: "Bad Request", message: "实例并未归档，无需恢复。" });
         }
       }
+
+      const operation = action as InstanceOperation;
+      const acquisition = instanceOperationCoordinator.tryAcquire(instance.id, operation);
+      if (acquisition.acquired === false) {
+        return res.status(409).json({
+          error: INSTANCE_OPERATION_IN_PROGRESS,
+          code: INSTANCE_OPERATION_IN_PROGRESS,
+          message: `实例正在执行 ${acquisition.active.operation}，请等待当前操作完成后重试。`,
+          activeOperation: acquisition.active.operation,
+          startedAt: acquisition.active.startedAt,
+        });
+      }
+      const operationLease = acquisition.lease;
+      const releaseOperation = () => instanceOperationCoordinator.release(operationLease);
+      let releaseWhenHandlerReturns = true;
+
+      try {
 
       if (action === "start" || action === "restart") {
          const diskLimitMb = await resolveInstanceDiskLimitMb(instance);
@@ -159,12 +191,11 @@ export function createActionsRoutes(deps: RouterDependencies) {
         const ctx = buildDeploymentContext(instance);
         io.emit(`deploy_log_${instance.id}`, { timestamp: new Date().toISOString(), message: "[系统] 正在清理旧容器准备重新部署..." });
         const { cleanOldContainersOfInstance } = await import("../../deployment");
-        cleanOldContainersOfInstance(instance.id, io).then(() => {
-          executeDeployment(instance, io, wrappedUpdateStatus, config, req.user);
-        }).catch((err) => {
+        const redeployPromise = cleanOldContainersOfInstance(instance.id, io).catch((err) => {
           console.error("Clean old containers failed:", err);
-          executeDeployment(instance, io, wrappedUpdateStatus, config, req.user);
-        });
+        }).then(() => executeDeployment(instance, io, wrappedUpdateStatus, config, req.user));
+        releaseWhenHandlerReturns = false;
+        releaseOperationAfter(redeployPromise, releaseOperation, action);
         return res.json({ success: true, status: "deploying" });
       }
 
@@ -237,7 +268,9 @@ export function createActionsRoutes(deps: RouterDependencies) {
              if (shouldSelfHeal) {
                 await wrappedUpdateStatus.run({ status: action === "restart" ? "restarting" : "deploying", id: req.params.id });
                 io.emit(`deploy_log_${instance.id}`, { timestamp: new Date().toISOString(), message: reasonMessage });
-                executeDeployment(instance, io, wrappedUpdateStatus, config, req.user);
+                const selfHealPromise = executeDeployment(instance, io, wrappedUpdateStatus, config, req.user);
+                releaseWhenHandlerReturns = false;
+                releaseOperationAfter(selfHealPromise, releaseOperation, "self-heal");
                 return res.json({ success: true, status: action === "restart" ? "restarting" : "deploying" });
              }
           } catch (e) {
@@ -257,7 +290,9 @@ export function createActionsRoutes(deps: RouterDependencies) {
             await wrappedUpdateStatus.run({ status: "deploying", id: req.params.id });
             const { runInstanceHealthChecks } = await import("../../deployment");
             const ctx2 = buildDeploymentContext(instance);
-            runInstanceHealthChecks(ctx2.instanceId, ctx2.gatewayHostPort, ctx2.dashboardHostPort, ctx2.subdomain, io, wrappedUpdateStatus, "manual");
+            const healthPromise = runInstanceHealthChecks(ctx2.instanceId, ctx2.gatewayHostPort, ctx2.dashboardHostPort, ctx2.subdomain, io, wrappedUpdateStatus, "manual");
+            releaseWhenHandlerReturns = false;
+            releaseOperationAfter(healthPromise, releaseOperation, "local proxy health check");
             return res.json({ success: true, status: "deploying", mode: "local" });
          }
          await wrappedUpdateStatus.run({ status: "deploying", id: req.params.id });
@@ -268,13 +303,17 @@ export function createActionsRoutes(deps: RouterDependencies) {
             }
             const { runInstanceHealthChecks } = await import("../../deployment");
             const ctx2 = buildDeploymentContext(instance);
-            runInstanceHealthChecks(ctx2.instanceId, ctx2.gatewayHostPort, ctx2.dashboardHostPort, ctx2.subdomain, io, wrappedUpdateStatus, "manual");
+            const healthPromise = runInstanceHealthChecks(ctx2.instanceId, ctx2.gatewayHostPort, ctx2.dashboardHostPort, ctx2.subdomain, io, wrappedUpdateStatus, "manual");
+            releaseWhenHandlerReturns = false;
+            releaseOperationAfter(healthPromise, releaseOperation, "Traefik health check");
             return res.json({ success: true, status: "deploying" });
          }
 
          await wrappedUpdateStatus.run({ status: "deploying", id: req.params.id });
          const { rebuildProxyConfig } = await import("../../deployment");
-         rebuildProxyConfig(instance, io, wrappedUpdateStatus);
+         const rebuildPromise = rebuildProxyConfig(instance, io, wrappedUpdateStatus);
+         releaseWhenHandlerReturns = false;
+         releaseOperationAfter(Promise.resolve(rebuildPromise), releaseOperation, "proxy rebuild");
          return res.json({ success: true, status: "deploying" });
       }
 
@@ -306,10 +345,15 @@ export function createActionsRoutes(deps: RouterDependencies) {
         startPeriodicAgentDbSync(req.params.id, config);
         await wrappedUpdateStatus.run({ status: transientStatus, id: req.params.id });
         const { runInstanceHealthChecks } = await import("../../deployment");
-        runInstanceHealthChecks(ctx.instanceId, ctx.gatewayHostPort, ctx.dashboardHostPort, ctx.subdomain, io, wrappedUpdateStatus, "manual");
+        const healthPromise = runInstanceHealthChecks(ctx.instanceId, ctx.gatewayHostPort, ctx.dashboardHostPort, ctx.subdomain, io, wrappedUpdateStatus, "manual");
+        releaseWhenHandlerReturns = false;
+        releaseOperationAfter(healthPromise, releaseOperation, `${action} health check`);
       }
       
       res.json({ success: true, status: transientStatus });
+      } finally {
+        if (releaseWhenHandlerReturns) releaseOperation();
+      }
     } catch (e: any) {
       console.error("[Instance Action Error]", e);
       res.status(500).json({
