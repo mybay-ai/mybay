@@ -1,0 +1,20 @@
+ARG HERMES_BASE_IMAGE=nousresearch/hermes-agent
+ARG HERMES_BASE_TAG=latest
+FROM ${HERMES_BASE_IMAGE}:${HERMES_BASE_TAG}
+
+ARG MYBAY_FEISHU_BASE_IMAGE
+ARG MYBAY_FEISHU_RECIPE_REVISION=feishu-runtime-v1
+
+LABEL com.mybay.feishu.runtime="true" \
+      com.mybay.feishu.base-image="${MYBAY_FEISHU_BASE_IMAGE}" \
+      com.mybay.feishu.recipe-revision="${MYBAY_FEISHU_RECIPE_REVISION}"
+
+RUN /opt/hermes/.venv/bin/python -m ensurepip --upgrade \
+ && /opt/hermes/.venv/bin/python -m pip install --no-cache-dir --upgrade pip setuptools wheel \
+ && /opt/hermes/.venv/bin/python -m pip install --no-cache-dir \
+      "lark-oapi==1.6.8" \
+      "qrcode==7.4.2" \
+      aiohttp \
+      websockets \
+ && /opt/hermes/.venv/bin/python -c \
+      "import importlib.metadata as metadata; import aiohttp, lark_oapi, qrcode, websockets; assert metadata.version('lark-oapi') == '1.6.8'; assert metadata.version('qrcode') == '7.4.2'; print('Feishu runtime dependencies OK')"

@@ -34,17 +34,31 @@ import { skillPolicyRegistry } from "../shared/skillPolicyRegistry";
 import { assertRuntimeSatisfiesSkillPolicy, createRuntimeSecurityManifest } from "./services/skillPolicyEnforcer";
 import { resolveHermesProvider, VALID_HERMES_PROVIDERS } from "./providerEnv";
 import { getDockerProfile, getResourceLimits } from "./services/docker/dockerResourcePolicy";
+import { ensureLocalFeishuRuntimeImage, requiresLocalFeishuRuntime } from "./services/localFeishuRuntime";
 
 export { getDockerProfile, getResourceLimits } from "./services/docker/dockerResourcePolicy";
 export type { DockerProfile } from "./services/docker/dockerResourcePolicy";
 
-// Global map to track in-progress builds to prevent concurrent redundant builds
-const pendingBuilds = new Map<string, Promise<string>>();
 
 export async function ensureFrontendBuilt(docker: any, baseImage: string, instanceId: string, io: SocketIOServer, config?: any): Promise<string> {
+  if (requiresLocalFeishuRuntime(config)) {
+    const lastSlash = baseImage.lastIndexOf("/");
+    const lastColon = baseImage.lastIndexOf(":");
+    const selectedImage = lastColon > lastSlash ? baseImage.slice(0, lastColon) : baseImage;
+    const selectedTag = lastColon > lastSlash ? baseImage.slice(lastColon + 1) : "latest";
+    return ensureLocalFeishuRuntimeImage({
+      dockerClient: docker,
+      baseImage: selectedImage,
+      baseTag: selectedTag,
+      onLog: (message) => io.emit(`deploy_log_${instanceId}`, {
+        timestamp: new Date().toISOString(),
+        message: `[飞书运行环境] ${message}`,
+      }),
+    });
+  }
   io.emit(`deploy_log_${instanceId}`, {
-     timestamp: new Date().toISOString(),
-     message: `[标准镜像就绪] 遵循标准版本模型规范，跳过动态派生构建，直接调度官方标准镜像：${baseImage}`,
+    timestamp: new Date().toISOString(),
+    message: `[标准镜像就绪] 遵循标准版本模型规范，跳过动态派生构建，直接调度官方标准镜像：${baseImage}`,
   });
   return baseImage;
 }

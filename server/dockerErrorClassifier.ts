@@ -2,6 +2,7 @@ export const DEPLOYMENT_ERROR_CODES = [
   "PORT_CONFLICT",
   "DOCKER_UNAVAILABLE",
   "IMAGE_PULL_FAILED",
+  "FEISHU_RUNTIME_PREPARE_FAILED",
   "NETWORK_CREATE_FAILED",
   "CONTAINER_CREATE_FAILED",
   "CONTAINER_START_FAILED",
@@ -44,6 +45,12 @@ const patterns: Array<{ code: DeploymentErrorCode; test: RegExp; message: string
     retryable: false,
   },
   {
+    code: "FEISHU_RUNTIME_PREPARE_FAILED",
+    test: /feishu runtime image preparation failed|dockerfile\.feishu|lark-oapi/i,
+    message: "The local Feishu runtime image could not be prepared.",
+    retryable: true,
+  },
+  {
     code: "NETWORK_CREATE_FAILED",
     test: /network.*(create|driver|not found|failed)|failed.*network/i,
     message: "The isolated Docker network could not be prepared.",
@@ -81,6 +88,7 @@ export function classifyDockerError(error: unknown, fallback: DeploymentErrorCod
     PORT_CONFLICT: "The selected host port is already in use.",
     DOCKER_UNAVAILABLE: "Docker Engine is unavailable. Please start Docker and retry deployment.",
     IMAGE_PULL_FAILED: "The container image could not be downloaded.",
+    FEISHU_RUNTIME_PREPARE_FAILED: "The local Feishu runtime image could not be prepared.",
     NETWORK_CREATE_FAILED: "The isolated Docker network could not be prepared.",
     CONTAINER_CREATE_FAILED: "The instance container could not be created.",
     CONTAINER_START_FAILED: "The instance container could not be started.",
