@@ -430,7 +430,7 @@ async function upgradeInstanceFlow(
   // Ensure frontend is built before proceeding - Perform this BEFORE stopping old containers
   let finalUpgradeImage;
   try {
-    finalUpgradeImage = await ensureFrontendBuilt(docker, targetImageFull, instanceId, io);
+    finalUpgradeImage = await ensureFrontendBuilt(docker, targetImageFull, instanceId, io, config);
   } catch (buildErr: any) {
     const errMsg = `构建升级镜像失败 (targetImageFull: ${targetImageFull}, instanceId: ${instanceId}): ${buildErr.message || buildErr}`;
     await logUpgrade(`[升级错误] ❌ ${errMsg}`);
