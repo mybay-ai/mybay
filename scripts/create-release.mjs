@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { ZipArchive } from "archiver";
+import { execFileSync } from "node:child_process";
 
 const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const EXCLUDED_ROOT_DIRECTORIES = new Set([
@@ -25,24 +26,29 @@ export function shouldIncludeReleasePath(relativePath) {
   return !EXCLUDED_SUFFIXES.some((suffix) => name.toLowerCase().endsWith(suffix));
 }
 
-function collectReleaseFiles(rootDir, currentDir = rootDir, output = []) {
-  const entries = fs.readdirSync(currentDir, { withFileTypes: true })
-    .sort((a, b) => a.name.localeCompare(b.name, "en"));
-  for (const entry of entries) {
-    const absolutePath = path.join(currentDir, entry.name);
-    const relativePath = path.relative(rootDir, absolutePath).replaceAll("\\", "/");
-    if (!shouldIncludeReleasePath(relativePath)) continue;
-    if (entry.isSymbolicLink()) continue;
-    if (entry.isDirectory()) collectReleaseFiles(rootDir, absolutePath, output);
-    else if (entry.isFile()) output.push({ absolutePath, relativePath });
-  }
-  return output;
+export function collectReleaseFiles(rootDir = PROJECT_ROOT) {
+  const tracked = execFileSync("git", ["ls-files", "-z", "--cached"], {
+    cwd: rootDir,
+    encoding: "buffer",
+  }).toString("utf8").split("\0").filter(Boolean).sort((a, b) => a.localeCompare(b, "en"));
+  return tracked.filter(shouldIncludeReleasePath).map((relativePath) => {
+    const absolutePath = path.resolve(rootDir, relativePath);
+    if (!fs.existsSync(absolutePath)) {
+      throw new Error(`Tracked release file is missing from the working tree: ${relativePath}`);
+    }
+    const stat = fs.lstatSync(absolutePath);
+    if (stat.isSymbolicLink() || !stat.isFile()) {
+      throw new Error(`Release source must be a regular tracked file: ${relativePath}`);
+    }
+    return { absolutePath, relativePath };
+  });
 }
 
-export async function createReleaseArchive(outputPath) {
+export async function createReleaseArchive(outputPath, options = {}) {
+  const projectRoot = options.projectRoot || PROJECT_ROOT;
   const destination = path.resolve(outputPath);
   fs.mkdirSync(path.dirname(destination), { recursive: true });
-  const files = collectReleaseFiles(PROJECT_ROOT);
+  const files = collectReleaseFiles(projectRoot);
   const temporary = destination + "." + process.pid + ".tmp";
   if (fs.existsSync(destination)) throw new Error("Refusing to overwrite existing archive: " + destination);
   try {
@@ -54,7 +60,7 @@ export async function createReleaseArchive(outputPath) {
       archive.on("warning", reject);
       archive.on("error", reject);
       archive.pipe(output);
-      for (const file of files) archive.file(file.absolutePath, { name: file.relativePath });
+      for (const file of files) archive.append(fs.readFileSync(file.absolutePath), { name: file.relativePath, date: new Date("1980-01-01T00:00:00.000Z") });
       void archive.finalize();
     });
     fs.renameSync(temporary, destination);
