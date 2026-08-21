@@ -123,9 +123,9 @@ export function createVersionsRoutes(deps: RouterDependencies) {
       if (respondIfInstanceOperationActive(res, [req.params.id])) return;
       void upgradeInstance(req.params.id, resolvedTag, req.user.id, req.user.role, io)
         .then((result: { success: boolean; error?: string }) => {
-          if (!result.success) console.error(`[upgrade] Instance ${req.params.id} failed:`, result.error);
+          if (!result.success) console.error("[upgrade] Instance failed:", req.params.id, result.error);
         })
-        .catch((error: unknown) => console.error(`[upgrade] Instance ${req.params.id} failed:`, error));
+        .catch((error: unknown) => console.error("[upgrade] Instance failed:", req.params.id, error));
       res.json({ success: true, message: "已在后台启动升级任务，详情请查看更新日志。", resolvedTag });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
