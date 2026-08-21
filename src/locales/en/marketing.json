@@ -1061,19 +1061,19 @@
     "timelineTip": "Preview Release",
     "releases": [
       {
-        "version": "v0.1.1-preview",
+        "version": "v0.1.2-preview",
         "date": "2026.08.21",
         "badge": "PREVIEW",
-        "summary": "MyBay Open Source v0.1.1-preview improves local instance lifecycle coordination, chat readiness, and session recovery.",
+        "summary": "MyBay Open Source v0.1.2-preview fixes local Feishu/Lark deployment by preparing and verifying the required runtime dependencies.",
         "sections": [
           {
-            "title": "Local instance reliability",
+            "title": "Local Feishu runtime reliability",
             "type": "fix",
             "items": [
-              "Coordinated conflicting local instance lifecycle operations, including upgrade, rollback, redeploy, restore, archive, and deletion.",
-              "Unified local chat readiness, runtime state, sendability, wakeability, and error responses.",
-              "Improved recovery when Hermes session creation encounters transient runtime or gateway failures.",
-              "Preserved the existing Desktop, LAN, and Server deployment checks and all attachment upload and preview limits."
+              "Builds and caches a local Feishu-enhanced image from the selected official Hermes version.",
+              "Pins and verifies lark-oapi, qrcode, aiohttp, and websockets before replacing an instance container.",
+              "Uses the same verified image preparation path for deployment, redeployment, upgrade, and rollback, with a dedicated failure code.",
+              "Preserves existing Desktop, LAN, and Server checks and all attachment upload, preview, type, count, and size limits."
             ]
           }
         ]

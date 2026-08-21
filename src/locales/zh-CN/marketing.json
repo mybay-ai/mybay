@@ -1061,19 +1061,19 @@
     "timelineTip": "Preview Release",
     "releases": [
       {
-        "version": "v0.1.1-preview",
+        "version": "v0.1.2-preview",
         "date": "2026.08.21",
         "badge": "PREVIEW",
-        "summary": "麦贝开源版 v0.1.1-preview 改进了本地实例生命周期协调、聊天就绪状态与会话恢复。",
+        "summary": "麦贝开源版 v0.1.2-preview 修复本地飞书/Lark 部署所需运行依赖的准备与验证。",
         "sections": [
           {
-            "title": "本地实例可靠性",
+            "title": "本地飞书运行可靠性",
             "type": "fix",
             "items": [
-              "协调升级、回滚、重新部署、恢复、归档和删除等相互冲突的本地实例生命周期操作。",
-              "统一本地实例聊天就绪状态、运行状态、可发送性、可唤醒性和错误返回。",
-              "改进 Hermes 会话创建遇到临时 Runtime 或网关故障时的恢复能力。",
-              "保留现有 Desktop、LAN、Server 部署检查以及全部附件上传和预览限制。"
+              "基于所选 Hermes 官方版本构建并缓存本地飞书增强镜像。",
+              "在替换实例容器前固定并验证 lark-oapi、qrcode、aiohttp 与 websockets 依赖。",
+              "部署、重新部署、升级和回滚共用同一条已验证镜像准备路径，并提供专用失败错误码。",
+              "保留现有 Desktop、LAN、Server 检查以及附件上传、预览、类型、数量和大小限制。"
             ]
           }
         ]

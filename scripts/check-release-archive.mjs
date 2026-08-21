@@ -9,7 +9,7 @@ const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 
 const packageJson = JSON.parse(fs.readFileSync(path.join(PROJECT_ROOT, "package.json"), "utf8"));
 const archivePath = path.resolve(process.argv[2] || path.join(PROJECT_ROOT, "release", "mybay-open-source-v" + packageJson.version + ".zip"));
 const requiredFiles = [
-  ".env.example", "BRAND_ASSETS.md", "CODE_OF_CONDUCT.md", "COMMERCIAL-LICENSE.md", "CONTRIBUTING.md", "Dockerfile", "LICENSE",
+  ".env.example", "BRAND_ASSETS.md", "CODE_OF_CONDUCT.md", "COMMERCIAL-LICENSE.md", "CONTRIBUTING.md", "Dockerfile", "Dockerfile.feishu", "LICENSE",
   "README.md", "README.zh-CN.md", "SECURITY.md", "THIRD_PARTY_NOTICES.md", "TRADEMARKS.md", "deploy/traefik/dynamic.yml",
   "docker-compose.server.yml", "docker-compose.yml", "package-lock.json", "package.json", "quick-start.ps1", "quick-start.sh", "scripts/quick-start-env.ps1", "scripts/quick-start-env.sh",
 ];
