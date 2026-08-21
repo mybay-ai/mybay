@@ -26,6 +26,11 @@ import {
   normalizeStoredMessageError,
   normalizeStoredMessageStatus
 } from "./chat-workspace/chatMessagePolicy";
+import {
+  normalizeChatReadinessProbe,
+  unavailableChatReadiness,
+  type ChatReadinessState,
+} from "./chat-workspace/chatReadinessState";
 
 import {
   ChatMessage,
@@ -100,7 +105,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [chatReadiness, setChatReadiness] = useState<Record<string, { ready: boolean; reason?: string; message?: string }>>({});
+  const [chatReadiness, setChatReadiness] = useState<Record<string, ChatReadinessState>>({});
 
   
   // Conversation Selection State
@@ -475,9 +480,9 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
           const readinessPromises = activeList.map(async (inst: any) => {
             try {
               const probe = await api.get(`/api/instances/${inst.id}/chat-readiness`);
-              return { id: inst.id, ready: !!probe?.ready, reason: probe?.error, message: probe?.message };
+              return { id: inst.id, ...normalizeChatReadinessProbe(probe) };
             } catch (err) {
-              return { id: inst.id, ready: false, reason: "PROBE_FAILED", message: t("dashboard:chatWorkspace.probeFailed") };
+              return { id: inst.id, ...unavailableChatReadiness("PROBE_FAILED", t("dashboard:chatWorkspace.probeFailed")) };
             }
           });
 
@@ -527,7 +532,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
         )) return;
         setChatReadiness(prev => ({
           ...prev,
-          [selectedId]: { ready: !!probe?.ready, reason: probe?.error, message: probe?.message }
+          [selectedId]: normalizeChatReadinessProbe(probe)
         }));
       } catch (err) {
         if (!shouldAcceptConversationHistory(
@@ -536,7 +541,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
         )) return;
         setChatReadiness(prev => ({
           ...prev,
-          [selectedId]: { ready: false, reason: "PROBE_FAILED", message: t("dashboard:chatWorkspace.probeFailed") }
+          [selectedId]: unavailableChatReadiness("PROBE_FAILED", t("dashboard:chatWorkspace.probeFailed"))
         }));
       }
 

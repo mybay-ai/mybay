@@ -20,6 +20,26 @@ import { findAvailablePort } from "../../utils";
 import { execFile } from "child_process";
 import { runInstanceHealthChecks } from "../../healthCheck";
 import { startPeriodicAgentDbSync } from "../../sqliteAgentSync";
+import {
+  INSTANCE_OPERATION_IN_PROGRESS,
+  instanceOperationCoordinator,
+} from "../../services/instances/instanceOperationCoordinator";
+
+function respondIfInstanceOperationActive(res: Response, instanceIds: string[]): boolean {
+  for (const instanceId of instanceIds) {
+    const active = instanceOperationCoordinator.getActive(instanceId);
+    if (!active) continue;
+    res.status(409).json({
+      error: `Instance operation already in progress: ${active.operation}`,
+      code: INSTANCE_OPERATION_IN_PROGRESS,
+      instanceId,
+      activeOperation: active.operation,
+      startedAt: active.startedAt,
+    });
+    return true;
+  }
+  return false;
+}
 
 export function createVersionsRoutes(deps: RouterDependencies) {
   const router = Router();
@@ -70,7 +90,13 @@ export function createVersionsRoutes(deps: RouterDependencies) {
         });
       }
 
-      bulkUpgrade(instanceIds, tag, req.user.id, req.user.role, io);
+      if (respondIfInstanceOperationActive(res, instanceIds)) return;
+      void bulkUpgrade(instanceIds, tag, req.user.id, req.user.role, io)
+        .then((results: Record<string, { success: boolean; error?: string }>) => {
+          const failed = Object.entries(results).filter(([, result]) => !result.success);
+          if (failed.length > 0) console.error("[bulk-upgrade] Some instance upgrades failed:", Object.fromEntries(failed));
+        })
+        .catch((error: unknown) => console.error("[bulk-upgrade] Background queue failed:", error));
       res.json({ success: true, message: "已在后台启动实例批量升级队列，并发限制为 2 台，请查看实例状态。" });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -94,7 +120,12 @@ export function createVersionsRoutes(deps: RouterDependencies) {
       }
 
       const resolvedTag = validation.resolvedTag || tag;
-      upgradeInstance(req.params.id, resolvedTag, req.user.id, req.user.role, io);
+      if (respondIfInstanceOperationActive(res, [req.params.id])) return;
+      void upgradeInstance(req.params.id, resolvedTag, req.user.id, req.user.role, io)
+        .then((result: { success: boolean; error?: string }) => {
+          if (!result.success) console.error("[upgrade] Instance failed:", req.params.id, result.error);
+        })
+        .catch((error: unknown) => console.error("[upgrade] Instance failed:", req.params.id, error));
       res.json({ success: true, message: "已在后台启动升级任务，详情请查看更新日志。", resolvedTag });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -103,12 +134,17 @@ export function createVersionsRoutes(deps: RouterDependencies) {
 
   router.post("/:id/rollback", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
+      if (respondIfInstanceOperationActive(res, [req.params.id])) return;
       const { rollbackInstance } = require("../../upgradeManager");
       const result = await rollbackInstance(req.params.id, req.user.id, req.user.role, io);
       if (result.success) {
         res.json({ success: true, message: "已成功出发异步回滚任务，请查看历史详情日志。" });
       } else {
-        res.status(400).json({ error: result.error });
+        const isConflict = String(result.error || "").startsWith(INSTANCE_OPERATION_IN_PROGRESS);
+        res.status(isConflict ? 409 : 400).json({
+          error: result.error,
+          ...(isConflict ? { code: INSTANCE_OPERATION_IN_PROGRESS } : {}),
+        });
       }
     } catch (err: any) {
       res.status(500).json({ error: err.message });

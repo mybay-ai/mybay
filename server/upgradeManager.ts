@@ -15,6 +15,33 @@ import { resolveInstanceRole } from "./utils/instanceRole";
 import { globalTaskSemaphore } from "./utils";
 import { supportsFeishu } from "./utils/hermesCapabilities";
 import { sortHermesVersionsDescending } from "../shared/version";
+import {
+  INSTANCE_OPERATION_IN_PROGRESS,
+  instanceOperationCoordinator,
+  type InstanceOperation,
+} from "./services/instances/instanceOperationCoordinator";
+
+type UpgradeOperationResult = { success: boolean; error?: string };
+
+async function withInstanceUpgradeOperation(
+  instanceId: string,
+  operation: Extract<InstanceOperation, "upgrade" | "rollback">,
+  work: () => Promise<UpgradeOperationResult>,
+): Promise<UpgradeOperationResult> {
+  const acquisition = instanceOperationCoordinator.tryAcquire(instanceId, operation);
+  if (acquisition.acquired === false) {
+    return {
+      success: false,
+      error: `${INSTANCE_OPERATION_IN_PROGRESS}: another instance operation is already in progress (${acquisition.active.operation}).`,
+    };
+  }
+
+  try {
+    return await work();
+  } finally {
+    instanceOperationCoordinator.release(acquisition.lease);
+  }
+}
 
 const activeUpgrades = new Set<string>();
 
@@ -24,7 +51,7 @@ export async function getUpgradeLogs(instanceId: string) {
   return logs.filter((log: any) => log.action?.includes("upgrade") || log.action?.includes("rollback") || log.action === "upgrade_progress" || log.action === "rollback_progress");
 }
 
-export async function rollbackInstance(
+async function rollbackInstanceUnlocked(
   instanceId: string,
   userId: string,
   role: string,
@@ -51,6 +78,16 @@ export async function rollbackInstance(
     activeUpgrades.delete(instanceId);
     return { success: false, error: err.message || String(err) };
   }
+}
+
+export async function rollbackInstance(
+  instanceId: string,
+  userId: string,
+  role: string,
+  io: SocketIOServer
+): Promise<UpgradeOperationResult> {
+  return withInstanceUpgradeOperation(instanceId, "rollback", () =>
+    rollbackInstanceUnlocked(instanceId, userId, role, io));
 }
 
 export function isFeishuInstance(instance: any): boolean {
@@ -178,7 +215,7 @@ export async function validateBulkUpgrade(
   return { success: true };
 }
 
-export async function upgradeInstance(
+async function upgradeInstanceUnlocked(
   instanceId: string,
   targetTag: string,
   userId: string,
@@ -229,6 +266,17 @@ export async function upgradeInstance(
     activeUpgrades.delete(instanceId);
     return { success: false, error: err.message || String(err) };
   }
+}
+
+export async function upgradeInstance(
+  instanceId: string,
+  targetTag: string,
+  userId: string,
+  role: string,
+  io: SocketIOServer
+): Promise<UpgradeOperationResult> {
+  return withInstanceUpgradeOperation(instanceId, "upgrade", () =>
+    upgradeInstanceUnlocked(instanceId, targetTag, userId, role, io));
 }
 
 async function upgradeInstanceFlow(

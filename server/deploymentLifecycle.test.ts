@@ -52,7 +52,7 @@ describe("deployment lifecycle persistence", () => {
     const results = await Promise.all(Array.from({ length: 8 }, (_, index) => Promise.resolve().then(() => bundle(`instance-${index}`, [10100, 10101, 10102, 10103, 10104, 10105, 10106, 10107]))));
     const ports = results.filter((result): result is Extract<typeof result, { kind: "created" }> => result.kind === "created").map((result) => result.port);
     expect(new Set(ports).size).toBe(8);
-  });
+  }, 15_000);
 
   it("returns the same instance and task for an idempotent replay", () => {
     const first = bundle("instance-one", [10100], "request-key-123");

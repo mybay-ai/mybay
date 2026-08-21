@@ -25,6 +25,16 @@ describe("chatRuntimeErrors", () => {
     expect(result.code).toBe("CREDENTIAL_DECRYPT_FAILED");
     expect(result.message).toBe("The saved credential cannot be decrypted. Save its API Key again.");
   });
+
+  it.each([
+    "INSTANCE_NOT_RUNNING",
+    "INTERNAL_ROUTE_CONNECT_FAILED",
+    "HERMES_API_NOT_READY",
+    "HERMES_SESSION_CREATE_FAILED",
+    "HERMES_SESSION_REBIND_FAILED",
+  ])("maps local chat readiness and session error %s", (code) => {
+    expect(humanizeChatError({ data: { error: code } })).toMatchObject({ code, known: true });
+  });
   it("keeps a safe fallback for unknown errors", () => {
     const result = humanizeChatError({ data: { error: "SOME_NEW_ERROR" } }, "自定义失败提示");
     expect(result.message).toBe("自定义失败提示");
