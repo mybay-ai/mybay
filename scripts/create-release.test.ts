@@ -1,5 +1,16 @@
-import { describe, expect, it } from "vitest";
-import { shouldIncludeReleasePath } from "./create-release.mjs";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { execFileSync } from "node:child_process";
+import AdmZip from "adm-zip";
+import { afterEach, describe, expect, it } from "vitest";
+import { createReleaseArchive, shouldIncludeReleasePath } from "./create-release.mjs";
+
+const tempRoots: string[] = [];
+
+afterEach(() => {
+  for (const root of tempRoots.splice(0)) fs.rmSync(root, { recursive: true, force: true });
+});
 
 describe("release package path filtering", () => {
   it("excludes runtime data, build output, dependencies, secrets and backups", () => {
@@ -17,3 +28,33 @@ describe("release package path filtering", () => {
       expect(shouldIncludeReleasePath(target), target).toBe(true);
   });
 });
+
+  it("archives only tracked files and produces deterministic output", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "mybay-release-test-"));
+    tempRoots.push(root);
+    const tracked = [
+      "README.md", "LICENSE", "package.json", ".env.example",
+      "server/index.ts", "src/main.tsx", "config/example.json",
+    ];
+    for (const relative of tracked) {
+      const absolute = path.join(root, relative);
+      fs.mkdirSync(path.dirname(absolute), { recursive: true });
+      fs.writeFileSync(absolute, `${relative}\n`);
+    }
+    execFileSync("git", ["init"], { cwd: root });
+    execFileSync("git", ["config", "user.email", "release-test@example.invalid"], { cwd: root });
+    execFileSync("git", ["config", "user.name", "Release Test"], { cwd: root });
+    execFileSync("git", ["add", "--", ...tracked], { cwd: root });
+    execFileSync("git", ["commit", "-m", "fixture"], { cwd: root });
+    fs.writeFileSync(path.join(root, "local-secret-test.txt"), "must not ship\n");
+
+    const first = path.join(root, "release", "one.zip");
+    const second = path.join(root, "release", "two.zip");
+    await createReleaseArchive(first, { projectRoot: root });
+    await createReleaseArchive(second, { projectRoot: root });
+    const names = new AdmZip(first).getEntries().filter((entry) => !entry.isDirectory).map((entry) => entry.entryName);
+
+    expect(names).toEqual([...tracked].sort((a, b) => a.localeCompare(b, "en")));
+    expect(names).not.toContain("local-secret-test.txt");
+    expect(fs.readFileSync(first)).toEqual(fs.readFileSync(second));
+  });

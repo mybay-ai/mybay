@@ -1061,19 +1061,19 @@
     "timelineTip": "Preview Release",
     "releases": [
       {
-        "version": "v0.1.0-preview",
-        "date": "2026.08.15",
+        "version": "v0.1.1-preview",
+        "date": "2026.08.21",
         "badge": "PREVIEW",
-        "summary": "MyBay Open Source v0.1.0-preview is an early public preview focused on a safe, stable local-first release.",
+        "summary": "MyBay Open Source v0.1.1-preview improves local instance lifecycle coordination, chat readiness, and session recovery.",
         "sections": [
           {
-            "title": "Stability fixes",
+            "title": "Local instance reliability",
             "type": "fix",
             "items": [
-              "Fixed JSON, text, and other raw file responses being incorrectly handled by the business JSON parser.",
-              "Added request cancellation and generation checks to file previews so stale requests cannot overwrite the current session, instance, or a closed preview.",
-              "Unified stop terminal states across Quick, Assist, and asynchronous chats so cancellation and completion cannot overwrite each other.",
-              "Applied one message-length contract and history context budget across the frontend and backend to protect requests, storage, and model context."
+              "Coordinated conflicting local instance lifecycle operations, including upgrade, rollback, redeploy, restore, archive, and deletion.",
+              "Unified local chat readiness, runtime state, sendability, wakeability, and error responses.",
+              "Improved recovery when Hermes session creation encounters transient runtime or gateway failures.",
+              "Preserved the existing Desktop, LAN, and Server deployment checks and all attachment upload and preview limits."
             ]
           }
         ]
