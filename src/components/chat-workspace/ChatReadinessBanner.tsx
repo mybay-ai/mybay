@@ -2,6 +2,7 @@ import { Trans, useTranslation } from "react-i18next";
 import { AlertCircle } from "lucide-react";
 import type { AgentInstance } from "../../types";
 import { getChatErrorMessage } from "../../lib/chatRuntimeErrors";
+import { deriveLocalInstanceReadiness } from "../../../shared/localInstanceReadiness";
 
 type ReadinessState = {
   ready: boolean;
@@ -32,6 +33,16 @@ export function ChatReadinessBanner({
   const channel = selectedInstance?.configSummary?.channel || "web";
   const isPureWeb = channel === "web" || channel === "none";
   const readinessMessage = getChatErrorMessage({ code: selectedReadiness?.reason, message: selectedReadiness?.message }, selectedReadiness?.message || t("dashboard:chatWorkspace.statusNotReady"));
+  const unifiedReadiness = deriveLocalInstanceReadiness({
+    status: selectedInstance?.status,
+    physicalStatus: selectedInstance?.physical_status,
+    deploymentError: selectedInstance?.deployment_error,
+    modelConfigStatus: selectedInstance?.model_config_status,
+    gatewayStatus: selectedInstance?.gateway_status,
+    configuredChannels: selectedInstance?.configured_channels,
+    connectedChannels: selectedInstance?.connected_channels,
+    chat: selectedReadiness,
+  });
 
   if (isPureWeb) {
     return (
@@ -39,9 +50,7 @@ export function ChatReadinessBanner({
         <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
         <div className="space-y-1 text-left">
           <p className="font-bold text-amber-900 dark:text-amber-100">
-            {selectedReadiness?.runtimeReady
-              ? t("dashboard:chatWorkspace.runtimeReadyChatPendingTitle")
-              : t("dashboard:chatWorkspace.webOnlyDeployPendingTitle")}
+            {t(`dashboard:readiness_${unifiedReadiness.phase}_title`)}
           </p>
           <p className="text-amber-700 leading-relaxed dark:text-amber-200/90">
             {readinessMessage || t("dashboard:chatWorkspace.webOnlyDeployPendingDesc")}
@@ -49,7 +58,7 @@ export function ChatReadinessBanner({
             ({t("dashboard:chatWorkspace.errorCodeLabel")}: <code className="font-mono bg-amber-100 px-1 py-0.5 rounded text-[11px] text-amber-800 font-semibold">{selectedReadiness?.reason || "UNKNOWN"}</code>)
           </p>
           <p className="text-content-muted text-[13px] leading-relaxed mt-1">
-            {selectedReadiness?.runtimeReady
+            {unifiedReadiness.runtimeReady
               ? t("dashboard:chatWorkspace.runtimeReadyChatPendingTip")
               : t("dashboard:chatWorkspace.webOnlyDeployPendingTip")}
           </p>

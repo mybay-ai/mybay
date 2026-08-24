@@ -7,6 +7,7 @@ import type { AgentInstance, InstanceStats } from "../types";
 import { ChannelPendingAuthPanel } from "./ChannelPendingAuthPanel";
 import { useFeedback } from "./FeedbackProvider";
 import { RuntimeMetricsPanel } from "./instance-runtime/RuntimeMetricsPanel";
+import { InstanceReadinessNotice } from "./instance-runtime/InstanceReadinessNotice";
 
 import { api } from "../lib/api";
 
@@ -283,6 +284,7 @@ export function ContainerStats({ instance: propInstance, onReload, currentUser, 
 
   return (
     <div ref={containerRef} className="flex flex-col gap-4 mt-2">
+      <InstanceReadinessNotice instance={instance} compact />
       {/* 存储超额阻断提示 */}
       {stats.storageStatus === 'exceeded' && (
         <div className="bg-rose-50 dark:bg-rose-950/25 border-2 border-rose-200 dark:border-rose-900/40 rounded-2xl p-5 shadow-sm animate-in fade-in slide-in-from-top-4 duration-500">

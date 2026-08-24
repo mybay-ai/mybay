@@ -23,6 +23,16 @@ describe("final health policy", () => {
     })).toBe("unhealthy");
   });
 
+  it("does not turn a running runtime into deployment failure while chat initializes", () => {
+    expect(resolveFinalHealthStatus({
+      dashboardAccessEnabled: false,
+      gatewayReady: true,
+      chatRequired: true,
+      chatReady: false,
+      deploymentCheck: true,
+    })).toBe("running");
+  });
+
   it("turns a failed dashboard route into a terminal deployment failure", () => {
     expect(resolveFinalHealthStatus({
       dashboardAccessEnabled: true,

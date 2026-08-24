@@ -14,7 +14,10 @@ export function shouldCheckDashboardProxy(dashboardAccessEnabled: boolean) {
 }
 
 export function resolveFinalHealthStatus(input: FinalHealthPolicyInput): FinalHealthStatus {
-  const runtimeReady = input.gatewayReady && (!input.chatRequired || input.chatReady);
+  // Deployment health describes the local runtime and its configured access route only.
+  // Chat readiness is reported independently so a running container is not mislabeled as
+  // a failed deployment while its model/API is still initializing or needs configuration.
+  const runtimeReady = input.gatewayReady;
   if (!runtimeReady) return input.deploymentCheck ? "unhealthy" : "gateway_starting";
   if (!input.dashboardAccessEnabled) return "running";
   if (input.proxyCheckPassed) return "running";

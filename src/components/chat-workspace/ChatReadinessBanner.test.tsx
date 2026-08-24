@@ -13,6 +13,7 @@ async function renderBanner(channelLabel: string, readinessMessage: string, opti
     resources: {
       en: {
         dashboard: {
+          readiness_runtime_ready_chat_initializing_title: "Instance running, chat initializing",
           chatWorkspace: {
             externalChannelTitle: "External channel",
             externalChannelDesc: "Channel: <strong>{{channel}}</strong>",
@@ -57,7 +58,7 @@ describe("ChatReadinessBanner interpolation", () => {
 
   it("distinguishes a running instance from chat readiness", async () => {
     const html = await renderBanner("Web", "chat API disabled", { channel: "web", runtimeReady: true });
-    expect(html).toContain("Instance running, chat not ready");
+    expect(html).toContain("Instance running, chat initializing");
     expect(html).toContain("Check chat configuration");
   });
 });

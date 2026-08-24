@@ -2,6 +2,7 @@ import React from "react";
 import { Activity, AlertTriangle, CheckCircle2, ClipboardCopy, Clock3, RefreshCw, Server, ShieldCheck } from "lucide-react";
 import { api } from "../../lib/api";
 import { Button, cn } from "../ui";
+import { InstanceReadinessNotice } from "../instance-runtime/InstanceReadinessNotice";
 
 type Props = { instanceId: string; instance: any };
 type Check = { code: string; label: string; status: "pass" | "warning" | "fail"; detail: string; suggestion?: string };
@@ -33,7 +34,7 @@ function eventAdvice(code: string) {
   return suggestions[code] || "请结合诊断项目和运行日志排查。";
 }
 
-export function InstanceDiagnosticsWorkspace({ instanceId }: Props) {
+export function InstanceDiagnosticsWorkspace({ instanceId, instance }: Props) {
   const [health, setHealth] = React.useState<any>(null);
   const [report, setReport] = React.useState<any>(null);
   const [events, setEvents] = React.useState<any[]>([]);
@@ -92,6 +93,7 @@ export function InstanceDiagnosticsWorkspace({ instanceId }: Props) {
           <div className="flex gap-2"><Button variant="outline" onClick={() => void copyReport()} disabled={!report} className="gap-2"><ClipboardCopy className="h-4 w-4" />{copied ? "已复制" : "复制诊断报告"}</Button><Button variant="outline" onClick={() => void load(true)} disabled={loading} className="gap-2"><RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />重新检测</Button></div>
         </div>
         {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300">{error}</div>}
+        <InstanceReadinessNotice instance={instance} />
         {report?.summary && <div className="grid grid-cols-3 gap-3"><div className="rounded-lg bg-emerald-50 p-3 text-center text-sm text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">通过 {report.summary.passed}</div><div className="rounded-lg bg-amber-50 p-3 text-center text-sm text-amber-700 dark:bg-amber-950/30 dark:text-amber-300">警告 {report.summary.warnings}</div><div className="rounded-lg bg-rose-50 p-3 text-center text-sm text-rose-700 dark:bg-rose-950/30 dark:text-rose-300">失败 {report.summary.failed}</div></div>}
         <div className="rounded-xl border border-slate-200 bg-white px-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">{checks.map((check) => <DiagnosticRow key={check.code} check={check} />)}</div>
         <div>

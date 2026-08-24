@@ -806,13 +806,13 @@ ${logsTail || '(暂无日志)'}
       step: "health_check",
       status: finalStatus,
       message: runtimeReady
-        ? "Dashboard 未启用，已跳过 Dashboard 公网路由检查；运行时网关检查通过"
+        ? `Dashboard 未启用，已跳过 Dashboard 公网路由检查；运行时网关检查通过${finalChatReady ? "，聊天已就绪" : "，聊天仍在初始化或需要配置"}`
         : "Dashboard 未启用，但运行时网关未能完成就绪检查",
     }).catch(() => {});
     io.emit(`deploy_log_${instanceId}`, {
       timestamp: new Date().toISOString(),
       message: runtimeReady
-        ? `[健康自检] 状态: running -> Dashboard 未启用，跳过 Dashboard 公网路由检查；运行时网关已就绪。`
+        ? `[健康自检] 状态: running -> Dashboard 未启用，跳过 Dashboard 公网路由检查；运行时网关已就绪。${finalChatReady ? "聊天已就绪。" : "聊天仍在初始化或需要配置，不计为部署失败。"}`
         : `[健康自检] 状态: ${finalStatus} -> Dashboard 未启用，但运行时网关尚未就绪。`,
     });
     await safeUpdateInstanceStatus(updateInstanceStatusStmt, instanceId, finalStatus);
@@ -879,7 +879,7 @@ ${logsTail || '(暂无日志)'}
     });
     io.emit(`deploy_log_${instanceId}`, {
       timestamp: new Date().toISOString(),
-      message: `[健康自检] 状态: ${finalStatus} -> 实例公网反代通道正常 (${publicUrl})。${lastGatewayReady ? '平台通道已连接完成！' : '等待平台通道连接...'}`,
+      message: `[健康自检] 状态: ${finalStatus} -> 实例公网反代通道正常 (${publicUrl})。${finalChatReady ? "聊天已就绪。" : "聊天仍在初始化或需要配置，不计为部署失败。"}`,
     });
     await dbAdapter.updateInstanceVersionInfo(instanceId, {
       deployment_error: finalStatus === "unhealthy" ? "公网路由已就绪，但运行时网关未能完成就绪检查" : null,
@@ -889,7 +889,7 @@ ${logsTail || '(暂无日志)'}
       owner_id: instance?.owner_id || instance?.user_id,
       step: "health_check",
       status: finalStatus,
-      message: `公网路由通道测试成功 (${publicUrl})`
+      message: `公网路由通道测试成功 (${publicUrl})；${finalChatReady ? "聊天已就绪" : "聊天仍在初始化或需要配置"}`
     }).catch(() => {});
     await safeUpdateInstanceStatus(updateInstanceStatusStmt, instanceId, finalStatus);
     io.emit(`deploy_status_${instanceId}`, finalStatus);

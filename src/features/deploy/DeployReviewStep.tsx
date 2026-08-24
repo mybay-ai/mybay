@@ -2,6 +2,8 @@ import { Check, Layers, Globe, Shield, Terminal, Settings, ArrowRight, Server, K
 import { useTranslation } from "react-i18next";
 import { Button, Card } from "../../components/ui";
 import { useNavigate } from "react-router-dom";
+import { InstanceReadinessNotice } from "../../components/instance-runtime/InstanceReadinessNotice";
+import type { AgentInstance } from "../../types";
 
 interface DeployReviewStepProps {
   step: number;
@@ -622,6 +624,10 @@ export function DeployReviewStep({ step, data, createdInstance, testResults, onS
     );
   }
   // Else, step === 7 Success page
+  const deployedInstance = {
+    ...createdInstance,
+    status: createdInstance?.instanceStatus || createdInstance?.status || "running",
+  } as AgentInstance;
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 font-sans">
       <div className="rounded-2xl border border-green-200 bg-green-50/20 p-6 text-center dark:border-emerald-800/70 dark:bg-emerald-950/30">
@@ -633,6 +639,8 @@ export function DeployReviewStep({ step, data, createdInstance, testResults, onS
           {t("wizardCopy.review.deployedDescription", { name: createdInstance?.name })}
         </p>
       </div>
+
+      {createdInstance?.id && <InstanceReadinessNotice instance={deployedInstance} />}
 
       <div className="border border-outline rounded-2xl bg-surface overflow-hidden p-6 shadow-sm space-y-4">
         <div className="border-b pb-3 flex items-center gap-2 text-content">
