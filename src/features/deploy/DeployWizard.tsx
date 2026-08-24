@@ -7,6 +7,7 @@ import type { SetupFormData } from "../../types";
 import { useInstanceQuota } from "../../hooks/useInstanceQuota";
 import { api } from "../../lib/api";
 import { sanitizeDeployPayload } from "./sanitizeDeployPayload";
+import { buildLocalDeploymentRequest } from "./localDeploymentRequestAdapter";
 import { isDeploymentSuccessful, isDeploymentTerminal } from "./deploymentUiState";
 
 // Import modular sub-components
@@ -482,15 +483,12 @@ export function DeployWizard({
     setLoading(true);
     setSubmitError(null);
     try {
-      const payload = {
-        ...sanitizeDeployPayload(data),
-        confirmed_skill_ids: data.skills || [],
-        trust_permission_confirmed: trustPermissionConfirmed,
-        trust_permission_confirmed_at: new Date().toISOString()
-      };
-      const result = await api.post("/api/instances", payload, {
-        headers: { "Idempotency-Key": idempotencyKey },
+      const request = buildLocalDeploymentRequest({
+        draft: data,
+        idempotencyKey,
+        permissionConfirmed: trustPermissionConfirmed,
       });
+      const result = await api.post(request.path, request.body, request.options);
       if (result && result.initialDashboardCredentials) {
         sessionStorage.setItem(
           "one_time_credentials_instance_" + result.id,
