@@ -8,7 +8,7 @@ import type { AgentInstance, User as UserType } from "../types";
 import { APP_ROUTES } from "../constants/routes";
 import { useNavigate } from "react-router-dom";
 import { useFeedback } from "./FeedbackProvider";
-import { ChatConversationSidebar } from "./chat-workspace/ChatConversationSidebar";
+import { ChatConversationSidebar, type ConversationSearchResult } from "./chat-workspace/ChatConversationSidebar";
 import { ChatInputBar, type ChatReasoningEffort, type PendingAttachment } from "./chat-workspace/ChatInputBar";
 import { ChatMessagesPanel } from "./chat-workspace/ChatMessagesPanel";
 import { ChatSettingsPanel } from "./chat-workspace/ChatSettingsPanel";
@@ -111,6 +111,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
   
   // Conversation Selection State
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [searchNavigation, setSearchNavigation] = useState<{ conversationId: string; messageId: string; sequenceNo: number; nonce: number } | null>(null);
   const [activeRunConversationId, setActiveRunConversationId] = useState<string | null>(null);
 
   // Message Pagination State
@@ -566,14 +567,18 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     const initialConvId = selectedConversationId;
     const currentMessageGen = messageGenerationRef.current;
     const historyRequestId = ++messageLoadRequestIdRef.current;
-    shouldScrollToBottomRef.current = true;
+    const searchTarget = searchNavigation?.conversationId === initialConvId ? searchNavigation : null;
+    shouldScrollToBottomRef.current = !searchTarget;
 
     async function loadConvMessages() {
       try {
         setLoadingMessages(true);
         setError(null);
         setNextCursorSeq(null);
-        const res = await api.get(`/api/instances/${selectedId}/conversations/${selectedConversationId}/messages?limit=50`);
+        const targetQuery = searchTarget && Number.isFinite(searchTarget.sequenceNo)
+          ? `&beforeSeq=${encodeURIComponent(String(searchTarget.sequenceNo + 1))}`
+          : "";
+        const res = await api.get(`/api/instances/${selectedId}/conversations/${selectedConversationId}/messages?limit=50${targetQuery}`);
         if (!shouldAcceptMessageHistory(
           { selectedId: selectedIdRef.current, selectedConversationId: selectedConversationIdRef.current, messageGeneration: messageGenerationRef.current, historyRequestId: messageLoadRequestIdRef.current },
           { selectedId: initialSelectedId, selectedConversationId: initialConvId, messageGeneration: currentMessageGen, historyRequestId }
@@ -653,7 +658,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     }
 
     loadConvMessages();
-  }, [selectedId, selectedConversationId]);
+  }, [selectedId, selectedConversationId, searchNavigation?.nonce]);
 
   const selectedReadiness = chatReadiness[selectedId];
   const isChatReady = selectedReadiness ? selectedReadiness.ready : false; // Do not assume ready until verified
@@ -1828,7 +1833,22 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
           onCloseMobileSidebar={() => setMobileSidebarOpen(false)}
           onScroll={handleConversationsScroll}
           onSelectConversation={(id) => {
+            setSearchNavigation(null);
             selectConversationId(id);
+            setMobileSidebarOpen(false);
+          }}
+          onSelectSearchResult={(result: ConversationSearchResult) => {
+            if (result.message_id && Number.isFinite(result.sequence_no)) {
+              setSearchNavigation({
+                conversationId: result.conversation_id,
+                messageId: result.message_id,
+                sequenceNo: Number(result.sequence_no),
+                nonce: Date.now()
+              });
+            } else {
+              setSearchNavigation(null);
+            }
+            selectConversationId(result.conversation_id);
             setMobileSidebarOpen(false);
           }}
           setRenameValue={setRenameValue}
@@ -1955,6 +1975,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
                 message.id === messageId ? { ...message, user_feedback: feedback } : message
               )));
             }}
+            highlightedMessageId={searchNavigation?.conversationId === selectedConversationId ? searchNavigation.messageId : null}
           />
 
           {/* Message input area */}

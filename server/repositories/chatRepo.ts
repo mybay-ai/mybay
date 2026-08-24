@@ -84,6 +84,18 @@ function touchConversation(data: any, conversationId: string, updates: any = {})
   return conv;
 }
 
+export interface ConversationSearchResult {
+  conversation_id: string;
+  conversation_title: string;
+  project_id: string | null;
+  matched_field: "title" | "message";
+  message_id: string | null;
+  message_role: string | null;
+  sequence_no: number | null;
+  snippet: string;
+  matched_at: string;
+}
+
 const UNORDERED_CONVERSATION_SORT = Number.MAX_SAFE_INTEGER;
 
 function conversationSortValue(value: unknown): number {
@@ -123,6 +135,15 @@ function isConversationAfterCursor(conversation: Conversation, cursor: string): 
 
 function assertUniqueIds(ids: string[], errorCode: string) {
   if (ids.length !== new Set(ids).size) throw new Error(errorCode);
+}
+
+function buildSearchSnippet(value: string, normalizedQuery: string, maxLength = 180): string {
+  const compact = String(value || "").replace(/\s+/g, " ").trim();
+  if (compact.length <= maxLength) return compact;
+  const matchIndex = compact.toLocaleLowerCase().indexOf(normalizedQuery);
+  const start = Math.max(0, Math.min(matchIndex - Math.floor(maxLength / 3), compact.length - maxLength));
+  const end = Math.min(compact.length, start + maxLength);
+  return `${start > 0 ? "…" : ""}${compact.slice(start, end)}${end < compact.length ? "…" : ""}`;
 }
 
 export const chatRepo = {
@@ -202,6 +223,59 @@ export const chatRepo = {
       rows = rows.filter((conversation) => isConversationAfterCursor(conversation, cursor));
     }
     return rows.slice(0, limit);
+  },
+
+  async searchConversations(userId: string, instanceId: string, query: string, limit = 30): Promise<ConversationSearchResult[]> {
+    const normalizedQuery = String(query || "").trim().toLocaleLowerCase();
+    if (!normalizedQuery) return [];
+
+    const store = readStore();
+    const conversations = store.conversations.filter((conversation) => conversation.user_id === userId && conversation.instance_id === instanceId);
+    const byConversationId = new Map(conversations.map((conversation) => [conversation.id, conversation]));
+    const ranked: Array<ConversationSearchResult & { score: number }> = [];
+
+    for (const conversation of conversations) {
+      const title = String(conversation.title || "");
+      const normalizedTitle = title.toLocaleLowerCase();
+      if (normalizedTitle.includes(normalizedQuery)) {
+        ranked.push({
+          conversation_id: conversation.id,
+          conversation_title: title,
+          project_id: conversation.project_id || null,
+          matched_field: "title",
+          message_id: null,
+          message_role: null,
+          sequence_no: null,
+          snippet: buildSearchSnippet(title, normalizedQuery),
+          matched_at: conversation.updated_at,
+          score: normalizedTitle === normalizedQuery ? 400 : normalizedTitle.startsWith(normalizedQuery) ? 350 : 300
+        });
+      }
+    }
+
+    for (const message of store.chatMessages) {
+      const conversation = byConversationId.get(message.conversation_id);
+      if (!conversation) continue;
+      const content = typeof message.content === "string" ? message.content : "";
+      if (!content.toLocaleLowerCase().includes(normalizedQuery)) continue;
+      ranked.push({
+        conversation_id: conversation.id,
+        conversation_title: conversation.title,
+        project_id: conversation.project_id || null,
+        matched_field: "message",
+        message_id: message.id,
+        message_role: message.role || null,
+        sequence_no: Number(message.sequence_no || 0),
+        snippet: buildSearchSnippet(content, normalizedQuery),
+        matched_at: message.created_at || conversation.updated_at,
+        score: 200
+      });
+    }
+
+    return ranked
+      .sort((a, b) => b.score - a.score || String(b.matched_at || "").localeCompare(String(a.matched_at || "")) || Number(b.sequence_no || 0) - Number(a.sequence_no || 0))
+      .slice(0, Math.max(1, Math.min(50, limit)))
+      .map(({ score: _score, ...result }) => result);
   },
 
   async reorderConversations(userId: string, instanceId: string, orderedIds: string[]): Promise<Conversation[]> {

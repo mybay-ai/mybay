@@ -202,6 +202,44 @@ describe("chatRepo local status contract", () => {
     expect((await chatRepo.listConversations("user-1", "instance-2", 10)).map(item => item.id)).toEqual([otherInstance.id]);
   });
 
+  it("searches local conversation titles and message content within the user and instance boundary", async () => {
+    const matchingTitle = await chatRepo.createConversation("user-1", "instance-1", "Quarterly launch notes");
+    const matchingMessage = await chatRepo.createConversation("user-1", "instance-1", "General planning");
+    const foreignUser = await chatRepo.createConversation("user-2", "instance-1", "Quarterly private notes");
+    const foreignInstance = await chatRepo.createConversation("user-1", "instance-2", "Quarterly other instance");
+
+    const addCompletedTurn = async (conversationId: string, userId: string, instanceId: string, requestId: string, content: string) => {
+      const started = await chatRepo.beginChatTurn({ conversationId, userId, instanceId, requestId, content });
+      await chatRepo.finishChatTurn({ conversationId, userMessageId: started.message_id!, status: "completed", assistantContent: `Answer for ${content}` });
+    };
+    await addCompletedTurn(matchingMessage.id, "user-1", "instance-1", "request-local", "Discuss the quarterly roadmap");
+    await addCompletedTurn(foreignUser.id, "user-2", "instance-1", "request-foreign-user", "Quarterly secret");
+    await addCompletedTurn(foreignInstance.id, "user-1", "instance-2", "request-foreign-instance", "Quarterly elsewhere");
+
+    const results = await chatRepo.searchConversations("user-1", "instance-1", "quarterly", 20);
+    expect(results.some(result => result.conversation_id === matchingTitle.id && result.matched_field === "title")).toBe(true);
+    expect(results.some(result => result.conversation_id === matchingMessage.id && result.matched_field === "message" && result.message_id)).toBe(true);
+    expect(results.some(result => result.conversation_id === foreignUser.id)).toBe(false);
+    expect(results.some(result => result.conversation_id === foreignInstance.id)).toBe(false);
+  });
+
+  it("returns bounded search snippets and respects the result limit", async () => {
+    const conversation = await chatRepo.createConversation("user-1", "instance-1", "Search limits");
+    for (let index = 0; index < 3; index += 1) {
+      const started = await chatRepo.beginChatTurn({
+        conversationId: conversation.id,
+        userId: "user-1",
+        instanceId: "instance-1",
+        requestId: `search-${index}`,
+        content: `${"prefix ".repeat(40)}needle ${index} ${"suffix ".repeat(40)}`
+      });
+      await chatRepo.finishChatTurn({ conversationId: conversation.id, userMessageId: started.message_id!, status: "completed", assistantContent: "complete" });
+    }
+    const results = await chatRepo.searchConversations("user-1", "instance-1", "needle", 2);
+    expect(results).toHaveLength(2);
+    expect(results.every(result => result.snippet.length <= 182 && result.snippet.includes("needle"))).toBe(true);
+  });
+
   it("rejects invalid conversation ordering without partially changing data", async () => {
     const first = await chatRepo.createConversation("user-1", "instance-1", "First");
     const second = await chatRepo.createConversation("user-1", "instance-1", "Second");

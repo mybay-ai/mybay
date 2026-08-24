@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { AlertCircle, LoaderCircle } from "lucide-react";
-import type { RefObject } from "react";
+import { useEffect, type RefObject } from "react";
 import { findRetrySourceMessage } from "./run/retrySelectors";
 import type { AgentInstance, User as UserType } from "../../types";
 import type { ChatMessage } from "../../lib/chatWorkspaceState";
@@ -54,6 +54,7 @@ type ChatMessagesPanelProps = {
   onOpenConversationFile?: (file: PendingAttachment) => void;
   onOpenInstanceFilePath?: (filePath: string) => void;
   onMessageFeedbackChange?: (messageId: string, feedback: "like" | "dislike" | null) => void;
+  highlightedMessageId?: string | null;
 };
 
 export function ChatMessagesPanel({
@@ -83,6 +84,7 @@ export function ChatMessagesPanel({
   onGoToInstanceManage,
   onUsePrompt,
   onLoadMoreMessages,
+  highlightedMessageId,
   onRetry,
   onEditMessage,
   onSwitchToAssistAndDiagnose,
@@ -124,6 +126,15 @@ export function ChatMessagesPanel({
   const runAssistantHasContent = runAssistantIndex >= 0 && Boolean(messages[runAssistantIndex]?.content.trim());
   const shouldShowLegacyLoading = shouldShowLegacyRunLoading(sending, runExecutionState) && !runAssistantHasContent;
 
+  useEffect(() => {
+    if (!highlightedMessageId) return;
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const escapedId = typeof CSS !== "undefined" && typeof CSS.escape === "function" ? CSS.escape(highlightedMessageId) : highlightedMessageId.replace(/["\\]/g, "\\$&");
+    const target = container.querySelector<HTMLElement>(`[data-chat-message-id="${escapedId}"]`);
+    if (target) target.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [highlightedMessageId, messages, scrollContainerRef]);
+
   return (
     <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.06),_transparent_34%),linear-gradient(180deg,_rgba(248,250,252,0.92),_#ffffff_42%)] text-content p-3 sm:p-5 space-y-4 sm:space-y-5 dark:bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.12),_transparent_34%),linear-gradient(180deg,_rgba(15,23,42,0.98),_#020617_55%)]">
       <ChatReadinessBanner
@@ -155,8 +166,12 @@ export function ChatMessagesPanel({
           )}
 
           {messages.map((msg, messageIndex) => (
-            <ChatMessageBubble
+            <div
               key={msg.id || `${selectedConversationId}-${msg.sequence_no}`}
+              data-chat-message-id={msg.id}
+              className={highlightedMessageId === msg.id ? "rounded-2xl ring-2 ring-indigo-400 ring-offset-4 ring-offset-white transition dark:ring-indigo-400 dark:ring-offset-slate-950" : undefined}
+            >
+            <ChatMessageBubble
               message={msg}
               currentUser={currentUser}
               retrySourceMessage={msg.role === "assistant" ? findRetrySourceMessage(messages, messageIndex) : undefined}
@@ -177,6 +192,7 @@ export function ChatMessagesPanel({
               canRespondToApproval={canRespondToApproval}
               onRespondToApproval={onRespondToApproval}
             />
+            </div>
           ))}
 
           {detachedRunMessage && (

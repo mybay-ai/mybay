@@ -181,6 +181,28 @@ export function registerConversationRoutes(router: Router) {
   // ======================================================================
   // 2. List Conversations (Stable Pagination)
   // ======================================================================
+  router.get("/:id/conversations/search", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    const { id } = req.params;
+    const query = typeof req.query.q === "string" ? req.query.q.trim() : "";
+    let limit = req.query.limit ? parseInt(String(req.query.limit), 10) : 30;
+
+    if (!isValidInstanceId(id) || query.length < 2 || query.length > 200) {
+      return res.status(400).json({ success: false, error: "INVALID_SEARCH_QUERY" });
+    }
+    if (!Number.isFinite(limit) || limit <= 0) limit = 30;
+    limit = Math.min(limit, 50);
+
+    try {
+      const access = await assertInstanceAccess(id, req.user.id);
+      if (!access.ok) return res.status(access.status).json({ success: false, error: access.error });
+      const results = await chatRepo.searchConversations(req.user.id, id, query, limit);
+      return res.json({ success: true, results });
+    } catch (err: any) {
+      console.error("[Search Conversations Error]", err);
+      return res.status(500).json({ success: false, error: "INTERNAL_ERROR" });
+    }
+  });
+
   router.get("/:id/conversations", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
     let limit = req.query.limit ? parseInt(String(req.query.limit), 10) : 20;

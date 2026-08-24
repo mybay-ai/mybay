@@ -1,6 +1,19 @@
-import { ArrowDown, ArrowUp, ChevronLeft, Edit3, Folder, FolderInput, FolderPlus, MessageSquare, Pin, Plus, Trash2, X } from "lucide-react";
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { ArrowDown, ArrowUp, ChevronLeft, Edit3, Folder, FolderInput, FolderPlus, LoaderCircle, MessageSquare, Pin, Plus, Search, Trash2, X } from "lucide-react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { api } from "../../lib/api";
+
+export interface ConversationSearchResult {
+  conversation_id: string;
+  conversation_title: string;
+  project_id: string | null;
+  matched_field: "title" | "message";
+  message_id: string | null;
+  message_role: string | null;
+  sequence_no: number | null;
+  snippet: string;
+  matched_at: string;
+}
 
 interface ChatConversationSidebarProps {
   mobileSidebarOpen: boolean;
@@ -22,6 +35,7 @@ interface ChatConversationSidebarProps {
   onCloseMobileSidebar: () => void;
   onScroll: (event: React.UIEvent<HTMLDivElement>) => void;
   onSelectConversation: (id: string) => void;
+  onSelectSearchResult: (result: ConversationSearchResult) => void;
   setRenameValue: (value: string) => void;
   setRenamingId: (id: string | null) => void;
   onRenameSubmit: (id: string) => void;
@@ -52,6 +66,7 @@ export function ChatConversationSidebar({
   onCloseMobileSidebar,
   onScroll,
   onSelectConversation,
+  onSelectSearchResult,
   setRenameValue,
   setRenamingId,
   onRenameSubmit,
@@ -66,6 +81,11 @@ export function ChatConversationSidebar({
   const [editingProject, setEditingProject] = useState<any | null>(null);
   const [projectName, setProjectName] = useState("");
   const [moveConversationId, setMoveConversationId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<ConversationSearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [searchFailed, setSearchFailed] = useState(false);
+  const searchRequestRef = useRef(0);
 
   const moveConversation = useMemo(() => conversations.find((conv) => conv.id === moveConversationId) || null, [conversations, moveConversationId]);
 
@@ -75,6 +95,44 @@ export function ChatConversationSidebar({
       setEditingProject(null);
     }
   }, [projectModalMode]);
+
+  useEffect(() => {
+    setSearchQuery("");
+    setSearchResults([]);
+    setSearching(false);
+    setSearchFailed(false);
+    searchRequestRef.current += 1;
+  }, [selectedId]);
+
+  useEffect(() => {
+    const query = searchQuery.trim();
+    const requestId = ++searchRequestRef.current;
+    if (!selectedId || query.length < 2) {
+      setSearchResults([]);
+      setSearching(false);
+      setSearchFailed(false);
+      return;
+    }
+
+    setSearching(true);
+    setSearchFailed(false);
+    const timer = window.setTimeout(async () => {
+      try {
+        const response = await api.get(`/api/instances/${encodeURIComponent(selectedId)}/conversations/search?q=${encodeURIComponent(query)}&limit=30`);
+        if (searchRequestRef.current !== requestId) return;
+        setSearchResults(response?.success && Array.isArray(response.results) ? response.results : []);
+      } catch (error) {
+        if (searchRequestRef.current !== requestId) return;
+        console.error("Failed to search conversations:", error);
+        setSearchResults([]);
+        setSearchFailed(true);
+      } finally {
+        if (searchRequestRef.current === requestId) setSearching(false);
+      }
+    }, 250);
+
+    return () => window.clearTimeout(timer);
+  }, [searchQuery, selectedId]);
 
   const closeProjectModal = () => {
     setProjectModalMode(null);
@@ -271,8 +329,54 @@ export function ChatConversationSidebar({
         </button>
       </div>
 
+      <div className="shrink-0 border-b border-outline bg-surface/55 px-3 py-2.5">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-muted" />
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            maxLength={200}
+            placeholder={t("chatWorkspace.searchConversations")}
+            className="h-9 w-full rounded-lg border border-outline bg-surface pl-9 pr-8 text-[13px] text-content outline-none transition placeholder:text-content-muted focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 dark:focus:border-indigo-500 dark:focus:ring-indigo-500/20"
+          />
+          {searchQuery && (
+            <button type="button" onClick={() => setSearchQuery("")} className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-content-muted hover:bg-surface-muted hover:text-content-secondary" title={t("chatWorkspace.clearSearch")}>
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-2.5 space-y-1.5 [-webkit-overflow-scrolling:touch]" onScroll={onScroll}>
-        {loadingConversations ? (
+        {searchQuery.trim().length >= 2 ? (
+          searching ? (
+            <div className="flex items-center justify-center gap-2 py-10 text-[13px] text-content-muted"><LoaderCircle className="h-4 w-4 animate-spin" />{t("chatWorkspace.searchingConversations")}</div>
+          ) : searchFailed ? (
+            <div className="px-4 py-10 text-center text-[13px] text-red-600 dark:text-red-300">{t("chatWorkspace.searchConversationsFailed")}</div>
+          ) : searchResults.length === 0 ? (
+            <div className="px-4 py-10 text-center text-[13px] text-content-muted">{t("chatWorkspace.noConversationSearchResults")}</div>
+          ) : (
+            <div className="space-y-1.5">
+              <div className="px-1.5 pb-1 text-[11px] font-semibold uppercase tracking-wide text-content-muted">{t("chatWorkspace.searchResults", { count: searchResults.length })}</div>
+              {searchResults.map((result, index) => (
+                <button
+                  type="button"
+                  key={`${result.conversation_id}-${result.message_id || "title"}-${index}`}
+                  onClick={() => onSelectSearchResult(result)}
+                  className="w-full rounded-xl border border-transparent bg-surface/55 p-3 text-left transition hover:border-indigo-200 hover:bg-indigo-50 dark:hover:border-indigo-500/35 dark:hover:bg-indigo-950/30"
+                >
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="h-3.5 w-3.5 shrink-0 text-indigo-500" />
+                    <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-content">{result.conversation_title}</span>
+                    <span className="shrink-0 text-[10px] text-content-muted">{t(result.matched_field === "title" ? "chatWorkspace.titleMatch" : "chatWorkspace.messageMatch")}</span>
+                  </div>
+                  {result.matched_field === "message" && <p className="mt-1.5 line-clamp-3 text-[12px] leading-5 text-content-muted">{result.snippet}</p>}
+                </button>
+              ))}
+            </div>
+          )
+        ) : loadingConversations ? (
           <div className="space-y-2 p-2">
             {[1, 2, 3, 4].map((i) => (
               <div key={i} className="h-11 bg-surface/70 rounded-lg animate-pulse border border-outline/70" />
