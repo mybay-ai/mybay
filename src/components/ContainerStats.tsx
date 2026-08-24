@@ -787,7 +787,7 @@ export function ContainerStats({ instance: propInstance, onReload, currentUser, 
                   </div>
                 )}
 
-                {/* Item 7: model_options_status */}
+                {/* Supplemental diagnostic: model_options_status (not included in the 7 critical checks) */}
                 {instance.model_provider && (
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs gap-1.5">
                     <span className="text-content-muted font-medium font-sans">{t("runtimeMetrics.health.optionsTitle")}</span>

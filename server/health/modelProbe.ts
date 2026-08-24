@@ -1,4 +1,7 @@
 import { PassThrough } from "node:stream";
+import fs from "node:fs";
+import path from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { providerRegistry } from "../../shared/providerRegistry";
 export function sanitizeErrorMsg(errorMsg: string | null | undefined): string {
   if (!errorMsg) return "";
@@ -37,8 +40,49 @@ export function matchModelNames(actual: string, expected: string): boolean {
 }
 
 export function checkRecentSessionsForAppliedModel(instanceId: string, expectedProvider: string, expectedModel: string): { success: boolean; sessionCount: number; lastSession?: any } {
-  // SQLite is removed from primary and fallback data layers
-  return { success: false, sessionCount: 0 };
+  if (!/^[A-Za-z0-9_-]+$/.test(instanceId)) return { success: false, sessionCount: 0 };
+  const instanceDataRoot = process.env.MYBAY_INSTANCE_DATA_ROOT?.trim()
+    || path.join(process.cwd(), "data", "instances");
+  const stateDbPath = path.join(instanceDataRoot, instanceId, "state.db");
+  if (!fs.existsSync(stateDbPath)) return { success: false, sessionCount: 0 };
+
+  let database: DatabaseSync | null = null;
+  try {
+    database = new DatabaseSync(stateDbPath, { readOnly: true });
+    const rows = database.prepare(`
+      SELECT
+        source,
+        model,
+        billing_provider AS provider,
+        api_call_count,
+        input_tokens,
+        output_tokens,
+        last_activity_at
+      FROM sessions
+      WHERE COALESCE(api_call_count, 0) > 0
+        AND COALESCE(model, '') <> ''
+      ORDER BY COALESCE(last_activity_at, started_at, 0) DESC
+      LIMIT 50
+    `).all() as any[];
+
+    const expectedProviderNormalized = normalizeProvider(expectedProvider);
+    const matchingRows = rows.filter((row) => {
+      const modelMatches = matchModelNames(String(row.model || ""), expectedModel);
+      if (!modelMatches) return false;
+      const actualProvider = normalizeProvider(String(row.provider || ""));
+      return !expectedProviderNormalized
+        || !actualProvider
+        || actualProvider === expectedProviderNormalized;
+    });
+    const lastSession = matchingRows[0];
+    return lastSession
+      ? { success: true, sessionCount: matchingRows.length, lastSession }
+      : { success: false, sessionCount: 0 };
+  } catch {
+    return { success: false, sessionCount: 0 };
+  } finally {
+    database?.close();
+  }
 }
 
 export async function queryEndpoint(container: any, url: string): Promise<{ provider: string; model: string; raw: string; statusCode: number } | null> {

@@ -67,6 +67,8 @@
   "expandHistory": "展开对话历史",
   "probeFailed": "无法探测就绪状态",
   "webOnlyDeployPendingTitle": "实例未完成部署 (仅 Web 控制台模式)",
+  "runtimeReadyChatPendingTitle": "实例运行中，聊天尚未就绪",
+  "runtimeReadyChatPendingTip": "实例容器已经运行；请根据上方错误检查聊天 API、内部密钥或路由配置。",
   "webOnlyDeployPendingDesc": "当前实例网页对话服务暂不可用。",
   "errorCodeLabel": "错误代码",
   "webOnlyDeployPendingTip": "提示：仅 Web 独立控制台模式下，网页对话服务为主对话入口，要求后台 8642 端口就绪。请耐心等待实例完全启动就绪，或进入实例设置确认内部对话 API 配置并重新部署实例。",

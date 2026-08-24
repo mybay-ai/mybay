@@ -9,10 +9,10 @@ import { canExecutePollingCallback, finalizeRunMetrics, finalizeRunSteps, isTerm
 import { observeRunSseEventId } from "./runSseCursor";
 import { createRunExecutionState, deriveAssistantText, deriveToolSteps } from "./run/runReducer";
 import { consumeRunSseFrame } from "./run/runStreamCoordinator";
-import { chooseMostCompleteStreamingContent, mergeRecoveredStreamingContent } from "./run/runTextReconciliation";
+import { mergeRecoveredStreamingContent } from "./run/runTextReconciliation";
 import type { RunExecutionState, RunExecutionStatus, ToolEventPayload } from "./run/runTypes";
-import { findRunAssistantMessageIndex } from "./run/runSelectors";
 import { finalizeRunExecution } from "./run/runFinalizer";
+import { applyRunExecutionToMessages, applyRunTextSnapshot } from "./run/runExecutionSync";
 
 export type RunsCapabilityState = "checking" | "supported" | "explicitly_unsupported" | "unavailable" | "disabled";
 
@@ -178,21 +178,12 @@ export function useChatRuns({
     if (!pendingText) return;
     pendingTextRef.current = "";
     pendingTextConversationIdRef.current = null;
-    const execution = runExecutionRef.current;
+    const currentExecution = runExecutionRef.current;
+    const execution = currentExecution ? applyRunTextSnapshot(currentExecution, pendingText) : null;
+    if (execution && pendingTextConversationId && execution.conversationId !== pendingTextConversationId) return;
+    if (execution) runExecutionRef.current = execution;
     setRunExecutionState(execution);
-
-    setMessages(prev => {
-      if (prev.length === 0) return prev;
-      const explicitIndex = execution ? findRunAssistantMessageIndex(prev, execution) : -1;
-      const targetIndex = explicitIndex >= 0 ? explicitIndex : prev.length - 1;
-      const target = prev[targetIndex];
-      if (!target || target.role !== "assistant" || (pendingTextConversationId && target.conversation_id !== pendingTextConversationId)) return prev;
-      const content = chooseMostCompleteStreamingContent(target.content || "", pendingText);
-      if (content === target.content) return prev;
-      const updated = [...prev];
-      updated[targetIndex] = { ...target, content };
-      return updated;
-    });
+    if (execution) setMessages(prev => applyRunExecutionToMessages(prev, execution));
   }, [setMessages]);
 
   const scheduleTextFlush = useCallback(() => {
@@ -479,19 +470,13 @@ export function useChatRuns({
               setRunMetrics(prev => prev?.runId === runId ? { ...prev, status: run.status } : prev);
             }
             if (run.partialOutput) {
-              setMessages(prev => {
-                if (prev.length === 0) return prev;
-                const execution = runExecutionRef.current;
-                const explicitIndex = execution ? findRunAssistantMessageIndex(prev, execution) : -1;
-                const targetIndex = explicitIndex >= 0 ? explicitIndex : prev.length - 1;
-                const target = prev[targetIndex];
-                if (!target || target.role !== "assistant" || target.conversation_id !== currentConvId) return prev;
-                const content = chooseMostCompleteStreamingContent(target.content || "", run.partialOutput);
-                if (content === target.content) return prev;
-                const updated = [...prev];
-                updated[targetIndex] = { ...target, content, conversation_id: currentConvId };
-                return updated;
-              });
+              const execution = runExecutionRef.current;
+              if (execution?.runId === runId && execution.conversationId === currentConvId) {
+                const reconciled = applyRunTextSnapshot(execution, run.partialOutput);
+                runExecutionRef.current = reconciled;
+                setRunExecutionState(reconciled);
+                setMessages(prev => applyRunExecutionToMessages(prev, reconciled));
+              }
             }
 
             if (isTerminalRunStatus(run.status)) {

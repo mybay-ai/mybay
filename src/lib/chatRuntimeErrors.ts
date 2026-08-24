@@ -19,6 +19,7 @@ type ErrorInput = {
 } | null;
 
 const ERROR_MESSAGES: Record<string, string> = {
+  CSRF_ORIGIN_MISMATCH: "当前访问地址与本地控制台配置不一致，请使用配置的地址访问，或刷新页面后重试。",
   INSTANCE_NOT_FOUND: "找不到这个实例，可能已删除或当前账号无权访问。",
   INTERNAL_ROUTING: "服务器内部路由密钥未配置，请补充配置后重启服务。",
   DOCKER_UNAVAILABLE: "服务器 Docker 服务暂时不可用，请检查 Docker 是否正在运行。",

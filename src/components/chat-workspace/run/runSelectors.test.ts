@@ -29,6 +29,15 @@ describe("run message selectors", () => {
     }))).toBe(-1);
   });
 
+  it("never binds an identified new run to a previous pending assistant", () => {
+    expect(findRunAssistantMessageIndex(messages, createRunExecutionState({
+      runId: "run-new",
+      conversationId: "conv-1",
+      requestId: "request-new",
+      assistantMessageId: "assistant-new"
+    }))).toBe(-1);
+  });
+
   it("hides the legacy loader after timeline blocks exist", () => {
     expect(shouldShowLegacyRunLoading(true, createRunExecutionState({ runId: "run-1" }))).toBe(true);
     expect(shouldShowLegacyRunLoading(true, createRunExecutionState({

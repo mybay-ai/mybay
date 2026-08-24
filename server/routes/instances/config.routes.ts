@@ -37,7 +37,11 @@ import { startPeriodicAgentDbSync } from "../../sqliteAgentSync";
 import { ensureEncryptedDashboardAuthSecret } from "../../utils/dashboardAuthSecret";
 import { applySavedProviderCredential, SavedProviderCredentialError } from "../../utils/savedProviderCredential";
 import { validateConfigArchiveEntries } from "../../utils/configArchiveSecurity";
-import { isPrivilegedUser, parseInstanceConfigJson } from "../../services/instanceConfig/instanceConfigRoutePolicy";
+import {
+  isPrivilegedUser,
+  parseInstanceConfigJson,
+  resolveProviderCredentialSelection,
+} from "../../services/instanceConfig/instanceConfigRoutePolicy";
 
 export function createConfigRoutes(deps: RouterDependencies) {
   const router = Router();
@@ -1210,6 +1214,16 @@ API keys, credentials, and passwords must be manually reconfigured upon future r
       if (data.providerApiKey !== undefined && typeof data.providerApiKey !== 'string') {
         return res.status(400).json({ error: "配置格式验证错误：'providerApiKey' (apiKey) 必须是 string 字符串类型。" });
       }
+      if (
+        data.providerCredentialId !== undefined &&
+        data.providerCredentialId !== null &&
+        typeof data.providerCredentialId !== "string"
+      ) {
+        return res.status(400).json({
+          code: "INVALID_PROVIDER_CREDENTIAL_ID",
+          error: "配置格式验证错误：'providerCredentialId' 必须是 string 字符串或 null。"
+        });
+      }
       if (data.enableDashboard !== undefined && typeof data.enableDashboard !== 'boolean') {
         return res.status(400).json({ error: "配置格式验证错误：'enableDashboard' 必须是 boolean 布尔类型。" });
       }
@@ -1260,10 +1274,16 @@ API keys, credentials, and passwords must be manually reconfigured upon future r
 
       const expectedName = instance.container_name || `mybay-agent-${instance.id}`;
 
+      const config = parseInstanceConfigJson(instance.config_json);
+      const previousChannelConfig = { ...config };
+      const credentialSelection = resolveProviderCredentialSelection(data, config);
+      const { selectedCredentialId } = credentialSelection;
+
       // Resolve saved credential if provided during update
-      if (data.providerCredentialId) {
+      if (selectedCredentialId) {
         try {
-          const cred = await dbAdapter.getCredentialById(data.providerCredentialId, req.user.id);
+          const cred = await dbAdapter.getCredentialById(selectedCredentialId, req.user.id);
+          data.providerCredentialId = selectedCredentialId;
           applySavedProviderCredential(data, cred);
         } catch (err: any) {
           console.error("Failed to resolve credential for instance update:", err);
@@ -1279,9 +1299,19 @@ API keys, credentials, and passwords must be manually reconfigured upon future r
           });
         }
       }
-      
-      const config = JSON.parse(instance.config_json);
-      const previousChannelConfig = { ...config };
+
+      if (
+        credentialSelection.requiresNewManualApiKey ||
+        (
+          credentialSelection.switchingToManual &&
+          isMaskedSecretPlaceholder(data.providerApiKey)
+        )
+      ) {
+        return res.status(400).json({
+          code: "MODEL_API_KEY_REQUIRED",
+          error: "切换为手动填写 API Key 时，请输入新的模型 API Key。"
+        });
+      }
       
       // Auto-generate hermesApiKey for legacy instances if not present
       if (!config.hermesApiKey) {
@@ -1305,10 +1335,13 @@ API keys, credentials, and passwords must be manually reconfigured upon future r
 
       if (data.providerApiKey !== undefined && !isMaskedSecretPlaceholder(data.providerApiKey)) {
         config.providerApiKey = data.providerApiKey ? encrypt(data.providerApiKey) : config.providerApiKey;
+        if (data.providerApiKey) delete config.apiKey;
       }
-      if (data.providerCredentialId) {
-        config.providerCredentialId = data.providerCredentialId;
+      if (selectedCredentialId) {
+        config.providerCredentialId = selectedCredentialId;
         delete config.apiKey;
+      } else if (credentialSelection.switchingToManual) {
+        delete config.providerCredentialId;
       }
 
 

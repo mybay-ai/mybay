@@ -1998,6 +1998,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
           messages={messages}
           toolSteps={toolSteps}
           activeRunId={selectedActiveRunId}
+          runExecutionState={selectedRunExecution}
           runMetrics={selectedRunMetrics}
           approvalRequests={approvalRequests}
           runCapabilities={runCapabilities}
@@ -2036,6 +2037,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
                 messages={messages}
                 toolSteps={toolSteps}
                 activeRunId={selectedActiveRunId}
+                runExecutionState={selectedRunExecution}
                 runMetrics={selectedRunMetrics}
                 approvalRequests={approvalRequests}
                 runCapabilities={runCapabilities}

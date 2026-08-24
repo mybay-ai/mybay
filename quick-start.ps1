@@ -5,6 +5,8 @@ param(
 
     [string]$LanBindIp = "",
 
+    [switch]$InstallPrerequisites,
+
     [Alias("h")]
     [switch]$Help
 )
@@ -13,10 +15,11 @@ Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
 
 if ($Help) {
-    Write-Output "Usage: .\quick-start.ps1 [-Mode desktop|lan|server] [-LanBindIp 192.168.1.20]"
+    Write-Output "Usage: .\quick-start.ps1 [-Mode desktop|lan|server] [-LanBindIp 192.168.1.20] [-InstallPrerequisites]"
     Write-Output "  desktop  Local computer deployment (default)"
     Write-Output "  lan      Local-network deployment bound to one host IPv4 address"
     Write-Output "  server   Public server deployment with Traefik and HTTPS"
+    Write-Output "  -InstallPrerequisites  Install Docker Desktop with winget when needed, then start it"
     return
 }
 
@@ -64,6 +67,78 @@ function Get-PreferredHostDns {
 
 function Test-Command([string]$Name) {
     return $null -ne (Get-Command $Name -ErrorAction SilentlyContinue)
+}
+
+function Add-DockerCliToProcessPath {
+    $dockerBin = Join-Path $env:ProgramFiles "Docker\Docker\resources\bin"
+    $dockerExe = Join-Path $dockerBin "docker.exe"
+    if ((Test-Path -LiteralPath $dockerExe) -and ($env:Path -split ';' -notcontains $dockerBin)) {
+        $env:Path = "$dockerBin;$env:Path"
+    }
+}
+
+function Test-DockerDaemon {
+    if (-not (Test-Command "docker")) {
+        return $false
+    }
+
+    $previousErrorActionPreference = $ErrorActionPreference
+    try {
+        # PowerShell 7 can promote native stderr to an error when the daemon is unavailable.
+        $ErrorActionPreference = "Continue"
+        & docker info *> $null
+        return $LASTEXITCODE -eq 0
+    } catch {
+        return $false
+    } finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
+}
+
+function Install-DockerDesktop {
+    if (-not (Test-Command "winget")) {
+        Fail "Docker was not found and winget is unavailable. Install Docker Desktop manually, then retry: https://docs.docker.com/desktop/setup/install/windows-install/"
+    }
+
+    Write-Host "Docker Desktop is required while MyBay is running."
+    Write-Host "Installing Docker Desktop with winget; Windows may request administrator approval."
+    $previousErrorActionPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = "Continue"
+        & winget install --exact --id Docker.DockerDesktop --source winget --accept-package-agreements --accept-source-agreements
+        $installExitCode = $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
+    if ($installExitCode -ne 0) {
+        Fail "Docker Desktop installation failed with winget exit code $installExitCode. Complete any pending Windows updates or restart, then rerun this command."
+    }
+
+    Add-DockerCliToProcessPath
+    if (-not (Test-Command "docker")) {
+        Fail "Docker Desktop was installed, but its CLI is not available yet. Restart Windows, then rerun this command."
+    }
+}
+
+function Start-DockerDesktopAndWait([int]$TimeoutSeconds = 180) {
+    $dockerDesktopPath = Join-Path $env:ProgramFiles "Docker\Docker\Docker Desktop.exe"
+    if (-not (Test-Path -LiteralPath $dockerDesktopPath)) {
+        Fail "Docker is installed but its daemon is unavailable, and Docker Desktop could not be found. Start your Docker daemon manually and retry."
+    }
+
+    Write-Host "Starting Docker Desktop..."
+    Start-Process -FilePath $dockerDesktopPath | Out-Null
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    do {
+        if (Test-DockerDaemon) {
+            Write-Host "[OK] Docker Desktop is running."
+            return
+        }
+        Write-Host "Waiting for the Docker engine to become ready..."
+        Start-Sleep -Seconds 5
+    } while ([DateTime]::UtcNow -lt $deadline)
+
+    Fail "Docker Desktop did not become ready within $TimeoutSeconds seconds. Complete its first-run setup, enable WSL 2/virtualization if prompted, or restart Windows; then rerun this command."
 }
 
 function Read-Utf8Lines([string]$Path) {
@@ -175,11 +250,16 @@ try {
 
     Write-Step "1/6" "Checking Docker and system dependencies..."
     if (-not (Test-Command "docker")) {
-        Fail "Docker was not found. Install Docker Desktop first: https://docs.docker.com/desktop/setup/install/windows-install/"
+        if (-not $InstallPrerequisites) {
+            Fail "Docker was not found. Install Docker Desktop first, or rerun with -InstallPrerequisites to install it with winget."
+        }
+        Install-DockerDesktop
     }
-    & docker info *> $null
-    if ($LASTEXITCODE -ne 0) {
-        Fail "Docker is installed but the Docker daemon is not running. Start Docker Desktop and retry."
+    if (-not (Test-DockerDaemon)) {
+        if (-not $InstallPrerequisites) {
+            Fail "Docker is installed but the Docker daemon is not running. Start Docker Desktop and retry, or rerun with -InstallPrerequisites to start it and wait."
+        }
+        Start-DockerDesktopAndWait
     }
 
     & docker compose version *> $null

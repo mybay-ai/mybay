@@ -39,7 +39,6 @@ import { ensureLocalFeishuRuntimeImage, requiresLocalFeishuRuntime } from "./ser
 export { getDockerProfile, getResourceLimits } from "./services/docker/dockerResourcePolicy";
 export type { DockerProfile } from "./services/docker/dockerResourcePolicy";
 
-
 export async function ensureFrontendBuilt(docker: any, baseImage: string, instanceId: string, io: SocketIOServer, config?: any): Promise<string> {
   if (requiresLocalFeishuRuntime(config)) {
     const lastSlash = baseImage.lastIndexOf("/");

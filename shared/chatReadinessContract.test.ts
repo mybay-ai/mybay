@@ -52,4 +52,21 @@ describe("local chat readiness contract", () => {
       error: null,
     });
   });
+
+  it("keeps runtime readiness separate from chat sendability", () => {
+    expect(buildLocalChatReadiness({
+      ready: false,
+      runtimeReady: true,
+      sendable: false,
+      status: "running",
+      reason: "CHAT_API_NOT_ENABLED",
+      message: "chat configuration required",
+    })).toMatchObject({
+      ready: false,
+      runtimeReady: true,
+      sendable: false,
+      runtimeState: "running",
+      reason: "CHAT_API_NOT_ENABLED",
+    });
+  });
 });

@@ -13,6 +13,7 @@ import type {
   ToolEventPayload,
   ToolRunBlock
 } from "./runTypes";
+import { chooseMostCompleteStreamingContent } from "./runTextReconciliation";
 
 const TERMINAL_STATUSES = new Set<RunExecutionStatus>(["completed", "failed", "cancelled", "stopped", "expired"]);
 
@@ -60,6 +61,8 @@ export function createRunExecutionState(params: {
     requestId: params.requestId,
     assistantMessageId: params.assistantMessageId,
     status: params.status || "queued",
+    assistantText: params.initialText || "",
+    streamText: params.initialText || "",
     blocks,
     lastProcessedSeq: -1
   };
@@ -74,10 +77,16 @@ function replaceBlock(blocks: RunBlock[], index: number, block: RunBlock): RunBl
 function reduceTextDelta(state: RunExecutionState, event: NormalizedRunEvent<TextDeltaPayload>): RunExecutionState {
   const delta = typeof event.payload?.delta === "string" ? event.payload.delta : "";
   if (!delta) return { ...state, lastProcessedSeq: event.seq };
+  const blockText = state.blocks
+    .filter((block): block is TextRunBlock => block.type === "text")
+    .map(block => block.content)
+    .join("");
+  const streamText = (state.streamText ?? blockText) + delta;
+  const assistantText = chooseMostCompleteStreamingContent(state.assistantText || blockText, streamText);
   const last = state.blocks[state.blocks.length - 1];
   if (last?.type === "text") {
     const updated: TextRunBlock = { ...last, content: last.content + delta, lastSeq: event.seq };
-    return { ...state, blocks: replaceBlock(state.blocks, state.blocks.length - 1, updated), lastProcessedSeq: event.seq };
+    return { ...state, assistantText, streamText, blocks: replaceBlock(state.blocks, state.blocks.length - 1, updated), lastProcessedSeq: event.seq };
   }
   const block: TextRunBlock = {
     id: `${state.runId}-text-${event.seq}`,
@@ -86,7 +95,7 @@ function reduceTextDelta(state: RunExecutionState, event: NormalizedRunEvent<Tex
     lastSeq: event.seq,
     content: delta
   };
-  return { ...state, blocks: [...state.blocks, block], lastProcessedSeq: event.seq };
+  return { ...state, assistantText, streamText, blocks: [...state.blocks, block], lastProcessedSeq: event.seq };
 }
 
 function reduceToolEvent(state: RunExecutionState, event: NormalizedRunEvent<ToolEventPayload>): RunExecutionState {

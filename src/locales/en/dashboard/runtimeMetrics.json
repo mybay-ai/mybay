@@ -93,7 +93,7 @@
     "llmCallable": "LLM endpoint is callable",
     "llmBlocked": "LLM endpoint call is blocked",
     "llmNotTested": "LLM endpoint has not been tested",
-    "optionsTitle": "7. Alternative model options endpoint",
+    "optionsTitle": "Supplemental (not scored): alternative model options endpoint",
     "optionsSuccess": "Alternative model list loaded successfully",
     "optionsAuthRequired": "Authentication required to load alternative models",
     "optionsChecking": "⏳ Checking...",

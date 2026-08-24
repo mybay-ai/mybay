@@ -11,6 +11,10 @@ if ($errors.Count -ne 0) {
 
 $requiredPatterns = @(
     'ValidateSet\("desktop", "lan", "server"\)',
+    '\[switch\]\$InstallPrerequisites',
+    'Docker\.DockerDesktop',
+    '--accept-package-agreements',
+    'Start-DockerDesktopAndWait',
     'RandomNumberGenerator',
     'docker compose',
     'MYBAY_INTERNAL_ROUTING_SECRET',
@@ -28,6 +32,10 @@ foreach ($pattern in $requiredPatterns) {
 
 if ($source -match '(?im)^\s*(node|npm|npx|openssl)(\.exe)?\s') {
     throw "quick-start.ps1 must not depend on host Node.js, npm, npx, or openssl."
+}
+
+if ($source -notmatch 'if \(-not \$InstallPrerequisites\)[\s\S]+?Install-DockerDesktop') {
+    throw "quick-start.ps1 must not install Docker Desktop unless -InstallPrerequisites was explicitly supplied."
 }
 
 if ($source -match 'Admin password: \$\(\$script:GeneratedAdminPassword\)') {

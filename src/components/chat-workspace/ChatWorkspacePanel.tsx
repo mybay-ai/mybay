@@ -9,6 +9,8 @@ import { sanitizeChatDisplayContent } from "../../lib/chatProtocolSanitizer";
 import { WorkspaceDebugTab, WorkspaceFilesTab, WorkspacePreviewTab, WorkspaceResultTab, WorkspaceStepsTab } from "./workspace-panel-tabs";
 import { isTerminalRunStatus } from "./runUiLifecycle";
 import { resolveRunDurationMs } from "./run/runDuration";
+import type { RunExecutionState } from "./run/runTypes";
+import { resolveWorkspaceAssistantResult } from "./run/runResultSource";
 
 type WorkspaceTab = "result" | "steps" | "files" | "preview" | "debug";
 type TimelineFilter = "all" | "tool" | "search" | "file" | "model" | "failed";
@@ -29,6 +31,7 @@ type ChatWorkspacePanelProps = {
   messages: ChatMessage[];
   toolSteps: ChatToolStep[];
   activeRunId?: string | null;
+  runExecutionState?: RunExecutionState | null;
   runMetrics?: ChatRunMetrics | null;
   approvalRequests?: ChatApprovalRequest[];
   runCapabilities?: {
@@ -107,7 +110,7 @@ const extractUrlsFromText = (content: string) => {
   return urls;
 };
 
-export function ChatWorkspacePanel({ selectedId, selectedConversationId, selectedInstance, messages, toolSteps, activeRunId, runMetrics = null, approvalRequests = [], runCapabilities, onRespondToApproval, variant = "desktop", conversationFiles = [], conversationFilePreview = null, onDeleteConversationFile, onDownloadConversationFile, onOpenConversationFile, onPreviewConversationFile, onClearConversationFilePreview }: ChatWorkspacePanelProps) {
+export function ChatWorkspacePanel({ selectedId, selectedConversationId, selectedInstance, messages, toolSteps, activeRunId, runExecutionState = null, runMetrics = null, approvalRequests = [], runCapabilities, onRespondToApproval, variant = "desktop", conversationFiles = [], conversationFilePreview = null, onDeleteConversationFile, onDownloadConversationFile, onOpenConversationFile, onPreviewConversationFile, onClearConversationFilePreview }: ChatWorkspacePanelProps) {
   const { t } = useTranslation(["dashboard", "common"]);
   const [activeTab, setActiveTab] = useState<WorkspaceTab>("result");
   const [timelineFilter, setTimelineFilter] = useState<TimelineFilter>("all");
@@ -128,11 +131,13 @@ export function ChatWorkspacePanel({ selectedId, selectedConversationId, selecte
     return () => window.clearInterval(timerId);
   }, [activeRunId, runIsActive]);
 
-  const latestAssistantMessage = useMemo(() => {
-    return [...messages].reverse().find((message) => message.role === "assistant" && message.content?.trim());
-  }, [messages]);
+  const assistantResult = useMemo(
+    () => resolveWorkspaceAssistantResult(messages, runExecutionState, activeRunId),
+    [activeRunId, messages, runExecutionState]
+  );
+  const latestAssistantMessage = assistantResult.message;
   const latestAssistantContent = sanitizeChatDisplayContent(
-    latestAssistantMessage?.content,
+    assistantResult.content,
     t("dashboard:chatWorkspace.toolCallProtocolHidden")
   );
 

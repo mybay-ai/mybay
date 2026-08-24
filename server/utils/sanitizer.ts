@@ -273,6 +273,7 @@ export function sanitizeInstance(instance: any, mode: 'list' | 'detail' = 'detai
     const summary: any = {
       provider: config.provider || null,
       model: config.model || null,
+      providerCredentialId: config.providerCredentialId || null,
       baseUrl: (config.baseUrl || config.base_url || instance.model_base_url || instance.baseUrl || instance.base_url) ? resolvedBaseUrl : null,
       baseUrlHost: safeHostname,
       enableDashboard: dashboardEnabled,
@@ -516,5 +517,4 @@ export function sanitizeCredentialsForClient(input: any): any {
   }
   return sanitizeSingle(input);
 }
-
 

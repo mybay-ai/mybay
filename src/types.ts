@@ -33,6 +33,7 @@ export interface AgentInstance {
   configSummary?: {
     provider?: string | null;
     model?: string | null;
+    providerCredentialId?: string | null;
     baseUrl?: string | null;
     channel?: string;
     skills?: string[];

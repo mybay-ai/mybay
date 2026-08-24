@@ -438,7 +438,9 @@ export async function startReconciler(intervalMs: number = 60000, options: Recon
                       let enabledChannels: string[] = [];
                       let currentAllowMode = "";
                       try {
-                        const configObj = JSON.parse(instance.config_json || "{}");
+                        const configObj = typeof instance.config_json === "string"
+                          ? JSON.parse(instance.config_json || "{}")
+                          : (instance.config_json || {});
                         currentAllowMode = configObj.allowMode || "";
                         if (Array.isArray(configObj.channel)) {
                           enabledChannels = configObj.channel.map((c: string) => c.toLowerCase());

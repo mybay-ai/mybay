@@ -13,6 +13,7 @@ import { requestTraefikInternal } from "../utils/traefikInternalRequest";
 import { getTraefikRouterName, parseTraefikEnv } from "../infrastructure/traefik/traefikConfig";
 import {
   checkContainerPortListening,
+  checkPublishedPortBinding,
   checkFrontendConfigDiagnostic,
   checkFrontendMissingBuild,
   checkHostPortHttp,
@@ -93,7 +94,9 @@ export async function runInstanceHealthChecks(instanceId: string, gatewayHostPor
   try {
     instance = await dbAdapter.getInstanceById(instanceId);
     if (instance && instance.config_json) {
-      configObj = JSON.parse(instance.config_json);
+      configObj = typeof instance.config_json === "string"
+        ? JSON.parse(instance.config_json)
+        : instance.config_json;
       username = configObj.username || "";
       if (configObj.password) {
         plainPassword = decrypt(configObj.password);
@@ -127,6 +130,8 @@ export async function runInstanceHealthChecks(instanceId: string, gatewayHostPor
   ];
   const hasExternalChannel = enabledChannels.some(ch => externalList.includes(ch));
   const mustChatReady = !hasExternalChannel;
+  const deploymentMode = String(configObj.deployment_mode || process.env.DEPLOYMENT_MODE || "desktop").toLowerCase();
+  const directAccessMode = deploymentMode === "desktop" || deploymentMode === "lan";
 
   const ctx = buildDeploymentContext(instance || { id: instanceId });
   const dashboardContainerName = ctx.dashboardContainerName;
@@ -160,7 +165,17 @@ export async function runInstanceHealthChecks(instanceId: string, gatewayHostPor
     const portReady = dashboardAccessEnabled
       ? await checkContainerPortListening(dashboardContainerName, internal_web_port)
       : true;
-    const hostPortReady = dashboardAccessEnabled ? await checkHostPortHttp(host_port) : true;
+    const publishedBinding = dashboardAccessEnabled && directAccessMode
+      ? await checkPublishedPortBinding(
+          dashboardContainerName,
+          internal_web_port,
+          host_port,
+          deploymentMode as "desktop" | "lan",
+        )
+      : { ready: true, hostIp: null, hostPort: null };
+    const hostPortReady = dashboardAccessEnabled
+      ? (directAccessMode ? publishedBinding.ready : await checkHostPortHttp(host_port))
+      : true;
 
     const logsTail = await getContainerLogTail(dashboardContainerName, 30);
     const { isTraefik } = parseTraefikEnv(process.env);
@@ -168,6 +183,14 @@ export async function runInstanceHealthChecks(instanceId: string, gatewayHostPor
     let authRes: { success: boolean; url: string; statusCode: string };
     if (!dashboardAccessEnabled) {
       authRes = { success: true, url: "Dashboard access disabled", statusCode: "DISABLED" };
+    } else if (directAccessMode) {
+      authRes = {
+        success: portReady && publishedBinding.ready,
+        url: ctx.publicUrl,
+        statusCode: portReady && publishedBinding.ready
+          ? `DIRECT_BINDING_OK (${publishedBinding.hostIp || "default"}:${publishedBinding.hostPort || host_port})`
+          : "DIRECT_BINDING_MISSING",
+      };
     } else if (isTraefik) {
       authRes = await checkTraefikRouteDetails(subdomain, username, plainPassword);
     } else {
@@ -180,7 +203,7 @@ export async function runInstanceHealthChecks(instanceId: string, gatewayHostPor
     // 2. Check Traefik/Proxy route WITHOUT authentication (to verify basic auth middleware)
     let unauthStatusCode = "N/A";
     let basicAuthOk = true; 
-    const hasBasicAuth = dashboardAccessEnabled && !!(username && plainPassword);
+    const hasBasicAuth = dashboardAccessEnabled && !directAccessMode && !!(username && plainPassword);
     if (hasBasicAuth) {
       let unauthRes: { success: boolean; url: string; statusCode: string };
       if (isTraefik) {
@@ -803,7 +826,21 @@ ${logsTail || '(暂无日志)'}
   });
 
   let proxyCheckPassed = false;
-  if (isTraefik) {
+  if (directAccessMode) {
+    const directBinding = await checkPublishedPortBinding(
+      dashboardContainerName,
+      internal_web_port,
+      host_port,
+      deploymentMode as "desktop" | "lan",
+    );
+    proxyCheckPassed = dashboardPortListening && directBinding.ready;
+    io.emit(`deploy_log_${instanceId}`, {
+      timestamp: new Date().toISOString(),
+      message: proxyCheckPassed
+        ? `[健康自检] ${deploymentMode.toUpperCase()} 本地直连检查通过：${directBinding.hostIp || "default"}:${directBinding.hostPort || host_port} -> ${internal_web_port}/tcp。`
+        : `[健康自检] ${deploymentMode.toUpperCase()} 本地直连检查未通过：未找到符合当前模式的端口绑定。`,
+    });
+  } else if (isTraefik) {
     io.emit(`deploy_log_${instanceId}`, {
       timestamp: new Date().toISOString(),
       message: `[健康自检] 正在对 Traefik 动态代理生效状态进行动态网络路由联通检测...`,
@@ -834,7 +871,9 @@ ${logsTail || '(暂无日志)'}
     const publicUrl = buildInstancePublicUrl(subdomain, host_port);
     io.emit(`deploy_log_${instanceId}`, {
       timestamp: new Date().toISOString(),
-      message: isTraefik
+      message: directAccessMode
+        ? `[Health check passed] ${deploymentMode.toUpperCase()} 实例端口映射与容器内部服务均已就绪！`
+        : isTraefik
         ? `[Health check passed] Traefik 动态联通路由测试以 Host: ${subdomain} 正常直达！`
         : `[Proxy check passed] Host header 反代测试通过！说明宿主机已成功重载 Nginx 并对外服务。`,
     });
@@ -863,7 +902,12 @@ ${logsTail || '(暂无日志)'}
       chatReady: finalChatReady,
       deploymentCheck,
     });
-    if (isTraefik) {
+    if (directAccessMode) {
+      io.emit(`deploy_log_${instanceId}`, {
+        timestamp: new Date().toISOString(),
+        message: `[健康自检] 状态: dashboard_ready -> 容器端口已监听，但 ${deploymentMode.toUpperCase()} 模式的宿主端口绑定不符合预期，请重新部署以同步访问模式。`
+      });
+    } else if (isTraefik) {
       io.emit(`deploy_log_${instanceId}`, {
         timestamp: new Date().toISOString(),
         message: `[健康自检] 状态: dashboard_ready -> 麦贝统一容器已运行且端口就绪，但 Traefik 代理通道暂时未通过。极可能是外部 Nginx wildcard 反代、DNS、或 traefik_proxy 网桥网络还未就绪。请手动检查后重试。`

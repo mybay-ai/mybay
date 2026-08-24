@@ -26,6 +26,15 @@ describe("chatRuntimeErrors", () => {
     expect(result.message).toBe("The saved credential cannot be decrypted. Save its API Key again.");
   });
 
+  it("explains local console origin mismatches", () => {
+    const result = humanizeChatError({
+      status: 403,
+      data: { error: "Forbidden", code: "CSRF_ORIGIN_MISMATCH" },
+    });
+    expect(result).toMatchObject({ code: "CSRF_ORIGIN_MISMATCH", known: true });
+    expect(result.message).toContain("访问地址");
+  });
+
   it.each([
     "INSTANCE_NOT_RUNNING",
     "INTERNAL_ROUTE_CONNECT_FAILED",

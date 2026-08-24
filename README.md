@@ -38,7 +38,7 @@ See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for licensing and attributi
 
 ### Method 1: Local Desktop Quick Start
 
-Prerequisites: Docker Engine or Docker Desktop and Docker Compose. Host Node.js is not required. The macOS/Linux launcher additionally uses `openssl` and standard POSIX shell tools; the Windows launcher uses the built-in .NET cryptography APIs instead.
+Prerequisites: Docker Engine or Docker Desktop and Docker Compose. Host Node.js is not required. On Windows, the launcher can install Docker Desktop through `winget` when explicitly requested. The macOS/Linux launcher additionally uses `openssl` and standard POSIX shell tools; the Windows launcher uses the built-in .NET cryptography APIs instead.
 
 Use this mode when the browser and Docker run on the same computer:
 
@@ -46,8 +46,10 @@ Use this mode when the browser and Docker run on the same computer:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
-.\quick-start.ps1
+.\quick-start.ps1 -InstallPrerequisites
 ```
+
+`-InstallPrerequisites` installs Docker Desktop if missing, starts it, and waits for the Docker engine. Installation may request administrator approval or a Windows restart; after restarting, run the same command again. If Docker is already installed and running, you may omit this option and use `.\quick-start.ps1`.
 
 **macOS or Linux:**
 

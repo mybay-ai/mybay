@@ -79,6 +79,8 @@ export interface RunExecutionState {
   requestId?: string;
   assistantMessageId?: string;
   status: RunExecutionStatus;
+  assistantText?: string;
+  streamText?: string;
   blocks: RunBlock[];
   lastProcessedSeq: number;
 }

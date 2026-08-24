@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveWeixinChannelState } from "./gatewayReadiness";
+import { hasGatewayRuntimeEvidence, resolveWeixinChannelState } from "./gatewayReadiness";
 
 const baseInput = {
   hasCredentials: true,
@@ -76,5 +76,34 @@ describe("resolveWeixinChannelState", () => {
       transportConnected: false,
       status: "config_missing",
     });
+  });
+});
+
+describe("hasGatewayRuntimeEvidence", () => {
+  it("treats a durably connected external channel as gateway evidence", () => {
+    expect(hasGatewayRuntimeEvidence({
+      gatewayServices: {},
+      hasSuccessfulHttpProbe: false,
+      hasLogRunningEvidence: false,
+      connectedChannels: 1,
+    })).toBe(true);
+  });
+
+  it("recognizes the current s6 gateway service names", () => {
+    expect(hasGatewayRuntimeEvidence({
+      gatewayServices: { gateway_default: "running" },
+      hasSuccessfulHttpProbe: false,
+      hasLogRunningEvidence: false,
+      connectedChannels: 0,
+    })).toBe(true);
+  });
+
+  it("does not report readiness without runtime evidence", () => {
+    expect(hasGatewayRuntimeEvidence({
+      gatewayServices: {},
+      hasSuccessfulHttpProbe: false,
+      hasLogRunningEvidence: false,
+      connectedChannels: 0,
+    })).toBe(false);
   });
 });

@@ -12,6 +12,25 @@ export type WeixinChannelState = {
   reason: string;
 };
 
+export function hasGatewayRuntimeEvidence(input: {
+  gatewayServices: Record<string, string>;
+  hasSuccessfulHttpProbe: boolean;
+  hasLogRunningEvidence: boolean;
+  connectedChannels: number;
+}): boolean {
+  const services = input.gatewayServices || {};
+  const s6GatewayRunning = (
+    services["main_hermes"] === "running"
+    || services["gateway_default"] === "running"
+    || services["gateway"] === "running"
+    || services["dashboard"] === "running"
+  );
+  return s6GatewayRunning
+    || input.hasSuccessfulHttpProbe
+    || input.hasLogRunningEvidence
+    || input.connectedChannels > 0;
+}
+
 export function resolveWeixinChannelState(input: {
   hasCredentials: boolean;
   logsLower: string;
@@ -145,14 +164,21 @@ echo "=== NETWORK/DNS ==="
 timeout 2 ping -c 1 open.feishu.cn > /dev/null 2>&1 && echo "DNS_open.feishu.cn: OK" || echo "DNS_open.feishu.cn: FAIL"
 
 echo "=== s6 SERVICES ==="
+s6_svstat=$(command -v s6-svstat 2>/dev/null || true)
+if [ -z "$s6_svstat" ] && [ -x /command/s6-svstat ]; then
+  s6_svstat=/command/s6-svstat
+fi
 s6_dirs="/run/service /var/run/s6/services /etc/services.d"
-for s6_dir in \$s6_dirs; do
-  if [ -d "\$s6_dir" ]; then
-    for svc in \\\$(ls "\$s6_dir"); do
-      if [ "\$svc" != "." ] && [ "\$svc" != ".." ] && [ -d "\$s6_dir/\$svc" ]; then
-        stat=\$(s6-svstat "\$s6_dir/\$svc" 2>/dev/null || s6-svstat -o status "\$s6_dir/\$svc" 2>/dev/null)
-        if [ -n "\$stat" ]; then
-          echo "SERVICE_\$svc: \$stat"
+for s6_dir in $s6_dirs; do
+  if [ -d "$s6_dir" ]; then
+    for svc in $(ls "$s6_dir"); do
+      if [ "$svc" != "." ] && [ "$svc" != ".." ] && [ -d "$s6_dir/$svc" ]; then
+        stat=""
+        if [ -n "$s6_svstat" ]; then
+          stat=$("$s6_svstat" "$s6_dir/$svc" 2>/dev/null || "$s6_svstat" -o status "$s6_dir/$svc" 2>/dev/null)
+        fi
+        if [ -n "$stat" ]; then
+          echo "SERVICE_$svc: $stat"
         fi
       fi
     done
@@ -843,14 +869,12 @@ done
       "api call"
     ].some(keyword => logsLower.includes(keyword));
 
-    const s6GatewayRunning = (
-      result.gateway_services["main_hermes"] === "running" ||
-      result.gateway_services["gateway_default"] === "running" ||
-      result.gateway_services["gateway"] === "running" ||
-      result.gateway_services["dashboard"] === "running"
-    );
-
-    const isGatewayActive = s6GatewayRunning || hasSuccessfulHttpProbe || hasLogRunningEvidence;
+    const isGatewayActive = hasGatewayRuntimeEvidence({
+      gatewayServices: result.gateway_services,
+      hasSuccessfulHttpProbe,
+      hasLogRunningEvidence,
+      connectedChannels: connectedCount,
+    });
     const noAllowlist = logsLower.includes("no user allowlists configured") || logsLower.includes("allowlist is empty");
     const hasPendingAuth = result.pending_auth_count > 0;
 
@@ -871,10 +895,10 @@ done
     if (isGatewayActive) {
       result.gateway_ready = true;
       
-      if (isFeishuEnabled && depMissing) {
+      if (isFeishuEnabled && connectedCount === 0 && depMissing) {
         result.gateway_status = "channel_adapter_failed";
         result.gateway_error = "⚠️ 飞书连接失败：内核缺少 lark-oapi 依赖包或未成功加载。";
-      } else if (isFeishuEnabled && adapterFailed) {
+      } else if (isFeishuEnabled && connectedCount === 0 && adapterFailed) {
         result.gateway_status = "channel_adapter_failed";
         result.gateway_error = "⚠️ 飞书连接失败：内核加载 Feishu 适配组件失败（No adapter).";
       } else if (isApiEnabled && !isApiPortListening) {

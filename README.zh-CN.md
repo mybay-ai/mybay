@@ -38,7 +38,7 @@ MyBay 是独立维护的开源项目，并非 Nous Research 官方产品，也�
 
 ### 方式一：本机桌面一键部署
 
-前置要求：Docker Engine 或 Docker Desktop，以及 Docker Compose。宿主机不需要安装 Node.js。macOS/Linux 启动器还会使用 `openssl` 和标准 POSIX shell 工具；Windows 启动器直接使用系统内置的 .NET 密码学 API，不要求安装 OpenSSL。
+前置要求：Docker Engine 或 Docker Desktop，以及 Docker Compose。宿主机不需要安装 Node.js。在 Windows 上，用户明确指定后，启动器可以通过 `winget` 安装 Docker Desktop。macOS/Linux 启动器还会使用 `openssl` 和标准 POSIX shell 工具；Windows 启动器直接使用系统内置的 .NET 密码学 API，不要求安装 OpenSSL。
 
 适用于浏览器和 Docker 运行在同一台电脑上的场景：
 
@@ -46,8 +46,10 @@ MyBay 是独立维护的开源项目，并非 Nous Research 官方产品，也�
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
-.\quick-start.ps1
+.\quick-start.ps1 -InstallPrerequisites
 ```
+
+`-InstallPrerequisites` 会在缺少 Docker Desktop 时安装它，随后启动并等待 Docker 引擎。安装过程可能要求管理员授权或重启 Windows；重启后再次运行同一命令即可。如果 Docker 已安装并正在运行，可以省略该参数，直接执行 `.\quick-start.ps1`。
 
 **macOS 或 Linux：**
 

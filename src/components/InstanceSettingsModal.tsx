@@ -69,7 +69,7 @@ export function InstanceSettingsModal({ instance: initialInstance, onClose, onSa
   });
   const [baseUrl, setBaseUrl] = useState(initialBaseUrl);
   const [providerApiKey, setProviderApiKey] = useState("");
-  const [providerCredentialId, setProviderCredentialId] = useState("");
+  const [providerCredentialId, setProviderCredentialId] = useState(instance.config?.providerCredentialId || instance.configSummary?.providerCredentialId || "");
   const [channel, setChannel] = useState(instance.config?.channel || instance.configSummary?.channel || "");
   const [agentPrompt, setAgentPrompt] = useState(instance.config?.agentPrompt || instance.configSummary?.agentPrompt || "");
   const [enableDashboard, setEnableDashboard] = useState(instance.config?.enableDashboard ?? instance.configSummary?.enableDashboard ?? true);
@@ -88,6 +88,7 @@ export function InstanceSettingsModal({ instance: initialInstance, onClose, onSa
       setProvider(p);
       setModel(m);
       setBaseUrl(resolvedBaseUrl);
+      setProviderCredentialId(instance.config?.providerCredentialId || instance.configSummary?.providerCredentialId || "");
       setChannel(instance.config?.channel || instance.configSummary?.channel || "");
       setAgentPrompt(instance.config?.agentPrompt || instance.configSummary?.agentPrompt || "");
       setEnableDashboard(instance.config?.enableDashboard ?? instance.configSummary?.enableDashboard ?? true);
@@ -292,7 +293,9 @@ export function InstanceSettingsModal({ instance: initialInstance, onClose, onSa
       };
 
       if (providerApiKey.trim()) payload.providerApiKey = providerApiKey.trim();
-      if (providerCredentialId) payload.providerCredentialId = providerCredentialId;
+      // Always send the selected credential source. null explicitly means
+      // manual-key mode and lets the server clear a previous saved credential.
+      payload.providerCredentialId = providerCredentialId || null;
       if (password.trim()) payload.password = password.trim();
       if (telegramBotToken.trim()) payload.telegramBotToken = telegramBotToken.trim();
       if (discordBotToken.trim()) payload.discordBotToken = discordBotToken.trim();

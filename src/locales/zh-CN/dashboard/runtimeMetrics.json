@@ -93,7 +93,7 @@
     "llmCallable": "LLM 接口可正常调用",
     "llmBlocked": "LLM 接口调用受阻",
     "llmNotTested": "LLM 接口尚未测试",
-    "optionsTitle": "7. 备选模型列表选项接口加载率（Options List Rate）",
+    "optionsTitle": "辅助项（不计分）：备选模型列表接口（Options List）",
     "optionsSuccess": "备选模型列表加载成功",
     "optionsAuthRequired": "备选模型列表需要认证",
     "optionsChecking": "⏳ 检测中...",

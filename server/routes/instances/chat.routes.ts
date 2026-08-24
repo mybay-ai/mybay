@@ -17,6 +17,8 @@ import { registerQuickRoutes } from "./chat/quick.routes";
 import { registerAssistRoutes } from "./chat/assist.routes";
 import { registerFeedbackRoutes } from "./chat/feedback.routes";
 import {
+  buildLocalChatReadiness,
+  isLocalRuntimeReadyStatus,
   resolveLocalChatLifecycleReadiness,
 } from "../../../shared/chatReadinessContract";
 export { runsLimiter, runsLimiterStore, cleanupRunsLimiterStore } from "./chat/limiters";
@@ -246,6 +248,7 @@ export function createChatRoutes(deps: RouterDependencies) {
         dashboardEnabled: config.enableDashboard,
       });
       const currentStatus = String(instance.status || "").toLowerCase();
+      const runtimeReadyByLifecycle = isLocalRuntimeReadyStatus(currentStatus);
       if (lifecycleReadiness) {
         return res.json({
           success: true,
@@ -273,14 +276,15 @@ export function createChatRoutes(deps: RouterDependencies) {
       if (!isApiEnabled) {
         return res.json({
           success: true,
-          ready: false,
-          runtimeReady: false,
-          sendable: false,
-          wakeable: false,
-          runtimeState: currentStatus || "unknown",
-          reason: "CHAT_API_NOT_ENABLED",
-          error: "CHAT_API_NOT_ENABLED",
-          message: "该实例未启用内部对话 API 渠道。"
+          ...buildLocalChatReadiness({
+            ready: false,
+            runtimeReady: runtimeReadyByLifecycle,
+            sendable: false,
+            status: currentStatus,
+            reason: "CHAT_API_NOT_ENABLED",
+            error: "CHAT_API_NOT_ENABLED",
+            message: "该实例正在运行，但未启用内部对话 API 渠道。"
+          })
         });
       }
 
@@ -288,14 +292,15 @@ export function createChatRoutes(deps: RouterDependencies) {
       if (!keyResolution.ok || !keyResolution.apiKey) {
         return res.json({
           success: true,
-          ready: false,
-          runtimeReady: false,
-          sendable: false,
-          wakeable: false,
-          runtimeState: currentStatus || "unknown",
-          reason: keyResolution.error || "HERMES_INTERNAL_API_KEY_MISSING",
-          error: keyResolution.error || "HERMES_INTERNAL_API_KEY_MISSING",
-          message: keyResolution.error === "HERMES_INTERNAL_API_KEY_DECRYPT_FAILED" ? "Hermes internal API key decrypt failed." : "Instance is missing Hermes internal API key."
+          ...buildLocalChatReadiness({
+            ready: false,
+            runtimeReady: runtimeReadyByLifecycle,
+            sendable: false,
+            status: currentStatus,
+            reason: keyResolution.error || "HERMES_INTERNAL_API_KEY_MISSING",
+            error: keyResolution.error || "HERMES_INTERNAL_API_KEY_MISSING",
+            message: keyResolution.error === "HERMES_INTERNAL_API_KEY_DECRYPT_FAILED" ? "Hermes internal API key decrypt failed." : "Instance is missing Hermes internal API key."
+          })
         });
       }
       const apiKey = keyResolution.apiKey;
@@ -344,14 +349,15 @@ export function createChatRoutes(deps: RouterDependencies) {
 
       return res.json({
         success: true,
-        ready,
-        runtimeReady: ready,
-        sendable: ready,
-        wakeable: false,
-        runtimeState: ready ? "running" : (currentStatus || "unknown"),
-        reason: error,
-        error,
-        message
+        ...buildLocalChatReadiness({
+          ready,
+          runtimeReady: ready || runtimeReadyByLifecycle,
+          sendable: ready,
+          status: currentStatus,
+          reason: error,
+          error,
+          message
+        })
       });
 
     } catch (e: any) {

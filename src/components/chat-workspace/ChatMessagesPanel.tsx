@@ -11,7 +11,7 @@ import type { ChatToolStep } from "./ChatToolProgress";
 import type { ChatApprovalChoice, ChatApprovalRequest, ChatRunMetrics } from "./useChatRuns";
 import type { PendingAttachment } from "./ChatInputBar";
 import type { RunExecutionState } from "./run/runTypes";
-import { findRunAssistantMessageIndex, shouldShowLegacyRunLoading } from "./run/runSelectors";
+import { deriveRunAssistantText, findRunAssistantMessageIndex, shouldShowLegacyRunLoading } from "./run/runSelectors";
 import { selectInlineApproval } from "./run/approvalSelectors";
 
 type ReadinessState = {
@@ -105,6 +105,21 @@ export function ChatMessagesPanel({
         : t("dashboard:chatWorkspace.agentThinking", { name: agentDisplayName });
   const shouldShowBlockingHistoryLoader = loadingMessages && messages.length === 0;
   const runAssistantIndex = runExecutionState ? findRunAssistantMessageIndex(messages, runExecutionState) : -1;
+  const detachedRunMessage: ChatMessage | null = runExecutionState && runAssistantIndex < 0 ? {
+    id: `detached-run-${runExecutionState.runId}`,
+    role: "assistant",
+    content: deriveRunAssistantText(runExecutionState),
+    status: runExecutionState.status === "completed"
+      ? "completed"
+      : runExecutionState.status === "failed"
+        ? "failed"
+        : ["cancelled", "stopped", "expired"].includes(runExecutionState.status)
+          ? "stopped"
+          : "pending",
+    conversation_id: runExecutionState.conversationId || selectedConversationId,
+    request_id: runExecutionState.requestId || null,
+    metadata: { runId: runExecutionState.runId, requestId: runExecutionState.requestId }
+  } : null;
   const inlineApproval = runExecutionState ? selectInlineApproval(approvalRequests) : null;
   const runAssistantHasContent = runAssistantIndex >= 0 && Boolean(messages[runAssistantIndex]?.content.trim());
   const shouldShowLegacyLoading = shouldShowLegacyRunLoading(sending, runExecutionState) && !runAssistantHasContent;
@@ -122,7 +137,7 @@ export function ChatMessagesPanel({
         <ChatNoInstancesEmptyState onGoToInstanceManage={onGoToInstanceManage} />
       ) : shouldShowBlockingHistoryLoader ? (
         <ChatMessagesLoadingState />
-      ) : messages.length === 0 ? (
+      ) : messages.length === 0 && !detachedRunMessage ? (
         <ChatWelcomeEmptyState selectedInstance={selectedInstance} loadingInstances={loadingInstances} onUsePrompt={onUsePrompt} />
       ) : (
         <div className="space-y-4 max-w-4xl mx-auto">
@@ -163,6 +178,26 @@ export function ChatMessagesPanel({
               onRespondToApproval={onRespondToApproval}
             />
           ))}
+
+          {detachedRunMessage && (
+            <ChatMessageBubble
+              message={detachedRunMessage}
+              currentUser={currentUser}
+              selectedConversationId={selectedConversationId}
+              sending={sending}
+              onRetry={onRetry}
+              conversationFiles={conversationFiles}
+              onOpenConversationFile={onOpenConversationFile}
+              onOpenInstanceFilePath={onOpenInstanceFilePath}
+              fallbackModelLabel={fallbackModelLabel}
+              instanceId={selectedId}
+              runExecutionState={runExecutionState}
+              runMetrics={runMetrics}
+              approvalRequest={inlineApproval}
+              canRespondToApproval={canRespondToApproval}
+              onRespondToApproval={onRespondToApproval}
+            />
+          )}
 
           {shouldShowLegacyLoading && (
             <div className="flex gap-3.5 justify-start animate-pulse">

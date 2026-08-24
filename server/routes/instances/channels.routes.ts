@@ -611,7 +611,9 @@ export function createChannelsRoutes(deps: RouterDependencies) {
           let enabledChannels: string[] = [];
           if (instance.config_json) {
             try {
-              const configObj = JSON.parse(instance.config_json);
+              const configObj = typeof instance.config_json === "string"
+                ? JSON.parse(instance.config_json)
+                : instance.config_json;
               if (Array.isArray(configObj.channel)) {
                 enabledChannels = configObj.channel.map((c: string) => c.toLowerCase());
               } else if (typeof configObj.channel === 'string') {

@@ -236,7 +236,7 @@ export function WorkspaceResultTab({
                   </span>
                 )}
               </div>
-              {latestAssistantMessage ? (
+              {latestAssistantMessage || latestAssistantContent ? (
                 <p className="text-[14px] leading-6 text-content-secondary whitespace-pre-wrap max-h-[24rem] overflow-hidden">
                   {latestAssistantContent}
                 </p>

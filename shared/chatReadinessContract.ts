@@ -16,6 +16,10 @@ const PROBEABLE_INSTANCE_STATUSES = new Set([
   "dashboard_ready",
 ]);
 
+export function isLocalRuntimeReadyStatus(status: unknown): boolean {
+  return PROBEABLE_INSTANCE_STATUSES.has(String(status || "").trim().toLowerCase());
+}
+
 const DASHBOARDLESS_RECOVERABLE_STATUSES = new Set(["failed", "unhealthy"]);
 
 function normalizeRuntimeState(status: unknown, ready: boolean): string {
@@ -26,6 +30,8 @@ function normalizeRuntimeState(status: unknown, ready: boolean): string {
 
 export function buildLocalChatReadiness(input: {
   ready: boolean;
+  runtimeReady?: boolean;
+  sendable?: boolean;
   status?: unknown;
   reason?: string | null;
   error?: string | null;
@@ -34,8 +40,8 @@ export function buildLocalChatReadiness(input: {
   const reason = input.reason ?? input.error ?? null;
   return {
     ready: input.ready,
-    runtimeReady: input.ready,
-    sendable: input.ready,
+    runtimeReady: input.runtimeReady ?? input.ready,
+    sendable: input.sendable ?? input.ready,
     wakeable: false,
     runtimeState: normalizeRuntimeState(input.status, input.ready),
     reason,

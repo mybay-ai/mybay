@@ -67,6 +67,8 @@
   "expandHistory": "Expand Chat History",
   "probeFailed": "Unable to probe readiness",
   "webOnlyDeployPendingTitle": "Instance Deployment Pending (Web Console Only)",
+  "runtimeReadyChatPendingTitle": "Instance running, chat not ready",
+  "runtimeReadyChatPendingTip": "The instance container is running. Check the chat API, internal key, or routing error shown above.",
   "webOnlyDeployPendingDesc": "The web chat service for this instance is currently unavailable.",
   "errorCodeLabel": "Error Code",
   "webOnlyDeployPendingTip": "Tip: In Web-only mode, the web chat service is the main conversation entry, which requires port 8642 to be ready. Please wait for the instance to fully start, or check the internal chat API settings.",

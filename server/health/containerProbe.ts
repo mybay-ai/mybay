@@ -2,6 +2,56 @@ import { execFile } from "child_process";
 import Docker from "dockerode";
 
 const docker = new Docker();
+
+export type LocalAccessMode = "desktop" | "lan";
+
+export function resolvePublishedPortBinding(
+  inspectData: any,
+  internalPort: number,
+  expectedHostPort: number,
+  mode: LocalAccessMode,
+): { ready: boolean; hostIp: string | null; hostPort: string | null } {
+  const portKey = `${internalPort}/tcp`;
+  const bindings = inspectData?.NetworkSettings?.Ports?.[portKey]
+    || inspectData?.HostConfig?.PortBindings?.[portKey]
+    || [];
+  const expectedPort = String(expectedHostPort);
+
+  for (const binding of bindings) {
+    const hostPort = String(binding?.HostPort || "");
+    const hostIp = String(binding?.HostIp || "");
+    if (hostPort !== expectedPort) continue;
+
+    const normalizedIp = hostIp.toLowerCase();
+    const loopback = normalizedIp === "127.0.0.1" || normalizedIp === "::1";
+    const lanReachable = !loopback && (
+      normalizedIp === ""
+      || normalizedIp === "0.0.0.0"
+      || normalizedIp === "::"
+      || normalizedIp === "[::]"
+      || normalizedIp.length > 0
+    );
+    const ready = mode === "desktop" ? loopback : lanReachable;
+    return { ready, hostIp: hostIp || null, hostPort };
+  }
+
+  return { ready: false, hostIp: null, hostPort: null };
+}
+
+export async function checkPublishedPortBinding(
+  containerName: string,
+  internalPort: number,
+  expectedHostPort: number,
+  mode: LocalAccessMode,
+): Promise<{ ready: boolean; hostIp: string | null; hostPort: string | null }> {
+  try {
+    const inspectData = await docker.getContainer(containerName).inspect();
+    return resolvePublishedPortBinding(inspectData, internalPort, expectedHostPort, mode);
+  } catch {
+    return { ready: false, hostIp: null, hostPort: null };
+  }
+}
+
 export function checkContainerRunning(containerName: string): Promise<boolean> {
   return new Promise((resolve) => {
     const container = docker.getContainer(containerName);
