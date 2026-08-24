@@ -5,6 +5,7 @@ import * as path from "path";
 import { parseTraefikEnv } from "./infrastructure/traefik/traefikConfig";
 import { buildDeploymentContext } from "./deploymentContext";
 import { cleanupInstanceResources, compensateDeployment } from "./services/instanceCleanup";
+import { instanceOperationCoordinator } from "./services/instances/instanceOperationCoordinator";
 import type { Server as SocketIOServer } from "socket.io";
 
 async function reloadGatewayOfInstance(instanceId: string) {
@@ -169,6 +170,49 @@ async function migrateExistingQQBotInstances() {
 
 // Global map to track auto-healing retry attempts to prevent infinite CrashLoopBackoff storms
 const autoHealAttempts = new Map<string, number>();
+const DEFAULT_TRANSITION_RECOVERY_TIMEOUT_MS = 5 * 60 * 1000;
+
+function getTransitionRecoveryTimeoutMs() {
+  const configured = Number(process.env.MYBAY_TRANSITION_RECOVERY_TIMEOUT_MS || DEFAULT_TRANSITION_RECOVERY_TIMEOUT_MS);
+  return Number.isFinite(configured) && configured >= 30_000
+    ? configured
+    : DEFAULT_TRANSITION_RECOVERY_TIMEOUT_MS;
+}
+
+function isStaleTransition(instance: any, nowMs = Date.now()) {
+  const timestamp = Date.parse(String(instance.updated_at || instance.started_at || instance.created_at || ""));
+  return !Number.isFinite(timestamp) || nowMs - timestamp >= getTransitionRecoveryTimeoutMs();
+}
+
+function expectsContainerToRun(instance: any) {
+  return [
+    "running",
+    "partial_running",
+    "degraded",
+    "restarting",
+    "container_starting",
+    "gateway_starting",
+    "dashboard_ready",
+  ].includes(String(instance.status));
+}
+
+function getPersistedAutoHealAttempts(instance: any) {
+  const persisted = Number(instance?.metadata?.recovery?.container_start_attempts || 0);
+  return Math.max(autoHealAttempts.get(instance.id) || 0, Number.isFinite(persisted) ? persisted : 0);
+}
+
+async function persistAutoHealState(instance: any, attempts: number, error: string | null = null) {
+  const metadata = instance.metadata || {};
+  const recovery = {
+    ...(metadata.recovery || {}),
+    container_start_attempts: attempts,
+    last_container_start_at: attempts > 0 ? new Date().toISOString() : null,
+    last_container_start_error: error,
+  };
+  const updatedMetadata = { ...metadata, recovery };
+  instance.metadata = updatedMetadata;
+  await dbAdapter.updateInstanceVersionInfo(instance.id, { metadata: updatedMetadata }).catch(() => {});
+}
 
 async function healLegacyTraefikLabels() {
   const { isTraefik } = parseTraefikEnv(process.env);
@@ -268,6 +312,12 @@ export async function startReconciler(intervalMs: number = 60000, options: Recon
     try {
       // 1. Get all instances from DB
       const dbInstances = await dbAdapter.getAllInstances();
+      const deploymentTasks = await dbAdapter.listAllDeploymentTasks().catch(() => []);
+      const activeDeploymentInstances = new Set(
+        deploymentTasks
+          .filter((task: any) => ["queued", "deploying", "retry_wait"].includes(String(task.status)))
+          .map((task: any) => String(task.instance_id)),
+      );
       
       // 2. Get all containers from Docker (active or not)
       const containers = await docker.listContainers({ all: true });
@@ -373,7 +423,24 @@ export async function startReconciler(intervalMs: number = 60000, options: Recon
             await dbAdapter.updateInstanceConfig(instance.id, JSON.stringify(config)).catch(() => {});
          }
 
-         if (instance.status === 'deploying' || instance.status === 'restarting' || instance.upgrade_status === 'upgrading' || config.storageExceeded === true) {
+         const isRecoverableTransition = instance.status === "deploying" || instance.status === "restarting";
+         const transitionOwned = activeDeploymentInstances.has(String(instance.id)) || Boolean(instanceOperationCoordinator.getActive(instance.id));
+         const recoverStaleTransition = isRecoverableTransition && !transitionOwned && isStaleTransition(instance);
+
+         if (recoverStaleTransition) {
+            const recoveryStatus = isPhysicallyRunning ? "gateway_starting" : "restarting";
+            console.warn(`[Reconciler] Recovering stale instance transition ${instance.id}: ${instance.status} -> ${recoveryStatus} (physical=${actualContainer?.State || "missing"}).`);
+            await dbAdapter.updateInstanceRecord(instance.id, {
+               status: recoveryStatus,
+               health_status: isPhysicallyRunning ? "checking" : "unhealthy",
+               error_code: null,
+               error_message: null,
+               deployment_error: null,
+            });
+            instance.status = recoveryStatus;
+         }
+
+         if ((isRecoverableTransition && !recoverStaleTransition) || instance.upgrade_status === 'upgrading' || config.storageExceeded === true) {
             if (config.storageExceeded === true) {
                // Update DB with storage_exceeded status if not already set to make it visible in reconciler logs/metadata
                await dbAdapter.updateInstancePhysicalState(instance.id, {
@@ -400,24 +467,37 @@ export async function startReconciler(intervalMs: number = 60000, options: Recon
             }
 
             // If the user expects it to be running but it's exited/stopped/paused
-            if (instance.status === 'running' && physical_status !== 'running') {
-               const attempts = autoHealAttempts.get(instance.id) || 0;
+            const expectsRunning = expectsContainerToRun(instance);
+            if (expectsRunning && physical_status !== 'running') {
+               const attempts = getPersistedAutoHealAttempts(instance);
                if (attempts < 3) {
                   const nextAttempts = attempts + 1;
                   autoHealAttempts.set(instance.id, nextAttempts);
                   console.log(`[Self-Heal] Container "${containerName}" (instance: ${instance.id}) is in state "${physical_status}" but expected "running". Triggering automatic recovery (Attempt ${nextAttempts}/3)...`);
                   
                   try {
+                     await persistAutoHealState(instance, nextAttempts);
                      const container = docker.getContainer(actualContainer.Id);
                      await container.start();
-                     console.log(`[Self-Heal] Successfully restarted container "${containerName}" for instance ${instance.id}.`);
-                     
-                     // Reset attempts upon successful restart
-                     autoHealAttempts.set(instance.id, 0);
-                     physical_status = 'running';
+                     const recoveredState = await container.inspect();
+                     const verifiedState = String(recoveredState?.State?.Status || "unknown");
+                     if (verifiedState !== "running") {
+                        throw new Error(`Docker start returned but the verified state is ${verifiedState}.`);
+                     }
+                     console.log(`[Self-Heal] Successfully restarted and verified container "${containerName}" for instance ${instance.id}.`);
+                     physical_status = "running";
+                     await dbAdapter.updateInstanceRecord(instance.id, {
+                        status: "gateway_starting",
+                        health_status: "checking",
+                        error_code: null,
+                        error_message: null,
+                        deployment_error: null,
+                     });
+                     instance.status = "gateway_starting";
                   } catch (restartErr: any) {
                      console.error(`[Self-Heal] Failed to restart container "${containerName}" (Attempt ${nextAttempts}/3):`, restartErr.message);
                      physical_error = `Physical container is ${physical_status} but should be running. Auto-restart attempt ${nextAttempts}/3 failed: ${restartErr.message}`;
+                     await persistAutoHealState(instance, nextAttempts, restartErr.message);
                   }
                } else {
                   physical_error = `Physical container is ${physical_status} but should be running. Auto-healing suspended after 3 failed attempts to avoid crash loop.`;
@@ -426,6 +506,9 @@ export async function startReconciler(intervalMs: number = 60000, options: Recon
                // Reset when running status is recovered or remains stable
                if (autoHealAttempts.has(instance.id)) {
                   autoHealAttempts.delete(instance.id);
+               }
+               if (getPersistedAutoHealAttempts(instance) > 0) {
+                  await persistAutoHealState(instance, 0);
                }
 
                // Scan container logs for unauthorized access events across supported channels
@@ -543,7 +626,7 @@ export async function startReconciler(intervalMs: number = 60000, options: Recon
                }
             }
          } else {
-            if (instance.status === "running" || instance.status === "partial_running") {
+            if (expectsContainerToRun(instance)) {
                physical_error = "Container missing from Docker engine.";
                await dbAdapter.updateInstanceRecord(instance.id, {
                   status: "degraded",

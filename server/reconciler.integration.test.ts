@@ -7,9 +7,10 @@ const state = vi.hoisted(() => {
     updateInstancePhysicalState: vi.fn(),
     updateInstanceVersionInfo: vi.fn(),
     updateInstanceRecord: vi.fn(),
-    createCleanupTask: vi.fn()
+    createCleanupTask: vi.fn(),
+    listAllDeploymentTasks: vi.fn()
   };
-  const agentContainer = { start: vi.fn() };
+  const agentContainer = { start: vi.fn(), inspect: vi.fn() };
   const traefikContainer = { inspect: vi.fn() };
   const docker = {
     listContainers: vi.fn(),
@@ -43,7 +44,9 @@ describe("local Docker reconciler lifecycle", () => {
     state.cleanupInstanceResources.mockResolvedValue(undefined);
     state.compensateDeployment.mockResolvedValue(undefined);
     state.agentContainer.start.mockResolvedValue(undefined);
+    state.agentContainer.inspect.mockResolvedValue({ State: { Status: "running" } });
     state.docker.listNetworks.mockResolvedValue([]);
+    state.dbAdapter.listAllDeploymentTasks.mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -83,6 +86,96 @@ describe("local Docker reconciler lifecycle", () => {
     expect(state.dbAdapter.updateInstanceRecord).toHaveBeenCalledWith(
       "missing",
       expect.objectContaining({ status: "degraded", health_status: "unhealthy", error_code: "CONTAINER_MISSING" })
+    );
+  });
+
+  it("recovers a stale restarting transition after the control plane restarts", async () => {
+    state.dbAdapter.getAllInstances.mockResolvedValue([{
+      id: "stale-restart", status: "restarting", desired_state: "running",
+      updated_at: "2020-01-01T00:00:00.000Z",
+      container_name: "mybay-agent-stale-restart", config_json: "{}", metadata: {}
+    }]);
+    state.docker.listContainers.mockResolvedValue([{
+      Id: "stale-container", Names: ["/mybay-agent-stale-restart"], State: "exited", Created: 1, Labels: {}
+    }]);
+
+    await startReconciler(1000, { allowInTest: true, runStartupMaintenance: false });
+    await vi.waitFor(() => expect(state.agentContainer.start).toHaveBeenCalled());
+
+    expect(state.dbAdapter.updateInstanceRecord).toHaveBeenCalledWith(
+      "stale-restart",
+      expect.objectContaining({ status: "gateway_starting", health_status: "checking" })
+    );
+    expect(state.dbAdapter.updateInstancePhysicalState).toHaveBeenCalledWith(
+      "stale-restart",
+      expect.objectContaining({ physical_status: "running", physical_error: null })
+    );
+  });
+
+  it("does not take over a fresh or actively leased deployment transition", async () => {
+    const fresh = {
+      id: "fresh", status: "restarting", desired_state: "running",
+      updated_at: new Date().toISOString(), container_name: "mybay-agent-fresh", config_json: "{}"
+    };
+    const leased = {
+      id: "leased", status: "deploying", desired_state: "running",
+      updated_at: "2020-01-01T00:00:00.000Z", container_name: "mybay-agent-leased", config_json: "{}"
+    };
+    state.dbAdapter.getAllInstances.mockResolvedValue([fresh, leased]);
+    state.dbAdapter.listAllDeploymentTasks.mockResolvedValue([{ instance_id: "leased", status: "deploying" }]);
+    state.docker.listContainers.mockResolvedValue([
+      { Id: "fresh-id", Names: ["/mybay-agent-fresh"], State: "exited", Created: 1, Labels: {} },
+      { Id: "leased-id", Names: ["/mybay-agent-leased"], State: "exited", Created: 1, Labels: {} },
+    ]);
+
+    await startReconciler(1000, { allowInTest: true, runStartupMaintenance: false });
+    await new Promise((resolve) => setTimeout(resolve, 30));
+
+    expect(state.agentContainer.start).not.toHaveBeenCalled();
+    expect(state.dbAdapter.updateInstanceRecord).not.toHaveBeenCalled();
+  });
+
+  it("does not report recovery until Docker verifies the container is running", async () => {
+    state.dbAdapter.getAllInstances.mockResolvedValue([{
+      id: "crash-loop", status: "running", desired_state: "running",
+      container_name: "mybay-agent-crash-loop", config_json: "{}", metadata: {}
+    }]);
+    state.docker.listContainers.mockResolvedValue([{
+      Id: "crash-loop-id", Names: ["/mybay-agent-crash-loop"], State: "exited", Created: 1, Labels: {}
+    }]);
+    state.agentContainer.inspect.mockResolvedValue({ State: { Status: "exited" } });
+
+    await startReconciler(1000, { allowInTest: true, runStartupMaintenance: false });
+    await vi.waitFor(() => expect(state.dbAdapter.updateInstancePhysicalState).toHaveBeenCalled());
+
+    expect(state.dbAdapter.updateInstancePhysicalState).toHaveBeenCalledWith(
+      "crash-loop",
+      expect.objectContaining({
+        physical_status: "exited",
+        physical_error: expect.stringContaining("verified state is exited")
+      })
+    );
+    expect(state.dbAdapter.updateInstanceVersionInfo).toHaveBeenCalledWith(
+      "crash-loop",
+      expect.objectContaining({ metadata: expect.objectContaining({ recovery: expect.objectContaining({ container_start_attempts: 1 }) }) })
+    );
+  });
+
+  it("recovers an exited container while gateway readiness is still pending", async () => {
+    state.dbAdapter.getAllInstances.mockResolvedValue([{
+      id: "gateway-pending", status: "gateway_starting", desired_state: "running",
+      container_name: "mybay-agent-gateway-pending", config_json: "{}", metadata: {}
+    }]);
+    state.docker.listContainers.mockResolvedValue([{
+      Id: "gateway-pending-id", Names: ["/mybay-agent-gateway-pending"], State: "exited", Created: 1, Labels: {}
+    }]);
+
+    await startReconciler(1000, { allowInTest: true, runStartupMaintenance: false });
+    await vi.waitFor(() => expect(state.agentContainer.start).toHaveBeenCalled());
+
+    expect(state.dbAdapter.updateInstanceRecord).toHaveBeenCalledWith(
+      "gateway-pending",
+      expect.objectContaining({ status: "gateway_starting", health_status: "checking" })
     );
   });
 
