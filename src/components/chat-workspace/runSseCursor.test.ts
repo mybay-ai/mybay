@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { commitRunSseFrame, observeRunSseEventId } from "./runSseCursor";
+import { commitRunSseFrame, normalizeRunSseResumeCursor, observeRunSseEventId } from "./runSseCursor";
 
 describe("run SSE cursor", () => {
   it("commits an event id only after the frame is consumed", () => {
@@ -17,5 +17,12 @@ describe("run SSE cursor", () => {
     const cursor = { currentEventId: 0, lastCommittedEventId: 7 };
     expect(observeRunSseEventId(cursor, 0)).toBe(cursor);
     expect(observeRunSseEventId(cursor, Number.NaN)).toBe(cursor);
+  });
+
+  it("resumes after the last persisted event without replaying an empty cache", () => {
+    expect(normalizeRunSseResumeCursor(18)).toBe(18);
+    expect(normalizeRunSseResumeCursor("19")).toBe(19);
+    expect(normalizeRunSseResumeCursor(-1)).toBe(0);
+    expect(normalizeRunSseResumeCursor(1.5)).toBe(0);
   });
 });

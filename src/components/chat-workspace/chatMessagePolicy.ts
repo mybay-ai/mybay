@@ -27,6 +27,12 @@ export function isConcurrencyTakeoverError(err: any): boolean {
   return false;
 }
 
+export function isRetryableRunCreationError(err: any): boolean {
+  const status = Number(err?.status);
+  if (!Number.isFinite(status) || status <= 0) return true;
+  return status === 408 || status === 425 || status === 502 || status === 503 || status === 504 || status >= 500;
+}
+
 export function isConcurrencyTakeoverCode(code?: string | null): boolean {
   return !!code && (CONCURRENCY_TAKEOVER_ERRORS.has(code) || /CONCURRENT|ACTIVE_RUN|RUN_ALREADY|TOO_MANY/i.test(code));
 }

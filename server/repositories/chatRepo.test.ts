@@ -108,6 +108,22 @@ describe("chatRepo local status contract", () => {
     });
     expect(first.status).toBe("success");
 
+    const replay = await chatRepo.beginChatRun({
+      conversationId: conversation.id,
+      userId: "user-1",
+      instanceId: "instance-1",
+      content: "run",
+      requestId: "run-request-1",
+      runId: "run-replay",
+    });
+    expect(replay).toMatchObject({
+      status: "IDEMPOTENT_REPLAY",
+      run_id: "run-1",
+      run_status: "queued",
+      user_message_id: first.user_message_id,
+      sequence_no: first.sequence_no,
+    });
+
     const concurrent = await chatRepo.beginChatRun({
       conversationId: conversation.id,
       userId: "user-1",

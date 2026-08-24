@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   isConcurrencyTakeoverError,
+  isRetryableRunCreationError,
   normalizeStoredMessageError,
   normalizeStoredMessageStatus
 } from "./chatMessagePolicy";
@@ -23,6 +24,14 @@ describe("chat message policy characterization", () => {
     expect(isConcurrencyTakeoverError({ status: 409, code: "RUNNING" })).toBe(true);
     expect(isConcurrencyTakeoverError({ status: 429, data: { message: "active run exists" } })).toBe(true);
     expect(isConcurrencyTakeoverError({ status: 500, code: "RUNNING" })).toBe(false);
+  });
+
+  it("retries only transport and transient server failures when creating a run", () => {
+    expect(isRetryableRunCreationError(new TypeError("fetch failed"))).toBe(true);
+    expect(isRetryableRunCreationError({ status: 503 })).toBe(true);
+    expect(isRetryableRunCreationError({ status: 408 })).toBe(true);
+    expect(isRetryableRunCreationError({ status: 409 })).toBe(false);
+    expect(isRetryableRunCreationError({ status: 422 })).toBe(false);
   });
 });
 

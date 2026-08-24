@@ -23,6 +23,7 @@ import { getRetryAttachments } from "./chat-workspace/run/retryAttachments";
 import { MAX_CHAT_USER_MESSAGE_CHARS, countChatMessageCharacters } from "../../shared/chatMessageContract";
 import {
   isConcurrencyTakeoverError,
+  isRetryableRunCreationError,
   normalizeStoredMessageError,
   normalizeStoredMessageStatus
 } from "./chat-workspace/chatMessagePolicy";
@@ -616,9 +617,10 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
               requestId: recovered.requestId,
               assistantMessageId: recovered.assistantMessageId,
               status: recovered.status,
-              recoveryTextBaseline: recovered.partialOutput
+              recoveryTextBaseline: recovered.partialOutput,
+              resumeAfterEventId: res.activeRun.lastEventSeq
             });
-            // Trigger streaming reconnection from the beginning of the local event cache.
+            // Resume after the last persisted event; partial output already restores prior text.
             setTimeout(() => {
               streamActiveRun(res.activeRun.id, initialSelectedId, initialConvId);
             }, 100);
@@ -907,22 +909,27 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     payload: { conversationId: string | null; content: string; requestId: string; reasoningEffort?: ChatReasoningEffort; attachmentIds?: string[] },
     shouldRetryConcurrency: boolean
   ) => {
-    let lastErr: any = null;
-    const maxAttempts = shouldRetryConcurrency ? 6 : 1;
+    let concurrencyRetries = 0;
+    let transientRetries = 0;
 
-    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    while (true) {
       try {
         return await api.post(`/api/instances/${instanceId}/runs`, payload);
       } catch (err: any) {
-        lastErr = err;
-        if (!shouldRetryConcurrency || !isConcurrencyTakeoverError(err) || attempt === maxAttempts - 1) {
-          throw err;
+        if (shouldRetryConcurrency && isConcurrencyTakeoverError(err) && concurrencyRetries < 5) {
+          const delayMs = 300 + concurrencyRetries * 250;
+          concurrencyRetries += 1;
+          await sleep(delayMs);
+          continue;
         }
-        await sleep(300 + attempt * 250);
+        if (isRetryableRunCreationError(err) && transientRetries < 1) {
+          transientRetries += 1;
+          await sleep(400);
+          continue;
+        }
+        throw err;
       }
     }
-
-    throw lastErr;
   };
 
   const enqueueFollowUpMessage = (content: string, attachments: PendingAttachment[]) => {

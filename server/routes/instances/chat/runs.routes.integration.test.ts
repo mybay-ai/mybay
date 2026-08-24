@@ -91,4 +91,47 @@ describe("Interactive Agent POST /runs integration", () => {
       await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     }
   });
+
+  it("returns the original Run when a lost create response is retried with the same request", async () => {
+    process.env.MYBAY_ASYNC_CHAT_RUNS_ENABLED = "true";
+    getInstanceById.mockResolvedValue({ id: instanceId, user_id: userId, owner_id: userId, config_json: "{}" });
+    probeCapabilities.mockResolvedValue("supported");
+    beginChatRun.mockResolvedValue({
+      status: "IDEMPOTENT_REPLAY",
+      user_message_id: "44444444-4444-4444-8444-444444444444",
+      sequence_no: 1,
+      run_id: "55555555-5555-4555-8555-555555555555",
+      run_status: "running"
+    });
+
+    const app = express();
+    app.use(express.json());
+    const router = express.Router();
+    registerRunRoutes(router);
+    app.use("/api/instances", router);
+    const server = app.listen(0);
+
+    try {
+      await new Promise<void>((resolve) => server.once("listening", resolve));
+      const address = server.address();
+      if (!address || typeof address === "string") throw new Error("Test server did not expose a TCP port");
+      const response = await fetch(`http://127.0.0.1:${address.port}/api/instances/${instanceId}/runs`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ conversationId, content: "Run an interactive Agent task", requestId: "request-1" })
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body).toEqual(expect.objectContaining({
+        success: true,
+        replayed: true,
+        runId: "55555555-5555-4555-8555-555555555555",
+        status: "running"
+      }));
+      expect(requestRunsReconcile).toHaveBeenCalledOnce();
+    } finally {
+      await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    }
+  });
 });

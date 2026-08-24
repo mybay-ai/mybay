@@ -280,13 +280,24 @@ export const chatRepo = {
     });
   },
 
-  async beginChatRun(params: { conversationId: string; userId: string; instanceId: string; content: string; requestId: string; runId: string; reasoningEffort?: "fast" | "balanced" | "deep"; }): Promise<{ status: string; user_message_id: string | null; sequence_no: number | null }> {
+  async beginChatRun(params: { conversationId: string; userId: string; instanceId: string; content: string; requestId: string; runId: string; reasoningEffort?: "fast" | "balanced" | "deep"; }): Promise<{ status: string; user_message_id: string | null; sequence_no: number | null; run_id?: string | null; run_status?: string | null }> {
     return mutateStore((data) => {
       const conv = data.conversations.find((c: any) => c.id === params.conversationId && c.user_id === params.userId && c.instance_id === params.instanceId);
       if (!conv) throw new Error("CONVERSATION_NOT_FOUND_OR_ACCESS_DENIED");
 
       const duplicateRequest = data.chatRuns.find((r: any) => r.user_id === params.userId && r.instance_id === params.instanceId && r.request_id === params.requestId);
-      if (duplicateRequest) return { status: "DUPLICATE_REQUEST_ID", user_message_id: duplicateRequest.user_message_id || null, sequence_no: null };
+      if (duplicateRequest) {
+        const originalMessage = data.chatMessages.find((message: any) => message.id === duplicateRequest.user_message_id);
+        const isExactReplay = duplicateRequest.conversation_id === params.conversationId
+          && originalMessage?.content === params.content;
+        return {
+          status: isExactReplay ? "IDEMPOTENT_REPLAY" : "DUPLICATE_REQUEST_ID",
+          user_message_id: duplicateRequest.user_message_id || null,
+          sequence_no: originalMessage?.sequence_no ?? null,
+          run_id: duplicateRequest.id,
+          run_status: duplicateRequest.status || null,
+        };
+      }
       const duplicateRun = data.chatRuns.find((r: any) => r.id === params.runId);
       if (duplicateRun) return { status: "DUPLICATE_RUN", user_message_id: duplicateRun.user_message_id || null, sequence_no: null };
       const activeRun = data.chatRuns.find((r: any) => r.user_id === params.userId && r.instance_id === params.instanceId && ["queued", "running", "stopping"].includes(r.status));

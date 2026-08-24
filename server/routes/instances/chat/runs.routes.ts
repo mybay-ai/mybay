@@ -181,7 +181,19 @@ export function registerRunRoutes(router: Router) {
       });
 
 
-      if (beginResult.status === 'DUPLICATE_REQUEST_ID') {
+      if (beginResult.status === 'IDEMPOTENT_REPLAY' && beginResult.run_id) {
+        if (["queued", "running", "stopping"].includes(String(beginResult.run_status))) {
+          requestRunsReconcile();
+        }
+        return res.status(200).json({
+          success: true,
+          replayed: true,
+          runId: beginResult.run_id,
+          status: beginResult.run_status || "queued",
+          userMessageId: beginResult.user_message_id,
+          sequenceNo: beginResult.sequence_no
+        });
+      } else if (beginResult.status === 'DUPLICATE_REQUEST_ID') {
         return res.status(409).json({ success: false, error: "DUPLICATE_REQUEST_ID", message: "重复的请求 Request ID，该请求已被处理。" });
       } else if (beginResult.status === 'CONCURRENT_RUN') {
         return res.status(429).json({ success: false, error: "TOO_MANY_CONCURRENT_RUNS", message: "当前实例存在正在运行的异步对话任务，请稍候再试。" });

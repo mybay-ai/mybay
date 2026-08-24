@@ -3,6 +3,11 @@ export type RunSseCursor = {
   lastCommittedEventId: number;
 };
 
+export function normalizeRunSseResumeCursor(value: unknown): number {
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : 0;
+}
+
 export function observeRunSseEventId(cursor: RunSseCursor, eventId: number): RunSseCursor {
   if (!Number.isFinite(eventId) || eventId <= 0) return cursor;
   return { ...cursor, currentEventId: eventId };

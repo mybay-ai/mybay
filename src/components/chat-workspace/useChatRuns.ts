@@ -6,7 +6,7 @@ import { markChatRunCompleted } from "../../lib/chatWorkspaceNotifications";
 import type { ChatMessage } from "../../lib/chatWorkspaceState";
 import type { ChatToolStep } from "./ChatToolProgress";
 import { canExecutePollingCallback, finalizeRunMetrics, finalizeRunSteps, isTerminalRunStatus, normalizeRunDurationMs, shouldApplyRunUpdate, type TerminalRunStatus } from "./runUiLifecycle";
-import { observeRunSseEventId } from "./runSseCursor";
+import { normalizeRunSseResumeCursor, observeRunSseEventId } from "./runSseCursor";
 import { createRunExecutionState, deriveAssistantText, deriveToolSteps } from "./run/runReducer";
 import { consumeRunSseFrame } from "./run/runStreamCoordinator";
 import { mergeRecoveredStreamingContent } from "./run/runTextReconciliation";
@@ -150,6 +150,7 @@ export function useChatRuns({
     initialText?: string;
     initialStep?: ToolEventPayload;
     recoveryTextBaseline?: string;
+    resumeAfterEventId?: number;
   }) => {
     if (textFlushTimerRef.current) {
       clearTimeout(textFlushTimerRef.current);
@@ -158,7 +159,7 @@ export function useChatRuns({
     pendingTextRef.current = "";
     pendingTextConversationIdRef.current = null;
     recoveryTextBaselineRef.current = params.recoveryTextBaseline || "";
-    lastEventIdRef.current = 0;
+    lastEventIdRef.current = normalizeRunSseResumeCursor(params.resumeAfterEventId);
     setApprovalRequests([]);
     const state = createRunExecutionState(params);
     runExecutionRef.current = state;
