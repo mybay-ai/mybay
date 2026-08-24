@@ -1,25 +1,14 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { Dispatch, MouseEvent, MutableRefObject, SetStateAction, UIEvent } from "react";
 import type { TFunction } from "i18next";
 import { api } from "../../lib/api";
 import type { ChatMessage } from "../../lib/chatWorkspaceState";
 import { shouldAcceptConversationHistory } from "../../lib/chatWorkspaceState";
 import type { PendingAttachment } from "./ChatInputBar";
+import { mergePersistedOrder, moveConversationWithinSection, moveOrderedRecord, sortConversationRecords, sortProjectRecords } from "./localConversationOrdering";
 
 type ConversationRecord = any;
 type ChatProjectRecord = any;
-
-type ConversationPrefs = {
-  orderedIds: string[];
-  pinnedIds: string[];
-};
-
-const CONVERSATION_PREFS_PREFIX = "mybay.chatWorkspace.conversationPrefs.";
-
-function safeTime(value: unknown) {
-  const time = Date.parse(String(value || ""));
-  return Number.isFinite(time) ? time : 0;
-}
 
 type ConfirmOptions = {
   title: string;
@@ -65,57 +54,12 @@ export function useChatConversations({
   const [loadingMoreConversations, setLoadingMoreConversations] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
-
-  const getConversationPrefsKey = () => `${CONVERSATION_PREFS_PREFIX}${selectedId || "none"}`;
-
-  const readConversationPrefs = (): ConversationPrefs => {
-    if (typeof window === "undefined") return { orderedIds: [], pinnedIds: [] };
-    try {
-      const raw = window.localStorage.getItem(getConversationPrefsKey());
-      if (!raw) return { orderedIds: [], pinnedIds: [] };
-      const parsed = JSON.parse(raw);
-      return {
-        orderedIds: Array.isArray(parsed?.orderedIds) ? parsed.orderedIds.filter((id: unknown) => typeof id === "string") : [],
-        pinnedIds: Array.isArray(parsed?.pinnedIds) ? parsed.pinnedIds.filter((id: unknown) => typeof id === "string") : []
-      };
-    } catch {
-      return { orderedIds: [], pinnedIds: [] };
-    }
-  };
-
-  const writeConversationPrefs = (prefs: ConversationPrefs) => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem(getConversationPrefsKey(), JSON.stringify({
-      orderedIds: Array.from(new Set(prefs.orderedIds)),
-      pinnedIds: Array.from(new Set(prefs.pinnedIds))
-    }));
-  };
-
-  const applyConversationPreferences = (items: ConversationRecord[]) => {
-    const prefs = readConversationPrefs();
-    const pinned = new Set([
-      ...items.filter(item => Boolean(item.pinned_at)).map(item => item.id),
-      ...prefs.pinnedIds
-    ]);
-    const order = new Map(prefs.orderedIds.map((id, index) => [id, index]));
-    return [...items].map(item => ({
-      ...item,
-      pinned_at: pinned.has(item.id) ? (item.pinned_at || "local") : null
-    })).sort((a, b) => {
-      const pinnedA = pinned.has(a.id);
-      const pinnedB = pinned.has(b.id);
-      if (pinnedA !== pinnedB) return pinnedA ? -1 : 1;
-      const orderA = order.has(a.id) ? order.get(a.id)! : Number.MAX_SAFE_INTEGER;
-      const orderB = order.has(b.id) ? order.get(b.id)! : Number.MAX_SAFE_INTEGER;
-      if (orderA !== orderB) return orderA - orderB;
-      const timeDiff = safeTime(b.updated_at) - safeTime(a.updated_at);
-      if (timeDiff !== 0) return timeDiff;
-      return String(b.id || "").localeCompare(String(a.id || ""));
-    });
-  };
+  const conversationOrderMutationRef = useRef(0);
+  const projectOrderMutationRef = useRef(0);
+  const conversationProjectMutationRef = useRef(0);
 
   const setConversations: Dispatch<SetStateAction<ConversationRecord[]>> = (value) => {
-    setConversationsRaw(prev => applyConversationPreferences(typeof value === "function" ? (value as (previous: ConversationRecord[]) => ConversationRecord[])(prev) : value));
+    setConversationsRaw(prev => sortConversationRecords(typeof value === "function" ? (value as (previous: ConversationRecord[]) => ConversationRecord[])(prev) : value));
   };
 
   const resetConversationsForInstance = () => {
@@ -128,7 +72,7 @@ export function useChatConversations({
   const loadConversationProjects = async (instanceId: string) => {
     const res = await api.get('/api/instances/' + instanceId + '/conversation-projects');
     if (res && res.success && Array.isArray(res.projects)) {
-      setConversationProjects(res.projects);
+      setConversationProjects(sortProjectRecords(res.projects));
     }
   };
 
@@ -144,10 +88,10 @@ export function useChatConversations({
         { selectedId: initialSelectedId, instanceGeneration: currentInstanceGen }
       )) return;
       if (projectsRes && projectsRes.success && Array.isArray(projectsRes.projects)) {
-        setConversationProjects(projectsRes.projects);
+        setConversationProjects(sortProjectRecords(projectsRes.projects));
       }
       if (res && res.success && Array.isArray(res.conversations)) {
-        const sortedConversations = applyConversationPreferences(res.conversations);
+        const sortedConversations = sortConversationRecords(res.conversations);
         setConversationsRaw(sortedConversations);
         setConversationsCursor(res.nextCursor);
 
@@ -200,7 +144,7 @@ export function useChatConversations({
     try {
       const res = await api.post('/api/instances/' + selectedId + '/conversation-projects', { name: projectName });
       if (res && res.success && res.project) {
-        setConversationProjects(prev => [res.project, ...prev]);
+        setConversationProjects(prev => sortProjectRecords([res.project, ...prev]));
       }
     } catch (err) {
       console.error("Failed to create conversation project:", err);
@@ -216,7 +160,7 @@ export function useChatConversations({
     try {
       const res = await api.patch('/api/instances/' + selectedId + '/conversation-projects/' + projectId, { name: projectName });
       if (res && res.success && res.project) {
-        setConversationProjects(prev => prev.map(project => project.id === projectId ? res.project : project));
+        setConversationProjects(prev => sortProjectRecords(prev.map(project => project.id === projectId ? res.project : project)));
       }
     } catch (err) {
       console.error("Failed to rename conversation project:", err);
@@ -250,7 +194,9 @@ export function useChatConversations({
 
   const handleMoveConversationToProject = async (convId: string, projectId: string | null) => {
     if (!selectedId) return;
-
+    const previousProjectId = conversations.find(conversation => conversation.id === convId)?.project_id || null;
+    const mutationId = ++conversationProjectMutationRef.current;
+    setConversationsRaw(prev => sortConversationRecords(prev.map(conversation => conversation.id === convId ? { ...conversation, project_id: projectId } : conversation)));
     try {
       const res = await api.patch('/api/instances/' + selectedId + '/conversations/' + convId, { projectId });
       if (res && res.success && res.conversation) {
@@ -258,6 +204,9 @@ export function useChatConversations({
       }
     } catch (err) {
       console.error("Failed to move conversation to project:", err);
+      if (conversationProjectMutationRef.current === mutationId) {
+        setConversationsRaw(current => sortConversationRecords(current.map(conversation => conversation.id === convId ? { ...conversation, project_id: previousProjectId } : conversation)));
+      }
       setError(t("dashboard:chatWorkspace.moveToProjectFailed"));
     }
   };
@@ -303,50 +252,71 @@ export function useChatConversations({
     setRenameValue(title);
   };
 
-  const handleMoveConversation = (convId: string, direction: "up" | "down", e: MouseEvent) => {
+  const handleMoveConversation = async (convId: string, direction: "up" | "down", e: MouseEvent) => {
     e.stopPropagation();
-    const current = [...conversations];
-    const index = current.findIndex(c => c.id === convId);
-    if (index < 0) return;
-    const targetIndex = direction === "up" ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= current.length) return;
-    const next = [...current];
-    [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
-    const prefs = readConversationPrefs();
-    writeConversationPrefs({
-      ...prefs,
-      orderedIds: next.map(c => c.id)
-    });
+    if (!selectedId) return;
+    const snapshot = conversations;
+    const next = moveConversationWithinSection(snapshot, convId, direction);
+    if (!next) return;
+    const mutationId = ++conversationOrderMutationRef.current;
     setConversationsRaw(next);
+    try {
+      const res = await api.put('/api/instances/' + selectedId + '/conversations/order', { orderedIds: next.map(conversation => conversation.id) });
+      if (res?.success && Array.isArray(res.conversations) && conversationOrderMutationRef.current === mutationId) {
+        setConversationsRaw(current => mergePersistedOrder(current, res.conversations, sortConversationRecords));
+      }
+    } catch (err) {
+      console.error("Failed to persist conversation order:", err);
+      if (conversationOrderMutationRef.current === mutationId) {
+        setConversationsRaw(current => mergePersistedOrder(current, snapshot, sortConversationRecords));
+      }
+      setError(t("dashboard:chatWorkspace.reorderConversationFailed"));
+    }
+  };
+
+  const handleMoveProject = async (projectId: string, direction: "up" | "down", e: MouseEvent) => {
+    e.stopPropagation();
+    if (!selectedId) return;
+    const snapshot = conversationProjects;
+    const next = moveOrderedRecord(snapshot, projectId, direction);
+    if (!next) return;
+    const mutationId = ++projectOrderMutationRef.current;
+    setConversationProjects(next);
+    try {
+      const res = await api.put('/api/instances/' + selectedId + '/conversation-projects/order', { orderedIds: next.map(project => project.id) });
+      if (res?.success && Array.isArray(res.projects) && projectOrderMutationRef.current === mutationId) {
+        setConversationProjects(current => mergePersistedOrder(current, res.projects, sortProjectRecords));
+      }
+    } catch (err) {
+      console.error("Failed to persist project order:", err);
+      if (projectOrderMutationRef.current === mutationId) {
+        setConversationProjects(current => mergePersistedOrder(current, snapshot, sortProjectRecords));
+      }
+      setError(t("dashboard:chatWorkspace.reorderProjectFailed"));
+    }
   };
 
   const handleTogglePinConversation = (convId: string, e: MouseEvent) => {
     e.stopPropagation();
-    const prefs = readConversationPrefs();
-    const pinned = new Set([
-      ...conversations.filter(c => Boolean(c.pinned_at)).map(c => c.id),
-      ...prefs.pinnedIds
-    ]);
-    if (pinned.has(convId)) {
-      pinned.delete(convId);
-    } else {
-      pinned.add(convId);
-    }
-    const orderedIds = [convId, ...prefs.orderedIds.filter(id => id !== convId)];
-    writeConversationPrefs({ orderedIds, pinnedIds: Array.from(pinned) });
-    setConversationsRaw(prev => applyConversationPreferences(prev.map(c => ({
-      ...c,
-      pinned_at: pinned.has(c.id) ? (c.pinned_at || "local") : null
-    }))));
+    const previousPinnedAt = conversations.find(conversation => conversation.id === convId)?.pinned_at || null;
+    const shouldPin = !Boolean(previousPinnedAt);
+    setConversationsRaw(prev => sortConversationRecords(prev.map(conversation => conversation.id === convId ? {
+      ...conversation,
+      pinned_at: shouldPin ? new Date().toISOString() : null,
+    } : conversation)));
 
     if (selectedId) {
-      void api.patch('/api/instances/' + selectedId + '/conversations/' + convId, { pinned: pinned.has(convId) })
+      void api.patch('/api/instances/' + selectedId + '/conversations/' + convId, { pinned: shouldPin })
         .then((res) => {
           if (res && res.success && res.conversation) {
             setConversations(prev => prev.map(c => c.id === convId ? res.conversation : c));
           }
         })
-        .catch((err) => console.warn("Failed to persist conversation pin state:", err));
+        .catch((err) => {
+          console.warn("Failed to persist conversation pin state:", err);
+          setConversationsRaw(current => sortConversationRecords(current.map(conversation => conversation.id === convId ? { ...conversation, pinned_at: previousPinnedAt } : conversation)));
+          setError(t("dashboard:chatWorkspace.pinConversationFailed"));
+        });
     }
   };
 
@@ -456,6 +426,7 @@ export function useChatConversations({
     handleDeleteConversation,
     startRename,
     handleMoveConversation,
+    handleMoveProject,
     handleTogglePinConversation,
     buildConversationTitleFromMessage,
     maybeRenameDefaultConversation,

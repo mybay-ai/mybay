@@ -17,6 +17,7 @@ interface ChatConversationSidebarProps {
   onCreateProject: (name: string) => void;
   onRenameProject: (id: string, name: string) => void;
   onDeleteProject: (id: string) => void;
+  onMoveProject: (id: string, direction: "up" | "down", event: React.MouseEvent) => void;
   onCloseSidebar: () => void;
   onCloseMobileSidebar: () => void;
   onScroll: (event: React.UIEvent<HTMLDivElement>) => void;
@@ -46,6 +47,7 @@ export function ChatConversationSidebar({
   onCreateProject,
   onRenameProject,
   onDeleteProject,
+  onMoveProject,
   onCloseSidebar,
   onCloseMobileSidebar,
   onScroll,
@@ -132,10 +134,15 @@ export function ChatConversationSidebar({
   );
 
   const renderConversation = (conv: any) => {
-    const index = conversations.findIndex((item) => item.id === conv.id);
     const isSelected = conv.id === selectedConversationId;
     const isRenaming = conv.id === renamingId;
     const isPinned = Boolean(conv.pinned_at);
+    const sectionItems = isPinned
+      ? pinnedConversations
+      : conv.project_id
+        ? conversations.filter((item) => !item.pinned_at && item.project_id === conv.project_id)
+        : recentConversations;
+    const sectionIndex = sectionItems.findIndex((item) => item.id === conv.id);
 
     return (
       <div
@@ -180,7 +187,7 @@ export function ChatConversationSidebar({
             </button>
             <button
               onClick={(event) => onMoveConversation(conv.id, "up", event)}
-              disabled={index <= 0}
+              disabled={sectionIndex <= 0}
               className="p-1 text-content-muted hover:text-content-secondary hover:bg-outline/50 rounded disabled:cursor-not-allowed disabled:opacity-30"
               title={t("chatWorkspace.moveChatUp")}
             >
@@ -188,7 +195,7 @@ export function ChatConversationSidebar({
             </button>
             <button
               onClick={(event) => onMoveConversation(conv.id, "down", event)}
-              disabled={index < 0 || index >= conversations.length - 1}
+              disabled={sectionIndex < 0 || sectionIndex >= sectionItems.length - 1}
               className="p-1 text-content-muted hover:text-content-secondary hover:bg-outline/50 rounded disabled:cursor-not-allowed disabled:opacity-30"
               title={t("chatWorkspace.moveChatDown")}
             >
@@ -290,12 +297,30 @@ export function ChatConversationSidebar({
               <>
                 {renderSectionTitle(t("chatWorkspace.projects"), <Folder className="h-3 w-3" />)}
                 <div className="space-y-2">
-                  {projectGroups.map(({ project, items }) => (
+                  {projectGroups.map(({ project, items }, projectIndex) => (
                     <Fragment key={project.id}>
                       <div className="group/project flex items-center gap-2 rounded-lg px-1.5 py-1 text-[12px] font-semibold text-content-muted hover:bg-surface/70">
                         <Folder className="h-3.5 w-3.5 text-slate-400" />
                         <span className="min-w-0 flex-1 truncate">{project.name}</span>
                         <span className="rounded-full bg-outline/70 px-1.5 py-0.5 text-[10px] font-semibold text-content-muted">{items.length}</span>
+                        <button
+                          type="button"
+                          onClick={(event) => onMoveProject(project.id, "up", event)}
+                          disabled={projectIndex <= 0}
+                          className="rounded p-1 text-slate-400 opacity-100 hover:bg-outline hover:text-content-secondary disabled:cursor-not-allowed disabled:opacity-25 sm:opacity-0 sm:group-hover/project:opacity-100"
+                          title={t("chatWorkspace.moveProjectUp")}
+                        >
+                          <ArrowUp className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(event) => onMoveProject(project.id, "down", event)}
+                          disabled={projectIndex >= projectGroups.length - 1}
+                          className="rounded p-1 text-slate-400 opacity-100 hover:bg-outline hover:text-content-secondary disabled:cursor-not-allowed disabled:opacity-25 sm:opacity-0 sm:group-hover/project:opacity-100"
+                          title={t("chatWorkspace.moveProjectDown")}
+                        >
+                          <ArrowDown className="h-3.5 w-3.5" />
+                        </button>
                         <button
                           type="button"
                           onClick={(event) => { event.stopPropagation(); openRenameProjectModal(project); }}

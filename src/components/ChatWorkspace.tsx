@@ -214,6 +214,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     handleDeleteConversation,
     startRename,
     handleMoveConversation,
+    handleMoveProject,
     handleTogglePinConversation,
     buildConversationTitleFromMessage,
     maybeRenameDefaultConversation,
@@ -1822,6 +1823,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
           onCreateProject={handleCreateProject}
           onRenameProject={handleRenameProject}
           onDeleteProject={handleDeleteProject}
+          onMoveProject={handleMoveProject}
           onCloseSidebar={() => setSidebarOpen(false)}
           onCloseMobileSidebar={() => setMobileSidebarOpen(false)}
           onScroll={handleConversationsScroll}

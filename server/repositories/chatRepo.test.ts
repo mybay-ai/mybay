@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { closeLocalDatabase, mutateStore, readStore } from "../localStore";
-import { chatRepo } from "./chatRepo";
+import { chatRepo, encodeConversationCursor } from "./chatRepo";
 
 describe("chatRepo local status contract", () => {
   const relativeStorePath = "data/test-chat-repo-store.json";
@@ -186,5 +186,61 @@ describe("chatRepo local status contract", () => {
       run_id: "run-with-attachment",
       attachmentIds: ["file-1"],
     });
+  });
+
+  it("atomically persists a partial conversation order within one user and instance", async () => {
+    const first = await chatRepo.createConversation("user-1", "instance-1", "First");
+    const second = await chatRepo.createConversation("user-1", "instance-1", "Second");
+    const third = await chatRepo.createConversation("user-1", "instance-1", "Third");
+    const foreign = await chatRepo.createConversation("user-2", "instance-1", "Foreign");
+    const otherInstance = await chatRepo.createConversation("user-1", "instance-2", "Other instance");
+
+    const reordered = await chatRepo.reorderConversations("user-1", "instance-1", [first.id, third.id]);
+    expect(reordered.map(item => item.id)).toEqual([first.id, third.id, second.id]);
+    expect((await chatRepo.listConversations("user-1", "instance-1", 10)).map(item => item.id)).toEqual([first.id, third.id, second.id]);
+    expect((await chatRepo.listConversations("user-2", "instance-1", 10)).map(item => item.id)).toEqual([foreign.id]);
+    expect((await chatRepo.listConversations("user-1", "instance-2", 10)).map(item => item.id)).toEqual([otherInstance.id]);
+  });
+
+  it("rejects invalid conversation ordering without partially changing data", async () => {
+    const first = await chatRepo.createConversation("user-1", "instance-1", "First");
+    const second = await chatRepo.createConversation("user-1", "instance-1", "Second");
+    const before = (await chatRepo.listConversations("user-1", "instance-1", 10)).map(item => item.id);
+    await expect(chatRepo.reorderConversations("user-1", "instance-1", [first.id, first.id])).rejects.toThrow("CONVERSATION_ORDER_INVALID");
+    await expect(chatRepo.reorderConversations("user-1", "instance-1", [second.id, "foreign-id"])).rejects.toThrow("CONVERSATION_ORDER_INVALID");
+    expect((await chatRepo.listConversations("user-1", "instance-1", 10)).map(item => item.id)).toEqual(before);
+  });
+
+  it("persists project order without touching another instance", async () => {
+    const first = await chatRepo.createProject("user-1", "instance-1", "First");
+    const second = await chatRepo.createProject("user-1", "instance-1", "Second");
+    const foreign = await chatRepo.createProject("user-1", "instance-2", "Foreign");
+    await chatRepo.reorderProjects("user-1", "instance-1", [first.id, second.id]);
+    expect((await chatRepo.listProjects("user-1", "instance-1")).map(item => item.id)).toEqual([first.id, second.id]);
+    expect((await chatRepo.listProjects("user-1", "instance-2")).map(item => item.id)).toEqual([foreign.id]);
+  });
+
+  it("continues stable pagination with the persisted sort cursor", async () => {
+    const first = await chatRepo.createConversation("user-1", "instance-1", "First");
+    const second = await chatRepo.createConversation("user-1", "instance-1", "Second");
+    const third = await chatRepo.createConversation("user-1", "instance-1", "Third");
+    await chatRepo.reorderConversations("user-1", "instance-1", [second.id, first.id, third.id]);
+    const page = await chatRepo.listConversations("user-1", "instance-1", 2);
+    expect(page.map(item => item.id)).toEqual([second.id, first.id]);
+    const next = await chatRepo.listConversations("user-1", "instance-1", 2, encodeConversationCursor(page[1]));
+    expect(next.map(item => item.id)).toEqual([third.id]);
+  });
+
+  it("continues accepting the legacy updated_at and id cursor", async () => {
+    const first = await chatRepo.createConversation("user-1", "instance-1", "First");
+    const second = await chatRepo.createConversation("user-1", "instance-1", "Second");
+    mutateStore(data => {
+      const firstRow = data.conversations.find(item => item.id === first.id);
+      const secondRow = data.conversations.find(item => item.id === second.id);
+      if (firstRow) Object.assign(firstRow, { sort_order: null, updated_at: "2026-01-01T00:00:00.000Z" });
+      if (secondRow) Object.assign(secondRow, { sort_order: null, updated_at: "2026-01-02T00:00:00.000Z" });
+    });
+    const next = await chatRepo.listConversations("user-1", "instance-1", 10, `2026-01-02T00:00:00.000Z|${second.id}`);
+    expect(next.map(item => item.id)).toEqual([first.id]);
   });
 });

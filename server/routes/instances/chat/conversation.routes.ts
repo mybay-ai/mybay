@@ -1,7 +1,7 @@
 import { Router, Response } from "express";
 import { AuthenticatedRequest, authenticateToken } from "../../../middlewares/auth";
 import { dbAdapter } from "../../../db";
-import { chatRepo } from "../../../repositories/chatRepo";
+import { chatRepo, encodeConversationCursor } from "../../../repositories/chatRepo";
 import { filesRepo } from "../../../repositories/filesRepo";
 import { deleteConversationAttachmentDirectory } from "../../../services/chatAttachmentStorage";
 import { isValidInstanceId, isValidUUID } from "./validators";
@@ -60,6 +60,26 @@ export function registerConversationRoutes(router: Router) {
       return res.status(201).json({ success: true, project });
     } catch (err: any) {
       console.error("[Create Conversation Project Error]", err);
+      return res.status(500).json({ success: false, error: "INTERNAL_ERROR" });
+    }
+  });
+
+  router.put("/:id/conversation-projects/order", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    const { id } = req.params;
+    const orderedIds = req.body?.orderedIds;
+    if (!isValidInstanceId(id) || !Array.isArray(orderedIds) || orderedIds.length > 500 || orderedIds.some((value: unknown) => typeof value !== "string" || !isValidUUID(value))) {
+      return res.status(400).json({ success: false, error: "INVALID_PROJECT_ORDER" });
+    }
+    try {
+      const access = await assertInstanceAccess(id, req.user.id);
+      if (!access.ok) return res.status(access.status).json({ success: false, error: access.error });
+      const projects = await chatRepo.reorderProjects(req.user.id, id, orderedIds);
+      return res.json({ success: true, projects });
+    } catch (err: any) {
+      if (err?.message === "PROJECT_ORDER_INVALID") {
+        return res.status(400).json({ success: false, error: "INVALID_PROJECT_ORDER" });
+      }
+      console.error("[Reorder Conversation Projects Error]", err);
       return res.status(500).json({ success: false, error: "INTERNAL_ERROR" });
     }
   });
@@ -185,13 +205,33 @@ export function registerConversationRoutes(router: Router) {
       
       let nextCursor: string | null = null;
       if (conversations.length === limit) {
-        nextCursor = `${conversations[conversations.length - 1].updated_at}|${conversations[conversations.length - 1].id}`;
+        nextCursor = encodeConversationCursor(conversations[conversations.length - 1]);
       }
 
       return res.json({ success: true, conversations, nextCursor });
     } catch (err: any) {
       console.error("[List Conversations Error]", err);
       return res.status(500).json({ success: false, error: "INTERNAL_ERROR", message: "获取会话列表失败。" });
+    }
+  });
+
+  router.put("/:id/conversations/order", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    const { id } = req.params;
+    const orderedIds = req.body?.orderedIds;
+    if (!isValidInstanceId(id) || !Array.isArray(orderedIds) || orderedIds.length > 500 || orderedIds.some((value: unknown) => typeof value !== "string" || !isValidUUID(value))) {
+      return res.status(400).json({ success: false, error: "INVALID_CONVERSATION_ORDER" });
+    }
+    try {
+      const access = await assertInstanceAccess(id, req.user.id);
+      if (!access.ok) return res.status(access.status).json({ success: false, error: access.error });
+      const conversations = await chatRepo.reorderConversations(req.user.id, id, orderedIds);
+      return res.json({ success: true, conversations });
+    } catch (err: any) {
+      if (err?.message === "CONVERSATION_ORDER_INVALID") {
+        return res.status(400).json({ success: false, error: "INVALID_CONVERSATION_ORDER" });
+      }
+      console.error("[Reorder Conversations Error]", err);
+      return res.status(500).json({ success: false, error: "INTERNAL_ERROR" });
     }
   });
 

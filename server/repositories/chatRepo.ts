@@ -84,6 +84,47 @@ function touchConversation(data: any, conversationId: string, updates: any = {})
   return conv;
 }
 
+const UNORDERED_CONVERSATION_SORT = Number.MAX_SAFE_INTEGER;
+
+function conversationSortValue(value: unknown): number {
+  if (value === null || value === undefined || value === "") return UNORDERED_CONVERSATION_SORT;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : UNORDERED_CONVERSATION_SORT;
+}
+
+export function compareConversationOrder(a: Partial<Conversation>, b: Partial<Conversation>): number {
+  const sortDiff = conversationSortValue(a.sort_order) - conversationSortValue(b.sort_order);
+  if (sortDiff !== 0) return sortDiff;
+  const updatedDiff = String(b.updated_at || "").localeCompare(String(a.updated_at || ""));
+  if (updatedDiff !== 0) return updatedDiff;
+  return String(b.id || "").localeCompare(String(a.id || ""));
+}
+
+export function encodeConversationCursor(conversation: Partial<Conversation>): string {
+  const normalizedSortOrder = conversationSortValue(conversation.sort_order);
+  const sortOrder = normalizedSortOrder === UNORDERED_CONVERSATION_SORT ? "~" : String(normalizedSortOrder);
+  return `${sortOrder}|${conversation.updated_at || ""}|${conversation.id || ""}`;
+}
+
+function isConversationAfterCursor(conversation: Conversation, cursor: string): boolean {
+  const parts = cursor.split("|");
+  if (parts.length < 3) {
+    const [cursorUpdatedAt, cursorId] = parts;
+    return String(conversation.updated_at || "") < cursorUpdatedAt
+      || (String(conversation.updated_at || "") === cursorUpdatedAt && String(conversation.id || "") < cursorId);
+  }
+  const [rawSortOrder, cursorUpdatedAt, cursorId] = parts;
+  const cursorSortOrder = rawSortOrder === "~" ? UNORDERED_CONVERSATION_SORT : conversationSortValue(rawSortOrder);
+  const rowSortOrder = conversationSortValue(conversation.sort_order);
+  if (rowSortOrder !== cursorSortOrder) return rowSortOrder > cursorSortOrder;
+  return String(conversation.updated_at || "") < cursorUpdatedAt
+    || (String(conversation.updated_at || "") === cursorUpdatedAt && String(conversation.id || "") < cursorId);
+}
+
+function assertUniqueIds(ids: string[], errorCode: string) {
+  if (ids.length !== new Set(ids).size) throw new Error(errorCode);
+}
+
 export const chatRepo = {
   async listProjects(userId: string, instanceId: string): Promise<ChatProject[]> {
     return readStore().chatProjects
@@ -98,9 +139,28 @@ export const chatRepo = {
   async createProject(userId: string, instanceId: string, name: string): Promise<ChatProject> {
     return mutateStore((data) => {
       const now = nowIso();
-      const row = { id: randomUUID(), user_id: userId, instance_id: instanceId, name, description: null, sort_order: 0, is_archived: false, created_at: now, updated_at: now };
+      const scopedProjects = data.chatProjects.filter((project: any) => project.user_id === userId && project.instance_id === instanceId && !project.is_archived);
+      const firstSortOrder = scopedProjects.reduce((min: number, project: any) => Math.min(min, Number(project.sort_order || 0)), 0) - 1;
+      const row = { id: randomUUID(), user_id: userId, instance_id: instanceId, name, description: null, sort_order: firstSortOrder, is_archived: false, created_at: now, updated_at: now };
       data.chatProjects.push(row);
       return row;
+    });
+  },
+
+  async reorderProjects(userId: string, instanceId: string, orderedIds: string[]): Promise<ChatProject[]> {
+    return mutateStore((data) => {
+      assertUniqueIds(orderedIds, "PROJECT_ORDER_INVALID");
+      const scoped = data.chatProjects
+        .filter((project: any) => project.user_id === userId && project.instance_id === instanceId && !project.is_archived)
+        .sort((a: any, b: any) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
+      const byId = new Map(scoped.map((project: any) => [project.id, project]));
+      if (orderedIds.some((id) => !byId.has(id))) throw new Error("PROJECT_ORDER_INVALID");
+      const requested = orderedIds.map((id) => byId.get(id)!);
+      const requestedIds = new Set(orderedIds);
+      const finalOrder = [...requested, ...scoped.filter((project: any) => !requestedIds.has(project.id))];
+      const now = nowIso();
+      finalOrder.forEach((project: any, index) => Object.assign(project, { sort_order: index, updated_at: now }));
+      return finalOrder;
     });
   },
 
@@ -127,7 +187,9 @@ export const chatRepo = {
   async createConversation(userId: string, instanceId: string, title: string, projectId?: string | null): Promise<Conversation> {
     return mutateStore((data) => {
       const now = nowIso();
-      const row = { id: randomUUID(), user_id: userId, instance_id: instanceId, title, session_id: null, project_id: projectId || null, pinned_at: null, sort_order: null, last_message_at: now, created_at: now, updated_at: now };
+      const scoped = data.conversations.filter((conversation: any) => conversation.user_id === userId && conversation.instance_id === instanceId);
+      const firstSortOrder = scoped.reduce((min: number, conversation: any) => Math.min(min, conversationSortValue(conversation.sort_order)), 0) - 1;
+      const row = { id: randomUUID(), user_id: userId, instance_id: instanceId, title, session_id: null, project_id: projectId || null, pinned_at: null, sort_order: firstSortOrder, last_message_at: now, created_at: now, updated_at: now };
       data.conversations.push(row);
       return row;
     });
@@ -135,12 +197,28 @@ export const chatRepo = {
 
   async listConversations(userId: string, instanceId: string, limit = 20, cursor?: string): Promise<Conversation[]> {
     let rows = readStore().conversations.filter((c) => c.user_id === userId && c.instance_id === instanceId);
-    rows.sort((a, b) => String(b.updated_at || "").localeCompare(String(a.updated_at || "")) || String(b.id || "").localeCompare(String(a.id || "")));
+    rows.sort(compareConversationOrder);
     if (cursor) {
-      const [cursorUpdatedAt, cursorId] = cursor.split("|");
-      rows = rows.filter((c) => String(c.updated_at || "") < cursorUpdatedAt || (String(c.updated_at || "") === cursorUpdatedAt && String(c.id || "") < cursorId));
+      rows = rows.filter((conversation) => isConversationAfterCursor(conversation, cursor));
     }
     return rows.slice(0, limit);
+  },
+
+  async reorderConversations(userId: string, instanceId: string, orderedIds: string[]): Promise<Conversation[]> {
+    return mutateStore((data) => {
+      assertUniqueIds(orderedIds, "CONVERSATION_ORDER_INVALID");
+      const scoped = data.conversations
+        .filter((conversation: any) => conversation.user_id === userId && conversation.instance_id === instanceId)
+        .sort(compareConversationOrder);
+      const byId = new Map(scoped.map((conversation: any) => [conversation.id, conversation]));
+      if (orderedIds.some((id) => !byId.has(id))) throw new Error("CONVERSATION_ORDER_INVALID");
+      const requested = orderedIds.map((id) => byId.get(id)!);
+      const requestedIds = new Set(orderedIds);
+      const finalOrder = [...requested, ...scoped.filter((conversation: any) => !requestedIds.has(conversation.id))];
+      const now = nowIso();
+      finalOrder.forEach((conversation: any, index) => Object.assign(conversation, { sort_order: index, updated_at: now }));
+      return finalOrder;
+    });
   },
 
   async getConversation(userId: string, conversationId: string): Promise<Conversation | null> {
