@@ -192,6 +192,7 @@ export interface SetupFormData {
   apiKey: string;
   limitsCpu?: string;
   limitsMem?: string;
+  limitsDiskMb?: string | number;
   // Step 3
   provider: string;
   model: string;
@@ -205,6 +206,7 @@ export interface SetupFormData {
   providerCredentialId?: string;
   baseUrl?: string;
   isCustomModel?: boolean;
+  prompt?: string;
   // Step 4
   channel: string;
   // channel config

@@ -1,61 +1,78 @@
 import type { SetupFormData } from "../../types";
 
+const LOCAL_DEPLOY_FIELDS = [
+  "runtime_type",
+  "name",
+  "path",
+  "username",
+  "password",
+  "image",
+  "imageTag",
+  "port",
+  "enableDashboard",
+  "enableApi",
+  "apiKey",
+  "limitsCpu",
+  "limitsMem",
+  "limitsDiskMb",
+  "provider",
+  "model",
+  "providerApiKey",
+  "providerCredentialId",
+  "baseUrl",
+  "isCustomModel",
+  "prompt",
+  "channel",
+  "channelMode",
+  "allowMode",
+  "gatewayAllowAllUsers",
+  "skills",
+  "skillTavilyApiKey",
+  "skillSerperApiKey",
+  "skillGithubToken",
+  "template_id",
+  "blueprint_id",
+  "template_inputs",
+  "pet",
+  "learn",
+] as const satisfies readonly (keyof SetupFormData)[];
+
+const CHANNEL_FIELDS = {
+  telegram: ["telegramBotToken", "telegramAllowedUsers", "telegramAllowedChats"],
+  feishu: ["feishuAppId", "feishuAppSecret", "feishuRegion", "feishuAllowedUsers", "feishuAllowedChats"],
+  weixin: ["weixinAccountId", "weixinToken", "weixinBaseUrl", "weixinAllowedUsers", "weixinAllowedChats"],
+  slack: ["slackBotToken", "slackSigningSecret", "slackAppToken", "slackAllowedUsers", "slackAllowedChannels"],
+  discord: ["discordBotToken", "discordAllowedGuilds", "discordAllowedUsers", "discordAllowedChannels"],
+  webhook: ["webhookUrl", "webhookSecret", "webhookAllowedUsers", "webhookAllowedChannels"],
+  whatsapp: ["whatsappPhoneNumberId", "whatsappAccessToken", "whatsappAllowedUsers", "whatsappAllowedChannels"],
+  dingtalk: ["dingtalkAppKey", "dingtalkAppSecret", "dingtalkRobotSecret", "dingtalkAllowedUsers", "dingtalkAllowedChats"],
+  qq_bot: ["qqBotAppId", "qqBotSecret", "qqBotAllowedUsers", "qqBotAllowedGuilds", "qqBotAllowedChannels"],
+  wechat_mp: ["wechatMpAppId", "wechatMpAppSecret", "wechatMpToken", "wechatMpEncodingAesKey", "wechatMpAllowedUsers", "wechatMpAllowedChats"],
+  wecom: ["wecomAppId", "wecomAppSecret", "wecomAgentId", "wecomToken", "wecomEncodingAesKey", "wecomAllowedUsers", "wecomAllowedChats"],
+} as const satisfies Record<string, readonly (keyof SetupFormData)[]>;
+
+function copyDefinedField(
+  source: Partial<SetupFormData>,
+  target: Partial<SetupFormData>,
+  field: keyof SetupFormData,
+) {
+  if (Object.prototype.hasOwnProperty.call(source, field) && source[field] !== undefined) {
+    (target as Record<string, unknown>)[field] = source[field];
+  }
+}
+
 export function sanitizeDeployPayload(data: Partial<SetupFormData>): Partial<SetupFormData> {
-  const payload = { ...data };
-  const channel = payload.channel || "none";
+  const payload: Partial<SetupFormData> = {};
+  for (const field of LOCAL_DEPLOY_FIELDS) copyDefinedField(data, payload, field);
 
-  const channelFieldGroups: Record<string, string[]> = {
-    telegram: ["telegramBotToken", "telegramAllowedUsers", "telegramAllowedChats"],
-    feishu: ["feishuAppId", "feishuAppSecret", "feishuRegion", "feishuAllowedUsers", "feishuAllowedChats"],
-    weixin: ["weixinAccountId", "weixinToken", "weixinBaseUrl", "weixinAllowedUsers", "weixinAllowedChats"],
-    slack: ["slackBotToken", "slackSigningSecret", "slackAppToken", "slackAllowedUsers", "slackAllowedChannels"],
-    discord: ["discordBotToken", "discordAllowedGuilds", "discordAllowedUsers", "discordAllowedChannels"],
-    webhook: ["webhookUrl", "webhookSecret", "webhookAllowedUsers", "webhookAllowedChannels"],
-    whatsapp: ["whatsappPhoneNumberId", "whatsappAccessToken", "whatsappAllowedUsers", "whatsappAllowedChannels"],
-    dingtalk: ["dingtalkAppKey", "dingtalkAppSecret", "dingtalkRobotSecret", "dingtalkAllowedUsers", "dingtalkAllowedChats"],
-    qq_bot: ["qqBotAppId", "qqBotSecret", "qqBotAllowedUsers", "qqBotAllowedGuilds", "qqBotAllowedChannels"],
-    wechat_mp: ["wechatMpAppId", "wechatMpAppSecret", "wechatMpToken", "wechatMpEncodingAesKey", "wechatMpAllowedUsers", "wechatMpAllowedChats"],
-    wecom: ["wecomAppId", "wecomAppSecret", "wecomAgentId", "wecomToken", "wecomEncodingAesKey", "wecomAllowedUsers", "wecomAllowedChats"]
-  };
+  // Open source deployment is BYOK-only. Platform model identifiers, credit multipliers,
+  // entitlements, UI state, and proxy/preflight state are intentionally not request fields.
+  payload.modelBillingMode = "byok";
 
-  // Determine which fields we should KEEP based on the active channel
-  // Note: if channel is 'lark', we might want to map to 'feishu' or keep its fields
-  const activeChannelGroup = channel === "lark" ? "feishu" : channel;
-
-  // 1. Delete fields for all other channels
-  Object.keys(channelFieldGroups).forEach((ch) => {
-    if (ch !== activeChannelGroup) {
-      channelFieldGroups[ch].forEach((field) => {
-        delete (payload as any)[field];
-      });
-    }
-  });
-
-  // 2. Extra explicit cleanup if NOT feishu/lark
-  if (channel !== "feishu" && channel !== "lark") {
-    const feishuAndLarkFields = [
-      "feishuAppId",
-      "feishuAppSecret",
-      "feishuRegion",
-      "feishuAllowedUsers",
-      "feishuAllowedChats",
-      "larkAppId",
-      "larkAppSecret"
-    ];
-    feishuAndLarkFields.forEach((field) => {
-      delete (payload as any)[field];
-    });
-  }
-
-  // 3. If none, double check we cleared all groups
-  if (channel === "none") {
-    Object.values(channelFieldGroups).flat().forEach((field) => {
-      delete (payload as any)[field];
-    });
-    // also clear any explicit lark fields
-    delete (payload as any).larkAppId;
-    delete (payload as any).larkAppSecret;
-  }
+  const channel = String(payload.channel || "none").toLowerCase();
+  const activeChannel = channel === "lark" ? "feishu" : channel;
+  const activeFields = CHANNEL_FIELDS[activeChannel as keyof typeof CHANNEL_FIELDS] || [];
+  for (const field of activeFields) copyDefinedField(data, payload, field);
 
   return payload;
 }
