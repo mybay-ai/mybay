@@ -19,6 +19,7 @@ import { useChatWorkspaceFiles } from "./chat-workspace/useChatWorkspaceFiles";
 import { useChatConversations } from "./chat-workspace/useChatConversations";
 import { computeMobileWorkspaceFrame, type MobileWorkspaceFrame } from "./chat-workspace/mobileWorkspaceLayout";
 import { recoverActiveRunMessages } from "./chat-workspace/run/runRecovery";
+import { executeStopLifecycle, pollRunRelease, type RunReleaseResult } from "./chat-workspace/run/runStopLifecycle";
 import { markRunMessagesStopped } from "./chat-workspace/run/runTerminalMessages";
 import { getRetryAttachments } from "./chat-workspace/run/retryAttachments";
 import { MAX_CHAT_USER_MESSAGE_CHARS, countChatMessageCharacters } from "../../shared/chatMessageContract";
@@ -71,7 +72,6 @@ export function generateUUIDv4(): string {
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-const ACTIVE_CHAT_RUN_STATUSES = new Set(["queued", "dispatching", "running", "stopping", "stop_requested"]);
 type QueuedFollowUp = {
   id: string;
   content: string;
@@ -391,6 +391,8 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     setToolSteps,
     initializeRunExecution,
     finalizeActiveRunUi,
+    isCurrentRunContext,
+    markActiveRunStatusUnknown,
     streamActiveRun,
     handleStopRun,
     respondToApproval,
@@ -907,21 +909,14 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     };
   }, [socket, currentUser?.id, refreshConversationFiles]);
 
-  const waitForRunRelease = async (instanceId: string, runId: string) => {
-    for (let attempt = 0; attempt < 8; attempt += 1) {
-      await sleep(attempt === 0 ? 180 : 320);
-      try {
+  const waitForRunRelease = async (instanceId: string, runId: string): Promise<RunReleaseResult> => {
+    return pollRunRelease({
+      delay: async (ms) => { await sleep(ms); },
+      readStatus: async () => {
         const res = await api.get(`/api/instances/${instanceId}/runs/${runId}`);
-        const status = String(res?.run?.status || "").toLowerCase();
-        if (!status || !ACTIVE_CHAT_RUN_STATUSES.has(status)) {
-          return true;
-        }
-      } catch (err) {
-        console.warn("[Chat Interrupt] Failed to poll stopped run status:", err);
-        return false;
+        return res?.run?.status;
       }
-    }
-    return false;
+    });
   };
 
   const createChatRunWithRetry = async (
@@ -1679,26 +1674,38 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
   };
 
   const handleStopActiveRun = async () => {
-    const runId = activeRunId;
-    const instanceId = selectedIdRef.current;
-    const conversationId = selectedConversationIdRef.current;
-    if (!instanceId || !conversationId || !runId) return;
-    const stopResult = await handleStopRun(runId, instanceId);
-    if (!stopResult.ok) return;
-    const released = await waitForRunRelease(instanceId, runId);
-    if (!released) {
-      setRunMetrics(prev => prev?.runId === runId ? { ...prev, status: "status_unknown" } : prev);
-      return;
+    const targetRunId = activeRunId;
+    const targetInstanceId = selectedIdRef.current;
+    const targetConversationId = selectedConversationIdRef.current;
+    if (!targetInstanceId || !targetConversationId || !targetRunId) return;
+
+    const outcome = await executeStopLifecycle({
+      requestStop: () => handleStopRun(targetRunId, targetInstanceId),
+      waitForRelease: () => waitForRunRelease(targetInstanceId, targetRunId),
+      isCurrentTarget: () => (
+        selectedIdRef.current === targetInstanceId
+        && selectedConversationIdRef.current === targetConversationId
+        && isCurrentRunContext(targetRunId, targetConversationId)
+      ),
+      onTerminal: (terminalStatus) => {
+        stopActiveRunStreams();
+        finalizeActiveRunUi(targetRunId, terminalStatus);
+        setActiveRunConversationId(null);
+        activeChatGenerationRef.current += 1;
+        activeChatRequestIdRef.current = null;
+        setSending(false);
+        if (terminalStatus === "stopped" || terminalStatus === "cancelled") {
+          markStoppedRunMessages(targetRunId, targetConversationId);
+          scheduleSyncCancellationReconciliation(targetInstanceId, targetConversationId);
+        } else {
+          void refreshAuthoritativeHistoryRef.current(targetInstanceId, targetConversationId);
+        }
+      }
+    });
+
+    if (outcome === "status_unknown" && isCurrentRunContext(targetRunId, targetConversationId)) {
+      markActiveRunStatusUnknown(targetRunId);
     }
-    if (selectedIdRef.current !== instanceId || selectedConversationIdRef.current !== conversationId) return;
-    finalizeActiveRunUi(runId, "stopped");
-    stopActiveRunStreams();
-    setActiveRunConversationId(null);
-    activeChatGenerationRef.current += 1;
-    activeChatRequestIdRef.current = null;
-    setSending(false);
-    markStoppedRunMessages(runId, conversationId);
-    scheduleSyncCancellationReconciliation(instanceId, conversationId);
   };
 
   const handleRetry = (msg: ChatMessage) => {

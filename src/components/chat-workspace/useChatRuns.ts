@@ -5,7 +5,7 @@ import { getAuthToken } from "../../lib/auth";
 import { markChatRunCompleted } from "../../lib/chatWorkspaceNotifications";
 import type { ChatMessage } from "../../lib/chatWorkspaceState";
 import type { ChatToolStep } from "./ChatToolProgress";
-import { canExecutePollingCallback, finalizeRunMetrics, finalizeRunSteps, isTerminalRunStatus, normalizeRunDurationMs, shouldApplyRunUpdate, type TerminalRunStatus } from "./runUiLifecycle";
+import { canExecutePollingCallback, finalizeRunMetrics, finalizeRunSteps, isTerminalRunStatus, normalizeRunDurationMs, shouldApplyRunUpdate, shouldTriggerFallback, type TerminalRunStatus } from "./runUiLifecycle";
 import { normalizeRunSseResumeCursor, observeRunSseEventId } from "./runSseCursor";
 import { createRunExecutionState, deriveAssistantText, deriveToolSteps } from "./run/runReducer";
 import { consumeRunSseFrame } from "./run/runStreamCoordinator";
@@ -15,6 +15,7 @@ import { finalizeRunExecution } from "./run/runFinalizer";
 import { applyRunExecutionToMessages, applyRunTextSnapshot } from "./run/runExecutionSync";
 import { mergeApprovalEvent, settleApprovalRequests } from "./run/approvalSelectors";
 import { reconcileRunMetricStatus } from "./run/runStatusSemantics";
+import { normalizeStopRunStatus, type StopRunResult } from "./run/runStopLifecycle";
 import {
   canApplyTerminalWatchdogResponse,
   isFinalStepTerminalHint,
@@ -50,6 +51,7 @@ export interface ChatRunMetrics {
   creditBalanceAfter?: number | null;
   startedAt?: string | number | null;
   completedAt?: string | number | null;
+  transportState?: "idle" | "connecting" | "connected" | "reconnecting" | "polling";
 }
 
 export interface ChatApprovalRequest {
@@ -141,6 +143,26 @@ export function useChatRuns({
     });
   }, []);
 
+  const isCurrentRunContext = useCallback((runId: string, conversationId?: string | null) => {
+    const execution = runExecutionRef.current;
+    return currentRunIdRef.current === runId
+      && (!conversationId || execution?.conversationId === conversationId);
+  }, []);
+
+  const markActiveRunStatusUnknown = useCallback((runId: string) => {
+    if (currentRunIdRef.current !== runId) return;
+    setRunMetrics(previous => previous?.runId === runId ? { ...previous, status: "status_unknown" } : previous);
+    const execution = runExecutionRef.current;
+    if (execution?.runId !== runId || isTerminalRunStatus(execution.status)) return;
+    const unknownExecution = { ...execution, status: "status_unknown" as const };
+    runExecutionRef.current = unknownExecution;
+    setRunExecutionState(unknownExecution);
+  }, [setRunMetrics]);
+
+  const setRunTransportState = useCallback((runId: string, transportState: NonNullable<ChatRunMetrics["transportState"]>) => {
+    setRunMetrics(previous => previous?.runId === runId ? { ...previous, transportState } : previous);
+  }, [setRunMetrics]);
+
   const setToolSteps = useCallback<React.Dispatch<React.SetStateAction<ChatToolStep[]>>>((value) => {
     setToolStepsState((previous) => {
       const next = typeof value === "function" ? value(previous) : value;
@@ -162,7 +184,7 @@ export function useChatRuns({
     } else {
       setToolSteps(previous => finalizeRunSteps(previous, status));
     }
-    setRunMetrics(previous => finalizeRunMetrics(targetRunId, previous, status));
+    setRunMetrics(previous => ({ ...finalizeRunMetrics(targetRunId, previous, status), transportState: "idle" }));
     setApprovalRequests(previous => settleApprovalRequests(previous, undefined, "expired"));
     setStopPending(false);
     if (currentRunIdRef.current === targetRunId) setActiveRunId(null);
@@ -368,7 +390,9 @@ export function useChatRuns({
     try {
       const res = await api.get("/api/instances/" + instanceId + "/runs/" + runId);
       if (res?.success && res.run && shouldApplyRunUpdate(runId, currentRunIdRef.current)) {
-        setRunMetrics(normalizeRunMetrics(runId, res.run));
+        setRunMetrics(previous => previous?.runId && previous.runId !== runId
+          ? previous
+          : { ...previous, ...normalizeRunMetrics(runId, res.run), transportState: previous?.transportState });
       }
     } catch (err) {
       console.warn("[ChatWorkspace] Failed to load run metrics:", err);
@@ -525,6 +549,7 @@ export function useChatRuns({
 
   const startFallbackPolling = useCallback((runId: string, boundInstanceId = selectedIdRef.current, boundConversationId = selectedConversationIdRef.current) => {
     stopTerminalWatchdog();
+    setRunTransportState(runId, "polling");
     const runGeneration = pollingGenerationRef.current;
     if (activePollingIntervalRef.current) {
       clearTimeout(activePollingIntervalRef.current);
@@ -624,7 +649,7 @@ export function useChatRuns({
         activePollingIntervalRef.current = null;
       }
     });
-  }, [finalizeActiveRunUi, refreshAuthoritativeHistory, refreshRunMetrics, selectedConversationIdRef, selectedIdRef, setMessages, setSending, setStopPending, stopTerminalWatchdog, notificationUserId]);
+  }, [finalizeActiveRunUi, refreshAuthoritativeHistory, refreshRunMetrics, selectedConversationIdRef, selectedIdRef, setMessages, setRunTransportState, setSending, setStopPending, stopTerminalWatchdog, notificationUserId]);
 
   const streamActiveRun = useCallback(async (runId: string, boundInstanceId = selectedIdRef.current, boundConversationId = selectedConversationIdRef.current) => {
     const streamGeneration = pollingGenerationRef.current;
@@ -636,6 +661,7 @@ export function useChatRuns({
 
     const controller = new AbortController();
     activeSSEControllerRef.current = controller;
+    setRunTransportState(runId, "connecting");
     startTerminalWatchdog(runId, boundInstanceId, boundConversationId);
 
     let attempt = 0;
@@ -644,7 +670,17 @@ export function useChatRuns({
 
     let fallbackStarted = false;
     const triggerFallback = () => {
-      if (!fallbackStarted && currentRunIdRef.current === runId && pollingGenerationRef.current === streamGeneration) {
+      if (!fallbackStarted
+        && shouldTriggerFallback({
+          aborted: controller.signal.aborted,
+          terminal: isTerminal,
+          selectedInstanceId: selectedIdRef.current,
+          boundInstanceId,
+          selectedConversationId: selectedConversationIdRef.current,
+          boundConversationId,
+        })
+        && currentRunIdRef.current === runId
+        && pollingGenerationRef.current === streamGeneration) {
         fallbackStarted = true;
         startFallbackPolling(runId, boundInstanceId, boundConversationId);
       }
@@ -686,6 +722,7 @@ export function useChatRuns({
         if (!reader) {
           throw new Error("Response body reader unavailable");
         }
+        setRunTransportState(runId, "connected");
 
         const decoder = new TextDecoder();
         let buffer = "";
@@ -806,6 +843,7 @@ export function useChatRuns({
           break;
         }
         const delay = Math.min(1000 * Math.pow(2, attempt), 10000);
+        setRunTransportState(runId, "reconnecting");
         console.warn(`[SSE Stream] Disconnected. Reconnecting in ${delay}ms... (Attempt ${attempt}/${maxAttempts})`);
 
         await new Promise<void>((resolve) => {
@@ -824,20 +862,21 @@ export function useChatRuns({
       }
     }
 
-    if (!isTerminal) {
+    if (!isTerminal && !controller.signal.aborted) {
       triggerFallback();
     }
-  }, [handleParsedSSEEvent, selectedConversationIdRef, selectedIdRef, startFallbackPolling, startTerminalWatchdog]);
+  }, [handleParsedSSEEvent, selectedConversationIdRef, selectedIdRef, setRunTransportState, startFallbackPolling, startTerminalWatchdog]);
 
-  const handleStopRun = useCallback(async (targetRunId = activeRunId, targetInstanceId = selectedId) => {
+  const handleStopRun = useCallback(async (targetRunId = activeRunId, targetInstanceId = selectedId): Promise<StopRunResult> => {
     if (!targetRunId || !targetInstanceId || !runCapabilities.runStop) return { ok: false as const, error: "RUN_STOP_UNAVAILABLE" };
     if (stopPendingRef.current) return { ok: false as const, error: "RUN_STOP_ALREADY_PENDING" };
+    if (currentRunIdRef.current !== targetRunId) return { ok: false as const, error: "STALE_RUN" };
     setStopPending(true);
     try {
       const res = await api.post(`/api/instances/${targetInstanceId}/runs/${targetRunId}/stop`);
       if (res && res.success) {
         showToast(t("dashboard:chatWorkspace.stopRequestSent"), "success");
-        const status = String(res.status || res.runStatus || res.run_status || "stopping").toLowerCase();
+        const status = normalizeStopRunStatus(res.status || res.runStatus || res.run_status) || "stopping";
         if (currentRunIdRef.current === targetRunId) {
           setRunMetrics(prev => prev?.runId === targetRunId ? { ...prev, status } : prev);
           const currentExecution = runExecutionRef.current;
@@ -908,6 +947,8 @@ export function useChatRuns({
     setToolSteps,
     initializeRunExecution,
     finalizeActiveRunUi,
+    isCurrentRunContext,
+    markActiveRunStatusUnknown,
     streamActiveRun,
     handleStopRun,
     respondToApproval,

@@ -556,6 +556,9 @@
   "runStatusFailed": "Failed",
   "runStatusStopped": "Stopped",
   "runStatusUnknown": "Status pending confirmation",
+  "inputStatusConnecting": "Connecting to response stream",
+  "inputStatusReconnecting": "Connection interrupted, recovering",
+  "inputStatusPollingRecovery": "Stream unavailable, syncing status",
   "timelineSteps": "steps",
   "messageTooLong": "A single message can contain up to {{max}} characters. Split it or upload it as a file."
 }

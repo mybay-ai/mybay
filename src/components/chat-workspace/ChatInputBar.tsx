@@ -215,6 +215,15 @@ export function ChatInputBar({
       value: formatDuration(runMetrics?.durationMs) + " · " + formatTokens(runMetrics?.usageTotalTokens) + " tokens"
     }
   ];
+  const runActivityLabel = runMetrics?.status === "status_unknown"
+    ? t("dashboard:chatWorkspace.runStatusUnknown")
+    : runMetrics?.transportState === "reconnecting"
+      ? t("dashboard:chatWorkspace.inputStatusReconnecting")
+      : runMetrics?.transportState === "polling"
+        ? t("dashboard:chatWorkspace.inputStatusPollingRecovery")
+        : runMetrics?.transportState === "connecting"
+          ? t("dashboard:chatWorkspace.inputStatusConnecting")
+          : t("dashboard:chatWorkspace.inputStatusRunning");
 
   return (
     <div className={"shrink-0 border-t border-outline/80 bg-surface/90 px-3 backdrop-blur sm:p-4 " + (mobileKeyboardOpen ? "pb-2 pt-1.5" : "pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2.5")}>
@@ -419,7 +428,7 @@ export function ChatInputBar({
           {sending && (
             <div className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-2 py-1 font-semibold text-indigo-600 dark:border-indigo-400/25 dark:bg-indigo-500/10 dark:text-indigo-300">
               <Clock3 className="h-3 w-3 motion-safe:animate-pulse" />
-              {t("dashboard:chatWorkspace.inputStatusRunning")}
+              {runActivityLabel}
             </div>
           )}
         </div>
