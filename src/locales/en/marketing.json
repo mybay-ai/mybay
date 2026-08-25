@@ -1061,19 +1061,46 @@
     "timelineTip": "Preview Release",
     "releases": [
       {
-        "version": "v0.1.2-preview",
-        "date": "2026.08.21",
+        "version": "v0.1.21-preview",
+        "date": "2026.08.25",
         "badge": "PREVIEW",
-        "summary": "MyBay Open Source v0.1.2-preview fixes local Feishu/Lark deployment by preparing and verifying the required runtime dependencies.",
+        "summary": "MyBay Open Source v0.1.21-preview improves local instance recovery, chat readiness, deployment adaptation, conversation management, and the mobile workspace.",
         "sections": [
           {
-            "title": "Local Feishu runtime reliability",
+            "title": "Instance chat stability",
             "type": "fix",
             "items": [
-              "Builds and caches a local Feishu-enhanced image from the selected official Hermes version.",
-              "Pins and verifies lark-oapi, qrcode, aiohttp, and websockets before replacing an instance container.",
-              "Uses the same verified image preparation path for deployment, redeployment, upgrade, and rollback, with a dedicated failure code.",
-              "Preserves existing Desktop, LAN, and Server checks and all attachment upload, preview, type, count, and size limits."
+              "Binds new runs precisely by runId, requestId, and assistantMessageId so a previous answer cannot be overwritten.",
+              "Uses consistent run state across Results, chat bubbles, and Steps while preventing terminal-state regression.",
+              "Recovers conversations from server snapshots after refresh, isolates cross-run events, and avoids duplicated streamed text."
+            ]
+          },
+          {
+            "title": "Local instance and deployment lifecycle",
+            "type": "fix",
+            "items": [
+              "Separates instance running, chat initialization, chat configuration required, and chat authentication or routing failures.",
+              "Adapts deployment forms through a local field allowlist into the existing instance creation endpoint.",
+              "Strengthens instance health checks, physical-state reconciliation, and local Feishu runtime dependency validation.",
+              "Preserves Desktop, LAN, and Server preflight checks without introducing SaaS capabilities."
+            ]
+          },
+          {
+            "title": "Local conversation management",
+            "type": "feature",
+            "items": [
+              "Adds persistent conversation and project ordering, moves, and rollback on failure.",
+              "Adds local search across conversation titles and message content while preserving user and instance isolation."
+            ]
+          },
+          {
+            "title": "Mobile workspace experience",
+            "type": "feature",
+            "items": [
+              "Makes conversation history and workspace drawers mutually exclusive and preserves Result, Steps, Files, and Preview tab state.",
+              "Improves sizing and scrolling for long results, steps, and file previews.",
+              "Compacts the composer when the software keyboard opens to prevent content obstruction.",
+              "Leaves attachment upload, preview, type, count, size, and retry rules unchanged."
             ]
           }
         ]

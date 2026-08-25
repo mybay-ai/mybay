@@ -43,7 +43,7 @@ export const SEO_CONFIG: Record<string, SEOMeta> = {
   },
   "/changelog": {
     title: "麦贝开源版更新日志",
-    description: "查看麦贝开源版 v0.1.2-preview 已发布并验证的 Preview 能力。",
+    description: "查看麦贝开源版 v0.1.21-preview 已发布并验证的 Preview 能力。",
   },
   "/privacy": {
     title: "麦贝开源版隐私说明",
