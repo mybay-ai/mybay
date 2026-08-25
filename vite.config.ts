@@ -13,7 +13,7 @@ export default defineConfig(() => {
     },
     test: {
       fileParallelism: false,
-      exclude: ['release/**', 'dist/**', 'data/**', 'node_modules/**'],
+      exclude: ['.codex-worktrees/**', 'release/**', 'dist/**', 'data/**', 'node_modules/**'],
     },
     build: {
       rollupOptions: {

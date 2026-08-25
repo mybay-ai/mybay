@@ -1,4 +1,5 @@
 node_modules/
+.codex-worktrees/
 build/
 dist/
 coverage/
