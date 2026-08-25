@@ -58,6 +58,7 @@ describe("instance diagnostic report", () => {
         id: "i1", name: "feishu", status: "running", physical_status: "running",
         gateway_ready: true, configured_channels: 1, connected_channels: 0,
         channel_status: { feishu: { status: "auth_failed" } },
+        model_provider: "deepseek", model_config_status: "verified", model_runtime_status: "callable",
         config_json: JSON.stringify({ deployment_mode: "desktop", channel: "feishu", password: "encrypted", webPasswordHash: "hash", dashboardAuthSecret: "secret", hermesDashboardAuthSecret: "secret" }),
       },
       context,
@@ -66,8 +67,8 @@ describe("instance diagnostic report", () => {
     });
 
     expect(report.checks.find((check) => check.code === "CONTAINER_STATE")?.status).toBe("pass");
-    expect(report.checks.find((check) => check.code === "CHANNEL")).toMatchObject({ status: "fail", reasonCode: "CHANNEL_CONFIG_UNAVAILABLE" });
-    expect(report.checks.find((check) => check.code === "CHAT_READINESS")?.status).toBe("fail");
+    expect(report.checks.find((check) => check.code === "CHANNEL")).toMatchObject({ status: "fail", reasonCode: "CHANNEL_CONFIG_UNAVAILABLE", recoveryAction: "open_channel_settings" });
+    expect(report.checks.find((check) => check.code === "CHAT_READINESS")).toMatchObject({ status: "fail", recoveryAction: "open_channel_settings" });
   });
 
   it("uses detailed channel state when the aggregate connected count is stale", () => {

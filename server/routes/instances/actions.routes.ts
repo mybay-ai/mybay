@@ -386,6 +386,7 @@ export function createActionsRoutes(deps: RouterDependencies) {
         return res.status(400).json({
           success: false,
           error: "INVALID_DIAGNOSTIC_CHECK",
+          code: "INVALID_DIAGNOSTIC_CHECK",
           message: "不支持的诊断检查项。",
         });
       }

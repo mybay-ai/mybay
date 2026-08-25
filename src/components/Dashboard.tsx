@@ -8,6 +8,7 @@ import { APP_ROUTES, buildInstanceFilesNavigationUrl } from "../constants/routes
 import { InstanceSettingsModal } from "./InstanceSettingsModal";
 import { AgentDeploymentHome } from "./AgentDeploymentHome";
 import { CredentialsSection } from "./CredentialsSection";
+import { api } from "../lib/api";
 
 import { BookOpen, ExternalLink, HelpCircle, Github, MessageSquare } from "lucide-react";
 
@@ -412,6 +413,8 @@ export function Dashboard({ instances, loading, fetchInstances, socket, currentU
         currentUser={currentUser}
         socket={socket}
         terminalDetailsRef={terminalDetailsRef}
+        setEditingInstance={setEditingInstance}
+        handleInstanceAction={handleInstanceAction}
       />
 
       {/* Instance Settings Modal */}
@@ -419,9 +422,23 @@ export function Dashboard({ instances, loading, fetchInstances, socket, currentU
         <InstanceSettingsModal 
           instance={editingInstance} 
           currentUser={currentUser} 
-          onClose={() => setEditingInstance(null)} 
+          onClose={() => {
+            try { sessionStorage.removeItem(`instance_diagnostics_pending_${editingInstance.id}`); } catch {}
+            setEditingInstance(null);
+          }}
           advancedResourceConfigEnabled={advancedResourceConfigEnabled}
           onSave={() => {
+            let pendingCheck = "";
+            try {
+              pendingCheck = sessionStorage.getItem(`instance_diagnostics_pending_${editingInstance.id}`) || "";
+              sessionStorage.removeItem(`instance_diagnostics_pending_${editingInstance.id}`);
+            } catch {}
+            if (pendingCheck) {
+              void api.post(`/api/instances/${editingInstance.id}/health-check`, {
+                trigger_source: "diagnostics_panel",
+                check_code: pendingCheck,
+              }).catch((error) => console.error("Post-settings diagnostic recheck failed:", error));
+            }
             setEditingInstance(null);
             fetchInstances();
           }}

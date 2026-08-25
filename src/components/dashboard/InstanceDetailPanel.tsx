@@ -49,6 +49,8 @@ interface InstanceDetailPanelProps {
   currentUser: UserType;
   socket: Socket | null;
   terminalDetailsRef: React.RefObject<HTMLDivElement | null>;
+  setEditingInstance: (instance: AgentInstance | null) => void;
+  handleInstanceAction: (id: string, action: string, requireConfirm?: boolean, confirmMsg?: string) => void;
 }
 
 export function InstanceDetailPanel({
@@ -59,7 +61,9 @@ export function InstanceDetailPanel({
   setDetailTab,
   currentUser,
   socket,
-  terminalDetailsRef
+  terminalDetailsRef,
+  setEditingInstance,
+  handleInstanceAction
 }: InstanceDetailPanelProps) {
   const { t } = useTranslation("dashboard");
   const navigate = useNavigate();
@@ -144,6 +148,8 @@ export function InstanceDetailPanel({
       setNewPassword("");
       setConfirmedFirstLogin(false);
       showToast(t("instance_detail_password_reset_success"), "success");
+      try { sessionStorage.removeItem(`instance_diagnostics_pending_${activeLogs}`); } catch {}
+      window.dispatchEvent(new CustomEvent("mybay:diagnostics-recheck", { detail: { instanceId: activeLogs, checkCode: "DASHBOARD_AUTH" } }));
     } catch (e: any) {
       console.error("Failed to reset password:", e);
       showToast(e.message || t("instance_detail_password_reset_failed"), "error");
@@ -667,7 +673,17 @@ export function InstanceDetailPanel({
               <InstanceRuntimeContextViewer instanceId={selectedInstance.id} />
             </div>
           ) : (
-            <InstanceDiagnosticsWorkspace instanceId={selectedInstance.id} instance={selectedInstance} />
+            <InstanceDiagnosticsWorkspace
+              instanceId={selectedInstance.id}
+              instance={selectedInstance}
+              onOpenLogs={() => setDetailTab("logs")}
+              onOpenSettings={() => {
+                setActiveLogs(null);
+                setEditingInstance(selectedInstance);
+              }}
+              onOpenPasswordReset={() => setShowPasswordSection(true)}
+              onRedeploy={() => handleInstanceAction(selectedInstance.id, "redeploy", true, t("confirm_redeploy"))}
+            />
           )}
         </div>
       </div>
