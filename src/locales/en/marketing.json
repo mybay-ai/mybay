@@ -1061,11 +1061,21 @@
     "timelineTip": "Preview Release",
     "releases": [
       {
-        "version": "v0.1.21-preview",
+        "version": "v0.1.22-preview",
         "date": "2026.08.25",
         "badge": "PREVIEW",
-        "summary": "MyBay Open Source v0.1.21-preview improves local instance recovery, chat readiness, deployment adaptation, conversation management, and the mobile workspace.",
+        "summary": "MyBay Open Source v0.1.22-preview adds outbound model-request and conversation API security hardening to the local instance and chat experience improvements.",
         "sections": [
+          {
+            "title": "Local security hardening",
+            "type": "fix",
+            "items": [
+              "Revalidates the final model API Base URL immediately before each runtime request to block legacy or bypassed configuration from reaching local, private, or cloud metadata addresses.",
+              "Fails closed on DNS errors and checks every resolved IPv4 and IPv6 address, URL credentials, and restricted internal hostname.",
+              "Adds dedicated limits for conversation search and for conversation and project creation, ordering, moves, renames, and deletion.",
+              "Preserves local instances, Desktop/LAN/Server deployment checks, and every attachment rule."
+            ]
+          },
           {
             "title": "Instance chat stability",
             "type": "fix",

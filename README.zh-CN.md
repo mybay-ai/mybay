@@ -15,7 +15,7 @@
 
 MyBay Open Source 是可自行部署的社区开源版本；[mybay.ai](https://mybay.ai) 提供的托管服务属于独立的商业服务，安装和运行本仓库不需要注册或依赖该服务。
 
-> **发布状态：Early Preview（`v0.1.21-preview`）。** 在 0.x 阶段，公共接口、Runtime Adapter、部署细节与升级行为仍可能调整。
+> **发布状态：Early Preview（`v0.1.22-preview`）。** 在 0.x 阶段，公共接口、Runtime Adapter、部署细节与升级行为仍可能调整。
 
 ## 与 Hermes Agent 的项目关系
 

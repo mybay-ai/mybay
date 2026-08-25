@@ -1061,11 +1061,21 @@
     "timelineTip": "Preview Release",
     "releases": [
       {
-        "version": "v0.1.21-preview",
+        "version": "v0.1.22-preview",
         "date": "2026.08.25",
         "badge": "PREVIEW",
-        "summary": "麦贝开源版 v0.1.21-preview 完善本地实例恢复、聊天就绪、部署适配、会话管理与移动端工作区体验。",
+        "summary": "麦贝开源版 v0.1.22-preview 在本地实例与对话体验优化基础上，补齐模型出站请求和会话接口的安全防护。",
         "sections": [
+          {
+            "title": "本地安全加固",
+            "type": "fix",
+            "items": [
+              "模型运行时在最终网络请求前再次校验 API Base URL，阻止旧配置或旁路数据访问本机、内网和云元数据地址。",
+              "DNS 校验改为失败即拒绝，并检查全部 IPv4、IPv6 解析结果、URL 凭证和受限内部域名。",
+              "为会话搜索以及会话和项目的创建、排序、移动、改名与删除增加独立限流。",
+              "保留本地实例、Desktop/LAN/Server 部署检查和全部附件规则。"
+            ]
+          },
           {
             "title": "实例对话稳定性",
             "type": "fix",
