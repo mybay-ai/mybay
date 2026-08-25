@@ -2,6 +2,7 @@ import { Bug, Clock3, Database, FileJson, TerminalSquare } from "lucide-react";
 import type { TFunction } from "i18next";
 import type { ChatToolStep } from "../ChatToolProgress";
 import type { ChatRunMetrics } from "../useChatRuns";
+import { getRunStatusI18nKey, normalizeRunDisplayStatus } from "../run/runStatusSemantics";
 
 type WorkspaceDebugTabProps = {
   t: TFunction;
@@ -40,16 +41,10 @@ export function WorkspaceDebugTab({
   const debugSteps = toolSteps.filter((step) => step.input || step.output || step.metadata || step.tool_name);
 
   const formatRunStatus = (value?: string | null) => {
-    const normalized = String(value || "").toLowerCase();
-    if (!normalized) return "-";
-    if (normalized === "completed") return t("dashboard:chatWorkspace.timelineRunCompleted");
-    if (normalized === "running" || normalized === "dispatching") return t("dashboard:chatWorkspace.timelineRunRunning");
-    if (normalized === "queued") return t("dashboard:chatWorkspace.timelineRunPreparing");
-    if (normalized === "stopping") return t("dashboard:chatWorkspace.timelineStopping");
-    if (normalized === "waiting_for_approval") return t("dashboard:chatWorkspace.timelineApprovalPending");
-    if (normalized === "stopped" || normalized === "cancelled") return t("dashboard:chatWorkspace.timelineRunStopped");
-    if (normalized === "failed" || normalized === "expired") return t("dashboard:chatWorkspace.timelineRunFailed");
-    return t("dashboard:chatWorkspace.metricUnavailable");
+    const normalized = normalizeRunDisplayStatus(value);
+    return normalized === "idle"
+      ? t("dashboard:chatWorkspace.metricUnavailable")
+      : t(`dashboard:chatWorkspace.${getRunStatusI18nKey(normalized)}`);
   };
 
   return (

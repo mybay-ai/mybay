@@ -13,6 +13,8 @@ import { mergeRecoveredStreamingContent } from "./run/runTextReconciliation";
 import type { RunExecutionState, RunExecutionStatus, ToolEventPayload } from "./run/runTypes";
 import { finalizeRunExecution } from "./run/runFinalizer";
 import { applyRunExecutionToMessages, applyRunTextSnapshot } from "./run/runExecutionSync";
+import { mergeApprovalEvent, settleApprovalRequests } from "./run/approvalSelectors";
+import { reconcileRunMetricStatus } from "./run/runStatusSemantics";
 
 export type RunsCapabilityState = "checking" | "supported" | "explicitly_unsupported" | "unavailable" | "disabled";
 
@@ -43,7 +45,7 @@ export interface ChatRunMetrics {
 
 export interface ChatApprovalRequest {
   id: string;
-  status: "pending" | "resolved";
+  status: "pending" | "resolved" | "expired";
   title?: string;
   description?: string;
   command?: string;
@@ -91,7 +93,7 @@ export function useChatRuns({
   const [toolStepsState, setToolStepsState] = useState<ChatToolStep[]>([]);
   const [runCapabilities, setRunCapabilities] = useState<RunsCapabilityDetails>(defaultRunCapabilities);
   const [approvalRequests, setApprovalRequests] = useState<ChatApprovalRequest[]>([]);
-  const [runMetrics, setRunMetrics] = useState<ChatRunMetrics | null>(null);
+  const [runMetricsState, setRunMetricsState] = useState<ChatRunMetrics | null>(null);
   const [runExecutionState, setRunExecutionState] = useState<RunExecutionState | null>(null);
   const [stopPending, setStopPendingState] = useState(false);
   const stopPendingRef = useRef(false);
@@ -116,6 +118,15 @@ export function useChatRuns({
     setActiveRunIdState(runId);
   }, []);
 
+  const setRunMetrics = useCallback<React.Dispatch<React.SetStateAction<ChatRunMetrics | null>>>((value) => {
+    setRunMetricsState(previous => {
+      const incoming = typeof value === "function" ? value(previous) : value;
+      if (!incoming) return null;
+      if (!previous || (incoming.runId && previous.runId && incoming.runId !== previous.runId)) return incoming;
+      return { ...incoming, status: reconcileRunMetricStatus(previous.status, incoming.status) };
+    });
+  }, []);
+
   const setToolSteps = useCallback<React.Dispatch<React.SetStateAction<ChatToolStep[]>>>((value) => {
     setToolStepsState((previous) => {
       const next = typeof value === "function" ? value(previous) : value;
@@ -125,6 +136,7 @@ export function useChatRuns({
   }, []);
 
   const toolSteps = toolStepsState;
+  const runMetrics = runMetricsState;
 
   const finalizeActiveRunUi = useCallback((targetRunId: string, status: TerminalRunStatus) => {
     const currentExecution = runExecutionRef.current;
@@ -137,6 +149,7 @@ export function useChatRuns({
       setToolSteps(previous => finalizeRunSteps(previous, status));
     }
     setRunMetrics(previous => finalizeRunMetrics(targetRunId, previous, status));
+    setApprovalRequests(previous => settleApprovalRequests(previous, undefined, "expired"));
     setStopPending(false);
     if (currentRunIdRef.current === targetRunId) setActiveRunId(null);
   }, [setActiveRunId, setStopPending, setToolSteps]);
@@ -376,19 +389,7 @@ export function useChatRuns({
       } else if (event === "approval") {
         const approval = JSON.parse(data) as ChatApprovalRequest;
         if (!approval?.id) return false;
-        setApprovalRequests(prev => {
-          const normalized = {
-            ...approval,
-            choices: Array.isArray(approval.choices) && approval.choices.length > 0 ? approval.choices : (["once", "deny"] as ChatApprovalChoice[])
-          };
-          const idx = prev.findIndex(item => item.id === normalized.id);
-          if (idx >= 0) {
-            const updated = [...prev];
-            updated[idx] = { ...updated[idx], ...normalized };
-            return updated;
-          }
-          return [normalized, ...prev].slice(0, 5);
-        });
+        setApprovalRequests(previous => mergeApprovalEvent(previous, approval));
         return true;
       } else if (event === "status") {
         const parsed = JSON.parse(data);
@@ -762,9 +763,20 @@ export function useChatRuns({
         resolveAll
       });
       if (res && res.success) {
-        setApprovalRequests(prev => prev.map(item => (
-          !approvalId || item.id === approvalId ? { ...item, status: "resolved", choice } : item
-        )));
+        setApprovalRequests(previous => settleApprovalRequests(previous, approvalId, "resolved", choice));
+        const currentExecution = runExecutionRef.current;
+        if (currentExecution?.runId === activeRunId) {
+          const blocks = currentExecution.blocks.map(block => block.type === "approval" && (!approvalId || block.approvalId === approvalId) && block.status === "pending"
+            ? { ...block, status: "resolved" as const, metadata: { ...(block.metadata || {}), choice } }
+            : block);
+          const execution = {
+            ...currentExecution,
+            status: currentExecution.status === "waiting_for_approval" ? "running" as const : currentExecution.status,
+            blocks
+          };
+          runExecutionRef.current = execution;
+          setRunExecutionState(execution);
+        }
         showToast(t("dashboard:chatWorkspace.approvalSubmitted"), "success");
       }
     } catch (e: any) {

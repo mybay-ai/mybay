@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CheckCircle2, LoaderCircle, ShieldAlert } from "lucide-react";
+import { CheckCircle2, CircleStop, LoaderCircle, ShieldAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ChatApprovalChoice, ChatApprovalRequest } from "../useChatRuns";
 
@@ -39,10 +39,11 @@ export function InlineApprovalCard({
   };
 
   if (!pending) {
+    const expired = approval.status === "expired";
     return (
-      <div className="mb-3 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/70 px-3 py-2 text-[12px] font-medium text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-300">
-        <CheckCircle2 className="h-4 w-4 shrink-0" />
-        {t("chatWorkspace.approvalResolved")}
+      <div className={`mb-3 flex items-center gap-2 rounded-xl border px-3 py-2 text-[12px] font-medium ${expired ? "border-amber-200 bg-amber-50/70 text-amber-700 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-300" : "border-emerald-200 bg-emerald-50/70 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-300"}`}>
+        {expired ? <CircleStop className="h-4 w-4 shrink-0" /> : <CheckCircle2 className="h-4 w-4 shrink-0" />}
+        {t(expired ? "chatWorkspace.approvalExpired" : "chatWorkspace.approvalResolved")}
       </div>
     );
   }

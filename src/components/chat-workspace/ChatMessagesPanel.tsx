@@ -13,6 +13,7 @@ import type { PendingAttachment } from "./ChatInputBar";
 import type { RunExecutionState } from "./run/runTypes";
 import { deriveRunAssistantText, findRunAssistantMessageIndex, shouldShowLegacyRunLoading } from "./run/runSelectors";
 import { selectInlineApproval } from "./run/approvalSelectors";
+import { getRunStatusI18nKey, resolveRunDisplayStatus } from "./run/runStatusSemantics";
 
 type ReadinessState = {
   ready: boolean;
@@ -96,15 +97,16 @@ export function ChatMessagesPanel({
   const { t } = useTranslation(["dashboard", "common"]);
   const agentDisplayName = selectedInstance?.name?.trim() || t("dashboard:chatWorkspace.agentFallbackName");
   const fallbackModelLabel = selectedInstance?.model_name?.trim() || selectedInstance?.configSummary?.model?.trim() || "";
-  const hasRunningTool = toolSteps.some((step) => step.status === "running");
-  const hasSettledTool = toolSteps.some((step) => step.status === "completed" || step.status === "failed");
-  const activityLabel = hasRunningTool
-    ? t("dashboard:chatWorkspace.agentOperating", { name: agentDisplayName })
-    : hasSettledTool
-      ? t("dashboard:chatWorkspace.agentFinalizing", { name: agentDisplayName })
-      : activeRunId
-        ? t("dashboard:chatWorkspace.agentRunning", { name: agentDisplayName })
-        : t("dashboard:chatWorkspace.agentThinking", { name: agentDisplayName });
+  const runDisplayStatus = resolveRunDisplayStatus({
+    activeRunId,
+    executionRunId: runExecutionState?.runId,
+    executionStatus: runExecutionState?.status,
+    metricRunId: runMetrics?.runId,
+    metricStatus: runMetrics?.status,
+    hasPendingApproval: approvalRequests.some(request => request.status === "pending"),
+    hasRunningTool: toolSteps.some(step => step.status === "running")
+  });
+  const activityLabel = t(`dashboard:chatWorkspace.${getRunStatusI18nKey(runDisplayStatus)}`, { name: agentDisplayName });
   const shouldShowBlockingHistoryLoader = loadingMessages && messages.length === 0;
   const runAssistantIndex = runExecutionState ? findRunAssistantMessageIndex(messages, runExecutionState) : -1;
   const detachedRunMessage: ChatMessage | null = runExecutionState && runAssistantIndex < 0 ? {

@@ -3,6 +3,7 @@ import type { TFunction } from "i18next";
 import type { ChatMessage } from "../../../lib/chatWorkspaceState";
 import type { ChatApprovalChoice, ChatApprovalRequest, ChatRunMetrics } from "../useChatRuns";
 import type { PendingAttachment } from "../ChatInputBar";
+import type { RunDisplayStatus } from "../run/runStatusSemantics";
 
 type WorkspaceResultTabProps = {
   t: TFunction;
@@ -26,6 +27,8 @@ type WorkspaceResultTabProps = {
   getConversationFileSourceLabel?: (file: PendingAttachment) => string;
   runMetrics: ChatRunMetrics;
   totalToolCallCount: number;
+  runDisplayStatus: RunDisplayStatus;
+  runStatusLabel: string;
 };
 
 export function WorkspaceResultTab({
@@ -49,7 +52,9 @@ export function WorkspaceResultTab({
   copiedFileId = null,
   getConversationFileSourceLabel,
   runMetrics,
-  totalToolCallCount
+  totalToolCallCount,
+  runDisplayStatus,
+  runStatusLabel
 }: WorkspaceResultTabProps) {
   const formatDuration = (value?: number | null) => {
     if (typeof value !== "number" || !Number.isFinite(value)) {
@@ -116,6 +121,12 @@ export function WorkspaceResultTab({
                   <CheckCircle2 className="h-4 w-4" />
                   {t("dashboard:chatWorkspace.approvalResolved")}
                 </div>
+              </div>
+            )}
+            {runDisplayStatus !== "idle" && (
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-outline/80 bg-surface px-3 py-2.5 shadow-sm">
+                <span className="text-[13px] font-semibold text-content">{t("dashboard:chatWorkspace.runStatusLabel")}</span>
+                <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${runDisplayStatus === "completed" ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300" : runDisplayStatus === "failed" ? "bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300" : runDisplayStatus === "stopped" || runDisplayStatus === "stopping" || runDisplayStatus === "waiting_for_approval" ? "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300" : "bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300"}`}>{runStatusLabel}</span>
               </div>
             )}
             {resultSummaryVisible && (

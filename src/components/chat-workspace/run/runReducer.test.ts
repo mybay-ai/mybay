@@ -35,4 +35,11 @@ describe("runReducer", () => {
     const terminal = runReducer(initial, event(1, "status.changed", { status: "completed" }));
     expect(runReducer(terminal, event(2, "text.delta", { delta: "late" }))).toBe(terminal);
   });
+
+  it("settles pending approvals when a run becomes terminal", () => {
+    const initial = createRunExecutionState({ runId: "run-1", conversationId: "conv-1", status: "running" });
+    const waiting = runReducer(initial, event(1, "approval.requested", { id: "approval-1", status: "pending" }));
+    const terminal = runReducer(waiting, event(2, "status.changed", { status: "failed" }));
+    expect(terminal.blocks.find(block => block.type === "approval")).toMatchObject({ type: "approval", status: "expired" });
+  });
 });

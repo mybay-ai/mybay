@@ -10,6 +10,9 @@ export function finalizeRunExecution(
     ...state,
     status,
     blocks: state.blocks.map((block) => {
+      if (block.type === "approval" && block.status === "pending") {
+        return { ...block, status: "expired" as const };
+      }
       if (block.type !== "tool" || block.status !== "running") return block;
       const completedAt = Math.max(finishedAt, block.startedAt || finishedAt);
       return {

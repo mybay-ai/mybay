@@ -7,10 +7,10 @@ import type { ChatToolStep } from "./ChatToolProgress";
 import type { ChatApprovalChoice, ChatApprovalRequest, ChatRunMetrics } from "./useChatRuns";
 import { sanitizeChatDisplayContent } from "../../lib/chatProtocolSanitizer";
 import { WorkspaceDebugTab, WorkspaceFilesTab, WorkspacePreviewTab, WorkspaceResultTab, WorkspaceStepsTab } from "./workspace-panel-tabs";
-import { isTerminalRunStatus } from "./runUiLifecycle";
 import { resolveRunDurationMs } from "./run/runDuration";
 import type { RunExecutionState } from "./run/runTypes";
 import { resolveWorkspaceAssistantResult } from "./run/runResultSource";
+import { getRunStatusI18nKey, getToolStatusI18nKey, isTerminalRunDisplayStatus, resolveRunDisplayStatus, resolveToolDisplayStatus, type ToolDisplayStatus } from "./run/runStatusSemantics";
 
 type WorkspaceTab = "result" | "steps" | "files" | "preview" | "debug";
 type TimelineFilter = "all" | "tool" | "search" | "file" | "model" | "failed";
@@ -123,7 +123,17 @@ export function ChatWorkspacePanel({ selectedId, selectedConversationId, selecte
     }
   }, [conversationFilePreview]);
 
-  const runIsActive = Boolean(activeRunId && !isTerminalRunStatus(runMetrics?.status));
+  const runDisplayStatus = resolveRunDisplayStatus({
+    activeRunId,
+    executionRunId: runExecutionState?.runId,
+    executionStatus: runExecutionState?.status,
+    metricRunId: runMetrics?.runId,
+    metricStatus: runMetrics?.status,
+    hasPendingApproval: approvalRequests.some(request => request.status === "pending"),
+    hasRunningTool: toolSteps.some(step => step.status === "running")
+  });
+  const runStatusLabel = t(`dashboard:chatWorkspace.${getRunStatusI18nKey(runDisplayStatus)}`);
+  const runIsActive = Boolean(activeRunId && !isTerminalRunDisplayStatus(runDisplayStatus));
   useEffect(() => {
     setDurationNowMs(Date.now());
     if (!runIsActive) return;
@@ -141,10 +151,11 @@ export function ChatWorkspacePanel({ selectedId, selectedConversationId, selecte
     t("dashboard:chatWorkspace.toolCallProtocolHidden")
   );
 
-  const completedToolCount = toolSteps.filter((step) => step.status === "completed").length;
-  const failedToolCount = toolSteps.filter((step) => step.status === "failed").length;
+  const getTimelineDisplayStatus = (step: ChatToolStep): ToolDisplayStatus => resolveToolDisplayStatus(step.status, runDisplayStatus);
+  const completedToolCount = toolSteps.filter((step) => getTimelineDisplayStatus(step) === "completed").length;
+  const failedToolCount = toolSteps.filter((step) => getTimelineDisplayStatus(step) === "failed").length;
   const hasActiveRunWithoutSteps = Boolean(activeRunId && toolSteps.length === 0);
-  const runningToolCount = toolSteps.filter((step) => step.status === "running").length;
+  const runningToolCount = toolSteps.filter((step) => getTimelineDisplayStatus(step) === "running").length;
   const resolvedDurationMs = resolveRunDurationMs({
     metrics: runMetrics,
     startCandidates: toolSteps.map(step => step.startedAt),
@@ -154,6 +165,7 @@ export function ChatWorkspacePanel({ selectedId, selectedConversationId, selecte
   });
   const effectiveRunMetrics: ChatRunMetrics = {
     ...runMetrics,
+    status: runDisplayStatus === "idle" ? runMetrics?.status : runDisplayStatus,
     durationMs: resolvedDurationMs
   };
   const totalToolCallCount = toolSteps.filter((step) => step.stepType !== "model_reasoning" && step.stepType !== "final").length;
@@ -199,9 +211,7 @@ export function ChatWorkspacePanel({ selectedId, selectedConversationId, selecte
   };
 
   const getTimelineStatusLabel = (step: ChatToolStep) => {
-    if (step.status === "running") return t("dashboard:chatWorkspace.toolRunning");
-    if (step.status === "completed") return t("dashboard:chatWorkspace.toolCompleted");
-    return t("dashboard:chatWorkspace.toolFailed");
+    return t(`dashboard:chatWorkspace.${getToolStatusI18nKey(getTimelineDisplayStatus(step))}`);
   };
 
   const getConversationFileSourceLabel = (file: PendingAttachment) => {
@@ -364,6 +374,8 @@ export function ChatWorkspacePanel({ selectedId, selectedConversationId, selecte
             getConversationFileSourceLabel={getConversationFileSourceLabel}
             runMetrics={effectiveRunMetrics}
             totalToolCallCount={totalToolCallCount}
+            runDisplayStatus={runDisplayStatus}
+            runStatusLabel={runStatusLabel}
           />
         )}
 
@@ -381,6 +393,7 @@ export function ChatWorkspacePanel({ selectedId, selectedConversationId, selecte
             getTimelineIcon={getTimelineIcon}
             getTimelineLabel={getTimelineLabel}
             getTimelineStatusLabel={getTimelineStatusLabel}
+            getTimelineDisplayStatus={getTimelineDisplayStatus}
             getTimelineStepTypeLabel={getTimelineStepTypeLabel}
             formatTimelineTime={formatTimelineTime}
           />

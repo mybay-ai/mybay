@@ -178,9 +178,13 @@ function reduceStatus(state: RunExecutionState, event: NormalizedRunEvent<Status
   const status = event.payload?.status || state.status;
   const finishedAt = Date.now();
   const blocks = isTerminalExecutionStatus(status)
-    ? state.blocks.map(block => block.type === "tool" && block.status === "running"
-      ? { ...block, status: status === "completed" ? "completed" as const : "failed" as const, completedAt: block.completedAt || finishedAt }
-      : block)
+    ? state.blocks.map(block => {
+      if (block.type === "tool" && block.status === "running") {
+        return { ...block, status: status === "completed" ? "completed" as const : "failed" as const, completedAt: block.completedAt || finishedAt };
+      }
+      if (block.type === "approval" && block.status === "pending") return { ...block, status: "expired" as const };
+      return block;
+    })
     : state.blocks;
   const previous = blocks[blocks.length - 1];
   if (previous?.type === "status" && previous.status === status) {

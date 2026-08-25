@@ -9,7 +9,8 @@ function createState(): RunExecutionState {
     lastProcessedSeq: 2,
     blocks: [
       { id: "text-1", type: "text", firstSeq: 1, lastSeq: 1, content: "partial" },
-      { id: "tool-1", type: "tool", firstSeq: 2, lastSeq: 2, toolCallId: "call-1", tool: "read", status: "running", startedAt: 100 }
+      { id: "tool-1", type: "tool", firstSeq: 2, lastSeq: 2, toolCallId: "call-1", tool: "read", status: "running", startedAt: 100 },
+      { id: "approval-1", type: "approval", firstSeq: 2, lastSeq: 2, approvalId: "approval-1", status: "pending" }
     ]
   };
 }
@@ -33,5 +34,9 @@ describe("finalizeRunExecution", () => {
     if (tool.type !== "tool") throw new Error("expected tool block");
     state.blocks[1] = { ...tool, status: "completed", completedAt: 180, durationMs: 80 };
     expect(finalizeRunExecution(state, "failed", 250).blocks[1]).toEqual(state.blocks[1]);
+  });
+
+  it("expires an unresolved approval when the run becomes terminal", () => {
+    expect(finalizeRunExecution(createState(), "failed", 250).blocks[2]).toMatchObject({ type: "approval", status: "expired" });
   });
 });

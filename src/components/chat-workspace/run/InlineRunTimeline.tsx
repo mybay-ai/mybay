@@ -6,6 +6,7 @@ import type { RunBlock, RunExecutionState, ToolRunBlock } from "./runTypes";
 import { isTerminalExecutionStatus } from "./runReducer";
 import { resolveRunDurationMs } from "./runDuration";
 import { translateToolStepLabel } from "./toolStepI18n";
+import { getRunStatusI18nKey, getToolStatusI18nKey, resolveRunDisplayStatus, resolveToolDisplayStatus } from "./runStatusSemantics";
 
 
 function formatDuration(durationMs: number | null): string {
@@ -19,17 +20,15 @@ function formatDuration(durationMs: number | null): string {
 
 function ToolBlock({ block, execution }: { block: ToolRunBlock; execution: RunExecutionState }) {
   const { t } = useTranslation("dashboard");
-  const stopped = (execution.status === "stopped" || execution.status === "cancelled") && block.status === "failed";
-  const Icon = block.status === "running" ? LoaderCircle : block.status === "completed" ? CheckCircle2 : stopped ? CircleStop : XCircle;
-  const statusLabel = block.status === "running"
-    ? t("chatWorkspace.timelineRunning")
-    : block.status === "completed"
-      ? t("chatWorkspace.timelineCompleted")
-      : stopped ? t("chatWorkspace.timelineStopped") : t("chatWorkspace.timelineFailed");
+  const runStatus = resolveRunDisplayStatus({ executionRunId: execution.runId, executionStatus: execution.status });
+  const displayStatus = resolveToolDisplayStatus(block.status, runStatus);
+  const Icon = displayStatus === "running" || displayStatus === "waiting_for_approval" ? LoaderCircle : displayStatus === "completed" ? CheckCircle2 : displayStatus === "stopped" ? CircleStop : XCircle;
+  const statusLabel = t(`chatWorkspace.${getToolStatusI18nKey(displayStatus)}`);
   const iconClass = "mt-0.5 h-3.5 w-3.5 shrink-0 " + (
-    block.status === "running" ? "animate-spin text-indigo-500" :
-      block.status === "completed" ? "text-emerald-500" :
-        stopped ? "text-amber-500" : "text-rose-500"
+    displayStatus === "running" ? "animate-spin text-indigo-500" :
+      displayStatus === "waiting_for_approval" ? "text-amber-500" :
+        displayStatus === "completed" ? "text-emerald-500" :
+          displayStatus === "stopped" ? "text-amber-500" : "text-rose-500"
   );
   return (
     <div className="flex items-start gap-2 rounded-xl border border-outline/80 bg-surface-muted/55 px-3 py-2 text-[12px]">
@@ -49,7 +48,11 @@ function TimelineBlock({ block, execution }: { block: RunBlock; execution: RunEx
     return (
       <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50/70 px-3 py-2 text-[12px] text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
         <ShieldQuestion className="h-4 w-4" />
-        {block.status === "pending" ? t("chatWorkspace.timelineApprovalPending") : t("chatWorkspace.timelineApprovalResolved")}
+        {block.status === "pending"
+          ? t("chatWorkspace.timelineApprovalPending")
+          : block.status === "expired"
+            ? t("chatWorkspace.timelineApprovalExpired")
+            : t("chatWorkspace.timelineApprovalResolved")}
       </div>
     );
   }
@@ -86,19 +89,8 @@ export function InlineRunTimeline({
     active: !terminal,
     nowMs: now
   }));
-  const statusLabel = execution.status === "completed"
-    ? t("chatWorkspace.timelineRunCompleted")
-    : execution.status === "failed" || execution.status === "expired"
-      ? t("chatWorkspace.timelineRunFailed")
-      : execution.status === "stopped" || execution.status === "cancelled"
-        ? t("chatWorkspace.timelineRunStopped")
-        : execution.status === "stopping"
-          ? t("chatWorkspace.timelineStopping")
-          : execution.status === "waiting_for_approval"
-            ? t("chatWorkspace.timelineApprovalPending")
-            : execution.status === "queued"
-              ? t("chatWorkspace.timelineRunPreparing")
-              : t("chatWorkspace.timelineRunRunning");
+  const runDisplayStatus = resolveRunDisplayStatus({ executionRunId: execution.runId, executionStatus: execution.status });
+  const statusLabel = t(`chatWorkspace.${getRunStatusI18nKey(runDisplayStatus)}`);
 
   useEffect(() => {
     setCollapsed(false);

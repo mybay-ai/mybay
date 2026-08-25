@@ -3,6 +3,7 @@ import type { Dispatch, SetStateAction } from "react";
 import type { TFunction } from "i18next";
 import type { LucideIcon } from "lucide-react";
 import type { ChatToolStep } from "../ChatToolProgress";
+import type { ToolDisplayStatus } from "../run/runStatusSemantics";
 
 type TimelineFilter = "all" | "tool" | "search" | "file" | "model" | "failed";
 
@@ -19,6 +20,7 @@ type WorkspaceStepsTabProps = {
   getTimelineIcon: (step: ChatToolStep) => LucideIcon;
   getTimelineLabel: (step: ChatToolStep) => string;
   getTimelineStatusLabel: (step: ChatToolStep) => string;
+  getTimelineDisplayStatus: (step: ChatToolStep) => ToolDisplayStatus;
   getTimelineStepTypeLabel: (step: ChatToolStep) => string;
   formatTimelineTime: (value?: number) => string;
 };
@@ -36,6 +38,7 @@ export function WorkspaceStepsTab({
   getTimelineIcon,
   getTimelineLabel,
   getTimelineStatusLabel,
+  getTimelineDisplayStatus,
   getTimelineStepTypeLabel,
   formatTimelineTime
 }: WorkspaceStepsTabProps) {
@@ -107,17 +110,20 @@ export function WorkspaceStepsTab({
               <div className="relative space-y-3 before:absolute before:left-[17px] before:top-4 before:bottom-4 before:w-px before:bg-outline">
                 {filteredToolSteps.map((step) => {
                   const Icon = getTimelineIcon(step);
+                  const displayStatus = getTimelineDisplayStatus(step);
                   const timeLabel = formatTimelineTime(step.completedAt || step.startedAt);
                   return (
                     <div key={step.id} className="relative flex gap-3">
                       <div className={"relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border " + (
-                        step.status === "running"
+                        displayStatus === "running"
                           ? "border-indigo-200 bg-indigo-50 text-indigo-600 dark:border-indigo-400/30 dark:bg-indigo-500/15 dark:text-indigo-300"
-                          : step.status === "completed"
+                          : displayStatus === "completed"
                             ? "border-emerald-200 bg-emerald-50 text-emerald-600 dark:border-emerald-400/25 dark:bg-emerald-500/15 dark:text-emerald-300"
-                            : "border-rose-200 bg-rose-50 text-rose-600 dark:border-rose-400/25 dark:bg-rose-500/15 dark:text-rose-300"
+                            : displayStatus === "failed"
+                              ? "border-rose-200 bg-rose-50 text-rose-600 dark:border-rose-400/25 dark:bg-rose-500/15 dark:text-rose-300"
+                              : "border-amber-200 bg-amber-50 text-amber-600 dark:border-amber-400/25 dark:bg-amber-500/15 dark:text-amber-300"
                       )}>
-                        {step.status === "running" ? <Loader2 className="h-4 w-4 motion-safe:animate-spin" /> : <Icon className="h-4 w-4" />}
+                        {displayStatus === "running" ? <Loader2 className="h-4 w-4 motion-safe:animate-spin" /> : <Icon className="h-4 w-4" />}
                       </div>
                       <div className="min-w-0 flex-1 rounded-xl border border-outline/80 bg-surface-muted/80 px-3 py-2.5">
                         <div className="flex items-start justify-between gap-2">
@@ -125,11 +131,13 @@ export function WorkspaceStepsTab({
                             {getTimelineLabel(step)}
                           </p>
                           <span className={"shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold " + (
-                            step.status === "running"
+                            displayStatus === "running"
                               ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300"
-                              : step.status === "completed"
+                              : displayStatus === "completed"
                                 ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
-                                : "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300"
+                                : displayStatus === "failed"
+                                  ? "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300"
+                                  : "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
                           )}>
                             {getTimelineStatusLabel(step)}
                           </span>
