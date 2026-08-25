@@ -1,5 +1,6 @@
 import { providerRegistry } from "../../shared/providerRegistry";
 import { decrypt } from "../crypto";
+import { checkSSRFSafe } from "./ssrfValidator";
 
 export interface LLMConfig {
   provider: string;
@@ -92,6 +93,15 @@ function resolveLLMRuntime(llmConfig: LLMConfig) {
     decryptedApiKey,
     strategy: conf ? conf.testStrategy : "openai-chat-completions"
   };
+}
+
+async function assertSafeLLMRequestUrl(url: string): Promise<void> {
+  const result = await checkSSRFSafe(url);
+  if (result.safe) return;
+
+  const error = new Error("模型服务地址未通过 SSRF 安全校验，请检查 API Base URL 配置。");
+  (error as Error & { code?: string }).code = "LLM_BASE_URL_UNSAFE";
+  throw error;
 }
 
 export async function generateChatCompletion(
@@ -193,6 +203,7 @@ export async function generateChatCompletion(
       opts.body = JSON.stringify(body);
     }
 
+    await assertSafeLLMRequestUrl(url);
     const response = await fetch(url, opts);
     clearTimeout(timeoutId);
 
@@ -359,6 +370,7 @@ export async function generateText(llmConfig: LLMConfig, options: GenerateTextOp
       opts.body = JSON.stringify(body);
     }
 
+    await assertSafeLLMRequestUrl(url);
     const response = await fetch(url, opts);
     clearTimeout(timeoutId);
 

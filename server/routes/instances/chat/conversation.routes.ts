@@ -5,6 +5,7 @@ import { chatRepo, encodeConversationCursor } from "../../../repositories/chatRe
 import { filesRepo } from "../../../repositories/filesRepo";
 import { deleteConversationAttachmentDirectory } from "../../../services/chatAttachmentStorage";
 import { isValidInstanceId, isValidUUID } from "./validators";
+import { conversationSearchLimiter, conversationWriteLimiter } from "./conversationLimiters";
 
 export function registerConversationRoutes(router: Router) {
 
@@ -39,7 +40,7 @@ export function registerConversationRoutes(router: Router) {
     }
   });
 
-  router.post("/:id/conversation-projects", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  router.post("/:id/conversation-projects", authenticateToken, conversationWriteLimiter, async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
     const { name } = req.body || {};
 
@@ -64,7 +65,7 @@ export function registerConversationRoutes(router: Router) {
     }
   });
 
-  router.put("/:id/conversation-projects/order", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  router.put("/:id/conversation-projects/order", authenticateToken, conversationWriteLimiter, async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
     const orderedIds = req.body?.orderedIds;
     if (!isValidInstanceId(id) || !Array.isArray(orderedIds) || orderedIds.length > 500 || orderedIds.some((value: unknown) => typeof value !== "string" || !isValidUUID(value))) {
@@ -84,7 +85,7 @@ export function registerConversationRoutes(router: Router) {
     }
   });
 
-  router.patch("/:id/conversation-projects/:projectId", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  router.patch("/:id/conversation-projects/:projectId", authenticateToken, conversationWriteLimiter, async (req: AuthenticatedRequest, res: Response) => {
     const { id, projectId } = req.params;
     const { name } = req.body || {};
 
@@ -109,7 +110,7 @@ export function registerConversationRoutes(router: Router) {
     }
   });
 
-  router.delete("/:id/conversation-projects/:projectId", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  router.delete("/:id/conversation-projects/:projectId", authenticateToken, conversationWriteLimiter, async (req: AuthenticatedRequest, res: Response) => {
     const { id, projectId } = req.params;
 
     if (!isValidInstanceId(id) || !isValidUUID(projectId)) {
@@ -131,7 +132,7 @@ export function registerConversationRoutes(router: Router) {
   // ======================================================================
   // 1. Create Conversation
   // ======================================================================
-  router.post("/:id/conversations", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  router.post("/:id/conversations", authenticateToken, conversationWriteLimiter, async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
     const { title, projectId } = req.body || {};
 
@@ -181,7 +182,7 @@ export function registerConversationRoutes(router: Router) {
   // ======================================================================
   // 2. List Conversations (Stable Pagination)
   // ======================================================================
-  router.get("/:id/conversations/search", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  router.get("/:id/conversations/search", authenticateToken, conversationSearchLimiter, async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
     const query = typeof req.query.q === "string" ? req.query.q.trim() : "";
     let limit = req.query.limit ? parseInt(String(req.query.limit), 10) : 30;
@@ -237,7 +238,7 @@ export function registerConversationRoutes(router: Router) {
     }
   });
 
-  router.put("/:id/conversations/order", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  router.put("/:id/conversations/order", authenticateToken, conversationWriteLimiter, async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
     const orderedIds = req.body?.orderedIds;
     if (!isValidInstanceId(id) || !Array.isArray(orderedIds) || orderedIds.length > 500 || orderedIds.some((value: unknown) => typeof value !== "string" || !isValidUUID(value))) {
@@ -295,7 +296,7 @@ export function registerConversationRoutes(router: Router) {
   // ======================================================================
   // 3.5 Update Single Conversation Title (Rename)
   // ======================================================================
-  router.patch("/:id/conversations/:conversationId", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  router.patch("/:id/conversations/:conversationId", authenticateToken, conversationWriteLimiter, async (req: AuthenticatedRequest, res: Response) => {
     const { id, conversationId } = req.params;
     const { title, projectId, pinned } = req.body || {};
 
@@ -365,7 +366,7 @@ export function registerConversationRoutes(router: Router) {
   // ======================================================================
   // 4. Delete Conversation
   // ======================================================================
-  router.delete("/:id/conversations/:conversationId", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  router.delete("/:id/conversations/:conversationId", authenticateToken, conversationWriteLimiter, async (req: AuthenticatedRequest, res: Response) => {
     const { id, conversationId } = req.params;
 
     if (!isValidInstanceId(id)) {

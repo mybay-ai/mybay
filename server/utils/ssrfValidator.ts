@@ -3,7 +3,7 @@ import ipaddr from 'ipaddr.js';
 
 export async function checkSSRFSafe(urlStr: string): Promise<{ safe: boolean; error?: string }> {
   if (!urlStr) {
-    return { safe: true };
+    return { safe: false, error: 'URL 不能为空' };
   }
   
   let parsedUrl: URL;
@@ -18,7 +18,11 @@ export async function checkSSRFSafe(urlStr: string): Promise<{ safe: boolean; er
     return { safe: false, error: `不支持的协议类型: ${parsedUrl.protocol}` };
   }
 
-  const hostname = parsedUrl.hostname;
+  if (parsedUrl.username || parsedUrl.password) {
+    return { safe: false, error: 'URL 不允许包含用户名或密码' };
+  }
+
+  const hostname = parsedUrl.hostname.toLowerCase().replace(/^\[|\]$/g, '');
 
   // Function to check if IP is a private/internal network
   const isPrivateIP = (ipString: string): boolean => {
@@ -41,18 +45,21 @@ export async function checkSSRFSafe(urlStr: string): Promise<{ safe: boolean; er
   }
 
   // If hostname is localhost or ends with common internal domains
-  if (hostname === 'localhost' || hostname.endsWith('.local') || hostname === 'host.docker.internal' || hostname.includes('mybay-agent.host')) {
+  if (
+    hostname === 'localhost' ||
+    hostname.endsWith('.localhost') ||
+    hostname.endsWith('.local') ||
+    hostname === 'host.docker.internal' ||
+    hostname === 'mybay-agent.host' ||
+    hostname.endsWith('.mybay-agent.host')
+  ) {
       return { safe: false, error: '禁止解析受限的内网域名' };
   }
 
   // 2. perform DNS resolution
   try {
-    const addresses = await new Promise<string[]>((resolve, reject) => {
-      dns.resolve(hostname, (err, records) => {
-        if (err) return reject(err);
-        resolve(records);
-      });
-    });
+    const records = await dns.promises.lookup(hostname, { all: true, verbatim: true });
+    const addresses = records.map((record) => record.address);
 
     if (!addresses || addresses.length === 0) {
       return { safe: false, error: '无法解析所提供域名的 DNS' };
@@ -67,7 +74,6 @@ export async function checkSSRFSafe(urlStr: string): Promise<{ safe: boolean; er
 
     return { safe: true };
   } catch (e: any) {
-    // If it's a domain that doesn't exist etc.
     return { safe: false, error: '域名解析失败: ' + e.message };
   }
 }
