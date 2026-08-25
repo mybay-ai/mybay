@@ -375,6 +375,20 @@ export function createActionsRoutes(deps: RouterDependencies) {
       }
 
       const triggerSource = req.body?.trigger_source || "manual";
+      const requestedCheck = typeof req.body?.check_code === "string"
+        ? req.body.check_code.trim().toUpperCase()
+        : "";
+      const supportedDiagnosticChecks = new Set([
+        "CONTAINER_STATE", "CONTAINER_HEALTH", "PORT_MAPPING", "DOCKER_NETWORK", "DISK_SPACE",
+        "PHYSICAL_STATE", "DASHBOARD_AUTH", "GATEWAY", "MODEL_CONFIG", "MODEL_RUNTIME", "CHANNEL", "CHAT_READINESS",
+      ]);
+      if (requestedCheck && !supportedDiagnosticChecks.has(requestedCheck)) {
+        return res.status(400).json({
+          success: false,
+          error: "INVALID_DIAGNOSTIC_CHECK",
+          message: "不支持的诊断检查项。",
+        });
+      }
 
       const ctx = buildDeploymentContext(instance);
 
@@ -388,7 +402,12 @@ export function createActionsRoutes(deps: RouterDependencies) {
       const { runInstanceHealthChecks } = await import("../../deployment");
       runInstanceHealthChecks(ctx.instanceId, ctx.gatewayHostPort, ctx.dashboardHostPort, ctx.subdomain, io, wrappedUpdateStatus, triggerSource);
 
-      res.json({ success: true, message: "Health check triggered successfully." });
+      res.json({
+        success: true,
+        message: "Health check triggered successfully.",
+        requested_check: requestedCheck || null,
+        scope: requestedCheck ? "related_health_chain" : "full",
+      });
     } catch (e: any) {
       console.error("[Actions API] Health check error:", e);
       res.status(500).json({ error: "服务器内部异常，健康检查失败" });

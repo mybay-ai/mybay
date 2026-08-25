@@ -67,6 +67,7 @@ export async function runInstanceHealthChecks(instanceId: string, gatewayHostPor
   const healthCheckPromise = (async () => {
     let sourceFriendly = "未知来源触发";
     if (triggerSource === "manual") sourceFriendly = "收到用户手动请求";
+    else if (triggerSource === "diagnostics_panel") sourceFriendly = "实例诊断面板触发";
     else if (triggerSource === "auto_create") sourceFriendly = "实例创建后自动自检";
     else if (triggerSource === "auto_retry") sourceFriendly = "失败后的自动重试";
     else if (triggerSource === "reconciler") sourceFriendly = "后台巡检触发";

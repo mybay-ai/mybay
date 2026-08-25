@@ -1,23 +1,42 @@
 import React from "react";
-import { Activity, AlertTriangle, CheckCircle2, ClipboardCopy, Clock3, RefreshCw, Server, ShieldCheck } from "lucide-react";
+import { Activity, AlertTriangle, CheckCircle2, ClipboardCopy, Clock3, Loader2, MinusCircle, RefreshCw, Server, ShieldCheck } from "lucide-react";
 import { api } from "../../lib/api";
 import { Button, cn } from "../ui";
 import { InstanceReadinessNotice } from "../instance-runtime/InstanceReadinessNotice";
 
 type Props = { instanceId: string; instance: any };
-type Check = { code: string; label: string; status: "pass" | "warning" | "fail"; detail: string; suggestion?: string };
+type Check = {
+  code: string;
+  domain: "container" | "host" | "dashboard" | "chat" | "model" | "channel";
+  label: string;
+  status: "pass" | "warning" | "fail" | "checking" | "not_applicable";
+  detail: string;
+  reasonCode?: string;
+  suggestion?: string;
+  recheckable?: boolean;
+};
 
-function DiagnosticRow({ check }: { check: Check }) {
+function DiagnosticRow({ check, checking, onRecheck }: { check: Check; checking: boolean; onRecheck: (code: string) => void }) {
   const ok = check.status === "pass";
+  const pending = check.status === "checking";
+  const skipped = check.status === "not_applicable";
+  const Icon = ok ? CheckCircle2 : pending ? Loader2 : skipped ? MinusCircle : AlertTriangle;
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-slate-100 py-3 last:border-0 dark:border-slate-800">
+    <div className="flex flex-col gap-2 border-b border-slate-100 py-3 last:border-0 sm:flex-row sm:items-start sm:justify-between sm:gap-4 dark:border-slate-800">
       <div className="flex items-center gap-2 text-sm font-medium text-content-secondary">
-        {ok ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <AlertTriangle className={cn("h-4 w-4", check.status === "fail" ? "text-rose-500" : "text-amber-500")} />}
-        {check.label}
+        <Icon className={cn("h-4 w-4", ok ? "text-emerald-500" : pending ? "animate-spin text-blue-500" : skipped ? "text-slate-400" : check.status === "fail" ? "text-rose-500" : "text-amber-500")} />
+        <span>{check.label}</span>
+        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-content-muted dark:bg-slate-800">{check.domain}</span>
       </div>
-      <div className="max-w-[65%] text-right">
-        <div className={cn("text-xs", ok ? "text-content-muted" : check.status === "fail" ? "text-rose-700 dark:text-rose-300" : "text-amber-700 dark:text-amber-300")}>{check.detail}</div>
+      <div className="sm:max-w-[68%] sm:text-right">
+        <div className={cn("text-xs", ok || skipped ? "text-content-muted" : pending ? "text-blue-700 dark:text-blue-300" : check.status === "fail" ? "text-rose-700 dark:text-rose-300" : "text-amber-700 dark:text-amber-300")}>{check.detail}</div>
+        {check.reasonCode && <code className="mt-1 inline-block text-[10px] text-content-muted">{check.reasonCode}</code>}
         {check.suggestion && <div className="mt-1 text-[11px] leading-4 text-content-muted">建议：{check.suggestion}</div>}
+        {check.recheckable !== false && !skipped && (
+          <button type="button" onClick={() => onRecheck(check.code)} disabled={checking} className="mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50 dark:text-indigo-400">
+            <RefreshCw className={cn("h-3 w-3", checking && "animate-spin")} />{checking ? "检测中" : "重新检测此项"}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -42,12 +61,23 @@ export function InstanceDiagnosticsWorkspace({ instanceId, instance }: Props) {
   const [loading, setLoading] = React.useState(true);
   const [copied, setCopied] = React.useState(false);
   const [error, setError] = React.useState("");
+  const [checkingCode, setCheckingCode] = React.useState<string | null>(null);
+  const [reconcilingUntil, setReconcilingUntil] = React.useState(0);
+  const hasLoadedRef = React.useRef(false);
 
-  const load = React.useCallback(async (trigger = false) => {
-    setLoading(true);
+  const load = React.useCallback(async (trigger = false, checkCode?: string) => {
+    if (trigger) setCheckingCode(checkCode || "ALL");
+    else if (!hasLoadedRef.current) setLoading(true);
     setError("");
     try {
-      if (trigger) await api.post(`/api/instances/${instanceId}/health-check`, { trigger_source: "diagnostics_panel" });
+      if (trigger) {
+        await api.post(`/api/instances/${instanceId}/health-check`, {
+          trigger_source: "diagnostics_panel",
+          ...(checkCode ? { check_code: checkCode } : {}),
+        });
+        setReconcilingUntil(Date.now() + 60_000);
+        await new Promise((resolve) => window.setTimeout(resolve, 700));
+      }
       const [healthResult, diagnosticResult, eventResult] = await Promise.all([
         api.get(`/api/instances/${instanceId}/healthz`),
         api.get(`/api/instances/${instanceId}/diagnostics`),
@@ -56,21 +86,26 @@ export function InstanceDiagnosticsWorkspace({ instanceId, instance }: Props) {
       setHealth(healthResult);
       setReport(diagnosticResult?.report || null);
       setEvents(Array.isArray(eventResult?.events) ? eventResult.events : []);
+      hasLoadedRef.current = true;
     } catch (reason: any) {
       setError(reason?.message || "诊断数据加载失败");
     } finally {
       setLoading(false);
+      if (trigger) setCheckingCode(null);
     }
   }, [instanceId]);
 
   React.useEffect(() => { void load(false); }, [load]);
+  const checks: Check[] = report?.checks || [];
 
-  const supplementalChecks: Check[] = [
-    { code: "GATEWAY", label: "Agent 网关", status: health?.gateway_ready ? "pass" : "fail", detail: health?.gateway_error || health?.gateway?.status || "尚未就绪", suggestion: health?.gateway_ready ? undefined : "查看运行日志，确认容器已启动且网关端口能够响应。" },
-    { code: "ACCESS_AUTH", label: "访问保护", status: health?.dashboard?.isAuthConfigured ? "pass" : "fail", detail: health?.dashboard?.isAuthConfigured ? "认证配置完整" : "认证配置缺失或尚未生效", suggestion: health?.dashboard?.isAuthConfigured ? undefined : "在实例操作菜单中重置访问密码，使认证配置重新写入。" },
-    { code: "MODEL", label: "模型配置", status: ["verified", "verified_by_runtime_session"].includes(health?.model?.config_status) ? "pass" : "warning", detail: `${health?.model?.config_status || "unknown"} / ${health?.model?.runtime_status || "unknown"}`, suggestion: ["verified", "verified_by_runtime_session"].includes(health?.model?.config_status) ? undefined : "重新测试模型连接，并确认保存的凭据、模型名和 Base URL 一致。" },
-  ];
-  const checks: Check[] = [...(report?.checks || []), ...supplementalChecks];
+  React.useEffect(() => {
+    const hasUnsettledChecks = checks.some((check) => check.status === "checking");
+    if (!hasUnsettledChecks && Date.now() >= reconcilingUntil) return;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") void load(false);
+    }, 5_000);
+    return () => window.clearInterval(timer);
+  }, [checks, load, reconcilingUntil]);
   const filteredEvents = events.filter((event) => {
     const status = String(event.status || "").toLowerCase();
     if (eventFilter === "errors") return ["failed", "error", "cancelled"].includes(status) || !!event.error_code;
@@ -89,13 +124,13 @@ export function InstanceDiagnosticsWorkspace({ instanceId, instance }: Props) {
     <div className="h-full overflow-y-auto p-4 md:p-6">
       <div className="mx-auto flex max-w-5xl flex-col gap-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div><h3 className="flex items-center gap-2 text-base font-semibold text-content"><Server className="h-4 w-4 text-indigo-500" />容器诊断</h3><p className="mt-1 text-xs text-content-muted">只读检查容器、端口、网络、磁盘、网关、认证和模型状态。</p></div>
-          <div className="flex gap-2"><Button variant="outline" onClick={() => void copyReport()} disabled={!report} className="gap-2"><ClipboardCopy className="h-4 w-4" />{copied ? "已复制" : "复制诊断报告"}</Button><Button variant="outline" onClick={() => void load(true)} disabled={loading} className="gap-2"><RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />重新检测</Button></div>
+          <div><h3 className="flex items-center gap-2 text-base font-semibold text-content"><Server className="h-4 w-4 text-indigo-500" />实例诊断</h3><p className="mt-1 text-xs text-content-muted">按当前实例能力检查容器、访问、对话、模型和渠道；修复后自动对账。</p></div>
+          <div className="flex gap-2"><Button variant="outline" onClick={() => void copyReport()} disabled={!report} className="gap-2"><ClipboardCopy className="h-4 w-4" />{copied ? "已复制" : "复制诊断报告"}</Button><Button variant="outline" onClick={() => void load(true)} disabled={!!checkingCode} className="gap-2"><RefreshCw className={cn("h-4 w-4", checkingCode === "ALL" && "animate-spin")} />全部重新检测</Button></div>
         </div>
         {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300">{error}</div>}
         <InstanceReadinessNotice instance={instance} />
-        {report?.summary && <div className="grid grid-cols-3 gap-3"><div className="rounded-lg bg-emerald-50 p-3 text-center text-sm text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">通过 {report.summary.passed}</div><div className="rounded-lg bg-amber-50 p-3 text-center text-sm text-amber-700 dark:bg-amber-950/30 dark:text-amber-300">警告 {report.summary.warnings}</div><div className="rounded-lg bg-rose-50 p-3 text-center text-sm text-rose-700 dark:bg-rose-950/30 dark:text-rose-300">失败 {report.summary.failed}</div></div>}
-        <div className="rounded-xl border border-slate-200 bg-white px-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">{checks.map((check) => <DiagnosticRow key={check.code} check={check} />)}</div>
+        {report?.summary && <div className="grid grid-cols-2 gap-3 sm:grid-cols-5"><div className="rounded-lg bg-emerald-50 p-3 text-center text-sm text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">通过 {report.summary.passed}</div><div className="rounded-lg bg-blue-50 p-3 text-center text-sm text-blue-700 dark:bg-blue-950/30 dark:text-blue-300">检测中 {report.summary.checking}</div><div className="rounded-lg bg-amber-50 p-3 text-center text-sm text-amber-700 dark:bg-amber-950/30 dark:text-amber-300">警告 {report.summary.warnings}</div><div className="rounded-lg bg-rose-50 p-3 text-center text-sm text-rose-700 dark:bg-rose-950/30 dark:text-rose-300">失败 {report.summary.failed}</div><div className="rounded-lg bg-slate-100 p-3 text-center text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300">不适用 {report.summary.notApplicable}</div></div>}
+        <div className="rounded-xl border border-slate-200 bg-white px-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">{checks.map((check) => <DiagnosticRow key={check.code} check={check} checking={checkingCode === check.code} onRecheck={(code) => void load(true, code)} />)}</div>
         <div>
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3"><h3 className="flex items-center gap-2 text-base font-semibold text-content"><Activity className="h-4 w-4 text-amber-500" />实例事件</h3><div className="flex rounded-lg border border-slate-200 p-1 text-xs dark:border-slate-700">{(["all", "errors", "success"] as const).map((filter) => <button key={filter} onClick={() => setEventFilter(filter)} className={cn("rounded-md px-3 py-1.5", eventFilter === filter ? "bg-slate-100 font-medium text-slate-800 dark:bg-slate-800 dark:text-white" : "text-content-muted")}>{filter === "all" ? "全部" : filter === "errors" ? "异常" : "成功"}</button>)}</div></div>
           <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
