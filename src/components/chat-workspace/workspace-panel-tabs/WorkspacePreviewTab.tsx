@@ -96,7 +96,7 @@ export function WorkspacePreviewTab({
                   </div>
                 ) : conversationFilePreview.kind === "image" && conversationFilePreview.url ? (
                   <div className="overflow-hidden rounded-xl border border-outline bg-surface-muted">
-                    <img src={conversationFilePreview.url} alt={conversationFilePreview.file.originalName} className="max-h-[520px] w-full object-contain" />
+                    <img src={conversationFilePreview.url} alt={conversationFilePreview.file.originalName} className="max-h-[min(44dvh,520px)] w-full object-contain sm:max-h-[520px]" />
                   </div>
                 ) : conversationFilePreview.kind === "html" && (conversationFilePreview.text || conversationFilePreview.url) ? (
                   <iframe
@@ -105,20 +105,20 @@ export function WorkspacePreviewTab({
                     title={conversationFilePreview.file.originalName}
                     sandbox="allow-scripts allow-forms allow-popups allow-modals"
                     referrerPolicy="no-referrer"
-                    className="h-[520px] w-full rounded-xl border border-outline bg-white"
+                    className="h-[min(44dvh,520px)] min-h-64 w-full rounded-xl border border-outline bg-white sm:h-[520px]"
                   />
                 ) : conversationFilePreview.kind === "pdf" && conversationFilePreview.url ? (
                   <iframe
                     src={conversationFilePreview.url}
                     title={conversationFilePreview.file.originalName}
-                    className="h-[520px] w-full rounded-xl border border-outline bg-white"
+                    className="h-[min(44dvh,520px)] min-h-64 w-full rounded-xl border border-outline bg-white sm:h-[520px]"
                   />
                 ) : conversationFilePreview.kind === "markdown" ? (
-                  <div className="prose prose-sm max-h-[520px] max-w-none overflow-auto rounded-xl border border-outline bg-surface-muted p-4 text-content-secondary prose-a:text-indigo-600 dark:prose-invert">
+                  <div className="prose prose-sm max-h-[min(44dvh,520px)] max-w-none overflow-auto overscroll-contain rounded-xl border border-outline bg-surface-muted p-4 text-content-secondary prose-a:text-indigo-600 dark:prose-invert sm:max-h-[520px] [-webkit-overflow-scrolling:touch]">
                     <Markdown remarkPlugins={[remarkGfm]}>{conversationFilePreview.text || ""}</Markdown>
                   </div>
                 ) : conversationFilePreview.kind === "text" ? (
-                  <pre className="max-h-[520px] overflow-auto whitespace-pre-wrap break-words rounded-xl border border-outline bg-surface-muted p-3 text-[12px] leading-5 text-content-secondary">
+                  <pre className="max-h-[min(44dvh,520px)] overflow-auto overscroll-contain whitespace-pre-wrap break-words rounded-xl border border-outline bg-surface-muted p-3 text-[12px] leading-5 text-content-secondary sm:max-h-[520px] [-webkit-overflow-scrolling:touch]">
                     {conversationFilePreview.text || ""}
                   </pre>
                 ) : (

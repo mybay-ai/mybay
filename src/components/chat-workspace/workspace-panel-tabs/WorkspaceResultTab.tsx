@@ -248,7 +248,7 @@ export function WorkspaceResultTab({
                 )}
               </div>
               {latestAssistantMessage || latestAssistantContent ? (
-                <p className="text-[14px] leading-6 text-content-secondary whitespace-pre-wrap max-h-[24rem] overflow-hidden">
+                <p className="max-h-[min(48dvh,32rem)] overflow-y-auto overscroll-contain whitespace-pre-wrap pr-1 text-[14px] leading-6 text-content-secondary [-webkit-overflow-scrolling:touch]">
                   {latestAssistantContent}
                 </p>
               ) : (

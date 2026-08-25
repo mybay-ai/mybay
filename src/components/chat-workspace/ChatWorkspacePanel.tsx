@@ -12,7 +12,7 @@ import type { RunExecutionState } from "./run/runTypes";
 import { resolveWorkspaceAssistantResult } from "./run/runResultSource";
 import { getRunStatusI18nKey, getToolStatusI18nKey, isTerminalRunDisplayStatus, resolveRunDisplayStatus, resolveToolDisplayStatus, type ToolDisplayStatus } from "./run/runStatusSemantics";
 
-type WorkspaceTab = "result" | "steps" | "files" | "preview" | "debug";
+export type WorkspaceTab = "result" | "steps" | "files" | "preview" | "debug";
 type TimelineFilter = "all" | "tool" | "search" | "file" | "model" | "failed";
 
 import type { PendingAttachment } from "./ChatInputBar";
@@ -43,6 +43,8 @@ type ChatWorkspacePanelProps = {
   };
   onRespondToApproval?: (choice: ChatApprovalChoice, approvalId?: string, resolveAll?: boolean) => void;
   variant?: "desktop" | "mobile";
+  activeTab?: WorkspaceTab;
+  onActiveTabChange?: (tab: WorkspaceTab) => void;
 };
 
 const TOOL_STEP_EVENT_KEYS: Record<string, string> = {
@@ -110,9 +112,16 @@ const extractUrlsFromText = (content: string) => {
   return urls;
 };
 
-export function ChatWorkspacePanel({ selectedId, selectedConversationId, selectedInstance, messages, toolSteps, activeRunId, runExecutionState = null, runMetrics = null, approvalRequests = [], runCapabilities, onRespondToApproval, variant = "desktop", conversationFiles = [], conversationFilePreview = null, onDeleteConversationFile, onDownloadConversationFile, onOpenConversationFile, onPreviewConversationFile, onClearConversationFilePreview }: ChatWorkspacePanelProps) {
+export function ChatWorkspacePanel({ selectedId, selectedConversationId, selectedInstance, messages, toolSteps, activeRunId, runExecutionState = null, runMetrics = null, approvalRequests = [], runCapabilities, onRespondToApproval, variant = "desktop", activeTab: controlledActiveTab, onActiveTabChange, conversationFiles = [], conversationFilePreview = null, onDeleteConversationFile, onDownloadConversationFile, onOpenConversationFile, onPreviewConversationFile, onClearConversationFilePreview }: ChatWorkspacePanelProps) {
   const { t } = useTranslation(["dashboard", "common"]);
-  const [activeTab, setActiveTab] = useState<WorkspaceTab>("result");
+  const [internalActiveTab, setInternalActiveTab] = useState<WorkspaceTab>("result");
+  const activeTab = controlledActiveTab ?? internalActiveTab;
+  const setActiveTab = (tab: WorkspaceTab) => {
+    if (controlledActiveTab === undefined) {
+      setInternalActiveTab(tab);
+    }
+    onActiveTabChange?.(tab);
+  };
   const [timelineFilter, setTimelineFilter] = useState<TimelineFilter>("all");
   const [copiedFileId, setCopiedFileId] = useState<string | null>(null);
   const [durationNowMs, setDurationNowMs] = useState(() => Date.now());
@@ -305,7 +314,7 @@ export function ChatWorkspacePanel({ selectedId, selectedConversationId, selecte
 
   return (
     <aside className={shellClassName}>
-      <div className="shrink-0 px-4 py-3 border-b border-outline/80 bg-surface/85">
+      <div className={"shrink-0 border-b border-outline/80 bg-surface/85 " + (variant === "mobile" ? "pb-2.5 pl-3 pr-12 pt-3" : "px-4 py-3")}>
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
@@ -336,21 +345,21 @@ export function ChatWorkspacePanel({ selectedId, selectedConversationId, selecte
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={"h-8 rounded-lg text-[13px] font-medium inline-flex items-center justify-center gap-1.5 transition-all " + (
+                className={"h-8 min-w-0 rounded-lg font-medium inline-flex items-center justify-center transition-all " + (variant === "mobile" ? "gap-1 px-1 text-[11px]" : "gap-1.5 text-[13px]") + " " + (
                   active
                     ? "bg-surface text-content shadow-xs"
                     : "text-content-muted hover:text-slate-700 hover:bg-white/60 dark:hover:text-slate-100 dark:hover:bg-slate-700/60"
                 )}
               >
                 <Icon className="w-3.5 h-3.5 shrink-0" />
-                <span>{tab.label}</span>
+                <span className="min-w-0 truncate">{tab.label}</span>
               </button>
             );
           })}
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3.5 space-y-3 [-webkit-overflow-scrolling:touch]">
+      <div className={"flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-3 [-webkit-overflow-scrolling:touch] " + (variant === "mobile" ? "p-3" : "p-3.5")}>
         {activeTab === "result" && (
           <WorkspaceResultTab
             t={t}

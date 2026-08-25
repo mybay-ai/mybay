@@ -14,9 +14,10 @@ import { ChatMessagesPanel } from "./chat-workspace/ChatMessagesPanel";
 import { ChatSettingsPanel } from "./chat-workspace/ChatSettingsPanel";
 import { useChatRuns } from "./chat-workspace/useChatRuns";
 import { ChatWorkspaceHeader } from "./chat-workspace/ChatWorkspaceHeader";
-import { ChatWorkspacePanel } from "./chat-workspace/ChatWorkspacePanel";
+import { ChatWorkspacePanel, type WorkspaceTab } from "./chat-workspace/ChatWorkspacePanel";
 import { useChatWorkspaceFiles } from "./chat-workspace/useChatWorkspaceFiles";
 import { useChatConversations } from "./chat-workspace/useChatConversations";
+import { computeMobileWorkspaceFrame, type MobileWorkspaceFrame } from "./chat-workspace/mobileWorkspaceLayout";
 import { recoverActiveRunMessages } from "./chat-workspace/run/runRecovery";
 import { markRunMessagesStopped } from "./chat-workspace/run/runTerminalMessages";
 import { getRetryAttachments } from "./chat-workspace/run/retryAttachments";
@@ -121,13 +122,15 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
   // UI States
   const [showSettings, setShowSettings] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [mobileOverlay, setMobileOverlay] = useState<"history" | "workspace" | null>(null);
+  const mobileSidebarOpen = mobileOverlay === "history";
+  const mobileWorkspaceOpen = mobileOverlay === "workspace";
   const [temperature, setTemperature] = useState<number>(0.7);
   const [reasoningEffort, setReasoningEffort] = useState<ChatReasoningEffort>("balanced");
   const [chatMode, setChatMode] = useState<"quick" | "assist" | "agent">("quick");
   const [selectedSkillId, setSelectedSkillId] = useState<string>("model_config_diagnosis");
-  const [mobileWorkspaceFrame, setMobileWorkspaceFrame] = useState<{ top: number; bottom: number } | null>(null);
-  const [mobileWorkspaceOpen, setMobileWorkspaceOpen] = useState(false);
+  const [mobileWorkspaceFrame, setMobileWorkspaceFrame] = useState<MobileWorkspaceFrame | null>(null);
+  const [mobileWorkspaceTab, setMobileWorkspaceTab] = useState<WorkspaceTab>("result");
 
   // Refs
   const workspaceRootRef = useRef<HTMLDivElement>(null);
@@ -260,12 +263,12 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
         // iOS changes visualViewport.offsetTop while the keyboard opens; deriving the
         // top position from getBoundingClientRect() makes the app header disappear.
         const dashboardHeaderOffset = 48;
-        const bottomInset = Math.max(0, Math.round(window.innerHeight - viewportHeight - viewportOffsetTop));
-
-        setMobileWorkspaceFrame({
-          top: dashboardHeaderOffset,
-          bottom: bottomInset
-        });
+        setMobileWorkspaceFrame(computeMobileWorkspaceFrame({
+          innerHeight: window.innerHeight,
+          viewportHeight,
+          viewportOffsetTop,
+          headerOffset: dashboardHeaderOffset
+        }));
 
         if (shouldScrollToBottomRef.current) {
           const container = scrollContainerRef.current;
@@ -292,6 +295,17 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
       window.visualViewport?.removeEventListener("scroll", updateMobileWorkspaceFrame);
     };
   }, []);
+
+  useEffect(() => {
+    if (!mobileOverlay) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMobileOverlay(null);
+      }
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [mobileOverlay]);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof document === "undefined") return;
@@ -1774,14 +1788,22 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
         hasMessages={messages.length > 0}
         chatMode={chatMode}
         getInstanceDropdownLabel={getInstanceDropdownLabel}
-        onOpenMobileSidebar={() => setMobileSidebarOpen(true)}
+        onOpenMobileSidebar={() => {
+          setShowSettings(false);
+          setMobileOverlay("history");
+        }}
         onDeployNewInstance={() => navigate(APP_ROUTES.DEPLOY)}
         onInstanceChange={(value) => {
           selectInstanceId(value);
           setMessages([]);
           setError(null);
+          setMobileOverlay(null);
+          setMobileWorkspaceTab("result");
         }}
-        onToggleSettings={() => setShowSettings(!showSettings)}
+        onToggleSettings={() => {
+          setMobileOverlay(null);
+          setShowSettings(!showSettings);
+        }}
         onClear={handleClear}
       />
 
@@ -1804,7 +1826,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
           <button
             type="button"
             className="absolute inset-0 z-20 bg-slate-950/45 sm:hidden"
-            onClick={() => setMobileSidebarOpen(false)}
+            onClick={() => setMobileOverlay(null)}
             aria-label={t("dashboard:chatWorkspace.sidebarToggle")}
           />
         )}
@@ -1823,19 +1845,19 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
           loadingMoreConversations={loadingMoreConversations}
           onCreateConversation={() => {
             handleCreateConversation();
-            setMobileSidebarOpen(false);
+            setMobileOverlay(null);
           }}
           onCreateProject={handleCreateProject}
           onRenameProject={handleRenameProject}
           onDeleteProject={handleDeleteProject}
           onMoveProject={handleMoveProject}
           onCloseSidebar={() => setSidebarOpen(false)}
-          onCloseMobileSidebar={() => setMobileSidebarOpen(false)}
+          onCloseMobileSidebar={() => setMobileOverlay(null)}
           onScroll={handleConversationsScroll}
           onSelectConversation={(id) => {
             setSearchNavigation(null);
             selectConversationId(id);
-            setMobileSidebarOpen(false);
+            setMobileOverlay(null);
           }}
           onSelectSearchResult={(result: ConversationSearchResult) => {
             if (result.message_id && Number.isFinite(result.sequence_no)) {
@@ -1849,7 +1871,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
               setSearchNavigation(null);
             }
             selectConversationId(result.conversation_id);
-            setMobileSidebarOpen(false);
+            setMobileOverlay(null);
           }}
           setRenameValue={setRenameValue}
           setRenamingId={setRenamingId}
@@ -1876,10 +1898,15 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
         {selectedId && (
           <button
             type="button"
-            onClick={() => setMobileWorkspaceOpen(true)}
+            onClick={() => {
+              setShowSettings(false);
+              setMobileOverlay("workspace");
+            }}
             className="sm:hidden absolute right-3 top-3 z-20 h-9 w-9 rounded-xl border border-outline bg-surface/95 text-content-secondary shadow-sm inline-flex items-center justify-center active:scale-95 transition-all"
             title={t("dashboard:chatWorkspace.workspaceTitle")}
             aria-label={t("dashboard:chatWorkspace.workspaceTitle")}
+            aria-expanded={mobileWorkspaceOpen}
+            aria-controls="mobile-chat-workspace-panel"
           >
             <Layers className="w-4 h-4" />
           </button>
@@ -2000,6 +2027,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
               pendingAttachments={pendingAttachments}
               isUploading={isUploading}
               attachmentConfig={attachmentConfig}
+              mobileKeyboardOpen={mobileWorkspaceFrame?.keyboardOpen || false}
               onUpload={handleUploadFiles}
               onRemoveAttachment={handleRemoveAttachment}
 
@@ -2040,13 +2068,13 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
             <button
               type="button"
               className="absolute inset-0"
-              onClick={() => setMobileWorkspaceOpen(false)}
+              onClick={() => setMobileOverlay(null)}
               aria-label={t("dashboard:files_close_preview_title")}
             />
-            <div className="relative flex h-[min(78dvh,720px)] max-h-[calc(100dvh-72px)] min-h-[360px] w-full flex-col rounded-t-3xl border border-outline bg-surface shadow-2xl overflow-hidden">
+            <div id="mobile-chat-workspace-panel" className="relative flex h-[82%] max-h-[720px] min-h-[min(360px,100%)] w-full flex-col overflow-hidden rounded-t-3xl border border-outline bg-surface shadow-2xl">
               <button
                 type="button"
-                onClick={() => setMobileWorkspaceOpen(false)}
+                onClick={() => setMobileOverlay(null)}
                 className="absolute right-3 top-3 z-10 h-8 w-8 rounded-full border border-outline bg-surface text-slate-500 hover:text-slate-800 inline-flex items-center justify-center shadow-sm dark:text-slate-300 dark:hover:text-white"
                 aria-label={t("dashboard:files_close_preview_title")}
               >
@@ -2054,6 +2082,8 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
               </button>
               <ChatWorkspacePanel
                 variant="mobile"
+                activeTab={mobileWorkspaceTab}
+                onActiveTabChange={setMobileWorkspaceTab}
                 selectedId={selectedId}
                 selectedConversationId={selectedConversationId}
                 conversationFiles={conversationFiles}

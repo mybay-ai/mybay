@@ -40,6 +40,7 @@ type ChatInputBarProps = {
   onKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
   onStopRun: () => void;
   onInputFocus?: () => void;
+  mobileKeyboardOpen?: boolean;
 };
 
 export function shouldIgnoreComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>): boolean {
@@ -67,6 +68,7 @@ export function ChatInputBar({
   onKeyDown,
   onStopRun,
   onInputFocus,
+  mobileKeyboardOpen = false,
   pendingAttachments = [],
   onUpload,
   onRemoveAttachment,
@@ -91,12 +93,14 @@ export function ChatInputBar({
   useEffect(() => {
     const textarea = textareaRef.current;
     if (!textarea) return;
-    const maxHeight = window.innerWidth < 640 ? 200 : 240;
+    const mobile = window.innerWidth < 640;
+    const minHeight = mobile && mobileKeyboardOpen ? 56 : 88;
+    const maxHeight = mobile ? (mobileKeyboardOpen ? 120 : 200) : 240;
     textarea.style.height = "auto";
-    const nextHeight = Math.min(Math.max(textarea.scrollHeight, 88), maxHeight);
+    const nextHeight = Math.min(Math.max(textarea.scrollHeight, minHeight), maxHeight);
     textarea.style.height = `${nextHeight}px`;
     textarea.style.overflowY = textarea.scrollHeight > maxHeight ? "auto" : "hidden";
-  }, [input]);
+  }, [input, mobileKeyboardOpen]);
   const placeholder = !isChatReady
     ? (isCompactInput
       ? t("dashboard:chatWorkspace.notReadyPlaceholderMobile")
@@ -213,7 +217,7 @@ export function ChatInputBar({
   ];
 
   return (
-    <div className="border-t border-outline/80 px-3 pt-2.5 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:p-4 bg-surface/90 backdrop-blur shrink-0">
+    <div className={"shrink-0 border-t border-outline/80 bg-surface/90 px-3 backdrop-blur sm:p-4 " + (mobileKeyboardOpen ? "pb-2 pt-1.5" : "pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2.5")}>
 
       {(pendingAttachments.length > 0 || isUploading) && (
         <div className="flex flex-wrap gap-2 mb-2 px-1 max-w-5xl mx-auto">
@@ -244,7 +248,7 @@ export function ChatInputBar({
             placeholder={placeholder}
             disabled={!isChatReady}
             rows={1}
-            className="w-full min-h-[88px] sm:min-h-[92px] max-h-[200px] sm:max-h-[240px] resize-none border-0 bg-transparent px-4 pb-12 pt-4 text-[16px] sm:text-[14px] leading-6 text-content placeholder:text-content-muted focus:outline-none scrollbar-none disabled:cursor-not-allowed disabled:text-content-muted"
+            className={"w-full resize-none border-0 bg-transparent px-4 pb-12 text-[16px] leading-6 text-content placeholder:text-content-muted focus:outline-none scrollbar-none disabled:cursor-not-allowed disabled:text-content-muted sm:min-h-[92px] sm:max-h-[240px] sm:pt-4 sm:text-[14px] " + (mobileKeyboardOpen ? "min-h-14 max-h-[120px] pt-2.5" : "min-h-[88px] max-h-[200px] pt-4")}
           />
 
 
@@ -401,11 +405,11 @@ export function ChatInputBar({
             </button>
           </div>
         </div>
-        <div className="mt-2 flex flex-wrap items-center gap-1.5 px-1 text-[11px] text-content-muted">
+        <div className={"mt-2 items-center gap-1.5 px-1 text-[11px] text-content-muted sm:flex sm:flex-wrap " + (mobileKeyboardOpen ? "hidden" : "flex flex-nowrap overflow-x-auto overscroll-x-contain pb-0.5 [-webkit-overflow-scrolling:touch]")}>
           {inputStatusItems.map((item) => {
             const Icon = item.icon;
             return (
-              <div key={item.id} className="inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-lg border border-outline/70 bg-surface/75 px-2 py-1 shadow-xs">
+              <div key={item.id} className="inline-flex min-w-0 max-w-full shrink-0 items-center gap-1.5 rounded-lg border border-outline/70 bg-surface/75 px-2 py-1 shadow-xs">
                 <Icon className="h-3 w-3 shrink-0 text-slate-400" />
                 <span className="shrink-0 text-slate-400">{item.label}</span>
                 <span className="min-w-0 truncate font-medium text-content-secondary">{item.value}</span>
