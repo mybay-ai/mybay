@@ -2,6 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { createPreviewRequestGuard, isPreviewAbortError, type PreviewRequestToken } from "./previewRequestGuard";
+import {
+  buildSandboxedHtmlPreviewShell,
+  isHtmlPreviewFile,
+  isSvgPreviewFile,
+  LOCAL_TEXT_PREVIEW_MAX_BYTES,
+} from "./previewSecurity";
 import { type PendingAttachment } from "./ChatInputBar";
 import {
   DEFAULT_CHAT_ATTACHMENT_CONFIG,
@@ -441,6 +447,14 @@ export function useChatWorkspaceFiles({
     return blob;
   };
 
+  const isMemoryBoundTextPreview = (kind: ConversationFilePreview["kind"]) => (
+    kind === "text" || kind === "markdown" || kind === "html"
+  );
+
+  const getPreviewTooLargeMessage = () => t("dashboard:chatWorkspace.workspacePreviewTooLarge", {
+    max: Math.round(LOCAL_TEXT_PREVIEW_MAX_BYTES / (1024 * 1024))
+  });
+
   const saveBlobFromResponse = async (response: Response, fallbackName: string) => {
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
@@ -470,11 +484,20 @@ export function useChatWorkspaceFiles({
 
     try {
       const response = await api.getRaw(`/api/instances/${capturedInstanceId}/files/download?path=${encodeURIComponent(filePath)}`, { signal: request.signal });
+      const declaredMimeType = response.headers.get("content-type") || loadingFile.mimeType || "";
+      const declaredKind = getPreviewKindByName(loadingFile.originalName, declaredMimeType);
+      const declaredSize = Number(response.headers.get("content-length") || 0);
+      if (isMemoryBoundTextPreview(declaredKind) && declaredSize > LOCAL_TEXT_PREVIEW_MAX_BYTES) {
+        throw new Error("PREVIEW_TOO_LARGE");
+      }
       const blob = await response.blob();
       if (!isPreviewRequestCurrent(request)) return;
       const mimeType = blob.type || loadingFile.mimeType || "";
       const previewFile = buildInstanceFilePreview(filePath, blob.size, mimeType);
       const kind = getPreviewKindByName(previewFile.originalName, mimeType);
+      if (isMemoryBoundTextPreview(kind) && blob.size > LOCAL_TEXT_PREVIEW_MAX_BYTES) {
+        throw new Error("PREVIEW_TOO_LARGE");
+      }
       const previewBlob = normalizePreviewBlob(blob, kind);
 
       if (kind === "text" || kind === "markdown") {
@@ -504,7 +527,9 @@ export function useChatWorkspaceFiles({
       });
     } catch (err: any) {
       if (isPreviewAbortError(err) || !isPreviewRequestCurrent(request)) return;
-      const message = err?.message || t("dashboard:chatWorkspace.workspacePreviewLoadFailed");
+      const message = err?.message === "PREVIEW_TOO_LARGE"
+        ? getPreviewTooLargeMessage()
+        : (err?.message || t("dashboard:chatWorkspace.workspacePreviewLoadFailed"));
       setConversationFilePreview({ file: loadingFile, kind: "unsupported", source: "instance", instancePath: filePath, error: message });
       showToast(message, "error");
     }
@@ -523,10 +548,35 @@ export function useChatWorkspaceFiles({
     if (!selectedId || !selectedConversationId) return;
     try {
       const response = await api.downloadChatFile(selectedId, selectedConversationId, file.id, "inline");
+      const declaredMimeType = response.headers.get("content-type") || file.mimeType || "";
+      const declaredKind = getPreviewKindByName(file.originalName, declaredMimeType);
+      const declaredSize = Number(response.headers.get("content-length") || file.size || 0);
+      if (isMemoryBoundTextPreview(declaredKind) && declaredSize > LOCAL_TEXT_PREVIEW_MAX_BYTES) {
+        showToast(getPreviewTooLargeMessage(), "warning");
+        return;
+      }
       const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+      const kind = getPreviewKind(file, blob);
+      if (isMemoryBoundTextPreview(kind) && blob.size > LOCAL_TEXT_PREVIEW_MAX_BYTES) {
+        showToast(getPreviewTooLargeMessage(), "warning");
+        return;
+      }
+      let sourceUrl: string | null = null;
+      let openBlob = blob;
+      if (isHtmlPreviewFile(file.originalName, blob.type || file.mimeType)) {
+        const source = await blob.text();
+        openBlob = new Blob([buildSandboxedHtmlPreviewShell(source, file.originalName)], { type: "text/html;charset=utf-8" });
+      } else if (isSvgPreviewFile(file.originalName, blob.type || file.mimeType)) {
+        sourceUrl = window.URL.createObjectURL(blob);
+        const imageMarkup = `<img src="${sourceUrl}" alt="" style="display:block;max-width:100%;max-height:100%;margin:auto">`;
+        openBlob = new Blob([buildSandboxedHtmlPreviewShell(imageMarkup, file.originalName)], { type: "text/html;charset=utf-8" });
+      }
+      const url = window.URL.createObjectURL(openBlob);
       window.open(url, "_blank", "noopener,noreferrer");
-      window.setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
+      window.setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+        if (sourceUrl) window.URL.revokeObjectURL(sourceUrl);
+      }, 60_000);
     } catch (err: any) {
       showToast(err?.message || t("dashboard:chatWorkspace.fileOpenFailed"), "error");
     }
@@ -549,9 +599,18 @@ export function useChatWorkspaceFiles({
     setConversationFilePreview({ file, kind: "unsupported", source: "conversation", loading: true });
     try {
       const response = await api.downloadChatFile(capturedInstanceId, capturedConversationId, file.id, "inline", { signal: request.signal });
+      const declaredMimeType = response.headers.get("content-type") || file.mimeType || "";
+      const declaredKind = getPreviewKindByName(file.originalName, declaredMimeType);
+      const declaredSize = Number(response.headers.get("content-length") || file.size || 0);
+      if (isMemoryBoundTextPreview(declaredKind) && declaredSize > LOCAL_TEXT_PREVIEW_MAX_BYTES) {
+        throw new Error("PREVIEW_TOO_LARGE");
+      }
       const blob = await response.blob();
       if (!isPreviewRequestCurrent(request)) return;
       const kind = getPreviewKind(file, blob);
+      if (isMemoryBoundTextPreview(kind) && blob.size > LOCAL_TEXT_PREVIEW_MAX_BYTES) {
+        throw new Error("PREVIEW_TOO_LARGE");
+      }
       const previewBlob = normalizePreviewBlob(blob, kind);
       if (kind === "text" || kind === "markdown") {
         const text = await previewBlob.text();
@@ -583,7 +642,9 @@ export function useChatWorkspaceFiles({
         file,
         kind: "unsupported",
         source: "conversation",
-        error: err?.message || t("dashboard:chatWorkspace.workspacePreviewLoadFailed")
+        error: err?.message === "PREVIEW_TOO_LARGE"
+          ? getPreviewTooLargeMessage()
+          : (err?.message || t("dashboard:chatWorkspace.workspacePreviewLoadFailed"))
       });
     }
   };

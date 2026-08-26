@@ -559,6 +559,7 @@
   "inputStatusConnecting": "正在连接对话流",
   "inputStatusReconnecting": "连接中断，正在恢复",
   "inputStatusPollingRecovery": "流式连接不可用，正在同步状态",
+  "workspacePreviewTooLarge": "文件超过 {{max}} MB，为避免占用过多内存，请下载后查看。",
   "timelineSteps": "个步骤",
   "messageTooLong": "单条消息最多支持 {{max}} 字符，请拆分内容或作为文件上传。"
 }

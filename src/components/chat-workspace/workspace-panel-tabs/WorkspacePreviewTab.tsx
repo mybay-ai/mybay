@@ -4,6 +4,7 @@ import remarkGfm from "remark-gfm";
 import type { TFunction } from "i18next";
 import type { ConversationFilePreview } from "../useChatWorkspaceFiles";
 import type { PendingAttachment } from "../ChatInputBar";
+import { buildSandboxedHtmlPreviewShell, HTML_PREVIEW_IFRAME_SANDBOX, isSvgPreviewFile } from "../previewSecurity";
 
 type WorkspacePreviewTabProps = {
   t: TFunction;
@@ -26,7 +27,14 @@ export function WorkspacePreviewTab({
 }: WorkspacePreviewTabProps) {
   const previewSourceUrl = conversationFilePreview?.url || "";
   const canUsePreviewUrl = Boolean(previewSourceUrl);
-  const useBlobActions = conversationFilePreview?.source === "instance" && canUsePreviewUrl;
+  const useDirectDownloadAction = conversationFilePreview?.source === "instance" && canUsePreviewUrl;
+  const useDirectOpenAction = useDirectDownloadAction
+    && conversationFilePreview?.kind !== "html"
+    && !isSvgPreviewFile(conversationFilePreview?.file.originalName || "", conversationFilePreview?.file.mimeType || "");
+  const useConversationActions = conversationFilePreview?.source === "conversation";
+  const sandboxedHtml = conversationFilePreview?.kind === "html" && conversationFilePreview.text
+    ? buildSandboxedHtmlPreviewShell(conversationFilePreview.text, conversationFilePreview.file.originalName)
+    : undefined;
 
   return (
           <div className="rounded-xl border border-outline/80 bg-surface p-4 shadow-sm">
@@ -49,16 +57,16 @@ export function WorkspacePreviewTab({
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
-                    {useBlobActions ? (
+                    {useDirectOpenAction ? (
                       <a href={previewSourceUrl} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-full text-slate-400 hover:bg-surface-muted hover:text-indigo-600 dark:hover:text-indigo-300" title={t("dashboard:chatWorkspace.runResultSummaryOpenFile")}>
                         <ExternalLink className="w-3.5 h-3.5" />
                       </a>
-                    ) : onOpenConversationFile && (
+                    ) : useConversationActions && onOpenConversationFile && (
                       <button type="button" onClick={() => onOpenConversationFile(conversationFilePreview.file)} className="p-1.5 rounded-full text-slate-400 hover:bg-surface-muted hover:text-indigo-600 dark:hover:text-indigo-300" title={t("dashboard:chatWorkspace.runResultSummaryOpenFile")}>
                         <ExternalLink className="w-3.5 h-3.5" />
                       </button>
                     )}
-                    {useBlobActions ? (
+                    {useDirectDownloadAction ? (
                       <a href={previewSourceUrl} download={conversationFilePreview.file.originalName} className="p-1.5 rounded-full text-slate-400 hover:bg-surface-muted hover:text-emerald-600 dark:hover:text-emerald-300" title={t("dashboard:chatWorkspace.runResultSummaryDownloadFile")}>
                         <Download className="w-3.5 h-3.5" />
                       </a>
@@ -81,12 +89,12 @@ export function WorkspacePreviewTab({
                     <p className="text-[13px] leading-5 text-content-muted">
                       {conversationFilePreview.error}
                     </p>
-                    {useBlobActions && (
+                    {useDirectDownloadAction && (
                       <div className="mt-4 flex justify-center gap-2">
-                        <a href={previewSourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-outline bg-surface px-3 py-1.5 text-[12px] font-semibold text-content-secondary hover:border-indigo-200 hover:text-indigo-600 dark:hover:border-indigo-400/40 dark:hover:text-indigo-300">
-                          <ExternalLink className="h-3.5 w-3.5" />
-                          {t("dashboard:chatWorkspace.runResultSummaryOpenFile")}
-                        </a>
+                        {useDirectOpenAction && <a href={previewSourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-outline bg-surface px-3 py-1.5 text-[12px] font-semibold text-content-secondary hover:border-indigo-200 hover:text-indigo-600 dark:hover:border-indigo-400/40 dark:hover:text-indigo-300">
+                            <ExternalLink className="h-3.5 w-3.5" />
+                            {t("dashboard:chatWorkspace.runResultSummaryOpenFile")}
+                          </a>}
                         <a href={previewSourceUrl} download={conversationFilePreview.file.originalName} className="inline-flex items-center gap-1.5 rounded-lg border border-outline bg-surface px-3 py-1.5 text-[12px] font-semibold text-content-secondary hover:border-emerald-200 hover:text-emerald-600 dark:hover:border-emerald-400/40 dark:hover:text-emerald-300">
                           <Download className="h-3.5 w-3.5" />
                           {t("dashboard:chatWorkspace.runResultSummaryDownloadFile")}
@@ -100,10 +108,10 @@ export function WorkspacePreviewTab({
                   </div>
                 ) : conversationFilePreview.kind === "html" && (conversationFilePreview.text || conversationFilePreview.url) ? (
                   <iframe
-                    src={conversationFilePreview.text ? undefined : conversationFilePreview.url}
-                    srcDoc={conversationFilePreview.text || undefined}
+                    src={sandboxedHtml ? undefined : conversationFilePreview.url}
+                    srcDoc={sandboxedHtml}
                     title={conversationFilePreview.file.originalName}
-                    sandbox="allow-scripts allow-forms allow-popups allow-modals"
+                    sandbox={HTML_PREVIEW_IFRAME_SANDBOX}
                     referrerPolicy="no-referrer"
                     className="h-[min(44dvh,520px)] min-h-64 w-full rounded-xl border border-outline bg-white sm:h-[520px]"
                   />
