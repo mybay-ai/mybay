@@ -14,6 +14,7 @@ export const DEPLOYMENT_ERROR_CODES = [
   "CLEANUP_FAILED",
   "QUOTA_EXCEEDED",
   "PATH_CONFLICT",
+  "PROVIDER_UNSUPPORTED",
 ] as const;
 
 export type DeploymentErrorCode = typeof DEPLOYMENT_ERROR_CODES[number];
@@ -100,6 +101,7 @@ export function classifyDockerError(error: unknown, fallback: DeploymentErrorCod
     CLEANUP_FAILED: "One or more instance resources could not be removed.",
     QUOTA_EXCEEDED: "The instance quota has been reached.",
     PATH_CONFLICT: "Another instance already uses this path.",
+    PROVIDER_UNSUPPORTED: "The selected model provider is not supported by the Hermes runtime.",
   };
   return { code: fallback, message: fallbackMessages[fallback], detail, retryable: false };
 }

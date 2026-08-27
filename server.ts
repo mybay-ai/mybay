@@ -8,6 +8,7 @@ if (typeof dns.setDefaultResultOrder === "function") {
 }
 
 import path from "path";
+import { APP_CONTENT_SECURITY_POLICY } from "./server/security/appContentSecurityPolicy";
 import fs from "fs";
 import { Server as SocketIOServer } from "socket.io";
 import { createServer } from "http";
@@ -195,7 +196,7 @@ async function startServer() {
     res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
     res.setHeader('X-XSS-Protection', '0');
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-    res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; connect-src 'self' ws: wss: https://challenges.cloudflare.com; font-src 'self' data:; img-src 'self' data: blob: https:; frame-src 'self' https://challenges.cloudflare.com");
+    res.setHeader('Content-Security-Policy', APP_CONTENT_SECURITY_POLICY);
     next();
   });
 

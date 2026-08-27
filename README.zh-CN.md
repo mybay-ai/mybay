@@ -1,8 +1,7 @@
 # 麦贝开源版（MyBay Open Source）
-<img width="1672" height="941" alt="512139158125125" src="https://github.com/user-attachments/assets/1ad9f507-6913-4b5d-9694-ede1d858a3a0" />
 
-[![CI](https://github.com/mybay-ai/mybay/actions/workflows/ci.yml/badge.svg)](https://github.com/mybay-ai/mybay/actions/workflows/ci.yml)
-[![Security](https://github.com/mybay-ai/mybay/actions/workflows/security.yml/badge.svg)](https://github.com/mybay-ai/mybay/actions/workflows/security.yml)
+[![CI](https://github.com/mybay-ai/mybay-core/actions/workflows/ci.yml/badge.svg)](https://github.com/mybay-ai/mybay-core/actions/workflows/ci.yml)
+[![Security](https://github.com/mybay-ai/mybay-core/actions/workflows/security.yml/badge.svg)](https://github.com/mybay-ai/mybay-core/actions/workflows/security.yml)
 [![License: AGPL-3.0-only](https://img.shields.io/badge/license-AGPL--3.0--only-blue.svg)](./LICENSE)
 
 语言：[English](./README.md) | [简体中文](./README.zh-CN.md)
@@ -15,7 +14,27 @@
 
 MyBay Open Source 是可自行部署的社区开源版本；[mybay.ai](https://mybay.ai) 提供的托管服务属于独立的商业服务，安装和运行本仓库不需要注册或依赖该服务。
 
-> **发布状态：Early Preview（`v0.1.22-preview`）。** 在 0.x 阶段，公共接口、Runtime Adapter、部署细节与升级行为仍可能调整。
+> **发布状态：Early Preview（`v0.1.23-preview`）。** 在 0.x 阶段，公共接口、Runtime Adapter、部署细节与升级行为仍可能调整。
+
+## 产品预览
+
+### 本地优先的 Agent 管理平台
+
+通过 Quick Start 或手动 Docker 部署，在自己的基础设施上运行和管理 AI Agent。
+
+![麦贝开源版首页与部署方式](./docs/images/mybay-home.png)
+
+### Agent 部署与实例管理
+
+在本地控制台中完成环境预检、模型凭据配置、Agent 部署、消息渠道连接和运行状态诊断。
+
+![Agent 部署中心](./docs/images/agent-deployment-center.png)
+
+### 实例对话与文件工作区
+
+在同一界面中与 Agent 对话，并查看执行进度、生成文件、文件变更摘要和支持的文件预览。
+
+![实例对话与文件工作区](./docs/images/chat-file-workspace.png)
 
 ## 与 Hermes Agent 的项目关系
 
@@ -35,6 +54,8 @@ MyBay 是独立维护的开源项目，并非 Nous Research 官方产品，也�
 ---
 
 ## 快速开始与部署指引
+
+> 第一次使用麦贝？请按照完整的 **[10 分钟部署第一个 Agent](./docs/QUICKSTART.zh-CN.md)** 教程，从启动 Docker 一直完成第一次本地对话。
 
 ### 方式一：本机桌面一键部署
 
@@ -94,8 +115,8 @@ chmod +x quick-start.sh
 
 1. **克隆项目并复制环境变量文件：**
    ```bash
-   git clone https://github.com/mybay-ai/mybay.git
-   cd mybay
+   git clone https://github.com/mybay-ai/mybay-core.git
+   cd mybay-core
    cp .env.example .env
    ```
 
@@ -257,6 +278,8 @@ MyBay 提供可扩展的 **Agent Runtime Specification（运行态接入规范�
 
 ## 更多文档
 
+- `docs/QUICKSTART.zh-CN.md`：10 分钟部署第一个本地 Agent（[English](./docs/QUICKSTART.md)）
+- `docs/troubleshooting.zh-CN.md`：部署、聊天、飞书和文件预览的故障索引（[English](./docs/troubleshooting.md)）
 - `docs/local-deployment.zh-CN.md`：本地部署详细流程
 - `docs/env.zh-CN.md`：环境变量详细说明
 - `docs/docker-image-cache.zh-CN.md`：Hermes Agent 镜像拉取、存储位置与清理说明

@@ -4,6 +4,7 @@ import type { ChatMessage } from "../../../lib/chatWorkspaceState";
 import type { ChatApprovalChoice, ChatApprovalRequest, ChatRunMetrics } from "../useChatRuns";
 import type { PendingAttachment } from "../ChatInputBar";
 import type { RunDisplayStatus } from "../run/runStatusSemantics";
+import { isGeneratedArtifactPreviewable, type GeneratedArtifact } from "../generatedArtifacts";
 
 type WorkspaceResultTabProps = {
   t: TFunction;
@@ -17,6 +18,7 @@ type WorkspaceResultTabProps = {
   completedToolCount: number;
   failedToolCount: number;
   conversationFiles: PendingAttachment[];
+  generatedArtifacts?: GeneratedArtifact[];
   latestAssistantUrls: string[];
   latestAssistantMessage?: ChatMessage;
   latestAssistantContent: string;
@@ -25,6 +27,8 @@ type WorkspaceResultTabProps = {
   onCopyConversationFileLink?: (file: PendingAttachment) => void;
   copiedFileId?: string | null;
   getConversationFileSourceLabel?: (file: PendingAttachment) => string;
+  onPreviewGeneratedArtifact?: (filePath: string) => void;
+  onDownloadGeneratedArtifact?: (filePath: string) => void;
   runMetrics: ChatRunMetrics;
   totalToolCallCount: number;
   runDisplayStatus: RunDisplayStatus;
@@ -43,6 +47,7 @@ export function WorkspaceResultTab({
   completedToolCount,
   failedToolCount,
   conversationFiles,
+  generatedArtifacts = [],
   latestAssistantUrls,
   latestAssistantMessage,
   latestAssistantContent,
@@ -51,6 +56,8 @@ export function WorkspaceResultTab({
   onCopyConversationFileLink,
   copiedFileId = null,
   getConversationFileSourceLabel,
+  onPreviewGeneratedArtifact,
+  onDownloadGeneratedArtifact,
   runMetrics,
   totalToolCallCount,
   runDisplayStatus,
@@ -149,7 +156,7 @@ export function WorkspaceResultTab({
                       : t("dashboard:chatWorkspace.runResultSummaryFailed", { count: failedToolCount })}
                   </div>
                   <div className="rounded-lg bg-surface-muted px-2.5 py-2 text-content-secondary">
-                    {t("dashboard:chatWorkspace.runResultSummaryFiles", { count: conversationFiles.length })}
+                    {t("dashboard:chatWorkspace.runResultSummaryFiles", { count: conversationFiles.length + generatedArtifacts.length })}
                   </div>
                   <div className="rounded-lg bg-surface-muted px-2.5 py-2 text-content-secondary">
                     {t("dashboard:chatWorkspace.runResultSummaryLinks", { count: latestAssistantUrls.length })}
@@ -180,6 +187,28 @@ export function WorkspaceResultTab({
                     <p className="font-semibold text-content-secondary">{formatTokenCount(runMetrics.usageTotalTokens)}</p>
                   </div>
                 </div>
+
+                {generatedArtifacts.length > 0 && (
+                  <div className="mt-3">
+                    <p className="mb-2 text-[12px] font-semibold text-content-muted">{t("dashboard:chatWorkspace.workspaceGeneratedArtifactsTitle", { count: generatedArtifacts.length })}</p>
+                    <div className="space-y-2">
+                      {generatedArtifacts.slice(0, 3).map((artifact) => {
+                        const ready = isGeneratedArtifactPreviewable(artifact);
+                        return (
+                          <div key={artifact.path} className="flex items-center gap-2 rounded-lg border border-outline bg-surface-muted px-2.5 py-2">
+                            <FileText className={`h-4 w-4 shrink-0 ${ready ? "text-emerald-500" : artifact.status === "generating" || artifact.status === "checking" ? "text-amber-500" : "text-red-500"}`} />
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-[13px] font-medium text-content-secondary">{artifact.name}</p>
+                              <p className="truncate text-[11px] text-slate-400">{t(`dashboard:chatWorkspace.workspaceGeneratedArtifactStatus_${artifact.status}`)}</p>
+                            </div>
+                            {onPreviewGeneratedArtifact && <button type="button" disabled={!ready} onClick={() => onPreviewGeneratedArtifact(artifact.path)} className="rounded-full p-1 text-slate-400 hover:bg-surface hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-35" title={t("dashboard:chatWorkspace.workspacePreviewFile")}><ExternalLink className="h-3.5 w-3.5" /></button>}
+                            {onDownloadGeneratedArtifact && <button type="button" disabled={!ready} onClick={() => onDownloadGeneratedArtifact(artifact.path)} className="rounded-full p-1 text-slate-400 hover:bg-surface hover:text-emerald-600 disabled:cursor-not-allowed disabled:opacity-35" title={t("dashboard:chatWorkspace.runResultSummaryDownloadFile")}><Download className="h-3.5 w-3.5" /></button>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {conversationFiles.length > 0 && (
                   <div className="mt-3">

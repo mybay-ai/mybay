@@ -698,6 +698,14 @@ dashboard:
     let finalYamlContent = "";
     try {
       const parsedObj = yaml.load(hermesNativeYamlContent) as any;
+      parsedObj.model = {
+        ...(parsedObj.model || {}),
+        ...(hermesModelConfigResult.configYaml.model || {})
+      };
+      parsedObj.providers = {
+        ...(parsedObj.providers || {}),
+        ...(hermesModelConfigResult.configYaml.providers || {})
+      };
       const cleanedObj = cleanYamlObject(parsedObj) as any;
 
       if (config.nativeDashboardBasicAuthEnabled === true) {
@@ -751,5 +759,4 @@ dashboard:
     throw new Error(cleanMsg);
   }
 }
-
 

@@ -35,8 +35,8 @@ To keep PR review smooth, please refrain from adding these features without prio
 
 1. Fork and clone the repository:
    ```bash
-   git clone https://github.com/mybay-ai/mybay.git
-   cd mybay
+   git clone https://github.com/mybay-ai/mybay-core.git
+   cd mybay-core
    ```
 
 2. Install dependencies:

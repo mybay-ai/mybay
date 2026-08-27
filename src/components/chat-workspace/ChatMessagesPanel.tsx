@@ -14,6 +14,7 @@ import type { RunExecutionState } from "./run/runTypes";
 import { deriveRunAssistantText, findRunAssistantMessageIndex, shouldShowLegacyRunLoading } from "./run/runSelectors";
 import { selectInlineApproval } from "./run/approvalSelectors";
 import { getRunStatusI18nKey, resolveRunDisplayStatus } from "./run/runStatusSemantics";
+import type { GeneratedArtifact } from "./generatedArtifacts";
 
 type ReadinessState = {
   ready: boolean;
@@ -54,6 +55,8 @@ type ChatMessagesPanelProps = {
   conversationFiles?: PendingAttachment[];
   onOpenConversationFile?: (file: PendingAttachment) => void;
   onOpenInstanceFilePath?: (filePath: string) => void;
+  onDownloadInstanceFilePath?: (filePath: string) => void;
+  generatedArtifacts?: GeneratedArtifact[];
   onMessageFeedbackChange?: (messageId: string, feedback: "like" | "dislike" | null) => void;
   highlightedMessageId?: string | null;
 };
@@ -92,6 +95,8 @@ export function ChatMessagesPanel({
   conversationFiles = [],
   onOpenConversationFile,
   onOpenInstanceFilePath,
+  onDownloadInstanceFilePath,
+  generatedArtifacts = [],
   onMessageFeedbackChange
 }: ChatMessagesPanelProps) {
   const { t } = useTranslation(["dashboard", "common"]);
@@ -185,11 +190,13 @@ export function ChatMessagesPanel({
               conversationFiles={conversationFiles}
               onOpenConversationFile={onOpenConversationFile}
               onOpenInstanceFilePath={onOpenInstanceFilePath}
+              onDownloadInstanceFilePath={onDownloadInstanceFilePath}
+              generatedArtifacts={generatedArtifacts}
               fallbackModelLabel={fallbackModelLabel}
               instanceId={selectedId}
               onMessageFeedbackChange={onMessageFeedbackChange}
               runExecutionState={msg.role === "assistant" && messageIndex === runAssistantIndex ? runExecutionState : null}
-              runMetrics={runMetrics}
+              runMetrics={msg.role === "assistant" && messageIndex === runAssistantIndex ? runMetrics : null}
               approvalRequest={msg.role === "assistant" && messageIndex === runAssistantIndex ? inlineApproval : null}
               canRespondToApproval={canRespondToApproval}
               onRespondToApproval={onRespondToApproval}
@@ -207,6 +214,8 @@ export function ChatMessagesPanel({
               conversationFiles={conversationFiles}
               onOpenConversationFile={onOpenConversationFile}
               onOpenInstanceFilePath={onOpenInstanceFilePath}
+              onDownloadInstanceFilePath={onDownloadInstanceFilePath}
+              generatedArtifacts={generatedArtifacts}
               fallbackModelLabel={fallbackModelLabel}
               instanceId={selectedId}
               runExecutionState={runExecutionState}

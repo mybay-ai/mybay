@@ -4,5 +4,28 @@
   "save": "保存",
   "loading": "加载中...",
   "english": "English",
-  "chinese": "简体中文"
+  "chinese": "简体中文",
+  "providerPicker": {
+    "placeholder": "请选择模型供应商",
+    "search": "搜索供应商或模型…",
+    "empty": "没有匹配的模型供应商",
+    "groups": {
+      "recommended": "⭐ 推荐供应商",
+      "domestic": "🇨🇳 更多中国大陆服务",
+      "international": "🌍 更多海外服务",
+      "aggregator": "🔀 模型聚合平台",
+      "custom": "⚙️ 高级与自定义",
+      "legacy": "旧配置"
+    },
+    "badges": {
+      "recommended": "推荐",
+      "mainstream": "主流",
+      "fast": "高速",
+      "aggregator": "聚合平台",
+      "oauth": "OAuth",
+      "cn-direct": "中国大陆直连",
+      "global": "海外服务",
+      "custom": "自定义网络"
+    }
+  }
 }

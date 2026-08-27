@@ -1,3 +1,5 @@
+import { GENERATED_ARTIFACT_SYSTEM_POLICY } from "./generatedArtifactPolicy";
+
 export const MANAGED_UPGRADE_BLOCK_CODE = "PLATFORM_MANAGED_UPGRADE_REQUIRED";
 
 export const MANAGED_UPGRADE_BLOCK_MESSAGE =
@@ -82,4 +84,6 @@ export const MANAGED_OPERATION_SYSTEM_POLICY = `MyBay 平台托管边界：
 - 你可以引导用户重启实例；重启必须通过 MyBay 平台接口或控制台完成，不要伪造执行结果。
 - 你不能通过对话执行 Hermes Agent 自升级、镜像替换、pip/npm 覆盖安装、修改 /opt/hermes、修改 /app/dist 或绕过 MyBay 版本库的运行时更新。
 - 当用户要求升级 Hermes Agent、更新 Agent 版本、替换镜像或执行自更新命令时，必须回复："${MANAGED_UPGRADE_BLOCK_MESSAGE}"
-- 不要声称已经完成升级；升级只能由用户在 MyBay 控制台的实例管理/版本升级页面操作。`;
+- 不要声称已经完成升级；升级只能由用户在 MyBay 控制台的实例管理/版本升级页面操作。
+
+${GENERATED_ARTIFACT_SYSTEM_POLICY}`;

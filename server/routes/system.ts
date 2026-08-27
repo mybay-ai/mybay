@@ -644,14 +644,14 @@ router.post("/test-llm", authenticateToken, testLimiter, async (req: Authenticat
     }
   }
 
-  if (!apiKey || !model || !baseUrl) {
-    return res.json({ success: false, error: "缺少必填参数: apiKey, model 或 baseUrl" });
-  }
-
   const strategy = conf ? conf.testStrategy : "openai-chat-completions";
 
   if (strategy === "no-predeploy-test") {
     return res.json({ success: false, error: `模型服务商 "${conf ? conf.label : provider}" 设置了 no-predeploy-test 策略，不支持运行预配置连通性测试。` });
+  }
+
+  if (!model || !baseUrl || (conf?.requiresApiKey !== false && !apiKey)) {
+    return res.json({ success: false, error: "缺少必填参数: apiKey, model 或 baseUrl" });
   }
 
   const controller = new AbortController();

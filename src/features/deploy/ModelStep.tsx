@@ -7,6 +7,7 @@ import { providerRegistry } from "../../../shared/providerRegistry";
 import { resolveProviderRegistryKey } from "../../../shared/providerRegistryUtils";
 import type { Credential } from "../../types";
 import { api } from "../../lib/api";
+import { ProviderSelect } from "../../components/ProviderSelect";
 
 interface ModelStepProps {
   data: any;
@@ -38,17 +39,18 @@ export function ModelStep({ data, update, testLLM, testStatus, currentUser }: Mo
 
   const isPlatformModelMode = false;
 
-  // Filter only enabled providers
-  const activeProviders = Object.values(providerRegistry).filter(p => p.enabled);
   const selectedProviderConf = data.provider ? providerRegistry[data.provider as string] : undefined;
+  const usesPostDeployOAuth = selectedProviderConf?.testStrategy === "no-predeploy-test";
   const currentModels = selectedProviderConf ? selectedProviderConf.models || [] : [];
 
-  const handleProviderChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const prov = e.target.value;
+  const handleProviderChange = (prov: string) => {
     update("provider", prov);
     update("providerCredentialId", ""); // Reset saved credential selection
     const conf = providerRegistry[prov];
     if (conf) {
+      if (conf.authMode === "oauth-device-code") {
+        update("providerApiKey", "");
+      }
       update("model", conf.defaultModel || "");
       update("baseUrl", conf.defaultBaseUrl || "");
     } else {
@@ -92,9 +94,11 @@ export function ModelStep({ data, update, testLLM, testStatus, currentUser }: Mo
   // Validation for test button
   const canTest = () => {
     if (isPlatformModelMode) return false;
-    if (!data.provider || !data.model || (!data.providerApiKey && !data.providerCredentialId) || isTesting) return false;
+    if (!data.provider || !data.model || isTesting) return false;
 
     const conf = providerRegistry[data.provider];
+    if (!conf || conf.testStrategy === "no-predeploy-test") return false;
+    if (conf.requiresApiKey && !data.providerApiKey && !data.providerCredentialId) return false;
     // If it's custom, it MUST have a base URL
     if (data.provider === 'custom-openai-compatible' && !data.baseUrl) return false;
 
@@ -124,7 +128,7 @@ export function ModelStep({ data, update, testLLM, testStatus, currentUser }: Mo
           </p>
         </div>
 
-        <Button
+        {!usesPostDeployOAuth && <Button
           type="button"
           onClick={testLLM}
           disabled={!canTest()}
@@ -147,7 +151,7 @@ export function ModelStep({ data, update, testLLM, testStatus, currentUser }: Mo
               <span>{t("wizardCopy.model.test")}</span>
             </>
           )}
-        </Button>
+        </Button>}
       </div>
 
       {/* Connection response banner */}
@@ -175,7 +179,17 @@ export function ModelStep({ data, update, testLLM, testStatus, currentUser }: Mo
         </div>
       )}
 
-      <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-left shadow-sm">
+      {usesPostDeployOAuth && (
+        <div className="p-4 rounded-xl border border-blue-200 bg-blue-50 text-blue-900 flex items-start gap-2.5 text-[13px]">
+          <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="font-semibold">{t("wizardCopy.model.oauthAfterDeployTitle")}</p>
+            <p className="leading-relaxed">{t("wizardCopy.model.oauthAfterDeployDescription")}</p>
+          </div>
+        </div>
+      )}
+
+      {!usesPostDeployOAuth && <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-left shadow-sm">
         <div className="flex items-center gap-2 text-sm font-bold text-content">
           <Key className="h-4 w-4 text-blue-600" />
           {t("wizardCopy.model.byokTitle")}
@@ -183,12 +197,12 @@ export function ModelStep({ data, update, testLLM, testStatus, currentUser }: Mo
         <p className="mt-1 text-[13px] leading-5 text-content-muted">
           {t("wizardCopy.model.byokDescription")}
         </p>
-      </div>
+      </div>}
 
       {/* Two column form */}
       <div className={cn("grid grid-cols-1 md:grid-cols-2 gap-6 pt-2", isPlatformModelMode && "opacity-55 pointer-events-none")}>
         <div className="space-y-5">
-          <div>
+          {!usesPostDeployOAuth && <div>
             <Label className="text-sm font-semibold text-content-secondary flex items-center gap-1.5">
               <Database className="w-4 h-4 text-content-muted" />
               {t("wizardCopy.model.savedCredential")}
@@ -206,35 +220,24 @@ export function ModelStep({ data, update, testLLM, testStatus, currentUser }: Mo
             <p className="text-[11px] text-content-muted mt-1.5">
               {t("wizardCopy.model.savedCredentialHint")}
             </p>
-          </div>
+          </div>}
 
           <div>
             <Label className="text-sm font-semibold text-content-secondary flex items-center gap-1.5">
               <Cpu className="w-4 h-4 text-content-muted" />
               {t("wizardCopy.model.provider")}
             </Label>
-            <div className="relative mt-2">
-              {selectedProviderConf?.iconUrl && (
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center pointer-events-none">
-                  <img src={selectedProviderConf.iconUrl} alt="" className="w-4 h-4 object-contain" referrerPolicy="no-referrer" />
-                </div>
-              )}
-              <select
-                className={`flex h-11 w-full rounded-lg border border-slate-200 bg-white ${selectedProviderConf?.iconUrl ? 'pl-10' : 'pl-3.5'} pr-3.5 py-2.5 text-sm shadow-sm transition-colors text-slate-900 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500`}
-                value={data.provider || ""}
-                onChange={handleProviderChange}
-              >
-                <option value="">{t("wizardCopy.model.selectProvider")}</option>
-                {activeProviders.map(p => (
-                  <option key={p.id} value={p.id}>{p.label}</option>
-                ))}
-              </select>
-            </div>
+            <ProviderSelect
+              className="mt-2"
+              value={data.provider || ""}
+              onValueChange={handleProviderChange}
+              placeholder={t("wizardCopy.model.selectProvider")}
+            />
           </div>
         </div>
 
         <div className="space-y-5">
-          <div>
+          {!usesPostDeployOAuth && <div>
             <Label className="text-sm font-semibold text-content-secondary flex items-center gap-1.5">
               <Key className="w-4 h-4 text-content-muted" />
               {t("wizardCopy.model.apiKey")}
@@ -266,9 +269,9 @@ export function ModelStep({ data, update, testLLM, testStatus, currentUser }: Mo
                 </div>
               )}
             </div>
-          </div>
+          </div>}
 
-          <div>
+          {!usesPostDeployOAuth && <div>
             <Label className="text-sm font-semibold text-content-secondary flex items-center gap-1.5">
               <Link2 className="w-4 h-4 text-content-muted" />
               {t("wizardCopy.model.baseUrl")}
@@ -279,7 +282,7 @@ export function ModelStep({ data, update, testLLM, testStatus, currentUser }: Mo
               onChange={(e: any) => update("baseUrl", e.target.value)}
               className="mt-2 h-11 font-mono text-sm border-outline rounded-lg pr-3"
             />
-          </div>
+          </div>}
         </div>
       </div>
 
@@ -326,7 +329,7 @@ export function ModelStep({ data, update, testLLM, testStatus, currentUser }: Mo
         </div>
       </div>
 
-      {!isTestSuccess && (
+      {!isTestSuccess && !usesPostDeployOAuth && (
         <div className="p-4 bg-surface-muted border border-outline rounded-xl text-sm text-content-muted leading-relaxed shadow-sm">
           <strong className="text-content">{t("wizardCopy.model.securityTitle")}</strong>
           {data.providerCredentialId ? t("wizardCopy.model.securitySaved") : t("wizardCopy.model.securityByok")}

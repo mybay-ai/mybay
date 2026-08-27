@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Check, Copy, Download, ExternalLink, FileText, GitBranch, HardDrive, Image, Sparkles, X } from "lucide-react";
+import { AlertCircle, Check, Clock3, Copy, Download, ExternalLink, FileText, GitBranch, HardDrive, Image, RefreshCw, Sparkles, X } from "lucide-react";
 import type { TFunction } from "i18next";
 import type { PendingAttachment } from "../ChatInputBar";
 import { api } from "../../../lib/api";
+import { isGeneratedArtifactPreviewable, type GeneratedArtifact } from "../generatedArtifacts";
 
 type WorkspaceFileUsage = {
   totalBytes?: number;
@@ -31,6 +32,10 @@ type WorkspaceFilesTabProps = {
   t: TFunction;
   selectedId?: string;
   conversationFiles: PendingAttachment[];
+  generatedArtifacts?: GeneratedArtifact[];
+  onRefreshGeneratedArtifacts?: () => void;
+  onPreviewGeneratedArtifact?: (filePath: string) => void;
+  onDownloadGeneratedArtifact?: (filePath: string) => void;
   onPreviewConversationFile?: (file: PendingAttachment) => void;
   onOpenConversationFile?: (file: PendingAttachment) => void;
   onDownloadConversationFile?: (file: PendingAttachment) => void;
@@ -45,6 +50,10 @@ export function WorkspaceFilesTab({
   t,
   selectedId,
   conversationFiles,
+  generatedArtifacts = [],
+  onRefreshGeneratedArtifacts,
+  onPreviewGeneratedArtifact,
+  onDownloadGeneratedArtifact,
   onPreviewConversationFile,
   onOpenConversationFile,
   onDownloadConversationFile,
@@ -124,7 +133,7 @@ export function WorkspaceFilesTab({
       </div>
 
           <div className="rounded-xl border border-outline/80 bg-surface p-4 shadow-sm">
-            {conversationFiles.length === 0 ? (
+            {conversationFiles.length === 0 && generatedArtifacts.length === 0 ? (
               <>
                 <FileText className="w-5 h-5 text-slate-400 mb-3" />
                 <p className="text-[13px] font-semibold text-content">
@@ -136,7 +145,41 @@ export function WorkspaceFilesTab({
               </>
             ) : (
               <div className="space-y-2">
-                <p className="text-[13px] font-semibold text-content mb-3">{t("dashboard:chatWorkspace.workspaceConversationFilesTitle", { count: conversationFiles.length })}</p>
+                {generatedArtifacts.length > 0 && (
+                  <div className="mb-4 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[13px] font-semibold text-content">{t("dashboard:chatWorkspace.workspaceGeneratedArtifactsTitle", { count: generatedArtifacts.length })}</p>
+                      {onRefreshGeneratedArtifacts && (
+                        <button type="button" onClick={onRefreshGeneratedArtifacts} className="rounded-full p-1 text-slate-400 hover:bg-outline hover:text-indigo-600" title={t("dashboard:chatWorkspace.workspaceGeneratedArtifactRefresh")}>
+                          <RefreshCw className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                    {generatedArtifacts.map(artifact => {
+                      const ready = isGeneratedArtifactPreviewable(artifact);
+                      const pending = artifact.status === "generating" || artifact.status === "checking";
+                      return (
+                        <div key={artifact.path} className="flex items-center gap-3 rounded-lg border border-outline bg-surface-muted p-2">
+                          {pending ? <Clock3 className="h-4 w-4 shrink-0 text-amber-500 motion-safe:animate-pulse" /> : ready ? <Check className="h-4 w-4 shrink-0 text-emerald-500" /> : <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />}
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-[13px] font-medium text-content-secondary">{artifact.name}</p>
+                            <p className="truncate font-mono text-[10px] text-slate-400">{artifact.path}</p>
+                            {artifact.runId && <p className="truncate text-[10px] text-slate-400">{t("dashboard:chatWorkspace.workspaceGeneratedArtifactRun", { runId: artifact.runId.slice(0, 12) })}</p>}
+                            <p className={`mt-0.5 text-[11px] ${ready ? "text-emerald-600 dark:text-emerald-300" : pending ? "text-amber-600 dark:text-amber-300" : "text-red-500 dark:text-red-300"}`}>
+                              {t(`dashboard:chatWorkspace.workspaceGeneratedArtifactStatus_${artifact.status}`)}
+                              {ready && typeof artifact.size === "number" ? ` · ${formatWorkspaceBytes(artifact.size)}` : ""}
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-1">
+                            {onPreviewGeneratedArtifact && <button type="button" disabled={!ready} onClick={() => onPreviewGeneratedArtifact(artifact.path)} className="rounded-full p-1 text-slate-400 hover:bg-outline hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-35" title={t("dashboard:chatWorkspace.workspacePreviewFile")}><Image className="h-3.5 w-3.5" /></button>}
+                            {onDownloadGeneratedArtifact && <button type="button" disabled={!ready} onClick={() => onDownloadGeneratedArtifact(artifact.path)} className="rounded-full p-1 text-slate-400 hover:bg-outline hover:text-emerald-600 disabled:cursor-not-allowed disabled:opacity-35" title={t("dashboard:chatWorkspace.runResultSummaryDownloadFile")}><Download className="h-3.5 w-3.5" /></button>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {conversationFiles.length > 0 && <p className="mb-3 text-[13px] font-semibold text-content">{t("dashboard:chatWorkspace.workspaceConversationFilesTitle", { count: conversationFiles.length })}</p>}
                 {conversationFiles.map(file => (
                   <div key={file.id} className="flex items-center gap-3 p-2 rounded-lg border border-outline bg-surface-muted">
                     <FileText className="w-4 h-4 text-slate-400 shrink-0" />

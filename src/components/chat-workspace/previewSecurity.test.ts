@@ -12,8 +12,10 @@ describe("local attachment preview security", () => {
   it("injects a restrictive CSP before untrusted HTML content", () => {
     const result = buildSandboxedHtmlPreviewDocument('<html><head><script>fetch("https://example.com")</script></head></html>');
     expect(result.indexOf("Content-Security-Policy")).toBeLessThan(result.indexOf("<script>"));
+    expect(result).toContain("script-src 'unsafe-inline'");
     expect(result).toContain("connect-src 'none'");
     expect(result).toContain("form-action 'none'");
+    expect(result).toContain('<script>fetch("https://example.com")</script>');
   });
 
   it("wraps fragments and escapes source inside the new-window sandbox shell", () => {

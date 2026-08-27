@@ -17,11 +17,16 @@ type TimelineFilter = "all" | "tool" | "search" | "file" | "model" | "failed";
 
 import type { PendingAttachment } from "./ChatInputBar";
 import type { ConversationFilePreview } from "./useChatWorkspaceFiles";
+import type { GeneratedArtifact } from "./generatedArtifacts";
 type ChatWorkspacePanelProps = {
   selectedId?: string;
   selectedConversationId?: string | null;
   conversationFiles?: PendingAttachment[];
   conversationFilePreview?: ConversationFilePreview | null;
+  generatedArtifacts?: GeneratedArtifact[];
+  onRefreshGeneratedArtifacts?: () => void;
+  onPreviewGeneratedArtifact?: (filePath: string) => void;
+  onDownloadGeneratedArtifact?: (filePath: string) => void;
   onDeleteConversationFile?: (fileId: string) => void;
   onDownloadConversationFile?: (file: PendingAttachment) => void;
   onOpenConversationFile?: (file: PendingAttachment) => void;
@@ -112,7 +117,7 @@ const extractUrlsFromText = (content: string) => {
   return urls;
 };
 
-export function ChatWorkspacePanel({ selectedId, selectedConversationId, selectedInstance, messages, toolSteps, activeRunId, runExecutionState = null, runMetrics = null, approvalRequests = [], runCapabilities, onRespondToApproval, variant = "desktop", activeTab: controlledActiveTab, onActiveTabChange, conversationFiles = [], conversationFilePreview = null, onDeleteConversationFile, onDownloadConversationFile, onOpenConversationFile, onPreviewConversationFile, onClearConversationFilePreview }: ChatWorkspacePanelProps) {
+export function ChatWorkspacePanel({ selectedId, selectedConversationId, selectedInstance, messages, toolSteps, activeRunId, runExecutionState = null, runMetrics = null, approvalRequests = [], runCapabilities, onRespondToApproval, variant = "desktop", activeTab: controlledActiveTab, onActiveTabChange, conversationFiles = [], conversationFilePreview = null, generatedArtifacts = [], onRefreshGeneratedArtifacts, onPreviewGeneratedArtifact, onDownloadGeneratedArtifact, onDeleteConversationFile, onDownloadConversationFile, onOpenConversationFile, onPreviewConversationFile, onClearConversationFilePreview }: ChatWorkspacePanelProps) {
   const { t } = useTranslation(["dashboard", "common"]);
   const [internalActiveTab, setInternalActiveTab] = useState<WorkspaceTab>("result");
   const activeTab = controlledActiveTab ?? internalActiveTab;
@@ -179,7 +184,7 @@ export function ChatWorkspacePanel({ selectedId, selectedConversationId, selecte
   };
   const totalToolCallCount = toolSteps.filter((step) => step.stepType !== "model_reasoning" && step.stepType !== "final").length;
   const latestAssistantUrls = useMemo(() => extractUrlsFromText(latestAssistantContent).slice(0, 3), [latestAssistantContent]);
-  const resultSummaryVisible = toolSteps.length > 0 || conversationFiles.length > 0 || latestAssistantUrls.length > 0;
+  const resultSummaryVisible = toolSteps.length > 0 || conversationFiles.length > 0 || generatedArtifacts.length > 0 || latestAssistantUrls.length > 0;
   const instanceName = selectedInstance?.name?.trim() || t("dashboard:chatWorkspace.agentFallbackName");
   const pendingApproval = approvalRequests.find((item) => item.status === "pending");
   const latestApproval = approvalRequests[0];
@@ -373,6 +378,7 @@ export function ChatWorkspacePanel({ selectedId, selectedConversationId, selecte
             completedToolCount={completedToolCount}
             failedToolCount={failedToolCount}
             conversationFiles={conversationFiles}
+            generatedArtifacts={generatedArtifacts}
             latestAssistantUrls={latestAssistantUrls}
             latestAssistantMessage={latestAssistantMessage}
             latestAssistantContent={latestAssistantContent}
@@ -381,6 +387,8 @@ export function ChatWorkspacePanel({ selectedId, selectedConversationId, selecte
             onCopyConversationFileLink={selectedId && selectedConversationId ? handleCopyConversationFileLink : undefined}
             copiedFileId={copiedFileId}
             getConversationFileSourceLabel={getConversationFileSourceLabel}
+            onPreviewGeneratedArtifact={onPreviewGeneratedArtifact}
+            onDownloadGeneratedArtifact={onDownloadGeneratedArtifact}
             runMetrics={effectiveRunMetrics}
             totalToolCallCount={totalToolCallCount}
             runDisplayStatus={runDisplayStatus}
@@ -424,6 +432,10 @@ export function ChatWorkspacePanel({ selectedId, selectedConversationId, selecte
             t={t}
             selectedId={selectedId}
             conversationFiles={conversationFiles}
+            generatedArtifacts={generatedArtifacts}
+            onRefreshGeneratedArtifacts={onRefreshGeneratedArtifacts}
+            onPreviewGeneratedArtifact={onPreviewGeneratedArtifact}
+            onDownloadGeneratedArtifact={onDownloadGeneratedArtifact}
             onPreviewConversationFile={onPreviewConversationFile}
             onOpenConversationFile={onOpenConversationFile}
             onDownloadConversationFile={onDownloadConversationFile}
@@ -438,11 +450,13 @@ export function ChatWorkspacePanel({ selectedId, selectedConversationId, selecte
           <WorkspacePreviewTab
             t={t}
             conversationFiles={conversationFiles}
+            generatedArtifacts={generatedArtifacts}
             conversationFilePreview={conversationFilePreview}
             onPreviewConversationFile={onPreviewConversationFile}
             onOpenConversationFile={onOpenConversationFile}
             onDownloadConversationFile={onDownloadConversationFile}
             onClearPreview={onClearConversationFilePreview}
+            onPreviewGeneratedArtifact={onPreviewGeneratedArtifact}
           />
         )}
       </div>

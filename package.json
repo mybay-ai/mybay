@@ -1,15 +1,15 @@
 {
     "name": "mybay-local",
-    "version": "0.1.22-preview",
+    "version": "0.1.23-preview",
     "description": "A local-first, self-hosted control plane for managing Hermes Agent instances.",
     "license": "AGPL-3.0-only",
     "repository": {
         "type": "git",
-        "url": "https://github.com/mybay-ai/mybay.git"
+        "url": "https://github.com/mybay-ai/mybay-core.git"
     },
-    "homepage": "https://github.com/mybay-ai/mybay#readme",
+    "homepage": "https://github.com/mybay-ai/mybay-core#readme",
     "bugs": {
-        "url": "https://github.com/mybay-ai/mybay/issues"
+        "url": "https://github.com/mybay-ai/mybay-core/issues"
     },
     "type": "module",
     "engines": {
@@ -44,6 +44,7 @@
         "backup:verify": "node scripts/mybay-ops.mjs verify-backup"
     },
     "dependencies": {
+        "@e965/xlsx": "^0.20.3",
         "adm-zip": "^0.6.0",
         "archiver": "^8.0.0",
         "bcryptjs": "^3.0.3",
@@ -58,7 +59,8 @@
         "multer": "^2.1.1",
         "pdf-parse": "^2.4.5",
         "socket.io": "^4.8.3",
-        "tar-fs": "^3.1.2"
+        "tar-fs": "^3.1.2",
+        "word-extractor": "^1.0.4"
     },
     "devDependencies": {
         "@eslint/js": "^9.39.5",

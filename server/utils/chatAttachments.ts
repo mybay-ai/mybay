@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { filesRepo } from "../repositories/filesRepo";
 import { getChatAttachmentConfig } from "../config/chatAttachmentConfig";
+import { normalizeMultipartFilename } from "./multipartFilename";
 
 export const TEXT_ATTACHMENT_EXTENSIONS = new Set([".txt", ".md", ".csv", ".json", ".log"]);
 
@@ -30,7 +31,7 @@ export function buildChatAttachmentMetadata(files: ChatAttachmentRecord[]) {
 
 export function getAttachmentDisplayName(file: any): string {
   if (!file) return "unknown";
-  return file.original_name || file.filename || "unknown";
+  return normalizeMultipartFilename(file.original_name || file.filename || "unknown");
 }
 
 export function getAttachmentExtension(file: any): string {

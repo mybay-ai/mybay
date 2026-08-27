@@ -11,7 +11,8 @@
  * 【严禁】在项目其他地方（如 server/providerEnv.ts 或前端组件内部）
  * 维护另一份 Provider / Model 列表，以防止数据不一致或双写错乱。
  *
- * 如果需要新增或修改模型供应商，只允许直接修改本文件。
+ * 如果需要新增或修改模型供应商，只允许直接修改本文件。新增项必须同时声明
+ * category、networkAccess、badges；如需进入推荐区，再配置 recommendedRank。
  */
 export interface ProviderConfig {
   id: string;
@@ -39,6 +40,10 @@ export interface ProviderConfig {
   iconUrl?: string;
   hermesProviderId?: string;
   runtimeProvider?: string;
+  category: "domestic" | "international" | "aggregator" | "custom";
+  networkAccess: "cn-direct" | "global" | "custom";
+  badges: Array<"mainstream" | "fast" | "aggregator" | "oauth">;
+  recommendedRank?: number;
 }
 
 export const providerRegistry: Record<string, ProviderConfig> = {
@@ -64,6 +69,10 @@ export const providerRegistry: Record<string, ProviderConfig> = {
     enabled: true,
     hermesProviderId: "openai-api",
     runtimeProvider: "openai-api",
+    category: "international",
+    networkAccess: "global",
+    badges: ["mainstream"],
+    recommendedRank: 3,
     iconUrl: "/assets/logos/openailogo.webp"
   },
   gemini: {
@@ -78,6 +87,10 @@ export const providerRegistry: Record<string, ProviderConfig> = {
     requiresApiKey: true,
     testStrategy: "gemini-generate-content",
     enabled: true,
+    category: "international",
+    networkAccess: "global",
+    badges: ["mainstream"],
+    recommendedRank: 4,
     iconUrl: "/assets/logos/geminilogo.webp"
   },
   anthropic: {
@@ -92,6 +105,10 @@ export const providerRegistry: Record<string, ProviderConfig> = {
     requiresApiKey: true,
     testStrategy: "anthropic-messages",
     enabled: true,
+    category: "international",
+    networkAccess: "global",
+    badges: ["mainstream"],
+    recommendedRank: 5,
     iconUrl: "/assets/logos/claudelogo.webp"
   },
   deepseek: {
@@ -101,11 +118,20 @@ export const providerRegistry: Record<string, ProviderConfig> = {
     type: "openai-compatible",
     defaultBaseUrl: "https://api.deepseek.com/v1",
     defaultModel: "deepseek-v4-flash",
-    models: ["deepseek-v4-flash", "deepseek-v4-pro"],
+    models: ["deepseek-v4-flash", "deepseek-v4-pro", "deepseek-v4-flash-vision-exp"],
     envPrefix: "DEEPSEEK",
     requiresApiKey: true,
     testStrategy: "openai-chat-completions",
+    apiMode: "chat_completions",
+    authType: "api_key",
+    supportsToolCalling: true,
+    supportsStreaming: true,
+    supportsResponsesApi: false,
     enabled: true,
+    category: "domestic",
+    networkAccess: "cn-direct",
+    badges: ["mainstream"],
+    recommendedRank: 1,
     iconUrl: "/assets/logos/deepseeklogo.webp"
   },
   qwen: {
@@ -114,13 +140,18 @@ export const providerRegistry: Record<string, ProviderConfig> = {
     region: "cn",
     type: "openai-compatible",
     defaultBaseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1",
-    defaultModel: "qwen3.6-flash",
-    models: ["qwen3.7-max", "qwen3.6-max", "qwen3.6-flash"],
-    envPrefix: "QWEN",
-    injectOpenAICompatible: true,
+    defaultModel: "qwen3.8-flash",
+    models: ["qwen3.8-flash", "qwen3.8-max", "qwen3.7-max", "qwen3.7-flash", "qwen3.6-plus", "qwen3.5-plus"],
+    envPrefix: "DASHSCOPE",
     requiresApiKey: true,
     testStrategy: "openai-chat-completions",
     enabled: true,
+    hermesProviderId: "alibaba",
+    runtimeProvider: "alibaba",
+    category: "domestic",
+    networkAccess: "cn-direct",
+    badges: ["mainstream"],
+    recommendedRank: 2,
     iconUrl: "/assets/logos/qwenlogo.webp"
   },
   moonshot: {
@@ -137,6 +168,9 @@ export const providerRegistry: Record<string, ProviderConfig> = {
     enabled: true,
     hermesProviderId: "kimi-coding-cn",
     runtimeProvider: "kimi-coding-cn",
+    category: "domestic",
+    networkAccess: "cn-direct",
+    badges: ["mainstream"],
     iconUrl: "/assets/logos/kimilogo.webp"
   },
   kimi: {
@@ -153,6 +187,9 @@ export const providerRegistry: Record<string, ProviderConfig> = {
     enabled: true,
     hermesProviderId: "kimi-coding",
     runtimeProvider: "kimi-coding",
+    category: "international",
+    networkAccess: "global",
+    badges: ["mainstream"],
     iconUrl: "/assets/logos/kimilogo.webp"
   },
   minimax: {
@@ -168,6 +205,9 @@ export const providerRegistry: Record<string, ProviderConfig> = {
     requiresApiKey: true,
     testStrategy: "openai-chat-completions",
     enabled: true,
+    category: "international",
+    networkAccess: "global",
+    badges: [],
     iconUrl: "/assets/logos/minimaxlogo.webp"
   },
   "minimax-cn": {
@@ -184,6 +224,9 @@ export const providerRegistry: Record<string, ProviderConfig> = {
     requiresApiKey: true,
     testStrategy: "openai-chat-completions",
     enabled: true,
+    category: "domestic",
+    networkAccess: "cn-direct",
+    badges: [],
     iconUrl: "/assets/logos/minimaxlogo.webp"
   },
   groq: {
@@ -199,6 +242,9 @@ export const providerRegistry: Record<string, ProviderConfig> = {
     requiresApiKey: true,
     testStrategy: "openai-chat-completions",
     enabled: true,
+    category: "international",
+    networkAccess: "global",
+    badges: ["fast"],
     iconUrl: "/assets/logos/groqlogo.webp"
   },
   zhipu: {
@@ -207,12 +253,15 @@ export const providerRegistry: Record<string, ProviderConfig> = {
     region: "cn",
     type: "openai-compatible",
     defaultBaseUrl: "https://open.bigmodel.cn/api/paas/v4",
-    defaultModel: "glm-5.1",
-    models: ["glm-5.2", "glm-5.1", "glm-5", "glm-4.7"],
+    defaultModel: "glm-5.2",
+    models: ["glm-5.3-Flash", "glm-5.3", "glm-5.2", "glm-5.1", "glm-5", "glm-4.7"],
     envPrefix: "ZHIPU",
     requiresApiKey: true,
     testStrategy: "openai-chat-completions",
-    enabled: true
+    enabled: true,
+    category: "domestic",
+    networkAccess: "cn-direct",
+    badges: ["mainstream"]
   },
   openrouter: {
     id: "openrouter",
@@ -225,7 +274,10 @@ export const providerRegistry: Record<string, ProviderConfig> = {
     envPrefix: "OPENROUTER",
     requiresApiKey: true,
     testStrategy: "openai-chat-completions",
-    enabled: true
+    enabled: true,
+    category: "aggregator",
+    networkAccess: "global",
+    badges: ["aggregator"]
   },
   siliconflow: {
     id: "siliconflow",
@@ -239,7 +291,10 @@ export const providerRegistry: Record<string, ProviderConfig> = {
     injectOpenAICompatible: true,
     requiresApiKey: true,
     testStrategy: "openai-chat-completions",
-    enabled: true
+    enabled: true,
+    category: "domestic",
+    networkAccess: "cn-direct",
+    badges: ["aggregator"]
   },
   xai: {
     id: "xai",
@@ -262,7 +317,10 @@ export const providerRegistry: Record<string, ProviderConfig> = {
     enabled: true,
     supportsVision: true,
     hermesProviderId: "xai",
-    runtimeProvider: "xai"
+    runtimeProvider: "xai",
+    category: "international",
+    networkAccess: "global",
+    badges: ["mainstream"]
   },
   "openai-codex": {
     id: "openai-codex",
@@ -296,7 +354,10 @@ export const providerRegistry: Record<string, ProviderConfig> = {
     enabled: true,
     supportsVision: true,
     hermesProviderId: "openai-codex",
-    runtimeProvider: "openai-codex"
+    runtimeProvider: "openai-codex",
+    category: "international",
+    networkAccess: "global",
+    badges: ["mainstream", "oauth"]
   },
   "xai-oauth": {
     id: "xai-oauth",
@@ -319,7 +380,10 @@ export const providerRegistry: Record<string, ProviderConfig> = {
     credentialPool: "xai-oauth",
     supportsVision: true,
     hermesProviderId: "xai-oauth",
-    runtimeProvider: "xai-oauth"
+    runtimeProvider: "xai-oauth",
+    category: "international",
+    networkAccess: "global",
+    badges: ["oauth"]
   },
   "custom-openai-compatible": {
     id: "custom-openai-compatible",
@@ -332,23 +396,14 @@ export const providerRegistry: Record<string, ProviderConfig> = {
     envPrefix: "CUSTOM",
     requiresApiKey: false,
     testStrategy: "openai-chat-completions",
-    enabled: true
+    enabled: true,
+    hermesProviderId: "custom-openai-compatible",
+    runtimeProvider: "custom-openai-compatible",
+    category: "custom",
+    networkAccess: "custom",
+    badges: []
   },
 
-  // Keep doubao, mistral, together around for backward compatibility but disabled if requested, or enabled by default
-  doubao: {
-    id: "doubao",
-    label: "字节跳动豆包 (Doubao)",
-    region: "cn",
-    type: "openai-compatible",
-    defaultBaseUrl: "https://ark.cn-beijing.volces.com/api/v3",
-    defaultModel: "doubao-pro-128k",
-    models: ["doubao-pro-128k", "doubao-lite-128k"],
-    envPrefix: "DOUBAO",
-    requiresApiKey: true,
-    testStrategy: "openai-chat-completions",
-    enabled: true
-  },
   mistral: {
     id: "mistral",
     label: "Mistral AI (法国领头羊)",
@@ -360,20 +415,28 @@ export const providerRegistry: Record<string, ProviderConfig> = {
     envPrefix: "MISTRAL",
     requiresApiKey: true,
     testStrategy: "openai-chat-completions",
-    enabled: true
+    enabled: true,
+    category: "international",
+    networkAccess: "global",
+    badges: []
   },
   together: {
     id: "together",
     label: "Together AI",
     region: "global",
     type: "openai-compatible",
-    defaultBaseUrl: "https://api.together.xyz/v3",
+    defaultBaseUrl: "https://api.together.ai/v1",
     defaultModel: "meta-llama/Llama-3.3-70B-Instruct-Turbo",
-    models: ["meta-llama/Llama-3.3-70B-Instruct-Turbo", "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo", "mistralai/Mixtral-8x7B-Instruct-v0.1", "Qwen/Qwen2.5-72B-Instruct"],
+    models: ["meta-llama/Llama-3.3-70B-Instruct-Turbo", "openai/gpt-oss-120b", "Qwen/Qwen3.7-Max", "deepseek-ai/DeepSeek-V4-Flash-0731"],
     envPrefix: "TOGETHER",
     requiresApiKey: true,
     testStrategy: "openai-chat-completions",
-    enabled: true
+    enabled: true,
+    hermesProviderId: "togetherai",
+    runtimeProvider: "togetherai",
+    category: "aggregator",
+    networkAccess: "global",
+    badges: ["aggregator"]
   }
 };
 

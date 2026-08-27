@@ -16,18 +16,34 @@ import {
   remainingChatAttachmentSlots,
   type ChatAttachmentConfig
 } from "../../../shared/chatAttachmentContract";
+import { normalizeGeneratedInstanceFilePath } from "./generatedFilePath";
+import {
+  clearGeneratedPreviewSelection,
+  clearPreviewSelection,
+  loadPreviewSelection,
+  saveGeneratedPreviewSelection,
+  savePreviewSelection,
+} from "./previewSelectionStorage";
+import { buildWorkspaceFileContextKey, selectWorkspaceFileContextValue } from "./workspaceFileContext";
+import { getWorkspacePreviewKind, type WorkspacePreviewKind } from "./workspacePreviewKind";
 
 type ShowToast = (message: string, type?: "success" | "info" | "warning" | "error", duration?: number) => void;
 
 export type ConversationFilePreview = {
   file: PendingAttachment;
-  kind: "image" | "html" | "pdf" | "markdown" | "text" | "office" | "unsupported";
+  kind: WorkspacePreviewKind;
+  contextKey?: string;
   source?: "conversation" | "instance";
   instancePath?: string;
   loading?: boolean;
   url?: string;
+  htmlPreviewUrl?: string;
+  downloadUrl?: string;
+  officeHtml?: string;
   text?: string;
   error?: string;
+  errorCode?: string;
+  missingDependencies?: string[];
 };
 
 type UseChatWorkspaceFilesOptions = {
@@ -58,6 +74,7 @@ export function useChatWorkspaceFiles({
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const [attachmentConfig, setAttachmentConfig] = useState<ChatAttachmentConfig>(DEFAULT_CHAT_ATTACHMENT_CONFIG);
   const [conversationFiles, setConversationFiles] = useState<PendingAttachment[]>([]);
+  const [conversationFilesContextKey, setConversationFilesContextKey] = useState("");
   const [conversationFilePreview, setConversationFilePreview] = useState<ConversationFilePreview | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
@@ -110,7 +127,7 @@ export function useChatWorkspaceFiles({
     setIsDraggingOver(false);
   }, []);
 
-  const clearConversationFilePreview = useCallback(() => {
+  const resetConversationFilePreview = useCallback(() => {
     invalidatePreviewRequests();
     if (conversationFilePreviewUrlRef.current) {
       window.URL.revokeObjectURL(conversationFilePreviewUrlRef.current);
@@ -119,9 +136,24 @@ export function useChatWorkspaceFiles({
     setConversationFilePreview(null);
   }, [invalidatePreviewRequests]);
 
+  const clearConversationFilePreview = useCallback(() => {
+    clearPreviewSelection(
+      typeof window === "undefined" ? null : window.sessionStorage,
+      selectedIdRef.current,
+      selectedConversationIdRef.current || ""
+    );
+    clearGeneratedPreviewSelection(
+      typeof window === "undefined" ? null : window.sessionStorage,
+      selectedIdRef.current,
+      selectedConversationIdRef.current || ""
+    );
+    resetConversationFilePreview();
+  }, [resetConversationFilePreview]);
+
   const refreshConversationFiles = useCallback(async (instanceId: string, conversationId: string | null) => {
     if (!instanceId || !conversationId) {
       setConversationFiles([]);
+      setConversationFilesContextKey("");
       return;
     }
 
@@ -132,6 +164,7 @@ export function useChatWorkspaceFiles({
         selectedConversationIdRef.current === conversationId
       ) {
         setConversationFiles(dedupeConversationFiles(Array.isArray(res?.files) ? res.files : []));
+        setConversationFilesContextKey(buildWorkspaceFileContextKey(instanceId, conversationId));
       }
     } catch (err) {
       console.warn("Failed to refresh conversation files:", err);
@@ -140,20 +173,22 @@ export function useChatWorkspaceFiles({
         selectedConversationIdRef.current === conversationId
       ) {
         setConversationFiles([]);
+        setConversationFilesContextKey(buildWorkspaceFileContextKey(instanceId, conversationId));
       }
     }
   }, []);
 
   useEffect(() => {
-    return () => clearConversationFilePreview();
-  }, [clearConversationFilePreview]);
+    return () => resetConversationFilePreview();
+  }, [resetConversationFilePreview]);
 
   useEffect(() => {
-    clearConversationFilePreview();
+    resetConversationFilePreview();
     setPendingAttachments([]);
     setConversationFiles([]);
+    setConversationFilesContextKey("");
     void refreshConversationFiles(selectedId, selectedConversationId);
-  }, [selectedId, selectedConversationId, clearConversationFilePreview, refreshConversationFiles]);
+  }, [selectedId, selectedConversationId, resetConversationFilePreview, refreshConversationFiles]);
 
   useEffect(() => {
     resetDragState();
@@ -278,6 +313,7 @@ export function useChatWorkspaceFiles({
             return attachmentConfig.maxFiles === null ? next : next.slice(0, attachmentConfig.maxFiles);
           });
           setConversationFiles(prev => dedupeConversationFiles([...res.files, ...prev]));
+          setConversationFilesContextKey(buildWorkspaceFileContextKey(uploadInstanceId, uploadConvId));
         }
       }
     } catch (err: unknown) {
@@ -398,15 +434,6 @@ export function useChatWorkspaceFiles({
     }
   };
 
-  const normalizeGeneratedInstanceFilePath = (rawPath: string) => {
-    const cleaned = rawPath
-      .trim()
-      .replace(/^[`*_]+|[`*_]+$/g, "")
-      .replace(/(?:[`*_]+|[.,;:!?，。；：！？]+)$/gu, "")
-      .replace(/\\/g, "/");
-    return cleaned.replace(/^\/?opt\/data\//i, "").replace(/^\/+/, "");
-  };
-
   const getFileNameFromPath = (filePath: string) => {
     const normalized = filePath.replace(/\\/g, "/");
     return normalized.split("/").filter(Boolean).pop() || "download";
@@ -419,22 +446,7 @@ export function useChatWorkspaceFiles({
     size
   });
 
-  const getPreviewKindByName = (fileName: string, mimeType = ""): ConversationFilePreview["kind"] => {
-    const normalizedMime = mimeType.toLowerCase();
-    const name = fileName.toLowerCase();
-    if (normalizedMime.startsWith("image/") || /\.(png|jpe?g|webp|gif|svg|bmp|avif)$/i.test(name)) return "image";
-    if (normalizedMime.includes("html") || /\.html?$/i.test(name)) return "html";
-    if (normalizedMime.includes("pdf") || name.endsWith(".pdf")) return "pdf";
-    if (/\.(md|markdown)$/i.test(name)) return "markdown";
-    if (
-      normalizedMime.startsWith("text/") ||
-      /\.(txt|csv|tsv|json|jsonl|log|yaml|yml|xml|ini|conf|env)$/i.test(name)
-    ) return "text";
-    if (/\.(doc|docx|xls|xlsx|ppt|pptx|odt|ods|odp|rtf)$/i.test(name)) return "office";
-    return "unsupported";
-  };
-
-  const normalizePreviewBlob = (blob: Blob, kind: ConversationFilePreview["kind"]) => {
+  const normalizePreviewBlob = (blob: Blob, kind: ConversationFilePreview["kind"], fileName = "") => {
     if (kind === "html" && !blob.type.toLowerCase().includes("html")) {
       return new Blob([blob], { type: "text/html;charset=utf-8" });
     }
@@ -444,6 +456,9 @@ export function useChatWorkspaceFiles({
     if ((kind === "text" || kind === "markdown") && !blob.type.toLowerCase().startsWith("text/")) {
       return new Blob([blob], { type: kind === "markdown" ? "text/markdown;charset=utf-8" : "text/plain;charset=utf-8" });
     }
+    if (kind === "video" && !blob.type.toLowerCase().startsWith("video/")) {
+      return new Blob([blob], { type: /\.mov$/i.test(fileName) ? "video/quicktime" : "video/mp4" });
+    }
     return blob;
   };
 
@@ -451,9 +466,9 @@ export function useChatWorkspaceFiles({
     kind === "text" || kind === "markdown" || kind === "html"
   );
 
-  const getPreviewTooLargeMessage = () => t("dashboard:chatWorkspace.workspacePreviewTooLarge", {
+  const getPreviewTooLargeMessage = useCallback(() => t("dashboard:chatWorkspace.workspacePreviewTooLarge", {
     max: Math.round(LOCAL_TEXT_PREVIEW_MAX_BYTES / (1024 * 1024))
-  });
+  }), [t]);
 
   const saveBlobFromResponse = async (response: Response, fallbackName: string) => {
     const blob = await response.blob();
@@ -470,22 +485,126 @@ export function useChatWorkspaceFiles({
   const handleOpenInstanceFilePath = async (rawPath: string) => {
     if (!selectedIdRef.current) return;
     const filePath = normalizeGeneratedInstanceFilePath(rawPath);
-    if (!filePath) return;
+    if (!filePath) {
+      showToast(t("dashboard:chatWorkspace.workspaceInvalidGeneratedPath"), "warning");
+      return;
+    }
 
     const request = beginPreviewRequest(`instance:${filePath}`);
     const capturedInstanceId = request.instanceId;
+    clearPreviewSelection(
+      typeof window === "undefined" ? null : window.sessionStorage,
+      capturedInstanceId,
+      request.conversationId || ""
+    );
+    saveGeneratedPreviewSelection(
+      typeof window === "undefined" ? null : window.sessionStorage,
+      capturedInstanceId,
+      request.conversationId || "",
+      filePath
+    );
     if (conversationFilePreviewUrlRef.current) {
       window.URL.revokeObjectURL(conversationFilePreviewUrlRef.current);
       conversationFilePreviewUrlRef.current = null;
     }
 
     const loadingFile = buildInstanceFilePreview(filePath);
-    setConversationFilePreview({ file: loadingFile, kind: "unsupported", source: "instance", instancePath: filePath, loading: true });
+    const contextKey = buildWorkspaceFileContextKey(request.instanceId, request.conversationId);
+    setConversationFilePreview({ file: loadingFile, kind: "unsupported", contextKey, source: "instance", instancePath: filePath, loading: true });
+
+    const initialPreviewKind = getWorkspacePreviewKind(loadingFile.originalName);
+    if (initialPreviewKind === "video") {
+      const videoFile = buildInstanceFilePreview(
+        filePath,
+        0,
+        /\.mov$/i.test(loadingFile.originalName) ? "video/quicktime" : "video/mp4"
+      );
+      setConversationFilePreview({
+        file: videoFile,
+        kind: "video",
+        contextKey,
+        source: "instance",
+        instancePath: filePath,
+        url: `/api/instances/${encodeURIComponent(capturedInstanceId)}/files/media-preview?path=${encodeURIComponent(filePath)}`,
+        downloadUrl: `/api/instances/${encodeURIComponent(capturedInstanceId)}/files/download?path=${encodeURIComponent(filePath)}`,
+      });
+      return;
+    }
+
+    if (initialPreviewKind === "office") {
+      try {
+        const preview = await api.get(`/api/instances/${encodeURIComponent(capturedInstanceId)}/files/office-preview?path=${encodeURIComponent(filePath)}`, { signal: request.signal });
+        if (!isPreviewRequestCurrent(request)) return;
+        setConversationFilePreview({
+          file: loadingFile,
+          kind: "office",
+          contextKey,
+          source: "instance",
+          instancePath: filePath,
+          officeHtml: typeof preview?.html === "string" ? preview.html : "",
+          downloadUrl: `/api/instances/${encodeURIComponent(capturedInstanceId)}/files/download?path=${encodeURIComponent(filePath)}`,
+        });
+      } catch (err: any) {
+        if (isPreviewAbortError(err) || !isPreviewRequestCurrent(request)) return;
+        setConversationFilePreview({
+          file: loadingFile,
+          kind: "office",
+          contextKey,
+          source: "instance",
+          instancePath: filePath,
+          downloadUrl: `/api/instances/${encodeURIComponent(capturedInstanceId)}/files/download?path=${encodeURIComponent(filePath)}`,
+          error: err?.message || t("dashboard:chatWorkspace.workspacePreviewLoadFailed"),
+        });
+      }
+      return;
+    }
+
+    if (initialPreviewKind === "html") {
+      try {
+        const metadata = await api.get(`/api/instances/${encodeURIComponent(capturedInstanceId)}/files/metadata?path=${encodeURIComponent(filePath)}`, { signal: request.signal });
+        if (!isPreviewRequestCurrent(request)) return;
+        if (metadata?.artifact?.previewStatus === "incomplete") {
+          const missingDependencies = (Array.isArray(metadata?.artifact?.previewDependencies)
+            ? metadata.artifact.previewDependencies
+            : [])
+            .filter((dependency: any) => dependency?.status === "missing" || dependency?.status === "unsupported")
+            .map((dependency: any) => String(dependency?.reference || dependency?.requestPath || "").trim())
+            .filter(Boolean);
+          setConversationFilePreview({
+            file: buildInstanceFilePreview(filePath, Number(metadata?.size || 0), String(metadata?.mime || "text/html")),
+            kind: "html",
+            contextKey,
+            source: "instance",
+            instancePath: filePath,
+            downloadUrl: `/api/instances/${encodeURIComponent(capturedInstanceId)}/files/download?path=${encodeURIComponent(filePath)}`,
+            errorCode: "HTML_PREVIEW_DEPENDENCIES_MISSING",
+            missingDependencies,
+            error: t("dashboard:chatWorkspace.workspaceHtmlPreviewDependenciesMissing", {
+              files: missingDependencies.join(", ") || t("dashboard:chatWorkspace.workspaceHtmlPreviewUnknownDependency")
+            }),
+          });
+          return;
+        }
+      } catch (err: any) {
+        if (isPreviewAbortError(err) || !isPreviewRequestCurrent(request)) return;
+        setConversationFilePreview({
+          file: loadingFile,
+          kind: "html",
+          contextKey,
+          source: "instance",
+          instancePath: filePath,
+          downloadUrl: `/api/instances/${encodeURIComponent(capturedInstanceId)}/files/download?path=${encodeURIComponent(filePath)}`,
+          errorCode: err?.code || "HTML_PREVIEW_PREFLIGHT_FAILED",
+          error: err?.message || t("dashboard:chatWorkspace.workspacePreviewLoadFailed"),
+        });
+        return;
+      }
+    }
 
     try {
       const response = await api.getRaw(`/api/instances/${capturedInstanceId}/files/download?path=${encodeURIComponent(filePath)}`, { signal: request.signal });
       const declaredMimeType = response.headers.get("content-type") || loadingFile.mimeType || "";
-      const declaredKind = getPreviewKindByName(loadingFile.originalName, declaredMimeType);
+      const declaredKind = getWorkspacePreviewKind(loadingFile.originalName, declaredMimeType);
       const declaredSize = Number(response.headers.get("content-length") || 0);
       if (isMemoryBoundTextPreview(declaredKind) && declaredSize > LOCAL_TEXT_PREVIEW_MAX_BYTES) {
         throw new Error("PREVIEW_TOO_LARGE");
@@ -494,16 +613,16 @@ export function useChatWorkspaceFiles({
       if (!isPreviewRequestCurrent(request)) return;
       const mimeType = blob.type || loadingFile.mimeType || "";
       const previewFile = buildInstanceFilePreview(filePath, blob.size, mimeType);
-      const kind = getPreviewKindByName(previewFile.originalName, mimeType);
+      const kind = getWorkspacePreviewKind(previewFile.originalName, mimeType);
       if (isMemoryBoundTextPreview(kind) && blob.size > LOCAL_TEXT_PREVIEW_MAX_BYTES) {
         throw new Error("PREVIEW_TOO_LARGE");
       }
-      const previewBlob = normalizePreviewBlob(blob, kind);
+      const previewBlob = normalizePreviewBlob(blob, kind, previewFile.originalName);
 
       if (kind === "text" || kind === "markdown") {
         const text = await previewBlob.text();
         if (!isPreviewRequestCurrent(request)) return;
-        setConversationFilePreview({ file: previewFile, kind, source: "instance", instancePath: filePath, text });
+        setConversationFilePreview({ file: previewFile, kind, contextKey, source: "instance", instancePath: filePath, text });
         return;
       }
 
@@ -517,9 +636,13 @@ export function useChatWorkspaceFiles({
       setConversationFilePreview({
         file: previewFile,
         kind,
+        contextKey,
         source: "instance",
         instancePath: filePath,
         url,
+        htmlPreviewUrl: kind === "html"
+          ? `/api/instances/${encodeURIComponent(capturedInstanceId)}/files/html-preview?path=${encodeURIComponent(filePath)}`
+          : undefined,
         text: htmlText,
         error: kind === "office" || kind === "unsupported"
           ? t("dashboard:chatWorkspace.workspacePreviewUnsupportedDesc")
@@ -530,10 +653,26 @@ export function useChatWorkspaceFiles({
       const message = err?.message === "PREVIEW_TOO_LARGE"
         ? getPreviewTooLargeMessage()
         : (err?.message || t("dashboard:chatWorkspace.workspacePreviewLoadFailed"));
-      setConversationFilePreview({ file: loadingFile, kind: "unsupported", source: "instance", instancePath: filePath, error: message });
+      setConversationFilePreview({ file: loadingFile, kind: "unsupported", contextKey, source: "instance", instancePath: filePath, error: message });
       showToast(message, "error");
     }
   };
+
+  const handleDownloadInstanceFilePath = async (rawPath: string) => {
+    const instanceId = selectedIdRef.current;
+    const filePath = normalizeGeneratedInstanceFilePath(rawPath);
+    if (!instanceId || !filePath) {
+      showToast(t("dashboard:chatWorkspace.workspaceInvalidGeneratedPath"), "warning");
+      return;
+    }
+    try {
+      const response = await api.getRaw(`/api/instances/${encodeURIComponent(instanceId)}/files/download?path=${encodeURIComponent(filePath)}`);
+      await saveBlobFromResponse(response, getFileNameFromPath(filePath));
+    } catch (err: any) {
+      showToast(err?.message || t("dashboard:chatWorkspace.fileDownloadFailed"), "error");
+    }
+  };
+
   const handleDownloadConversationFile = async (file: PendingAttachment) => {
     if (!selectedId || !selectedConversationId) return;
     try {
@@ -547,9 +686,14 @@ export function useChatWorkspaceFiles({
   const handleOpenConversationFile = async (file: PendingAttachment) => {
     if (!selectedId || !selectedConversationId) return;
     try {
+      if (isHtmlPreviewFile(file.originalName, file.mimeType)) {
+        const previewUrl = `/api/instances/${encodeURIComponent(selectedId)}/conversations/${encodeURIComponent(selectedConversationId)}/files/${encodeURIComponent(file.id)}/html-preview`;
+        window.open(previewUrl, "_blank", "noopener,noreferrer");
+        return;
+      }
       const response = await api.downloadChatFile(selectedId, selectedConversationId, file.id, "inline");
       const declaredMimeType = response.headers.get("content-type") || file.mimeType || "";
-      const declaredKind = getPreviewKindByName(file.originalName, declaredMimeType);
+      const declaredKind = getWorkspacePreviewKind(file.originalName, declaredMimeType);
       const declaredSize = Number(response.headers.get("content-length") || file.size || 0);
       if (isMemoryBoundTextPreview(declaredKind) && declaredSize > LOCAL_TEXT_PREVIEW_MAX_BYTES) {
         showToast(getPreviewTooLargeMessage(), "warning");
@@ -583,42 +727,82 @@ export function useChatWorkspaceFiles({
   };
 
   const getPreviewKind = (file: PendingAttachment, blob: Blob): ConversationFilePreview["kind"] => {
-    return getPreviewKindByName(file.originalName, blob.type || file.mimeType || "");
+    return getWorkspacePreviewKind(file.originalName, blob.type || file.mimeType || "");
   };
 
-  const handlePreviewConversationFile = async (file: PendingAttachment) => {
+  const handlePreviewConversationFile = useCallback(async (file: PendingAttachment) => {
     if (!selectedIdRef.current || !selectedConversationIdRef.current) return;
     const request = beginPreviewRequest(`conversation:${file.id}`);
     const capturedInstanceId = request.instanceId;
     const capturedConversationId = request.conversationId;
     if (!capturedConversationId) return;
+    savePreviewSelection(
+      typeof window === "undefined" ? null : window.sessionStorage,
+      capturedInstanceId,
+      capturedConversationId,
+      file.id
+    );
+    clearGeneratedPreviewSelection(
+      typeof window === "undefined" ? null : window.sessionStorage,
+      capturedInstanceId,
+      capturedConversationId
+    );
     if (conversationFilePreviewUrlRef.current) {
       window.URL.revokeObjectURL(conversationFilePreviewUrlRef.current);
       conversationFilePreviewUrlRef.current = null;
     }
-    setConversationFilePreview({ file, kind: "unsupported", source: "conversation", loading: true });
+    const contextKey = buildWorkspaceFileContextKey(capturedInstanceId, capturedConversationId);
+    setConversationFilePreview({ file, kind: "unsupported", contextKey, source: "conversation", loading: true });
+    const initialPreviewKind = getWorkspacePreviewKind(file.originalName, file.mimeType);
+    if (initialPreviewKind === "video") {
+      setConversationFilePreview({
+        file,
+        kind: "video",
+        contextKey,
+        source: "conversation",
+        url: `/api/instances/${encodeURIComponent(capturedInstanceId)}/conversations/${encodeURIComponent(capturedConversationId)}/files/${encodeURIComponent(file.id)}/media-preview`,
+      });
+      return;
+    }
+    if (initialPreviewKind === "office") {
+      try {
+        const preview = await api.get(`/api/instances/${encodeURIComponent(capturedInstanceId)}/conversations/${encodeURIComponent(capturedConversationId)}/files/${encodeURIComponent(file.id)}/office-preview`, { signal: request.signal });
+        if (!isPreviewRequestCurrent(request)) return;
+        setConversationFilePreview({
+          file,
+          kind: "office",
+          contextKey,
+          source: "conversation",
+          officeHtml: typeof preview?.html === "string" ? preview.html : "",
+        });
+      } catch (err: any) {
+        if (isPreviewAbortError(err) || !isPreviewRequestCurrent(request)) return;
+        setConversationFilePreview({ file, kind: "office", contextKey, source: "conversation", error: err?.message || t("dashboard:chatWorkspace.workspacePreviewLoadFailed") });
+      }
+      return;
+    }
     try {
       const response = await api.downloadChatFile(capturedInstanceId, capturedConversationId, file.id, "inline", { signal: request.signal });
       const declaredMimeType = response.headers.get("content-type") || file.mimeType || "";
-      const declaredKind = getPreviewKindByName(file.originalName, declaredMimeType);
+      const declaredKind = getWorkspacePreviewKind(file.originalName, declaredMimeType);
       const declaredSize = Number(response.headers.get("content-length") || file.size || 0);
       if (isMemoryBoundTextPreview(declaredKind) && declaredSize > LOCAL_TEXT_PREVIEW_MAX_BYTES) {
         throw new Error("PREVIEW_TOO_LARGE");
       }
       const blob = await response.blob();
       if (!isPreviewRequestCurrent(request)) return;
-      const kind = getPreviewKind(file, blob);
+      const kind = getWorkspacePreviewKind(file.originalName, blob.type || file.mimeType || "");
       if (isMemoryBoundTextPreview(kind) && blob.size > LOCAL_TEXT_PREVIEW_MAX_BYTES) {
         throw new Error("PREVIEW_TOO_LARGE");
       }
-      const previewBlob = normalizePreviewBlob(blob, kind);
+      const previewBlob = normalizePreviewBlob(blob, kind, file.originalName);
       if (kind === "text" || kind === "markdown") {
         const text = await previewBlob.text();
         if (!isPreviewRequestCurrent(request)) return;
-        setConversationFilePreview({ file, kind, source: "conversation", text });
+        setConversationFilePreview({ file, kind, contextKey, source: "conversation", text });
         return;
       }
-      if (kind === "image" || kind === "html" || kind === "pdf") {
+      if (kind === "image" || kind === "html" || kind === "pdf" || kind === "video") {
         const url = window.URL.createObjectURL(previewBlob);
         const htmlText = kind === "html" ? await previewBlob.text() : undefined;
         if (!isPreviewRequestCurrent(request)) {
@@ -626,13 +810,24 @@ export function useChatWorkspaceFiles({
           return;
         }
         conversationFilePreviewUrlRef.current = url;
-        setConversationFilePreview({ file, kind, source: "conversation", url, text: htmlText });
+        setConversationFilePreview({
+          file,
+          kind,
+          contextKey,
+          source: "conversation",
+          url,
+          htmlPreviewUrl: kind === "html"
+            ? `/api/instances/${encodeURIComponent(capturedInstanceId)}/conversations/${encodeURIComponent(capturedConversationId)}/files/${encodeURIComponent(file.id)}/html-preview`
+            : undefined,
+          text: htmlText
+        });
         return;
       }
       if (!isPreviewRequestCurrent(request)) return;
       setConversationFilePreview({
         file,
         kind,
+        contextKey,
         source: "conversation",
         error: t("dashboard:chatWorkspace.workspacePreviewUnsupportedDesc")
       });
@@ -641,23 +836,52 @@ export function useChatWorkspaceFiles({
       setConversationFilePreview({
         file,
         kind: "unsupported",
+        contextKey,
         source: "conversation",
         error: err?.message === "PREVIEW_TOO_LARGE"
           ? getPreviewTooLargeMessage()
           : (err?.message || t("dashboard:chatWorkspace.workspacePreviewLoadFailed"))
       });
     }
-  };
+  }, [beginPreviewRequest, getPreviewTooLargeMessage, isPreviewRequestCurrent, t]);
+
+  useEffect(() => {
+    if (!selectedId || !selectedConversationId || conversationFilePreview || conversationFiles.length === 0) return;
+    const selectedFileId = loadPreviewSelection(window.sessionStorage, selectedId, selectedConversationId);
+    if (!selectedFileId) return;
+    const selectedFile = conversationFiles.find(file => file.id === selectedFileId);
+    if (!selectedFile) {
+      clearPreviewSelection(window.sessionStorage, selectedId, selectedConversationId);
+      return;
+    }
+    void handlePreviewConversationFile(selectedFile);
+  }, [conversationFilePreview, conversationFiles, handlePreviewConversationFile, selectedConversationId, selectedId]);
   const handleDeleteConversationFile = async (fileId: string) => {
     if (!selectedId || !selectedConversationId) return;
     try {
       await api.deleteChatFile(selectedId, selectedConversationId, fileId);
       setConversationFiles(prev => prev.filter(a => a.id !== fileId));
       setPendingAttachments(prev => prev.filter(a => a.id !== fileId));
+      if (conversationFilePreview?.file.id === fileId) {
+        clearConversationFilePreview();
+      }
     } catch (err: any) {
       showToast(err?.message || t("dashboard:chatWorkspace.fileDeleteFailed"), "error");
     }
   };
+
+  const scopedConversationFiles = selectWorkspaceFileContextValue(
+    conversationFiles,
+    conversationFilesContextKey,
+    selectedId,
+    selectedConversationId
+  ) || [];
+  const scopedConversationFilePreview = selectWorkspaceFileContextValue(
+    conversationFilePreview,
+    conversationFilePreview?.contextKey,
+    selectedId,
+    selectedConversationId
+  );
 
   return {
     attachmentConfig,
@@ -665,9 +889,9 @@ export function useChatWorkspaceFiles({
     remainingAttachmentSlots: remainingChatAttachmentSlots(pendingAttachments.length, attachmentConfig.maxFiles),
     pendingAttachments,
     setPendingAttachments,
-    conversationFiles,
+    conversationFiles: scopedConversationFiles,
     setConversationFiles,
-    conversationFilePreview,
+    conversationFilePreview: scopedConversationFilePreview,
     clearConversationFilePreview,
     isUploading,
     isDraggingOver,
@@ -680,6 +904,7 @@ export function useChatWorkspaceFiles({
     handleDrop,
     handleRemoveAttachment,
     handleOpenInstanceFilePath,
+    handleDownloadInstanceFilePath,
     handleDownloadConversationFile,
     handleOpenConversationFile,
     handlePreviewConversationFile,

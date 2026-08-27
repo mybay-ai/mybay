@@ -27,12 +27,13 @@ export function createPreviewRequestGuard() {
 
   const isCurrent = (
     token: PreviewRequestToken,
-    context: Pick<PreviewRequestContext, "instanceId" | "conversationId">
+    context: Pick<PreviewRequestContext, "instanceId" | "conversationId"> & { identity?: string }
   ) => (
     !token.signal.aborted &&
     token.generation === generation &&
     token.instanceId === context.instanceId &&
-    token.conversationId === context.conversationId
+    token.conversationId === context.conversationId &&
+    (!context.identity || token.identity === context.identity)
   );
 
   return { begin, invalidate, isCurrent };

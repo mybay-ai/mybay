@@ -80,6 +80,15 @@ export function DashboardLayout({ children, currentUser, onLogout, setShowProfil
     }
   }, [isChatWorkspace, notificationUserId, completedChatCount]);
 
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSidebarOpen(false);
+    };
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [sidebarOpen]);
+
   const quota = useInstanceQuota(currentUser, instances);
   const isQuotaExceeded = !quota.canCreateInstance;
 
@@ -223,11 +232,11 @@ export function DashboardLayout({ children, currentUser, onLogout, setShowProfil
   };
 
   return (
-    <div className="flex h-screen bg-app-canvas text-content font-sans overflow-hidden transition-colors duration-200">
+    <div className="relative flex h-[100dvh] bg-app-canvas text-content font-sans overflow-hidden transition-colors duration-200">
       {/* Sidebar background overlay on mobile */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-slate-900/30 backdrop-blur-xs z-40 lg:hidden animate-fade-in"
+          className={`fixed inset-0 bg-slate-900/30 backdrop-blur-xs z-40 animate-fade-in ${isChatWorkspace ? "" : "lg:hidden"}`}
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -235,8 +244,9 @@ export function DashboardLayout({ children, currentUser, onLogout, setShowProfil
       {/* Sidebar */}
       <aside className={`
         fixed inset-y-0 left-0 w-60 bg-sidebar border-r border-outline flex flex-col p-4 gap-5 z-50
-        transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:z-20 lg:flex
-        ${sidebarOpen ? "translate-x-0 shadow-lg animate-slide-in" : "-translate-x-full lg:shadow-none"}
+        transition-transform duration-300 ease-in-out
+        ${isChatWorkspace ? "" : "lg:translate-x-0 lg:static lg:z-20 lg:flex"}
+        ${sidebarOpen ? "translate-x-0 shadow-lg animate-slide-in" : `-translate-x-full ${isChatWorkspace ? "" : "lg:shadow-none"}`}
       `}>
         <div className="flex items-center justify-between px-1.5 mt-1 shrink-0">
           <Link
@@ -250,9 +260,10 @@ export function DashboardLayout({ children, currentUser, onLogout, setShowProfil
 
           <button
             type="button"
-            className="p-2 -mr-1 text-content-muted hover:text-content lg:hidden hover:bg-nav-hover rounded-lg transition-colors flex items-center justify-center w-8 h-8"
+            className={`p-2 -mr-1 text-content-muted hover:text-content hover:bg-nav-hover rounded-lg transition-colors items-center justify-center w-8 h-8 ${isChatWorkspace ? "flex" : "flex lg:hidden"}`}
             onClick={() => setSidebarOpen(false)}
             title={t("nav.close_menu")}
+            aria-label={t("nav.close_menu")}
           >
             <X className="w-4.5 h-4.5" />
           </button>
@@ -349,13 +360,15 @@ export function DashboardLayout({ children, currentUser, onLogout, setShowProfil
       </aside>
 
       {/* Main Content */}
-      <main id="main-workspace" className="flex-1 flex flex-col h-screen overflow-hidden relative bg-app-canvas transition-colors duration-200">
-        <header className="h-12 bg-header backdrop-blur-md border-b border-outline flex items-center justify-between px-6 sm:px-8 shrink-0 z-10 sticky top-0">
+      <main id="main-workspace" className="flex-1 flex flex-col h-[100dvh] overflow-hidden relative bg-app-canvas transition-colors duration-200">
+        <header className={`h-12 bg-header backdrop-blur-md border-b border-outline flex items-center justify-between shrink-0 z-10 sticky top-0 ${isChatWorkspace ? "px-3 sm:px-5" : "px-6 sm:px-8"}`}>
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="p-2 -ml-2 text-content-muted hover:text-content lg:hidden hover:bg-nav-hover rounded-lg transition-colors flex items-center justify-center w-8 h-8"
+              className={`p-2 -ml-2 text-content-muted hover:text-content hover:bg-nav-hover rounded-lg transition-colors items-center justify-center w-8 h-8 ${isChatWorkspace ? "flex" : "flex lg:hidden"}`}
               title={t("nav.open_menu")}
+              aria-label={t("nav.open_menu")}
+              aria-expanded={sidebarOpen}
             >
               <Menu className="w-4.5 h-4.5" />
             </button>
@@ -380,8 +393,8 @@ export function DashboardLayout({ children, currentUser, onLogout, setShowProfil
           </div>
         </header>
 
-        <div className={`flex-1 overflow-y-auto w-full relative -z-0 scrollbar-thin ${isChatWorkspace ? "px-3 py-4 sm:px-5 sm:py-5 lg:px-6 lg:py-6" : "px-4 py-5 sm:p-6 lg:p-8"}`}>
-          <div className={`${isChatWorkspace ? "max-w-[1680px]" : "max-w-7xl"} mx-auto w-full pb-10 min-w-0`}>
+        <div className={`flex-1 w-full relative -z-0 scrollbar-thin ${isChatWorkspace ? "overflow-hidden" : "overflow-y-auto px-4 py-5 sm:p-6 lg:p-8"}`}>
+          <div className={`${isChatWorkspace ? "h-full max-w-none pb-0" : "max-w-7xl pb-10"} mx-auto w-full min-w-0`}>
             <ErrorBoundary>
               {children}
             </ErrorBoundary>

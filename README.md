@@ -1,5 +1,4 @@
 # MyBay Open Source Control Plane
-<img width="1672" height="941" alt="5129151285" src="https://github.com/user-attachments/assets/7a7a684c-746a-4713-94a2-e66648fce367" />
 
 [![CI](https://github.com/mybay-ai/mybay-core/actions/workflows/ci.yml/badge.svg)](https://github.com/mybay-ai/mybay-core/actions/workflows/ci.yml)
 [![Security](https://github.com/mybay-ai/mybay-core/actions/workflows/security.yml/badge.svg)](https://github.com/mybay-ai/mybay-core/actions/workflows/security.yml)
@@ -15,7 +14,27 @@ This edition operates completely standalone with no hosted SaaS dependencies, cl
 
 MyBay Open Source is the self-hosted community edition. The hosted MyBay service at [mybay.ai](https://mybay.ai) is a separate commercial offering and is not required to install or operate this repository.
 
-> **Release status: Early Preview (`v0.1.22-preview`).** Public interfaces, runtime adapters, deployment details, and upgrade behavior may still change during the 0.x series.
+> **Release status: Early Preview (`v0.1.23-preview`).** Public interfaces, runtime adapters, deployment details, and upgrade behavior may still change during the 0.x series.
+
+## Product Preview
+
+### Local-first Agent management
+
+Choose Quick Start or a manual Docker deployment to run and manage AI Agents on infrastructure you control.
+
+![MyBay Open Source home and deployment options](./docs/images/mybay-home.png)
+
+### Agent deployment and instance management
+
+Complete environment preflight checks, configure model credentials, deploy Agents, connect messaging channels, and inspect runtime health from one local control plane.
+
+![Agent deployment center](./docs/images/agent-deployment-center.png)
+
+### Chat and file workspace
+
+Chat with an Agent while viewing execution progress, generated files, file-change summaries, and supported previews in the same workspace.
+
+![Agent chat and file workspace](./docs/images/chat-file-workspace.png)
 
 ## Relationship with Hermes Agent
 
@@ -35,6 +54,8 @@ See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for licensing and attributi
 ---
 
 ## Deployment & Quick Start
+
+> New to MyBay? Follow the complete **[Deploy Your First Agent in 10 Minutes](./docs/QUICKSTART.md)** guide from Docker startup to the first local conversation.
 
 ### Method 1: Local Desktop Quick Start
 
@@ -94,8 +115,8 @@ The script asks for the control-panel domain, Agent root domain, and certificate
 
 1. **Clone the repository and copy environment configuration:**
    ```bash
-   git clone https://github.com/mybay-ai/mybay.git
-   cd mybay
+   git clone https://github.com/mybay-ai/mybay-core.git
+   cd mybay-core
    cp .env.example .env
    ```
 
@@ -257,6 +278,8 @@ With the `mybay.runtime.yaml` manifest, developers can declare container ports, 
 
 ## Documentation
 
+- `docs/QUICKSTART.md`: Deploy your first local Agent in 10 minutes ([简体中文](./docs/QUICKSTART.zh-CN.md))
+- `docs/troubleshooting.md`: Symptom-based troubleshooting for deployment, chat, Feishu, and previews ([简体中文](./docs/troubleshooting.zh-CN.md))
 - `docs/local-deployment.md`: Detailed local deployment workflow ([简体中文](./docs/local-deployment.zh-CN.md))
 - `docs/env.md`: Full environment variable reference ([简体中文](./docs/env.zh-CN.md))
 - `docs/docker-image-cache.md`: Hermes Agent image pulls, storage, and cleanup ([简体中文](./docs/docker-image-cache.zh-CN.md))
