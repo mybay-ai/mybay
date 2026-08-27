@@ -1,5 +1,6 @@
 interface ScheduledRun {
   id: string;
+  instance_id?: string | null;
   [key: string]: unknown;
 }
 
@@ -14,7 +15,7 @@ interface SchedulerLeaseController {
 interface RunReconcileSchedulerDependencies {
   ownerId: string;
   isTestEnvironment(): boolean;
-  createLeaseController(): SchedulerLeaseController;
+  createLeaseController(claimLimit: number): SchedulerLeaseController;
   emitClaimed(run: ScheduledRun): void;
   processRun(run: ScheduledRun, leaseLostRuns: Set<string>): Promise<void>;
   cleanupInactiveCaches(): void;
@@ -26,6 +27,56 @@ interface RunReconcileSchedulerDependencies {
 export interface StartRunReconcileSchedulerOptions {
   allowInTest?: boolean;
   cacheCleanupIntervalMs?: number;
+  concurrency?: number;
+}
+
+export const DEFAULT_RUN_RECONCILER_CONCURRENCY = 4;
+export const MAX_RUN_RECONCILER_CONCURRENCY = 16;
+
+export function resolveRunReconcilerConcurrency(
+  value: unknown = process.env.MYBAY_RUN_RECONCILER_CONCURRENCY,
+): number {
+  const parsed = Number.parseInt(String(value ?? ""), 10);
+  if (!Number.isFinite(parsed)) return DEFAULT_RUN_RECONCILER_CONCURRENCY;
+  return Math.max(1, Math.min(parsed, MAX_RUN_RECONCILER_CONCURRENCY));
+}
+
+export function resolveRunReconcilerClaimLimit(concurrency: number): number {
+  return Math.max(10, Math.min(50, resolveRunReconcilerConcurrency(concurrency) * 3));
+}
+
+function instanceSchedulingKey(run: ScheduledRun): string {
+  const instanceId = String(run.instance_id || "").trim();
+  return instanceId || "__missing_instance__";
+}
+
+/** Bounded parallel execution across instances, strict serialization per instance. */
+export async function processClaimedRunsByInstance<T extends ScheduledRun>(
+  runs: readonly T[],
+  concurrency: number,
+  processRun: (run: T) => Promise<void>,
+): Promise<void> {
+  if (runs.length === 0) return;
+
+  const queuesByInstance = new Map<string, T[]>();
+  for (const run of runs) {
+    const key = instanceSchedulingKey(run);
+    const queue = queuesByInstance.get(key);
+    if (queue) queue.push(run);
+    else queuesByInstance.set(key, [run]);
+  }
+
+  const queues = [...queuesByInstance.values()];
+  const workerCount = Math.min(resolveRunReconcilerConcurrency(concurrency), queues.length);
+  let nextQueueIndex = 0;
+
+  await Promise.all(Array.from({ length: workerCount }, async () => {
+    while (true) {
+      const queueIndex = nextQueueIndex++;
+      if (queueIndex >= queues.length) return;
+      for (const run of queues[queueIndex]) await processRun(run);
+    }
+  }));
 }
 
 export interface RunReconcileScheduler {
@@ -63,6 +114,8 @@ export function createRunReconcileScheduler(
     options: StartRunReconcileSchedulerOptions = {}
   ): Promise<void> {
     if (reconcileTimer || (dependencies.isTestEnvironment() && !options.allowInTest)) return;
+    const concurrency = resolveRunReconcilerConcurrency(options.concurrency);
+    const claimLimit = resolveRunReconcilerClaimLimit(concurrency);
     dependencies.logStarted(intervalMs, dependencies.ownerId);
 
     runReconcileCycle = async () => {
@@ -71,7 +124,7 @@ export function createRunReconcileScheduler(
         return;
       }
       isCycleRunning = true;
-      const leaseController = dependencies.createLeaseController();
+      const leaseController = dependencies.createLeaseController(claimLimit);
       const leaseLostRuns = leaseController.lostRunIds;
 
       try {
@@ -80,12 +133,12 @@ export function createRunReconcileScheduler(
         const stopLeaseRenewal = leaseController.startRenewal(claimedRuns);
 
         try {
-          for (const run of claimedRuns) {
+          await processClaimedRunsByInstance(claimedRuns, concurrency, async (run) => {
             if (leaseLostRuns.has(run.id)) {
               dependencies.logError(
                 `[RunsReconciler] Skipping run ${run.id} processing because lease was lost.`
               );
-              continue;
+              return;
             }
             try {
               dependencies.emitClaimed(run);
@@ -100,7 +153,7 @@ export function createRunReconcileScheduler(
                 await leaseController.release(run.id).catch(() => {});
               }
             }
-          }
+          });
         } finally {
           stopLeaseRenewal();
         }

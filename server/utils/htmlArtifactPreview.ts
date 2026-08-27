@@ -1,10 +1,7 @@
-import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 
 export const HTML_ARTIFACT_PREVIEW_MAX_BYTES = 2 * 1024 * 1024;
-export const HTML_ARTIFACT_PREVIEW_TOKEN_TTL_MS = 10 * 60 * 1000;
-
 export const HTML_ARTIFACT_PREVIEW_CSP = [
   "sandbox allow-scripts",
   "default-src 'none'",
@@ -51,15 +48,6 @@ const ALLOWED_ASSET_EXTENSIONS = new Set([
 export function isAllowedHtmlPreviewAsset(filePath: string): boolean {
   return ALLOWED_ASSET_EXTENSIONS.has(path.extname(filePath).toLowerCase());
 }
-
-export type HtmlArtifactPreviewTokenPayload = {
-  instanceId: string;
-  ownerId: string;
-  viewerRole: string;
-  projectRoot: string;
-  assetAliases?: Record<string, string>;
-  expiresAt: number;
-};
 
 export type HtmlArtifactPreviewDependency = {
   reference: string;
@@ -225,14 +213,6 @@ export function inspectHtmlArtifactPreviewProject(input: {
   return { status: missing.length > 0 ? "incomplete" : "ready", dependencies, missing, aliases };
 }
 
-function encodePayload(payload: HtmlArtifactPreviewTokenPayload): string {
-  return Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
-}
-
-function signPayload(encodedPayload: string, secret: string): string {
-  return crypto.createHmac("sha256", secret).update(encodedPayload).digest("base64url");
-}
-
 export function normalizeHtmlPreviewProjectRoot(requestedPath: string): { projectRoot: string; entryPath: string } | null {
   const normalized = requestedPath.replace(/^\/+/, "");
   if (!normalized || normalized.includes("\\")) return null;
@@ -246,43 +226,4 @@ export function normalizeHtmlPreviewProjectRoot(requestedPath: string): { projec
   }
   const projectRoot = path.posix.dirname(normalized);
   return { projectRoot, entryPath: path.posix.basename(normalized) };
-}
-
-export function createHtmlArtifactPreviewToken(input: {
-  instanceId: string;
-  ownerId: string;
-  viewerRole: string;
-  projectRoot: string;
-  assetAliases?: Record<string, string>;
-  secret: string;
-  now?: number;
-}): string {
-  const payload = encodePayload({
-    instanceId: input.instanceId,
-    ownerId: input.ownerId,
-    viewerRole: input.viewerRole,
-    projectRoot: input.projectRoot,
-    assetAliases: input.assetAliases,
-    expiresAt: (input.now ?? Date.now()) + HTML_ARTIFACT_PREVIEW_TOKEN_TTL_MS,
-  });
-  return `${payload}.${signPayload(payload, input.secret)}`;
-}
-
-export function verifyHtmlArtifactPreviewToken(token: string, secret: string, now = Date.now()): HtmlArtifactPreviewTokenPayload | null {
-  const [encodedPayload, signature, ...rest] = token.split(".");
-  if (!encodedPayload || !signature || rest.length > 0) return null;
-  const expected = signPayload(encodedPayload, secret);
-  const actualBuffer = Buffer.from(signature);
-  const expectedBuffer = Buffer.from(expected);
-  if (actualBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(actualBuffer, expectedBuffer)) return null;
-  try {
-    const payload = JSON.parse(Buffer.from(encodedPayload, "base64url").toString("utf8")) as HtmlArtifactPreviewTokenPayload;
-    if (!payload.instanceId || !payload.ownerId || !payload.viewerRole || !payload.projectRoot || !Number.isFinite(payload.expiresAt)) return null;
-    if (payload.assetAliases && (typeof payload.assetAliases !== "object" || Array.isArray(payload.assetAliases))) return null;
-    if (payload.assetAliases && Object.entries(payload.assetAliases).some(([from, to]) => !isSafeRelativeAssetPath(from) || !isSafeRelativeAssetPath(to))) return null;
-    if (payload.expiresAt <= now) return null;
-    return payload;
-  } catch {
-    return null;
-  }
 }

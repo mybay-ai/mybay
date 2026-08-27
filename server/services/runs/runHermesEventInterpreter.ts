@@ -204,13 +204,17 @@ export function createRunHermesEventInterpreter(
     }
 
     if (eventType === "approval.request") {
-      dependencies.addEvent(run.id, "approval", JSON.stringify(sanitizeApprovalEvent(event, "pending")));
+      const approval = sanitizeApprovalEvent(event, "pending");
+      tracker.sentSteps.set(`interaction:approval:${approval.id}`, "pending");
+      dependencies.addEvent(run.id, "approval", JSON.stringify(approval));
       dependencies.addEvent(run.id, "status", JSON.stringify({ status: "waiting_for_approval" }));
       return;
     }
 
     if (eventType === "approval.responded" || eventType === "approval.response") {
-      dependencies.addEvent(run.id, "approval", JSON.stringify(sanitizeApprovalEvent(event, "resolved")));
+      const approval = sanitizeApprovalEvent(event, "resolved");
+      tracker.sentSteps.set(`interaction:approval:${approval.id}`, "resolved");
+      dependencies.addEvent(run.id, "approval", JSON.stringify(approval));
       dependencies.addEvent(run.id, "status", JSON.stringify({ status: "running" }));
     }
   }

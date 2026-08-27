@@ -522,7 +522,7 @@ export const chatRepo = {
     });
   },
 
-  async finishChatRun(params: { runId: string; status: 'completed' | 'failed' | 'cancelled' | 'expired'; assistantContent?: string; errorCode?: string; usagePromptTokens?: number | null; usageCompletionTokens?: number | null; usageTotalTokens?: number | null; durationMs?: number | null; reconcilerId?: string; expectedUpstreamRunId?: string; }): Promise<{ status: string; assistant_message_id: string | null; assistant_sequence_no: number | null }> {
+  async finishChatRun(params: { runId: string; status: 'completed' | 'failed' | 'cancelled' | 'expired'; assistantContent?: string; errorCode?: string; usagePromptTokens?: number | null; usageCompletionTokens?: number | null; usageTotalTokens?: number | null; durationMs?: number | null; reconcilerId?: string; expectedUpstreamRunId?: string; completionAudit?: Record<string, unknown>; }): Promise<{ status: string; assistant_message_id: string | null; assistant_sequence_no: number | null }> {
     return mutateStore((data) => {
       const run = data.chatRuns.find((r: any) => r.id === params.runId);
       if (!run) return { status: "run_not_found", assistant_message_id: null, assistant_sequence_no: null };
@@ -531,7 +531,7 @@ export const chatRepo = {
       if (params.expectedUpstreamRunId && (run.upstream_run_id !== params.expectedUpstreamRunId || !["running", "stopping"].includes(run.status))) return { status: "upstream_run_mismatch", assistant_message_id: null, assistant_sequence_no: null };
       const now = nowIso();
       const assistantStatus = params.status === "completed" ? "completed" : "failed";
-      const assistant = { id: randomUUID(), conversation_id: run.conversation_id, instance_id: run.instance_id, role: "assistant", content: params.assistantContent ?? "", status: assistantStatus, sequence_no: nextSequence(data.chatMessages, run.conversation_id), request_id: run.request_id, error_code: params.errorCode ?? null, usage_prompt_tokens: params.usagePromptTokens ?? null, usage_completion_tokens: params.usageCompletionTokens ?? null, usage_total_tokens: params.usageTotalTokens ?? null, duration_ms: params.durationMs ?? null, metadata: { run_id: run.id }, created_at: now, updated_at: now };
+      const assistant = { id: randomUUID(), conversation_id: run.conversation_id, instance_id: run.instance_id, role: "assistant", content: params.assistantContent ?? "", status: assistantStatus, sequence_no: nextSequence(data.chatMessages, run.conversation_id), request_id: run.request_id, error_code: params.errorCode ?? null, usage_prompt_tokens: params.usagePromptTokens ?? null, usage_completion_tokens: params.usageCompletionTokens ?? null, usage_total_tokens: params.usageTotalTokens ?? null, duration_ms: params.durationMs ?? null, metadata: { run_id: run.id, ...(params.completionAudit ? { completion_verification: params.completionAudit } : {}) }, created_at: now, updated_at: now };
       data.chatMessages.push(assistant);
       const userMessage = data.chatMessages.find((m: any) => m.id === run.user_message_id);
       if (userMessage) Object.assign(userMessage, { status: "completed", updated_at: now });

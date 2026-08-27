@@ -26,7 +26,8 @@ interface RunNonStreamingChatExecutorDependencies {
     assistantContent: string,
     errorCode?: string,
     usage?: unknown,
-    durationMs?: number
+    durationMs?: number,
+    completionEvidence?: { requestId: string; responseStatusCode: number },
   ): Promise<unknown>;
   logOperation(
     operation: string,
@@ -159,7 +160,11 @@ export function createRunNonStreamingChatExecutor(
       assistantContent,
       undefined,
       chatResult.json?.usage || {},
-      durationMs
+      durationMs,
+      {
+        requestId: String(currentRequestId || ""),
+        responseStatusCode: chatResult.statusCode,
+      },
     );
     return true;
   };

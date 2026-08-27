@@ -20,7 +20,11 @@ import {
   shouldFallbackSessionCreate,
   shouldPreferNonStreamingChatForInstance
 } from "./runs/runHermesProtocol";
-import { createRunLeaseController, hasValidRunLease as validateRunLease } from "./runs/runLease";
+import {
+  createRunLeaseController,
+  DEFAULT_RUN_LEASE_POLICY,
+  hasValidRunLease as validateRunLease,
+} from "./runs/runLease";
 import {
   sanitizeRunErrorCode,
   terminalizeRun,
@@ -31,15 +35,12 @@ import {
   findRecoveredUpstreamId,
   handleDispatchRecordResult as resolveDispatchRecordResult,
   hasReachedDispatchAttemptLimit,
-  isStoppingRecoveryRecordSuccess,
   isValidUpstreamRunId,
   normalizeDispatchError as normalizeRunDispatchError,
-  resolveStopRecoveryWindow,
   shouldSearchForDispatchedRun,
 } from "./runs/runDispatchRecovery";
 import {
   hasRunExceededRuntime,
-  isImmediateStopCancellation,
   resolveMaxRuntimeMs,
   resolvePartialOutput,
   resolveProbeFailure,
@@ -70,6 +71,21 @@ import {
   createRunReconcileScheduler,
   type StartRunReconcileSchedulerOptions,
 } from "./runs/runReconcileScheduler";
+import {
+  assertVerifiedRunCompletionV1,
+  verifyRunCompletionV1,
+} from "./runs/runCompletionVerification";
+import { submitRunWithIdempotentRecovery } from "./runs/runSubmissionRecovery";
+import { publishPendingRuntimeInteractions } from "./runs/runPendingInteractionRecovery";
+import { convergeRunTerminalProbe } from "./runs/runTerminalConvergence";
+import { recoverStoppingRun } from "./runs/runStopRecovery";
+import {
+  HERMES_RUNTIME_CAPABILITIES,
+  canRecoverApprovalInteractions,
+  resolveConversationDispatchMode,
+  resolveTerminalObservationCapability,
+} from "./runs/runtimeCapabilityConsumers";
+import { containsDsmlToolCallProtocol } from "../utils/dsmlToolCallGuard";
 
 export { sanitizeStep } from "./runs/runStepSanitizer";
 export {
@@ -116,9 +132,13 @@ export function toHermesReasoningModelOptions(value: unknown) {
 const runReconcileScheduler = createRunReconcileScheduler({
   ownerId: RECONCILER_ID,
   isTestEnvironment: () => process.env.NODE_ENV === "test",
-  createLeaseController: () => createRunLeaseController({
+  createLeaseController: (claimLimit) => createRunLeaseController({
     repository: chatRepo,
-    ownerId: RECONCILER_ID
+    ownerId: RECONCILER_ID,
+    policy: {
+      ...DEFAULT_RUN_LEASE_POLICY,
+      claimLimit,
+    },
   }),
   emitClaimed: (run) => emitRunLifecycleStep(
     run.id,
@@ -145,8 +165,9 @@ const completeRunViaNonStreamingChat = createRunNonStreamingChatExecutor({
   requestRuns: (options) => requestRunsAPI(options),
   emitStatus: (runId, status) => addEventToCache(runId, "status", JSON.stringify(status)),
   toReasoningModelOptions: (value) => toHermesReasoningModelOptions(value),
-  completeRun: (runId, status, assistantContent, errorCode, usage, durationMs) =>
-    completeRun(runId, status, assistantContent, errorCode, usage as any, durationMs),
+  completeRun: (runId, status, assistantContent, errorCode, usage, durationMs, completionEvidence) =>
+    completeRun(runId, status, assistantContent, errorCode, usage as any, durationMs,
+      completionEvidence ? { response: completionEvidence } : {}),
   logOperation: (operation, runId, instanceId, statusCode, errorCode, durationMs) =>
     logOperation(operation, runId, instanceId, statusCode, errorCode, durationMs),
   now: () => Date.now()
@@ -286,7 +307,14 @@ export async function completeRunFromHermesEvent(run: any, event: any, upstreamR
       : typeof event.output?.message?.content === "string"
         ? event.output.message.content
         : tracker?.lastPartialOutput || "";
-    return completeRun(run.id, "completed", finalContent, undefined, event.usage, durationMs, { expectedUpstreamRunId: upstreamRunId });
+    return completeRun(run.id, "completed", finalContent, undefined, event.usage, durationMs, {
+      expectedUpstreamRunId: upstreamRunId,
+      runSnapshot: {
+        ...run,
+        status: run.status || "running",
+        upstream_run_id: run.upstream_run_id || upstreamRunId,
+      },
+    });
   }
 
   if (["run.failed", "run.error"].includes(eventType)) {
@@ -424,8 +452,51 @@ export async function completeRun(
   errorCode?: string,
   usage?: RunTerminalUsage,
   durationMs?: number | null,
-  authorization: { expectedUpstreamRunId?: string } = {},
+  authorization: {
+    expectedUpstreamRunId?: string;
+    response?: { requestId: string; responseStatusCode: number };
+    runSnapshot?: any;
+  } = {},
 ): Promise<boolean> {
+  let completionAudit: Record<string, unknown> | undefined;
+  if (finalStatus === "completed" && !containsDsmlToolCallProtocol(assistantContent)) {
+    const run = authorization.runSnapshot || await chatRepo.getChatRun(runId).catch(() => null);
+    const isAlreadyTerminal = ["completed", "failed", "cancelled", "expired"].includes(String(run?.status || ""));
+    const claim = isAlreadyTerminal ? null : authorization.response
+      ? {
+          source: "runtime_response" as const,
+          runId,
+          assistantContent,
+          observedAtMs: Date.now(),
+          requestId: authorization.response.requestId,
+          responseStatusCode: authorization.response.responseStatusCode,
+        }
+      : authorization.expectedUpstreamRunId
+        ? {
+            source: "runtime_status" as const,
+            runId,
+            assistantContent,
+            observedAtMs: Date.now(),
+            upstreamRunId: authorization.expectedUpstreamRunId,
+          }
+        : null;
+    if (!isAlreadyTerminal && !claim) {
+      console.warn(JSON.stringify({ operation: "run_completion_rejected", runId, reason: "RUN_COMPLETION_EVIDENCE_REQUIRED" }));
+      return false;
+    }
+    const decision = claim ? verifyRunCompletionV1(run, claim, RECONCILER_ID) : null;
+    if (decision && !decision.verified) {
+      console.warn(JSON.stringify({
+        operation: "run_completion_rejected",
+        runId,
+        reason: "reason" in decision ? decision.reason : "RUN_COMPLETION_REJECTED",
+      }));
+      return false;
+    } else if (decision?.verified) {
+      completionAudit = assertVerifiedRunCompletionV1(decision.verification, runId, assistantContent);
+    }
+  }
+
   return terminalizeRun({
     runId,
     finalStatus,
@@ -434,6 +505,7 @@ export async function completeRun(
     usage,
     durationMs,
     expectedUpstreamRunId: authorization.expectedUpstreamRunId,
+    completionAudit,
   }, {
     ownerId: RECONCILER_ID,
     finishRun: (params) => chatRepo.finishChatRun(params),
@@ -589,7 +661,14 @@ export async function processSingleRun(run: any, leaseLostRuns: Set<string>) {
       addEventToCache(run.id, "status", JSON.stringify({ status: "queued" }));
 
       const dispatchInstance = await dbAdapter.getInstanceById(run.instance_id);
-      if (shouldPreferNonStreamingChatForInstance(dispatchInstance)) {
+      const conversationDecision = resolveConversationDispatchMode(HERMES_RUNTIME_CAPABILITIES, {
+        preferBatch: shouldPreferNonStreamingChatForInstance(dispatchInstance),
+      });
+      if (conversationDecision.supported === false) {
+        await completeRun(run.id, "failed", "", conversationDecision.errorCode);
+        return;
+      }
+      if (conversationDecision.mode === "batch") {
         await completeRunViaNonStreamingChat(run, hermesMessages, hermesSessionId, "provider_compatibility", userMsg?.id, userMsg?.request_id);
         return;
       }
@@ -619,16 +698,31 @@ export async function processSingleRun(run: any, leaseLostRuns: Set<string>) {
       }
 
       const startTime = Date.now();
-      let dispatchRes = await requestRunsAPI({
-        instanceId: run.instance_id,
-        method: "POST",
-        path: "/v1/runs",
-        body: payload,
-        headers: {
-          "Idempotency-Key": run.id
+      let dispatchRes = await submitRunWithIdempotentRecovery({
+        submit: () => requestRunsAPI({
+          instanceId: run.instance_id,
+          method: "POST",
+          path: "/v1/runs",
+          body: payload,
+          headers: { "Idempotency-Key": run.id },
+          timeoutMs: 15000,
+          hermesSessionId,
+        }),
+        recover: async () => {
+          const lookup = await requestRunsAPI({
+            instanceId: run.instance_id,
+            method: "GET",
+            path: "/v1/runs",
+            timeoutMs: 10000,
+          });
+          if (!lookup.ok) return lookup;
+          const recoveredId = findRecoveredUpstreamId(lookup.json, run.id);
+          return { ...lookup, json: recoveredId ? { found: true, id: recoveredId } : { found: false } };
         },
-        timeoutMs: 15000,
-        hermesSessionId
+        shouldContinue: async () => {
+          const current = await chatRepo.getChatRun(run.id).catch(() => null);
+          return Boolean(current && current.status === "queued" && hasValidRunLease(current));
+        },
       });
 
       // Scheme B: Stale Hermes Session Recovery (guarded by MYBAY_RECOVER_STALE_HERMES_SESSION Feature Flag)
@@ -718,7 +812,14 @@ export async function processSingleRun(run: any, leaseLostRuns: Set<string>) {
           startedAt: new Date().toISOString()
         });
 
-        await handleDispatchRecordResult(run, recordRes, upstreamId, leaseLostRuns);
+        const dispatchActive = await handleDispatchRecordResult(run, recordRes, upstreamId, leaseLostRuns);
+        if (dispatchActive && canRecoverApprovalInteractions(HERMES_RUNTIME_CAPABILITIES)) {
+          publishPendingRuntimeInteractions(run, dispatchRes.json, "immediate_post_dispatch", {
+            getTracker: (runId, initialPartialOutput) => runHermesEventInterpreter.getOrCreate(runId, initialPartialOutput),
+            consume: (target, event) => runHermesEventInterpreter.handle(target, event, upstreamId),
+            log: (entry) => console.log(JSON.stringify(entry)),
+          });
+        }
       } else {
         const dispatchErrorCode = normalizeDispatchError(dispatchRes.statusCode, dispatchRes.error);
         logOperation(
@@ -772,6 +873,12 @@ export async function processSingleRun(run: any, leaseLostRuns: Set<string>) {
 
     ensureUpstreamRunEventStream(run, run.upstream_run_id);
 
+    const terminalObservation = resolveTerminalObservationCapability(HERMES_RUNTIME_CAPABILITIES);
+    if (terminalObservation.supported === false) {
+      await completeRun(run.id, "failed", "", terminalObservation.errorCode);
+      return;
+    }
+
     const maxRuntimeMs = getMaxRuntimeMs();
     if (hasRunExceededRuntime(run.created_at, maxRuntimeMs, Date.now())) {
       logOperation("TIMEOUT_EXCEEDED", run.id, run.instance_id, 408, "RUNTIME_TIMEOUT_EXCEEDED");
@@ -810,13 +917,24 @@ export async function processSingleRun(run: any, leaseLostRuns: Set<string>) {
         return;
       }
 
+      if (canRecoverApprovalInteractions(HERMES_RUNTIME_CAPABILITIES)) {
+        publishPendingRuntimeInteractions(run, statusRes.json, "status_probe", {
+          getTracker: (runId, initialPartialOutput) => runHermesEventInterpreter.getOrCreate(runId, initialPartialOutput),
+          consume: (target, event) => runHermesEventInterpreter.handle(target, event, run.upstream_run_id),
+          log: (entry) => console.log(JSON.stringify(entry)),
+        });
+      }
+
       if (terminalProbe?.status === "completed") {
         const finalContent = terminalProbe.assistantContent;
         const usage = terminalProbe.usage;
         const runDuration = terminalProbe.durationMs;
 
         logOperation("RUN_COMPLETED", run.id, run.instance_id, 200, undefined, runDuration);
-        await completeRun(run.id, "completed", finalContent, undefined, usage, runDuration);
+        await convergeRunTerminalProbe(run, terminalProbe, "status_probe", {
+          completeRun,
+          log: (entry) => console.log(JSON.stringify(entry)),
+        });
       } else if (terminalProbe?.status === "failed") {
         const upstreamError = terminalProbe.error;
         const hasNoPartialOutputForCompatFallback = !run.partial_output && !statusRes.json.partial_output;
@@ -856,10 +974,16 @@ export async function processSingleRun(run: any, leaseLostRuns: Set<string>) {
         }
 
         logOperation("RUN_FAILED_UPSTREAM", run.id, run.instance_id, 200, "UPSTREAM_FAILED", durationMs);
-        await completeRun(run.id, "failed", "", upstreamError);
+        await convergeRunTerminalProbe(run, terminalProbe, "status_probe", {
+          completeRun,
+          log: (entry) => console.log(JSON.stringify(entry)),
+        });
       } else if (terminalProbe?.status === "cancelled") {
         logOperation("RUN_CANCELLED_UPSTREAM", run.id, run.instance_id, 200, "UPSTREAM_CANCELLED", durationMs);
-        await completeRun(run.id, "cancelled", "", "CANCELLED_UPSTREAM");
+        await convergeRunTerminalProbe(run, terminalProbe, "status_probe", {
+          completeRun,
+          log: (entry) => console.log(JSON.stringify(entry)),
+        });
       } else {
         // Stream / parse partial outputs incrementally
         const partialOutput = resolvePartialOutput(tracker.lastPartialOutput, statusRes.json.partial_output);
@@ -906,182 +1030,17 @@ export async function processSingleRun(run: any, leaseLostRuns: Set<string>) {
       }
     }
   } else if (status === "stopping") {
-    if (!run.upstream_run_id) {
-      logOperation("STOPPING_NO_UPSTREAM", run.id, run.instance_id, 200);
-      if (leaseLostRuns.has(run.id)) return;
-
-      const dispatchAttempts = Number(run.dispatch_attempts || 0);
-      if (dispatchAttempts === 0) {
-        // Scenario A: Never attempted dispatch.
-        // Can directly be cancelled with CANCELLED_BY_USER
-        await completeRun(run.id, "cancelled", "", "CANCELLED_BY_USER");
-        return;
-      } else {
-        // Scenario B: Has attempted dispatch, but upstream_run_id is empty.
-        // We must query GET /v1/runs to see if we can find it.
-        const queryRes = await requestRunsAPI({
-          instanceId: run.instance_id,
-          method: "GET",
-          path: "/v1/runs",
-          timeoutMs: 10000
-        });
-        const recoveredUpstreamId = queryRes.ok && queryRes.json
-          ? findRecoveredUpstreamId(queryRes.json, run.id)
-          : null;
-
-        if (recoveredUpstreamId) {
-          const recordRes = await chatRepo.recordDispatchedChatRun({
-            runId: run.id,
-            reconcilerId: RECONCILER_ID,
-            upstreamRunId: recoveredUpstreamId,
-            startedAt: new Date().toISOString()
-          });
-
-          if (isStoppingRecoveryRecordSuccess(recordRes.status)) {
-            logOperation("STOPPING_UPSTREAM_RECOVERED", run.id, run.instance_id, 200);
-            return;
-          }
-        }
-
-        // If not found in GET /v1/runs:
-        // Perform finite recovery retries
-        const stopRequestedAtStr = run.stop_requested_at;
-        const stopRecovery = resolveStopRecoveryWindow(run.stop_attempts, stopRequestedAtStr, Date.now());
-        const stopAttempts = stopRecovery.stopAttempts;
-
-        if (stopRecovery.timedOut) {
-          logOperation("STOP_RECOVERY_TIMEOUT", run.id, run.instance_id, 408, "STOP_CONFIRMATION_TIMEOUT");
-          await completeRun(run.id, "failed", "", "STOP_CONFIRMATION_TIMEOUT");
-          return;
-        }
-
-        // Increment stop_attempts
-        const nextAttempts = stopAttempts + 1;
-        const nextRequestedAt = stopRequestedAtStr || new Date().toISOString();
-        const dbSuccess = await chatRepo.updateChatRun(run.id, {
-          stop_attempts: nextAttempts,
-          stop_requested_at: nextRequestedAt
-        }, RECONCILER_ID);
-
-        if (!dbSuccess) {
-          leaseLostRuns.add(run.id);
-          clearEventsCache(run.id);
-        }
-        return;
-      }
-    }
-
-    // 1. First probe upstream to check if it's already terminal
-    const startTime = Date.now();
-    const statusRes = await requestRunsAPI({
-      instanceId: run.instance_id,
-      method: "GET",
-      path: `/v1/runs/${run.upstream_run_id}`,
-      timeoutMs: 10000
+    await recoverStoppingRun(run, {
+      ownerId: RECONCILER_ID,
+      requestRuns: requestRunsAPI,
+      recordDispatched: (params) => chatRepo.recordDispatchedChatRun(params),
+      updateRun: (runId, updates, ownerId) => chatRepo.updateChatRun(runId, updates, ownerId),
+      completeRun,
+      markLeaseLost: (runId) => leaseLostRuns.add(runId),
+      hasLeaseBeenLost: (runId) => leaseLostRuns.has(runId),
+      clearEvents: clearEventsCache,
+      log: (entry) => console.log(JSON.stringify(entry)),
     });
-    const durationMs = Date.now() - startTime;
-
-    const now = Date.now();
-    const stopRequestedAtStr = run.stop_requested_at;
-    const stopRecovery = resolveStopRecoveryWindow(run.stop_attempts, stopRequestedAtStr, now);
-    const stopAttempts = stopRecovery.stopAttempts;
-    const timeElapsedSec = stopRecovery.elapsedSeconds;
-
-    if (statusRes.ok && statusRes.json) {
-      const terminalProbe = resolveTerminalProbeOutcome(statusRes.json, durationMs);
-      if (terminalProbe?.status === "completed") {
-        const finalContent = terminalProbe.assistantContent;
-        const usage = terminalProbe.usage;
-        const runDuration = terminalProbe.durationMs;
-        logOperation("STOPPING_UPSTREAM_ALREADY_COMPLETED", run.id, run.instance_id, 200, undefined, runDuration);
-        if (leaseLostRuns.has(run.id)) return;
-        await completeRun(run.id, "completed", finalContent, undefined, usage, runDuration);
-        return;
-      } else if (terminalProbe?.status === "failed") {
-        logOperation("STOPPING_UPSTREAM_ALREADY_FAILED", run.id, run.instance_id, 200, "UPSTREAM_FAILED", durationMs);
-        if (leaseLostRuns.has(run.id)) return;
-        await completeRun(run.id, "failed", "", terminalProbe.error);
-        return;
-      } else if (terminalProbe?.status === "cancelled") {
-        logOperation("STOPPING_UPSTREAM_ALREADY_CANCELLED", run.id, run.instance_id, 200, "UPSTREAM_CANCELLED", durationMs);
-        if (leaseLostRuns.has(run.id)) return;
-        await completeRun(run.id, "cancelled", "", "CANCELLED_UPSTREAM");
-        return;
-      }
-    } else if (statusRes.statusCode === 404) {
-      logOperation("STOPPING_UPSTREAM_NOT_FOUND_RETRYING", run.id, run.instance_id, 404, "UPSTREAM_RUN_NOT_FOUND");
-      if (stopRecovery.timedOut) {
-        logOperation("STOPPING_UPSTREAM_NOT_FOUND_TIMEOUT", run.id, run.instance_id, 404, "STOP_CONFIRMATION_TIMEOUT");
-        if (leaseLostRuns.has(run.id)) return;
-        await completeRun(run.id, "failed", "", "STOP_CONFIRMATION_TIMEOUT");
-        return;
-      }
-      
-      const nextAttempts = stopAttempts + 1;
-      const nextRequestedAt = stopRequestedAtStr || new Date().toISOString();
-      const dbSuccess = await chatRepo.updateChatRun(run.id, {
-        stop_attempts: nextAttempts,
-        stop_requested_at: nextRequestedAt
-      }, RECONCILER_ID);
-      
-      if (!dbSuccess) {
-        leaseLostRuns.add(run.id);
-        clearEventsCache(run.id);
-      }
-      return;
-    }
-
-    // 2. Check retry bounds
-    if (stopRecovery.timedOut) {
-      logOperation(
-        "STOP_MAX_ATTEMPTS_EXCEEDED",
-        run.id,
-        run.instance_id,
-        408,
-        "STOP_CONFIRMATION_TIMEOUT"
-      );
-      if (leaseLostRuns.has(run.id)) return;
-      await completeRun(run.id, "failed", "", "STOP_CONFIRMATION_TIMEOUT");
-      return;
-    }
-
-    // 3. Save attempt/metadata to database under lease lock FIRST before making network call
-    const nextAttempts = stopAttempts + 1;
-    const nextRequestedAt = stopRequestedAtStr || new Date().toISOString();
-
-    const dbSuccess = await chatRepo.updateChatRun(run.id, {
-      stop_attempts: nextAttempts,
-      stop_requested_at: nextRequestedAt
-    }, RECONCILER_ID);
-
-    if (!dbSuccess) {
-      leaseLostRuns.add(run.id);
-      clearEventsCache(run.id);
-      return;
-    }
-
-    logOperation("STOPPING_REQUESTED", run.id, run.instance_id, 200);
-    const stopRes = await requestRunsAPI({
-      instanceId: run.instance_id,
-      method: "POST",
-      path: `/v1/runs/${run.upstream_run_id}/stop`,
-      timeoutMs: 10000
-    });
-
-    if (stopRes.ok) {
-      logOperation("STOPPING_ACCEPTED_WAITING", run.id, run.instance_id, stopRes.statusCode);
-      if (isImmediateStopCancellation(stopRes.json)) {
-        if (leaseLostRuns.has(run.id)) return;
-        await completeRun(run.id, "cancelled", "", "CANCELLED_UPSTREAM");
-        return;
-      }
-      // Keep status as stopping, do not call completeRun or write cancelled
-      return;
-    } else {
-      // Do NOT transition to completed / cancelled on error! 
-      // Leave state in stopping and release lease for retry cycle.
-      logOperation("STOPPING_FAILED_RETRYING", run.id, run.instance_id, stopRes.statusCode, "STOP_REQUEST_FAILED");
-    }
   }
 }
 

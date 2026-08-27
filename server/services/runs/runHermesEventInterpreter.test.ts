@@ -55,6 +55,14 @@ describe("runHermesEventInterpreter", () => {
     expect(JSON.parse(events[1].data)).toEqual({ status: "waiting_for_approval" });
   });
 
+  it("tracks approval interaction state for status-probe deduplication", () => {
+    const { interpreter } = createHarness();
+    interpreter.handle({ id: "run-1" }, { event: "approval.request", approval_id: "approval-1" });
+    expect(interpreter.get("run-1")?.sentSteps.get("interaction:approval:approval-1")).toBe("pending");
+    interpreter.handle({ id: "run-1" }, { event: "approval.responded", approval_id: "approval-1", choice: "once" });
+    expect(interpreter.get("run-1")?.sentSteps.get("interaction:approval:approval-1")).toBe("resolved");
+  });
+
   it("requests reconciliation when immediate terminal handling rejects", async () => {
     const terminalError = new Error("terminal write failed");
     const { interpreter, completeTerminal, requestReconcile, warn } = createHarness(

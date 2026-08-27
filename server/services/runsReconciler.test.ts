@@ -65,7 +65,11 @@ describe("runs reconciler timer lifecycle", () => {
       assistant_message_id: "assistant-1",
       assistant_sequence_no: 2
     });
-    vi.spyOn(chatRepo, "getChatRun").mockResolvedValue(null);
+    vi.spyOn(chatRepo, "getChatRun").mockResolvedValue({
+      id: "run-1",
+      status: "running",
+      upstream_run_id: "upstream-1",
+    } as any);
 
     await completeRunFromHermesEvent(
       { id: "run-1", partial_output: "" },

@@ -79,7 +79,8 @@ describe("runNonStreamingChatExecutor", () => {
       "final answer",
       undefined,
       usage,
-      125
+      125,
+      { requestId: "request-current", responseStatusCode: 200 }
     );
   });
 

@@ -39,6 +39,7 @@ export interface FinishRunParams {
   durationMs: number | null;
   reconcilerId?: string;
   expectedUpstreamRunId?: string;
+  completionAudit?: Record<string, unknown>;
 }
 
 export interface RunTerminalizationInput {
@@ -49,6 +50,7 @@ export interface RunTerminalizationInput {
   usage?: RunTerminalUsage | null;
   durationMs?: number | null;
   expectedUpstreamRunId?: string;
+  completionAudit?: Record<string, unknown>;
 }
 
 export interface RunTerminalizationDependencies {
@@ -183,6 +185,7 @@ export async function terminalizeRun(
     durationMs: input.durationMs ?? null,
     reconcilerId: input.expectedUpstreamRunId ? undefined : dependencies.ownerId,
     expectedUpstreamRunId: input.expectedUpstreamRunId,
+    completionAudit: input.completionAudit,
   });
 
   if (result.status === "already_terminal") {

@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createRunReconcileScheduler } from "./runReconcileScheduler";
+import {
+  createRunReconcileScheduler,
+  processClaimedRunsByInstance,
+  resolveRunReconcilerClaimLimit,
+  resolveRunReconcilerConcurrency,
+} from "./runReconcileScheduler";
 
 function createHarness(claim = vi.fn(async () => [] as Array<{ id: string }>)) {
   const lostRunIds = new Set<string>();
@@ -99,5 +104,38 @@ describe("runReconcileScheduler", () => {
     expect(order).toEqual(["process", "release", "stop-renewal"]);
     expect(harness.emitClaimed).toHaveBeenCalledWith({ id: "run-1" });
     harness.scheduler.stop();
+  });
+
+  it("clamps concurrency and scales the claim window", () => {
+    expect(resolveRunReconcilerConcurrency(undefined)).toBe(4);
+    expect(resolveRunReconcilerConcurrency(0)).toBe(1);
+    expect(resolveRunReconcilerConcurrency(99)).toBe(16);
+    expect(resolveRunReconcilerClaimLimit(4)).toBe(12);
+    expect(resolveRunReconcilerClaimLimit(16)).toBe(48);
+  });
+
+  it("runs different instances concurrently while serializing the same instance", async () => {
+    let releaseA!: () => void;
+    const gateA = new Promise<void>((resolve) => { releaseA = resolve; });
+    const started: string[] = [];
+    const completed: string[] = [];
+
+    const processing = processClaimedRunsByInstance([
+      { id: "a-1", instance_id: "instance-a" },
+      { id: "a-2", instance_id: "instance-a" },
+      { id: "b-1", instance_id: "instance-b" },
+    ], 2, async (run) => {
+      started.push(run.id);
+      if (run.id === "a-1") await gateA;
+      completed.push(run.id);
+    });
+
+    await vi.waitFor(() => expect(started).toContain("b-1"));
+    expect(started).not.toContain("a-2");
+    releaseA();
+    await processing;
+
+    expect(started.indexOf("a-1")).toBeLessThan(started.indexOf("a-2"));
+    expect(completed).toContain("b-1");
   });
 });
