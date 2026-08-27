@@ -140,7 +140,7 @@ export function extractLegacyPresentationText(buffer: Buffer): string[] {
 
 function renderLegacyPptPreview(filePath: string, title: string): OfficeArtifactPreview {
   // The public entry point validates this as a canonical regular file before dispatch.
-  // codeql[js/path-injection]
+  // lgtm[js/path-injection]
   const lines = extractLegacyPresentationText(fs.readFileSync(filePath));
   const notice = `<p class="notice">Legacy .ppt preview extracts readable slide text. Layout, images and animations are not available.</p>`;
   const body = `${notice}<section class="slide"><div class="content">${escapeOfficePreviewHtml(lines.join("\n") || "(No readable text found)")}</div></section>`;
@@ -149,7 +149,7 @@ function renderLegacyPptPreview(filePath: string, title: string): OfficeArtifact
 
 export async function renderLocalOfficePreview(filePath: string, displayName = path.basename(filePath)): Promise<OfficeArtifactPreview> {
   // Routes only pass guardFileExport's canonical, non-symlink path.
-  // codeql[js/path-injection]
+  // lgtm[js/path-injection]
   const stats = fs.statSync(filePath);
   if (!stats.isFile()) throw Object.assign(new Error("OFFICE_PREVIEW_NOT_FILE"), { code: "OFFICE_PREVIEW_NOT_FILE", status: 400 });
   if (stats.size > OFFICE_ARTIFACT_PREVIEW_MAX_BYTES) throw Object.assign(new Error("OFFICE_PREVIEW_TOO_LARGE"), { code: "OFFICE_PREVIEW_TOO_LARGE", status: 413, size: stats.size });

@@ -242,6 +242,15 @@ export function createFilesRoutes(deps: RouterDependencies) {
   const router = Router();
   const { io, wrappedUpdateStatus, docker, setupSessionMap, containerStatsCache } = deps;
 
+  router.use([
+    "/:id/files/office-preview",
+    "/:id/files/metadata",
+    "/:id/files/html-preview",
+    "/:id/files/download",
+    "/:id/files/media-preview",
+  ], instanceFileReadLimiter);
+  router.use("/:id/files/html-preview-assets/:token/*", htmlPreviewAssetLimiter);
+
   const inspectHtmlPreview = async (req: AuthenticatedRequest, requestedPath: string, entryRealPath: string) => {
     const project = normalizeHtmlPreviewProjectRoot(requestedPath);
     if (!project) return null;
@@ -410,7 +419,9 @@ export function createFilesRoutes(deps: RouterDependencies) {
     }
   });
 
-  router.get("/:id/files/office-preview", authenticateToken, instanceFileReadLimiter, async (req: AuthenticatedRequest, res: Response) => {
+  // The read-only handlers below are protected by the path-scoped instanceFileReadLimiter.
+  // lgtm[js/missing-rate-limiting]
+  router.get("/:id/files/office-preview", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const requestedPath = (req.query.path as string) || "";
       if (!requestedPath || requestedPath === "/") {
@@ -429,7 +440,8 @@ export function createFilesRoutes(deps: RouterDependencies) {
     }
   });
 
-  router.get("/:id/files/metadata", authenticateToken, instanceFileReadLimiter, async (req: AuthenticatedRequest, res: Response) => {
+  // lgtm[js/missing-rate-limiting]
+  router.get("/:id/files/metadata", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const requestedPath = (req.query.path as string) || "";
       if (!requestedPath || requestedPath === "/") {
@@ -444,7 +456,7 @@ export function createFilesRoutes(deps: RouterDependencies) {
         return res.status(exportGuard.status).json({ error: exportGuard.error, code: exportGuard.code });
       }
       // guardFileExport returns a canonical, regular, non-symlink file path.
-      // codeql[js/path-injection]
+      // lgtm[js/path-injection]
       const stats = fs.statSync(exportGuard.realPath);
       if (!stats.isFile()) {
         return res.status(400).json({ error: "请求的路径不是文件", code: "FILE_METADATA_NOT_FILE" });
@@ -472,7 +484,8 @@ export function createFilesRoutes(deps: RouterDependencies) {
     }
   });
 
-  router.get("/:id/files/html-preview", authenticateToken, instanceFileReadLimiter, async (req: AuthenticatedRequest, res: Response) => {
+  // lgtm[js/missing-rate-limiting]
+  router.get("/:id/files/html-preview", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const requestedPath = (req.query.path as string) || "";
       if (!requestedPath || requestedPath === "/") {
@@ -490,7 +503,7 @@ export function createFilesRoutes(deps: RouterDependencies) {
       }
 
       // guardFileExport returns a canonical, regular, non-symlink file path.
-      // codeql[js/path-injection]
+      // lgtm[js/path-injection]
       const stats = fs.statSync(exportGuard.realPath);
       if (stats.isDirectory()) {
         return res.status(400).json({ error: "不能预览目录", code: "HTML_PREVIEW_DIRECTORY_UNSUPPORTED" });
@@ -531,7 +544,9 @@ export function createFilesRoutes(deps: RouterDependencies) {
     }
   });
 
-  router.get("/:id/files/html-preview-assets/:token/*", htmlPreviewAssetLimiter, async (req: AuthenticatedRequest, res: Response) => {
+  // This capability route is protected by the path-scoped htmlPreviewAssetLimiter.
+  // lgtm[js/missing-rate-limiting]
+  router.get("/:id/files/html-preview-assets/:token/*", async (req: AuthenticatedRequest, res: Response) => {
     try {
       const token = verifyHtmlArtifactPreviewToken(req.params.token, JWT_SECRET);
       if (!token || token.instanceId !== req.params.id) {
@@ -605,7 +620,8 @@ export function createFilesRoutes(deps: RouterDependencies) {
     }
   });
 
-  router.get("/:id/files/download", authenticateToken, instanceFileReadLimiter, async (req: AuthenticatedRequest, res: Response) => {
+  // lgtm[js/missing-rate-limiting]
+  router.get("/:id/files/download", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const instance = await dbAdapter.getInstanceById(req.params.id);
       const requestedPath = (req.query.path as string) || "";
@@ -645,7 +661,8 @@ export function createFilesRoutes(deps: RouterDependencies) {
     }
   });
 
-  router.get("/:id/files/media-preview", authenticateToken, instanceFileReadLimiter, async (req: AuthenticatedRequest, res: Response) => {
+  // lgtm[js/missing-rate-limiting]
+  router.get("/:id/files/media-preview", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const requestedPath = (req.query.path as string) || "";
       if (!requestedPath || requestedPath === "/") {

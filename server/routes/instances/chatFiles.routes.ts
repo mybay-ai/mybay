@@ -367,7 +367,16 @@ router.get("/:id/conversations/:conversationId/files", authenticateToken, async 
   }
 });
 
-router.get("/:id/conversations/:conversationId/files/:fileId/html-preview", authenticateToken, chatFileReadLimiter, async (req: AuthenticatedRequest, res: Response) => {
+router.use([
+  "/:id/conversations/:conversationId/files/:fileId/html-preview",
+  "/:id/conversations/:conversationId/files/:fileId/office-preview",
+  "/:id/conversations/:conversationId/files/:fileId/download",
+  "/:id/conversations/:conversationId/files/:fileId/media-preview",
+], chatFileReadLimiter);
+
+// These four handlers are protected by the path-scoped chatFileReadLimiter above.
+// lgtm[js/missing-rate-limiting]
+router.get("/:id/conversations/:conversationId/files/:fileId/html-preview", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const resolved = await resolveChatFileForAccess(req, res);
     if (!resolved) return;
@@ -411,7 +420,8 @@ router.get("/:id/conversations/:conversationId/files/:fileId/html-preview", auth
   }
 });
 
-router.get("/:id/conversations/:conversationId/files/:fileId/office-preview", authenticateToken, chatFileReadLimiter, async (req: AuthenticatedRequest, res: Response) => {
+// lgtm[js/missing-rate-limiting]
+router.get("/:id/conversations/:conversationId/files/:fileId/office-preview", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const resolved = await resolveChatFileForAccess(req, res);
     if (!resolved) return;
@@ -430,7 +440,8 @@ router.get("/:id/conversations/:conversationId/files/:fileId/office-preview", au
 });
 
 
-router.get("/:id/conversations/:conversationId/files/:fileId/download", authenticateToken, chatFileReadLimiter, async (req: AuthenticatedRequest, res: Response) => {
+// lgtm[js/missing-rate-limiting]
+router.get("/:id/conversations/:conversationId/files/:fileId/download", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const resolved = await resolveChatFileForAccess(req, res);
     if (!resolved) return;
@@ -459,7 +470,8 @@ router.get("/:id/conversations/:conversationId/files/:fileId/download", authenti
   }
 });
 
-router.get("/:id/conversations/:conversationId/files/:fileId/media-preview", authenticateToken, chatFileReadLimiter, async (req: AuthenticatedRequest, res: Response) => {
+// lgtm[js/missing-rate-limiting]
+router.get("/:id/conversations/:conversationId/files/:fileId/media-preview", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const resolved = await resolveChatFileForAccess(req, res);
     if (!resolved) return;

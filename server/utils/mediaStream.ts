@@ -16,7 +16,7 @@ export function streamLocalVideo(req: { headers: { range?: string } }, res: Resp
   }
 
   // Routes only call this helper with guardFileExport's canonical, non-symlink path.
-  // codeql[js/path-injection]
+  // lgtm[js/path-injection]
   const stats = fs.statSync(absolutePath);
   if (!stats.isFile() || stats.size <= 0) {
     return res.status(416).setHeader("Content-Range", `bytes */${Math.max(0, stats.size)}`).end();
@@ -41,7 +41,7 @@ export function streamLocalVideo(req: { headers: { range?: string } }, res: Resp
   res.setHeader("Content-Length", String(contentLength));
   if (range) res.setHeader("Content-Range", `bytes ${start}-${end}/${stats.size}`);
 
-  // codeql[js/path-injection]
+  // lgtm[js/path-injection]
   const stream = fs.createReadStream(absolutePath, { start, end });
   stream.on("error", (error) => {
     if (!res.headersSent) res.status(500).json({ success: false, error: "VIDEO_PREVIEW_TRANSFER_FAILED", code: "VIDEO_PREVIEW_TRANSFER_FAILED", message: "视频传输失败。" });
