@@ -28,7 +28,7 @@ const SECRET_CONTENT_PATTERNS = [
 ];
 
 export type FileLeakGuardResult =
-  | { ok: true; realPath: string }
+  | { ok: true; realPath: string; rootPath: string }
   | { ok: false; code: string; error: string; status: 400 | 403 | 404 };
 
 export function isBlockedExportFileName(fileName: string): boolean {
@@ -47,9 +47,11 @@ function isTextFile(fileName: string): boolean {
   return TEXT_FILE_EXTENSIONS.has(path.extname(fileName).toLowerCase());
 }
 
-async function containsSecretInTextFile(filePath: string): Promise<boolean> {
-  // The caller supplies a canonical file path that passed ownership, root-boundary and symlink checks.
-  const stream = fs.createReadStream(filePath, { encoding: "utf8", highWaterMark: 64 * 1024 }); // lgtm[js/path-injection]
+async function containsSecretInTextFile(filePath: string, rootPath: string): Promise<boolean> {
+  const canonicalRoot = fs.realpathSync(path.resolve(rootPath));
+  const canonicalFile = fs.realpathSync(path.resolve(filePath));
+  if (canonicalFile !== canonicalRoot && !canonicalFile.startsWith(canonicalRoot + path.sep)) return true;
+  const stream = fs.createReadStream(canonicalFile, { encoding: "utf8", highWaterMark: 64 * 1024 });
   let carry = "";
 
   try {
@@ -64,29 +66,37 @@ async function containsSecretInTextFile(filePath: string): Promise<boolean> {
   }
 }
 
-export async function guardFileExport(filePath: string, displayName = path.basename(filePath)): Promise<FileLeakGuardResult> {
+export async function guardFileExport(
+  filePath: string,
+  displayName = path.basename(filePath),
+  allowedRoot = path.dirname(filePath),
+): Promise<FileLeakGuardResult> {
   if (isBlockedExportFileName(displayName) || isBlockedExportFileName(filePath)) {
     return { ok: false, code: "FILE_EXPORT_BLOCKED", error: "出于安全原因，该文件不允许预览或导出。", status: 403 };
   }
 
   let realPath: string;
+  let rootPath: string;
   try {
-    // Export candidates come from validateFileAccess or the isolated chat-upload directory.
-    const linkStats = fs.lstatSync(filePath); // lgtm[js/path-injection]
+    rootPath = fs.realpathSync(path.resolve(allowedRoot));
+    realPath = fs.realpathSync(path.resolve(filePath));
+    if (realPath !== rootPath && !realPath.startsWith(rootPath + path.sep)) {
+      return { ok: false, code: "FILE_OUTSIDE_INSTANCE_ROOT", error: "文件路径超出实例数据目录。", status: 403 };
+    }
+    const linkStats = fs.lstatSync(realPath);
     if (linkStats.isSymbolicLink()) {
       return { ok: false, code: "FILE_SYMLINK_BLOCKED", error: "出于安全原因，不允许导出符号链接文件。", status: 403 };
     }
-    if (!fs.statSync(filePath).isFile()) { // lgtm[js/path-injection]
+    if (!fs.statSync(realPath).isFile()) {
       return { ok: false, code: "FILE_NOT_REGULAR", error: "只能预览或导出普通文件。", status: 400 };
     }
-    realPath = fs.realpathSync(filePath);
   } catch {
     return { ok: false, code: "FILE_NOT_FOUND", error: "文件不存在或已无法访问。", status: 404 };
   }
 
-  if (isTextFile(displayName) && await containsSecretInTextFile(realPath)) {
+  if (isTextFile(displayName) && await containsSecretInTextFile(realPath, rootPath)) {
     return { ok: false, code: "FILE_SECRET_CONTENT_BLOCKED", error: "检测到文件内容可能包含密钥或密码，已禁止预览和导出。", status: 403 };
   }
 
-  return { ok: true, realPath };
+  return { ok: true, realPath, rootPath };
 }

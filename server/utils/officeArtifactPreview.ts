@@ -138,23 +138,30 @@ export function extractLegacyPresentationText(buffer: Buffer): string[] {
   return lines;
 }
 
-function renderLegacyPptPreview(filePath: string, title: string): OfficeArtifactPreview {
-  // The public entry point validates this as a canonical regular file before dispatch.
-  const lines = extractLegacyPresentationText(fs.readFileSync(filePath)); // lgtm[js/path-injection]
+function renderLegacyPptPreview(buffer: Buffer, title: string): OfficeArtifactPreview {
+  const lines = extractLegacyPresentationText(buffer);
   const notice = `<p class="notice">Legacy .ppt preview extracts readable slide text. Layout, images and animations are not available.</p>`;
   const body = `${notice}<section class="slide"><div class="content">${escapeOfficePreviewHtml(lines.join("\n") || "(No readable text found)")}</div></section>`;
   return { html: wrapOfficePreview(title, body, "legacy-presentation"), mode: "legacy-presentation", truncated: lines.length >= 500 };
 }
 
-export async function renderLocalOfficePreview(filePath: string, displayName = path.basename(filePath)): Promise<OfficeArtifactPreview> {
-  // Routes only pass guardFileExport's canonical, non-symlink path.
-  const stats = fs.statSync(filePath); // lgtm[js/path-injection]
+export async function renderLocalOfficePreview(
+  filePath: string,
+  displayName = path.basename(filePath),
+  allowedRoot = path.dirname(filePath),
+): Promise<OfficeArtifactPreview> {
+  const canonicalRoot = fs.realpathSync(path.resolve(allowedRoot));
+  const canonicalPath = fs.realpathSync(path.resolve(filePath));
+  if (canonicalPath !== canonicalRoot && !canonicalPath.startsWith(canonicalRoot + path.sep)) {
+    throw Object.assign(new Error("OFFICE_PREVIEW_PATH_FORBIDDEN"), { code: "OFFICE_PREVIEW_PATH_FORBIDDEN", status: 403 });
+  }
+  const stats = fs.statSync(canonicalPath);
   if (!stats.isFile()) throw Object.assign(new Error("OFFICE_PREVIEW_NOT_FILE"), { code: "OFFICE_PREVIEW_NOT_FILE", status: 400 });
   if (stats.size > OFFICE_ARTIFACT_PREVIEW_MAX_BYTES) throw Object.assign(new Error("OFFICE_PREVIEW_TOO_LARGE"), { code: "OFFICE_PREVIEW_TOO_LARGE", status: 413, size: stats.size });
   const extension = path.extname(displayName).toLowerCase();
-  if (extension === ".doc" || extension === ".docx") return renderWordPreview(filePath, displayName);
-  if (extension === ".xls" || extension === ".xlsx") return renderSpreadsheetPreview(filePath, displayName);
-  if (extension === ".pptx") return renderPptxPreview(filePath, displayName);
-  if (extension === ".ppt") return renderLegacyPptPreview(filePath, displayName);
+  if (extension === ".doc" || extension === ".docx") return renderWordPreview(canonicalPath, displayName);
+  if (extension === ".xls" || extension === ".xlsx") return renderSpreadsheetPreview(canonicalPath, displayName);
+  if (extension === ".pptx") return renderPptxPreview(canonicalPath, displayName);
+  if (extension === ".ppt") return renderLegacyPptPreview(fs.readFileSync(canonicalPath), displayName);
   throw Object.assign(new Error("OFFICE_PREVIEW_TYPE_UNSUPPORTED"), { code: "OFFICE_PREVIEW_TYPE_UNSUPPORTED", status: 415 });
 }

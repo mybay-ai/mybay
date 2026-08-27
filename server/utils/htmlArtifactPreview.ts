@@ -129,23 +129,26 @@ function isSafeRelativeAssetPath(value: string): boolean {
 
 function listProjectFiles(root: string): string[] {
   const files: string[] = [];
+  const canonicalRoot = fs.realpathSync(path.resolve(root));
   const walk = (directory: string, depth: number) => {
     if (depth > MAX_HTML_PROJECT_SCAN_DEPTH || files.length >= MAX_HTML_PROJECT_SCAN_FILES) return;
     let entries: fs.Dirent[] = [];
+    let canonicalDirectory = "";
     try {
-      // The root is a canonical instance path and recursion only appends trusted directory entries.
-      entries = fs.readdirSync(directory, { withFileTypes: true }); // lgtm[js/path-injection]
+      canonicalDirectory = fs.realpathSync(path.resolve(directory));
+      if (canonicalDirectory !== canonicalRoot && !canonicalDirectory.startsWith(canonicalRoot + path.sep)) return;
+      entries = fs.readdirSync(canonicalDirectory, { withFileTypes: true });
     } catch {
       return;
     }
     for (const entry of entries) {
       if (files.length >= MAX_HTML_PROJECT_SCAN_FILES || entry.isSymbolicLink()) break;
-      const absolutePath = path.join(directory, entry.name);
+      const absolutePath = path.join(canonicalDirectory, entry.name);
       if (entry.isDirectory() && !HTML_PROJECT_SCAN_SKIP_DIRECTORIES.has(entry.name)) walk(absolutePath, depth + 1);
-      else if (entry.isFile()) files.push(path.relative(root, absolutePath).replace(/\\/g, "/"));
+      else if (entry.isFile()) files.push(path.relative(canonicalRoot, absolutePath).replace(/\\/g, "/"));
     }
   };
-  walk(root, 0);
+  walk(canonicalRoot, 0);
   return files;
 }
 
@@ -154,11 +157,21 @@ export function inspectHtmlArtifactPreviewProject(input: {
   entryPath: string;
   source?: string;
 }): HtmlArtifactPreviewInspection {
-  const projectRootAbsolute = path.resolve(input.projectRootAbsolute);
+  const projectRootAbsolute = fs.realpathSync(path.resolve(input.projectRootAbsolute));
   const entryPath = input.entryPath.replace(/\\/g, "/").replace(/^\/+/, "");
+  if (!isSafeRelativeAssetPath(entryPath)) {
+    throw Object.assign(new Error("HTML_PREVIEW_ENTRY_PATH_INVALID"), { code: "HTML_PREVIEW_ENTRY_PATH_INVALID", status: 400 });
+  }
   const entryDirectory = path.posix.dirname(entryPath) === "." ? "" : path.posix.dirname(entryPath);
-  // entryPath is normalized to safe non-empty segments by normalizeHtmlPreviewProjectRoot.
-  const source = input.source ?? fs.readFileSync(path.resolve(projectRootAbsolute, ...entryPath.split("/")), "utf8"); // lgtm[js/path-injection]
+  const resolvedEntryAbsolute = path.resolve(projectRootAbsolute, ...entryPath.split("/"));
+  if (resolvedEntryAbsolute !== projectRootAbsolute && !resolvedEntryAbsolute.startsWith(projectRootAbsolute + path.sep)) {
+    throw Object.assign(new Error("HTML_PREVIEW_ENTRY_OUTSIDE_PROJECT"), { code: "HTML_PREVIEW_ENTRY_OUTSIDE_PROJECT", status: 403 });
+  }
+  const entryAbsolute = input.source === undefined ? fs.realpathSync(resolvedEntryAbsolute) : resolvedEntryAbsolute;
+  if (entryAbsolute !== projectRootAbsolute && !entryAbsolute.startsWith(projectRootAbsolute + path.sep)) {
+    throw Object.assign(new Error("HTML_PREVIEW_ENTRY_OUTSIDE_PROJECT"), { code: "HTML_PREVIEW_ENTRY_OUTSIDE_PROJECT", status: 403 });
+  }
+  const source = input.source ?? fs.readFileSync(entryAbsolute, "utf8");
   const projectFiles = listProjectFiles(projectRootAbsolute);
   const projectFileSet = new Set(projectFiles);
   const dependencies: HtmlArtifactPreviewDependency[] = [];
@@ -190,9 +203,9 @@ export function inspectHtmlArtifactPreviewProject(input: {
     const preferredExisting = preferred.find(candidate => {
       if (!isSafeRelativeAssetPath(candidate) || !isAllowedHtmlPreviewAsset(candidate)) return false;
       try {
-        const candidateAbsolute = path.resolve(projectRootAbsolute, ...candidate.split("/"));
-        // candidate passed isSafeRelativeAssetPath and remains inside projectRootAbsolute.
-        const stats = fs.lstatSync(candidateAbsolute); // lgtm[js/path-injection]
+        const candidateAbsolute = fs.realpathSync(path.resolve(projectRootAbsolute, ...candidate.split("/")));
+        if (candidateAbsolute !== projectRootAbsolute && !candidateAbsolute.startsWith(projectRootAbsolute + path.sep)) return false;
+        const stats = fs.lstatSync(candidateAbsolute);
         return stats.isFile() && !stats.isSymbolicLink();
       } catch {
         return false;

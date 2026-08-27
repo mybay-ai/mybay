@@ -83,6 +83,16 @@ export const getMimeType = (filename: string) => {
   return map[ext] || 'application/octet-stream';
 };
 
+function resolveExistingDirectory(candidate: unknown): string | null {
+  if (typeof candidate !== "string" || !candidate || candidate.length > 4096 || /[\0-\x1f\x7f]/.test(candidate)) return null;
+  try {
+    const canonical = fs.realpathSync(path.resolve(candidate));
+    return fs.statSync(canonical).isDirectory() ? canonical : null;
+  } catch {
+    return null;
+  }
+}
+
 export const validateFileAccess = async (req: AuthenticatedRequest, instanceId: string, requestedPathRaw: string) => {
   if (!/^[A-Za-z0-9_-]{1,128}$/.test(instanceId)) {
     return { error: "无效的实例标识", status: 400 };
@@ -121,14 +131,9 @@ export const validateFileAccess = async (req: AuthenticatedRequest, instanceId: 
   }
 
   const localDir = path.resolve(process.cwd(), "data", "instances", instanceId);
-  let rootDir = localDir;
-  
-  // rootDir is selected only from the authenticated instance record or its validated Docker mount.
-  if (!fs.existsSync(rootDir) && instance.data_volume_path) { // lgtm[js/path-injection]
-    rootDir = instance.data_volume_path;
-  }
+  let rootDir = resolveExistingDirectory(localDir) || resolveExistingDirectory(instance.data_volume_path);
 
-  if (!fs.existsSync(rootDir)) { // lgtm[js/path-injection]
+  if (!rootDir) {
     try {
       const container = await getValidatedContainer(docker, instance);
       const inspectData = await container.inspect();
@@ -153,14 +158,9 @@ export const validateFileAccess = async (req: AuthenticatedRequest, instanceId: 
           console.warn("[File Manager] Self-container inspect failed", { error: me.message });
         }
 
-        // Docker mount paths are inspected from the already validated instance container.
-        if (resolvedLocal && fs.existsSync(resolvedLocal)) { // lgtm[js/path-injection]
-           rootDir = resolvedLocal;
-        } else if (fs.existsSync(hostPathFound)) { // lgtm[js/path-injection]
-           rootDir = hostPathFound;
-        } else if (fs.existsSync(localDir)) { // lgtm[js/path-injection]
-           rootDir = localDir;
-        }
+        rootDir = resolveExistingDirectory(resolvedLocal)
+          || resolveExistingDirectory(hostPathFound)
+          || resolveExistingDirectory(localDir);
         
         dbAdapter.updateInstanceVersionInfo(instanceId, { data_volume_path: hostPathFound }).catch((e: any) => {
           console.warn("[File Manager] Failed to auto-heal data_volume_path", { instanceId, error: e.message });
@@ -171,24 +171,17 @@ export const validateFileAccess = async (req: AuthenticatedRequest, instanceId: 
     }
   }
 
-  if (!fs.existsSync(rootDir)) { // lgtm[js/path-injection]
+  if (!rootDir) {
     return { error: "该实例暂无可浏览的数据目录，或未找到有效的挂载", status: 404 };
   }
 
   try {
-    const baseDir = path.resolve(rootDir);
-    // Canonicalization below is followed by an explicit containment check before returning the path.
-    const realBaseDir = fs.realpathSync(baseDir); // lgtm[js/path-injection]
+    const realBaseDir = rootDir;
     
     const relativePath = path.relative("/", path.join("/", requestedPath));
     const absolutePath = path.resolve(realBaseDir, relativePath);
 
-    // absolutePath is resolved against realBaseDir from normalized path segments.
-    if (!fs.existsSync(absolutePath)) { // lgtm[js/path-injection]
-      return { error: "文件或目录不存在", status: 404 };
-    }
-
-    const realAbsolutePath = fs.realpathSync(absolutePath); // lgtm[js/path-injection]
+    const realAbsolutePath = fs.realpathSync(absolutePath);
 
     const isInside = realAbsolutePath === realBaseDir || realAbsolutePath.startsWith(realBaseDir + path.sep);
 
@@ -203,6 +196,9 @@ export const validateFileAccess = async (req: AuthenticatedRequest, instanceId: 
 
     return { absolutePath: realAbsolutePath, candidatePath: absolutePath, rootDir: realBaseDir, instance };
   } catch (err: any) {
+    if (err?.code === "ENOENT" || err?.code === "ENOTDIR") {
+      return { error: "文件或目录不存在", status: 404 };
+    }
     console.error("[File Manager] Path validation error:", err);
     return { error: "路径解析错误", status: 400 };
   }

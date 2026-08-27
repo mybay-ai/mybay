@@ -377,7 +377,7 @@ export function createFilesRoutes(deps: RouterDependencies) {
       }
 
       const { absolutePath } = validation;
-      const exportGuard = await guardFileExport(absolutePath);
+      const exportGuard = await guardFileExport(absolutePath, path.basename(absolutePath), validation.rootDir);
       if (exportGuard.ok === false) return res.status(exportGuard.status).json({ error: exportGuard.error, code: exportGuard.code });
       const safeAbsolutePath = exportGuard.realPath;
 
@@ -429,9 +429,9 @@ export function createFilesRoutes(deps: RouterDependencies) {
       }
       const validation = await validateFileAccess(req, req.params.id, requestedPath);
       if ("error" in validation) return res.status(validation.status).json({ error: validation.error, code: "OFFICE_PREVIEW_PATH_UNAVAILABLE" });
-      const exportGuard = await guardFileExport(validation.absolutePath);
+      const exportGuard = await guardFileExport(validation.absolutePath, path.basename(validation.absolutePath), validation.rootDir);
       if (exportGuard.ok === false) return res.status(exportGuard.status).json({ error: exportGuard.error, code: exportGuard.code });
-      const preview = await renderLocalOfficePreview(exportGuard.realPath, path.basename(exportGuard.realPath));
+      const preview = await renderLocalOfficePreview(exportGuard.realPath, path.basename(exportGuard.realPath), exportGuard.rootPath);
       return res.json({ ok: true, ...preview });
     } catch (e: any) {
       const status = Number(e?.status) || 500;
@@ -451,12 +451,16 @@ export function createFilesRoutes(deps: RouterDependencies) {
       if ("error" in validation) {
         return res.status(validation.status).json({ error: validation.error, code: validation.status === 404 ? "FILE_NOT_FOUND" : "FILE_METADATA_FORBIDDEN" });
       }
-      const exportGuard = await guardFileExport(validation.absolutePath);
+      const exportGuard = await guardFileExport(validation.absolutePath, path.basename(validation.absolutePath), validation.rootDir);
       if (exportGuard.ok === false) {
         return res.status(exportGuard.status).json({ error: exportGuard.error, code: exportGuard.code });
       }
-      // guardFileExport returns a canonical, regular, non-symlink file path.
-      const stats = fs.statSync(exportGuard.realPath); // lgtm[js/path-injection]
+      const metadataRoot = fs.realpathSync(path.resolve(exportGuard.rootPath));
+      const metadataPath = fs.realpathSync(path.resolve(exportGuard.realPath));
+      if (metadataPath !== metadataRoot && !metadataPath.startsWith(metadataRoot + path.sep)) {
+        return res.status(403).json({ error: "文件路径超出实例数据目录", code: "FILE_METADATA_PATH_FORBIDDEN" });
+      }
+      const stats = fs.statSync(metadataPath);
       if (!stats.isFile()) {
         return res.status(400).json({ error: "请求的路径不是文件", code: "FILE_METADATA_NOT_FILE" });
       }
@@ -496,13 +500,17 @@ export function createFilesRoutes(deps: RouterDependencies) {
         return res.status(validation.status).json({ error: validation.error });
       }
 
-      const exportGuard = await guardFileExport(validation.absolutePath);
+      const exportGuard = await guardFileExport(validation.absolutePath, path.basename(validation.absolutePath), validation.rootDir);
       if (exportGuard.ok === false) {
         return res.status(exportGuard.status).json({ error: exportGuard.error, code: exportGuard.code });
       }
 
-      // guardFileExport returns a canonical, regular, non-symlink file path.
-      const stats = fs.statSync(exportGuard.realPath); // lgtm[js/path-injection]
+      const previewRoot = fs.realpathSync(path.resolve(exportGuard.rootPath));
+      const previewPath = fs.realpathSync(path.resolve(exportGuard.realPath));
+      if (previewPath !== previewRoot && !previewPath.startsWith(previewRoot + path.sep)) {
+        return res.status(403).json({ error: "文件路径超出实例数据目录", code: "HTML_PREVIEW_PATH_FORBIDDEN" });
+      }
+      const stats = fs.statSync(previewPath);
       if (stats.isDirectory()) {
         return res.status(400).json({ error: "不能预览目录", code: "HTML_PREVIEW_DIRECTORY_UNSUPPORTED" });
       }
@@ -581,7 +589,7 @@ export function createFilesRoutes(deps: RouterDependencies) {
       if (assetRealPath !== projectRoot && !assetRealPath.startsWith(projectRoot + path.sep)) {
         return res.status(403).json({ error: "HTML 资源超出项目目录", code: "HTML_PREVIEW_ASSET_OUTSIDE_PROJECT" });
       }
-      const exportGuard = await guardFileExport(assetRealPath);
+      const exportGuard = await guardFileExport(assetRealPath, path.basename(assetRealPath), projectRoot);
       if (exportGuard.ok === false) {
         return res.status(exportGuard.status).json({ error: exportGuard.error, code: exportGuard.code });
       }
@@ -634,7 +642,7 @@ export function createFilesRoutes(deps: RouterDependencies) {
       }
 
       const { absolutePath } = validation;
-      const exportGuard = await guardFileExport(absolutePath);
+      const exportGuard = await guardFileExport(absolutePath, path.basename(absolutePath), validation.rootDir);
       if (exportGuard.ok === false) return res.status(exportGuard.status).json({ error: exportGuard.error, code: exportGuard.code });
       const safeAbsolutePath = exportGuard.realPath;
 
@@ -668,9 +676,9 @@ export function createFilesRoutes(deps: RouterDependencies) {
       }
       const validation = await validateFileAccess(req, req.params.id, requestedPath);
       if ("error" in validation) return res.status(validation.status).json({ error: validation.error });
-      const exportGuard = await guardFileExport(validation.absolutePath);
+      const exportGuard = await guardFileExport(validation.absolutePath, path.basename(validation.absolutePath), validation.rootDir);
       if (exportGuard.ok === false) return res.status(exportGuard.status).json({ error: exportGuard.error, code: exportGuard.code });
-      return streamLocalVideo(req, res, exportGuard.realPath, path.basename(exportGuard.realPath));
+      return streamLocalVideo(req, res, exportGuard.realPath, path.basename(exportGuard.realPath), exportGuard.rootPath);
     } catch (e: any) {
       return res.status(500).json({ error: "视频预览失败: " + sanitizeErrorMessage(e.message), code: "VIDEO_PREVIEW_FAILED" });
     }

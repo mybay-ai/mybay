@@ -146,12 +146,12 @@ async function resolveChatFileForAccess(req: AuthenticatedRequest, res: Response
       res.status(403).json({ success: false, error: "INVALID_FILE_PATH", message: "文件路径未通过安全校验。" });
       return null;
     }
+    return { file: data, storagePath: realStoragePath, rootDir: realBaseDir };
   } catch {
     res.status(404).json({ success: false, error: "FILE_MISSING", message: "文件记录存在，但物理文件不存在。" });
     return null;
   }
 
-  return { file: data, storagePath };
 }
 function isFilesSchemaMismatch(error: any): boolean {
   const message = String(error?.message || error?.details || error?.hint || "");
@@ -386,7 +386,7 @@ router.get("/:id/conversations/:conversationId/files/:fileId/html-preview", auth
     if (!isHtmlArtifactPreview(displayName, mimeType)) {
       return res.status(415).json({ success: false, error: "CHAT_HTML_PREVIEW_TYPE_UNSUPPORTED", message: "该附件不是 HTML 文档。" });
     }
-    const exportGuard = await guardFileExport(resolved.storagePath, displayName);
+    const exportGuard = await guardFileExport(resolved.storagePath, displayName, resolved.rootDir);
     if (exportGuard.ok === false) {
       return res.status(exportGuard.status).json({ success: false, error: exportGuard.code, message: exportGuard.error });
     }
@@ -426,11 +426,11 @@ router.get("/:id/conversations/:conversationId/files/:fileId/office-preview", au
     const resolved = await resolveChatFileForAccess(req, res);
     if (!resolved) return;
     const displayName = normalizeMultipartFilename(resolved.file.original_name || resolved.file.filename || path.basename(resolved.storagePath));
-    const exportGuard = await guardFileExport(resolved.storagePath, displayName);
+    const exportGuard = await guardFileExport(resolved.storagePath, displayName, resolved.rootDir);
     if (exportGuard.ok === false) {
       return res.status(exportGuard.status).json({ success: false, error: exportGuard.code, message: exportGuard.error });
     }
-    const preview = await renderLocalOfficePreview(exportGuard.realPath, displayName);
+    const preview = await renderLocalOfficePreview(exportGuard.realPath, displayName, exportGuard.rootPath);
     return res.json({ success: true, ...preview });
   } catch (e: any) {
     const status = Number(e?.status) || 500;
@@ -447,7 +447,7 @@ router.get("/:id/conversations/:conversationId/files/:fileId/download", authenti
     if (!resolved) return;
 
     const displayName = normalizeMultipartFilename(resolved.file.original_name || resolved.file.filename || path.basename(resolved.storagePath));
-    const exportGuard = await guardFileExport(resolved.storagePath, displayName);
+    const exportGuard = await guardFileExport(resolved.storagePath, displayName, resolved.rootDir);
     if (exportGuard.ok === false) {
       return res.status(exportGuard.status).json({ success: false, error: exportGuard.code, message: exportGuard.error });
     }
@@ -476,11 +476,11 @@ router.get("/:id/conversations/:conversationId/files/:fileId/media-preview", aut
     const resolved = await resolveChatFileForAccess(req, res);
     if (!resolved) return;
     const displayName = normalizeMultipartFilename(resolved.file.original_name || resolved.file.filename || path.basename(resolved.storagePath));
-    const exportGuard = await guardFileExport(resolved.storagePath, displayName);
+    const exportGuard = await guardFileExport(resolved.storagePath, displayName, resolved.rootDir);
     if (exportGuard.ok === false) {
       return res.status(exportGuard.status).json({ success: false, error: exportGuard.code, message: exportGuard.error });
     }
-    return streamLocalVideo(req, res, exportGuard.realPath, displayName);
+    return streamLocalVideo(req, res, exportGuard.realPath, displayName, exportGuard.rootPath);
   } catch (e: any) {
     console.error(JSON.stringify({ operation: "chat_media_preview_failed", instanceId: req.params.id, conversationId: req.params.conversationId, fileId: req.params.fileId, error: e?.message || "Unknown Error" }));
     return res.status(500).json({ success: false, error: "CHAT_MEDIA_PREVIEW_FAILED", code: "CHAT_MEDIA_PREVIEW_FAILED", message: "视频预览失败，请稍后重试。" });

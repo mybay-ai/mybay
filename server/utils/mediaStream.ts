@@ -10,13 +10,23 @@ export function isStreamableVideoFile(fileName: string): boolean {
   return STREAMABLE_VIDEO_EXTENSIONS.has(path.extname(fileName).toLowerCase());
 }
 
-export function streamLocalVideo(req: { headers: { range?: string } }, res: Response, absolutePath: string, displayName: string) {
+export function streamLocalVideo(
+  req: { headers: { range?: string } },
+  res: Response,
+  absolutePath: string,
+  displayName: string,
+  allowedRoot = path.dirname(absolutePath),
+) {
   if (!isStreamableVideoFile(displayName)) {
     return res.status(415).json({ success: false, error: "VIDEO_PREVIEW_TYPE_UNSUPPORTED", code: "VIDEO_PREVIEW_TYPE_UNSUPPORTED", message: "该文件不是支持的视频格式。" });
   }
 
-  // Routes only call this helper with guardFileExport's canonical, non-symlink path.
-  const stats = fs.statSync(absolutePath); // lgtm[js/path-injection]
+  const canonicalRoot = fs.realpathSync(path.resolve(allowedRoot));
+  const canonicalPath = fs.realpathSync(path.resolve(absolutePath));
+  if (canonicalPath !== canonicalRoot && !canonicalPath.startsWith(canonicalRoot + path.sep)) {
+    return res.status(403).json({ success: false, error: "VIDEO_PREVIEW_PATH_FORBIDDEN", code: "VIDEO_PREVIEW_PATH_FORBIDDEN", message: "视频文件超出实例数据目录。" });
+  }
+  const stats = fs.statSync(canonicalPath);
   if (!stats.isFile() || stats.size <= 0) {
     return res.status(416).setHeader("Content-Range", `bytes */${Math.max(0, stats.size)}`).end();
   }
@@ -40,7 +50,7 @@ export function streamLocalVideo(req: { headers: { range?: string } }, res: Resp
   res.setHeader("Content-Length", String(contentLength));
   if (range) res.setHeader("Content-Range", `bytes ${start}-${end}/${stats.size}`);
 
-  const stream = fs.createReadStream(absolutePath, { start, end }); // lgtm[js/path-injection]
+  const stream = fs.createReadStream(canonicalPath, { start, end });
   stream.on("error", (error) => {
     if (!res.headersSent) res.status(500).json({ success: false, error: "VIDEO_PREVIEW_TRANSFER_FAILED", code: "VIDEO_PREVIEW_TRANSFER_FAILED", message: "视频传输失败。" });
     else res.destroy(error);
