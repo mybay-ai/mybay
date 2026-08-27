@@ -21,8 +21,22 @@ import {
 import { renderLocalOfficePreview } from "../../utils/officeArtifactPreview";
 import { normalizeMultipartFilename } from "../../utils/multipartFilename";
 import { streamLocalVideo } from "../../utils/mediaStream";
+import rateLimit from "express-rate-limit";
+import { getClientIp } from "../../utils/ip";
 
 const router = Router();
+
+const chatFileReadLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 300,
+  keyGenerator: (req: AuthenticatedRequest) => `chat_file_read:ip:${getClientIp(req)}:user:${req.user?.id || "anon"}`,
+  message: {
+    success: false,
+    error: "CHAT_FILE_RATE_LIMITED",
+    code: "CHAT_FILE_RATE_LIMITED",
+    message: "文件读取请求过于频繁，请稍后重试。",
+  },
+});
 
 const chatStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -353,7 +367,7 @@ router.get("/:id/conversations/:conversationId/files", authenticateToken, async 
   }
 });
 
-router.get("/:id/conversations/:conversationId/files/:fileId/html-preview", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+router.get("/:id/conversations/:conversationId/files/:fileId/html-preview", authenticateToken, chatFileReadLimiter, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const resolved = await resolveChatFileForAccess(req, res);
     if (!resolved) return;
@@ -381,7 +395,7 @@ router.get("/:id/conversations/:conversationId/files/:fileId/html-preview", auth
     res.setHeader("Content-Disposition", `inline; filename*=UTF-8''${encodeURIComponent(displayName)}`);
     return res.sendFile(exportGuard.realPath, (error) => {
       if (!error) return;
-      console.error(`[Chat File Preview] HTML stream failed: ${exportGuard.realPath} -`, error);
+      console.error("[Chat File Preview] HTML stream failed", { filePath: exportGuard.realPath, error });
       if (!res.headersSent) res.status(Number((error as any).statusCode) || 500).json({ success: false, error: "CHAT_HTML_PREVIEW_TRANSFER_FAILED", message: "HTML 附件预览传输失败。" });
       else res.destroy(error);
     });
@@ -397,7 +411,7 @@ router.get("/:id/conversations/:conversationId/files/:fileId/html-preview", auth
   }
 });
 
-router.get("/:id/conversations/:conversationId/files/:fileId/office-preview", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+router.get("/:id/conversations/:conversationId/files/:fileId/office-preview", authenticateToken, chatFileReadLimiter, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const resolved = await resolveChatFileForAccess(req, res);
     if (!resolved) return;
@@ -416,7 +430,7 @@ router.get("/:id/conversations/:conversationId/files/:fileId/office-preview", au
 });
 
 
-router.get("/:id/conversations/:conversationId/files/:fileId/download", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+router.get("/:id/conversations/:conversationId/files/:fileId/download", authenticateToken, chatFileReadLimiter, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const resolved = await resolveChatFileForAccess(req, res);
     if (!resolved) return;
@@ -445,7 +459,7 @@ router.get("/:id/conversations/:conversationId/files/:fileId/download", authenti
   }
 });
 
-router.get("/:id/conversations/:conversationId/files/:fileId/media-preview", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+router.get("/:id/conversations/:conversationId/files/:fileId/media-preview", authenticateToken, chatFileReadLimiter, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const resolved = await resolveChatFileForAccess(req, res);
     if (!resolved) return;

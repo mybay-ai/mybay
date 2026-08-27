@@ -48,6 +48,8 @@ function isTextFile(fileName: string): boolean {
 }
 
 async function containsSecretInTextFile(filePath: string): Promise<boolean> {
+  // The caller supplies a canonical file path that passed ownership, root-boundary and symlink checks.
+  // codeql[js/path-injection]
   const stream = fs.createReadStream(filePath, { encoding: "utf8", highWaterMark: 64 * 1024 });
   let carry = "";
 
@@ -70,10 +72,13 @@ export async function guardFileExport(filePath: string, displayName = path.basen
 
   let realPath: string;
   try {
+    // Export candidates come from validateFileAccess or the isolated chat-upload directory.
+    // codeql[js/path-injection]
     const linkStats = fs.lstatSync(filePath);
     if (linkStats.isSymbolicLink()) {
       return { ok: false, code: "FILE_SYMLINK_BLOCKED", error: "出于安全原因，不允许导出符号链接文件。", status: 403 };
     }
+    // codeql[js/path-injection]
     if (!fs.statSync(filePath).isFile()) {
       return { ok: false, code: "FILE_NOT_REGULAR", error: "只能预览或导出普通文件。", status: 400 };
     }

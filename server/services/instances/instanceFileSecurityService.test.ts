@@ -47,4 +47,11 @@ describe("instance file preview path isolation", () => {
     await expect(validateFileAccess(requestFor(ownerId), instanceId, ".env"))
       .resolves.toMatchObject({ status: 403 });
   });
+
+  it("rejects malformed instance identifiers and control characters before filesystem access", async () => {
+    await expect(validateFileAccess(requestFor(ownerId), "../invalid", "outputs/report.html"))
+      .resolves.toMatchObject({ status: 400 });
+    await expect(validateFileAccess(requestFor(ownerId), instanceId, "outputs/report.html\0.txt"))
+      .resolves.toMatchObject({ status: 400 });
+  });
 });
