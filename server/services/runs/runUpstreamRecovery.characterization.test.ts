@@ -6,6 +6,12 @@ vi.mock("../../utils/instanceInternalApiKey", () => ({
 vi.mock("../../utils/traefikInternalRequest", () => ({
   requestTraefikInternal: vi.fn(),
 }));
+vi.mock("../instances/resourceAuthorityService", () => ({
+  resolveRunDispatchAuthority: vi.fn(async (run: any) => ({
+    ok: true, actor: { kind: "system", id: "test" }, ownerId: run.user_id,
+    instance: { id: run.instance_id }, conversation: { id: run.conversation_id }, run,
+  })),
+}));
 
 import { dbAdapter } from "../../db";
 import { chatRepo } from "../../repositories/chatRepo";

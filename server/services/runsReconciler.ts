@@ -86,6 +86,7 @@ import {
   resolveTerminalObservationCapability,
 } from "./runs/runtimeCapabilityConsumers";
 import { containsDsmlToolCallProtocol } from "../utils/dsmlToolCallGuard";
+import { resolveRunDispatchAuthority } from "./instances/resourceAuthorityService";
 
 export { sanitizeStep } from "./runs/runStepSanitizer";
 export {
@@ -542,6 +543,13 @@ export async function processSingleRun(run: any, leaseLostRuns: Set<string>) {
   const status = run.status;
   initRunSequence(run.id, run.last_event_seq || 0);
 
+  const dispatchAuthority = await resolveRunDispatchAuthority(run);
+  if (dispatchAuthority.ok === false) {
+    logOperation("RUN_RESOURCE_AUTHORITY_REJECTED", run.id, run.instance_id, dispatchAuthority.status, dispatchAuthority.code);
+    await completeRun(run.id, "failed", "", dispatchAuthority.code);
+    return;
+  }
+
   // Retrieve or initialize incremental tracker
   const tracker = runHermesEventInterpreter.getOrCreate(run.id, run.partial_output);
 
@@ -615,7 +623,8 @@ export async function processSingleRun(run: any, leaseLostRuns: Set<string>) {
             attachmentIds,
             userId: run.user_id,
             instanceId: run.instance_id,
-            conversationId: run.conversation_id
+            conversationId: run.conversation_id,
+            authority: dispatchAuthority,
           });
           agentAttachmentContext = buildAgentAttachmentContextForPrompt(files);
         } catch (attachmentErr: any) {
@@ -955,7 +964,8 @@ export async function processSingleRun(run: any, leaseLostRuns: Set<string>) {
                   attachmentIds,
                   userId: run.user_id,
                   instanceId: run.instance_id,
-                  conversationId: run.conversation_id
+                  conversationId: run.conversation_id,
+                  authority: dispatchAuthority,
                 });
                 agentAttachmentContext = buildAgentAttachmentContextForPrompt(files);
               } catch (attachmentErr: any) {

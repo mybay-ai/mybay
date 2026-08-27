@@ -7,6 +7,9 @@ const userId = "33333333-3333-4333-8333-333333333333";
 
 const getInstanceById = vi.hoisted(() => vi.fn());
 const beginChatRun = vi.hoisted(() => vi.fn());
+const getChatRun = vi.hoisted(() => vi.fn());
+const getConversationForOwnerAndInstance = vi.hoisted(() => vi.fn());
+const requestStopChatRun = vi.hoisted(() => vi.fn());
 const probeCapabilities = vi.hoisted(() => vi.fn());
 const probeCapabilitiesDetailed = vi.hoisted(() => vi.fn());
 const requestRunsReconcile = vi.hoisted(() => vi.fn());
@@ -23,8 +26,9 @@ vi.mock("../../../repositories/chatRepo", () => ({
     beginChatRun,
     updateChatMessageMetadata: vi.fn(),
     finishChatRun: vi.fn(),
-    getChatRun: vi.fn(),
-    requestStopChatRun: vi.fn()
+    getChatRun,
+    getConversationForOwnerAndInstance,
+    requestStopChatRun
   }
 }));
 vi.mock("../../../utils/capabilities", () => ({ probeCapabilities, probeCapabilitiesDetailed }));
@@ -45,6 +49,7 @@ describe("Interactive Agent POST /runs integration", () => {
   it("creates a queued Run when the gate is enabled and Hermes supports Runs", async () => {
     process.env.MYBAY_ASYNC_CHAT_RUNS_ENABLED = "true";
     getInstanceById.mockResolvedValue({ id: instanceId, user_id: userId, owner_id: userId, config_json: "{}" });
+    getConversationForOwnerAndInstance.mockResolvedValue({ id: conversationId, user_id: userId, instance_id: instanceId });
     probeCapabilities.mockResolvedValue("supported");
     probeCapabilitiesDetailed.mockResolvedValue({
       state: "supported",
@@ -95,6 +100,7 @@ describe("Interactive Agent POST /runs integration", () => {
   it("returns the original Run when a lost create response is retried with the same request", async () => {
     process.env.MYBAY_ASYNC_CHAT_RUNS_ENABLED = "true";
     getInstanceById.mockResolvedValue({ id: instanceId, user_id: userId, owner_id: userId, config_json: "{}" });
+    getConversationForOwnerAndInstance.mockResolvedValue({ id: conversationId, user_id: userId, instance_id: instanceId });
     probeCapabilities.mockResolvedValue("supported");
     beginChatRun.mockResolvedValue({
       status: "IDEMPOTENT_REPLAY",
@@ -130,6 +136,73 @@ describe("Interactive Agent POST /runs integration", () => {
         status: "running"
       }));
       expect(requestRunsReconcile).toHaveBeenCalledOnce();
+    } finally {
+      await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    }
+  });
+
+  it("wakes the reconciler immediately after a stop request is accepted", async () => {
+    getInstanceById.mockResolvedValue({ id: instanceId, user_id: userId, owner_id: userId, config_json: "{}" });
+    getConversationForOwnerAndInstance.mockResolvedValue({ id: conversationId, user_id: userId, instance_id: instanceId });
+    getChatRun.mockResolvedValue({
+      id: "55555555-5555-4555-8555-555555555555",
+      instance_id: instanceId,
+      user_id: userId,
+      conversation_id: conversationId,
+      status: "queued"
+    });
+    requestStopChatRun.mockResolvedValue({ status: "stop_requested", run_status: "stopping" });
+
+    const app = express();
+    app.use(express.json());
+    const router = express.Router();
+    registerRunRoutes(router);
+    app.use("/api/instances", router);
+    const server = app.listen(0);
+
+    try {
+      await new Promise<void>((resolve) => server.once("listening", resolve));
+      const address = server.address();
+      if (!address || typeof address === "string") throw new Error("Test server did not expose a TCP port");
+      const response = await fetch(
+        `http://127.0.0.1:${address.port}/api/instances/${instanceId}/runs/55555555-5555-4555-8555-555555555555/stop`,
+        { method: "POST" }
+      );
+
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({ success: true, status: "stopping" });
+      expect(requestRunsReconcile).toHaveBeenCalledOnce();
+    } finally {
+      await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    }
+  });
+
+  it("rejects a cross-instance conversation before creating a Run", async () => {
+    process.env.MYBAY_ASYNC_CHAT_RUNS_ENABLED = "true";
+    getInstanceById.mockResolvedValue({ id: instanceId, user_id: userId, owner_id: userId, config_json: "{}" });
+    getConversationForOwnerAndInstance.mockResolvedValue(null);
+
+    const app = express();
+    app.use(express.json());
+    const router = express.Router();
+    registerRunRoutes(router);
+    app.use("/api/instances", router);
+    const server = app.listen(0);
+
+    try {
+      await new Promise<void>((resolve) => server.once("listening", resolve));
+      const address = server.address();
+      if (!address || typeof address === "string") throw new Error("Test server did not expose a TCP port");
+      const response = await fetch(`http://127.0.0.1:${address.port}/api/instances/${instanceId}/runs`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ conversationId, content: "unauthorized", requestId: "request-cross-parent" }),
+      });
+
+      expect(response.status).toBe(404);
+      await expect(response.json()).resolves.toMatchObject({ success: false, error: "CONVERSATION_NOT_FOUND" });
+      expect(beginChatRun).not.toHaveBeenCalled();
+      expect(probeCapabilities).not.toHaveBeenCalled();
     } finally {
       await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     }

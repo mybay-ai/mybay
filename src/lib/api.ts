@@ -26,6 +26,9 @@ async function fetchApiResponse(path: string, options: RequestInit = {}): Promis
     ...options,
     headers,
     credentials: "same-origin",
+    // Protected API responses must never be reused across authentication or
+    // local-database changes, even if an intermediary drops response headers.
+    cache: "no-store",
   });
 
   if (!response.ok) {
@@ -124,4 +127,3 @@ export const api = {
   delete: (path: string, body?: any, options?: RequestInit) => 
     apiFetch(path, { ...options, method: "DELETE", body: body ? JSON.stringify(body) : undefined }),
 };
-

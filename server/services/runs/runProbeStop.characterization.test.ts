@@ -9,6 +9,12 @@ vi.mock("../../utils/traefikInternalRequest", () => ({
 vi.mock("../../utils/traefikInternalSse", () => ({
   streamTraefikInternalSse: vi.fn(async () => undefined),
 }));
+vi.mock("../instances/resourceAuthorityService", () => ({
+  resolveRunDispatchAuthority: vi.fn(async (run: any) => ({
+    ok: true, actor: { kind: "system", id: "test" }, ownerId: run.user_id,
+    instance: { id: run.instance_id }, conversation: { id: run.conversation_id }, run,
+  })),
+}));
 
 import { dbAdapter } from "../../db";
 import { chatRepo } from "../../repositories/chatRepo";

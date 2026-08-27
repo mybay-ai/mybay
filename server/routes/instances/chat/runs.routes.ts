@@ -1,7 +1,6 @@
 import { NextFunction, Router, Response } from "express";
 import * as crypto from "crypto";
 import { AuthenticatedRequest, authenticateToken } from "../../../middlewares/auth";
-import { dbAdapter } from "../../../db";
 import { chatRepo } from "../../../repositories/chatRepo";
 import { probeCapabilities, probeCapabilitiesDetailed } from "../../../utils/capabilities";
 import { emitRunLifecycleStep, requestRunsAPI, requestRunsReconcile } from "../../../services/runsReconciler";
@@ -13,6 +12,12 @@ import { guardManagedOperation } from "../../../utils/managedOperationGuard";
 import { isInteractiveRunsEnabled, resolveInteractiveRunsAvailability } from "../../../utils/interactiveRuns";
 import { chatUserMessageLimitMessage, isChatUserMessageTooLong } from "../../../../shared/chatMessageContract";
 import { normalizeReasoningEffort } from "./helpers";
+import {
+  resolveConversationAuthority,
+  resolveInstanceAuthority,
+  resolveInstanceRunAuthority,
+} from "../../../services/instances/resourceAuthorityService";
+import { authorityActorFromRequest, sendAuthorityFailure } from "../../../services/instances/resourceAuthorityHttp";
 
 export function requireInteractiveRunsEnabled(_req: AuthenticatedRequest, res: Response, next: NextFunction) {
   if (!isInteractiveRunsEnabled()) {
@@ -40,14 +45,9 @@ export function registerRunRoutes(router: Router) {
     }
 
     try {
-      const instance = await dbAdapter.getInstanceById(id);
-      if (!instance) {
-        return res.status(404).json({ success: false, error: "INSTANCE_NOT_FOUND", message: "未找到目标实例。" });
-      }
-
-      if (instance.user_id !== req.user.id && instance.owner_id !== req.user.id) {
-        return res.status(403).json({ success: false, error: "FORBIDDEN", message: "您没有访问该实例的权限。" });
-      }
+      const authority = await resolveInstanceAuthority({ actor: authorityActorFromRequest(req), instanceId: id });
+      if (authority.ok === false) return sendAuthorityFailure(res, authority, "无法访问目标实例。");
+      const instance = authority.instance;
 
       const capabilities = await probeCapabilitiesDetailed(instance);
       const availability = resolveInteractiveRunsAvailability(capabilities.state);
@@ -120,14 +120,11 @@ export function registerRunRoutes(router: Router) {
     }
 
     try {
-      const instance = await dbAdapter.getInstanceById(id);
-      if (!instance) {
-        return res.status(404).json({ success: false, error: "INSTANCE_NOT_FOUND", message: "未找到目标实例。" });
-      }
-
-      if (instance.user_id !== req.user.id && instance.owner_id !== req.user.id) {
-        return res.status(403).json({ success: false, error: "FORBIDDEN", message: "您没有访问该实例的权限。" });
-      }
+      const instanceAuthority = await resolveInstanceAuthority({ actor: authorityActorFromRequest(req), instanceId: id });
+      if (instanceAuthority.ok === false) return sendAuthorityFailure(res, instanceAuthority, "无法访问目标实例。");
+      const conversationAuthority = await resolveConversationAuthority({ instance: instanceAuthority, conversationId });
+      if (conversationAuthority.ok === false) return sendAuthorityFailure(res, conversationAuthority, "对话会话不存在或无权访问。");
+      const instance = instanceAuthority.instance;
 
       let validatedFiles: any[] = [];
       try {
@@ -135,7 +132,8 @@ export function registerRunRoutes(router: Router) {
           attachmentIds,
           userId: req.user.id,
           instanceId: id,
-          conversationId
+          conversationId,
+          authority: conversationAuthority,
         });
       } catch (attachmentErr: any) {
         return res.status(attachmentErr.status || 400).json({
@@ -295,19 +293,11 @@ export function registerRunRoutes(router: Router) {
     }
 
     try {
-      const instance = await dbAdapter.getInstanceById(id);
-      if (!instance) {
-        return res.status(404).json({ success: false, error: "INSTANCE_NOT_FOUND", message: "未找到目标实例。" });
-      }
-
-      if (instance.user_id !== req.user.id && instance.owner_id !== req.user.id) {
-        return res.status(403).json({ success: false, error: "FORBIDDEN", message: "您没有访问该实例的权限。" });
-      }
-
-      const run = await chatRepo.getChatRun(runId);
-      if (!run || run.instance_id !== id || run.user_id !== req.user.id) {
-        return res.status(404).json({ success: false, error: "RUN_NOT_FOUND", message: "未找到目标任务或无权访问。" });
-      }
+      const instanceAuthority = await resolveInstanceAuthority({ actor: authorityActorFromRequest(req), instanceId: id });
+      if (instanceAuthority.ok === false) return sendAuthorityFailure(res, instanceAuthority, "无法访问目标实例。");
+      const runAuthority = await resolveInstanceRunAuthority({ instance: instanceAuthority, runId });
+      if (runAuthority.ok === false) return sendAuthorityFailure(res, runAuthority, "未找到目标任务或无权访问。");
+      const run = runAuthority.run;
 
       return res.json({
         success: true,
@@ -346,19 +336,11 @@ export function registerRunRoutes(router: Router) {
     }
 
     try {
-      const instance = await dbAdapter.getInstanceById(id);
-      if (!instance) {
-        return res.status(404).json({ success: false, error: "INSTANCE_NOT_FOUND", message: "未找到目标实例。" });
-      }
-
-      if (instance.user_id !== req.user.id && instance.owner_id !== req.user.id) {
-        return res.status(403).json({ success: false, error: "FORBIDDEN", message: "您没有访问该实例的权限。" });
-      }
-
-      const run = await chatRepo.getChatRun(runId);
-      if (!run || run.instance_id !== id || run.user_id !== req.user.id) {
-        return res.status(404).json({ success: false, error: "RUN_NOT_FOUND", message: "未找到目标任务或无权访问。" });
-      }
+      const instanceAuthority = await resolveInstanceAuthority({ actor: authorityActorFromRequest(req), instanceId: id });
+      if (instanceAuthority.ok === false) return sendAuthorityFailure(res, instanceAuthority, "无法访问目标实例。");
+      const runAuthority = await resolveInstanceRunAuthority({ instance: instanceAuthority, runId });
+      if (runAuthority.ok === false) return sendAuthorityFailure(res, runAuthority, "未找到目标任务或无权访问。");
+      const run = runAuthority.run;
 
       const stopResult = await chatRepo.requestStopChatRun({
         runId,
@@ -367,12 +349,14 @@ export function registerRunRoutes(router: Router) {
       });
 
       if (stopResult.status === 'stop_requested') {
+        requestRunsReconcile();
         return res.json({
           success: true,
           status: "stopping",
           message: "中止请求已发送。"
         });
       } else if (stopResult.status === 'already_stopping') {
+        requestRunsReconcile();
         return res.json({
           success: true,
           status: "stopping",

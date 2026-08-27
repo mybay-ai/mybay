@@ -1,8 +1,12 @@
 import { Router, Response } from "express";
 import { AuthenticatedRequest, authenticateToken } from "../../../middlewares/auth";
-import { dbAdapter } from "../../../db";
 import { chatRepo } from "../../../repositories/chatRepo";
 import { isValidInstanceId, isValidUUID } from "./validators";
+import {
+  resolveConversationAuthority,
+  resolveConversationMessageAuthority,
+  resolveInstanceAuthority,
+} from "../../../services/instances/resourceAuthorityService";
 
 function normalizeRating(value: unknown): "like" | "dislike" | null {
   if (value === "like" || value === "up") return "like";
@@ -16,30 +20,18 @@ async function assertFeedbackTarget(params: {
   conversationId: string;
   messageId: string;
 }) {
-  const instance = await dbAdapter.getInstanceById(params.instanceId);
-  if (!instance) {
-    return { ok: false as const, status: 404, error: "INSTANCE_NOT_FOUND" };
-  }
-  if (instance.user_id !== params.userId && instance.owner_id !== params.userId) {
-    return { ok: false as const, status: 403, error: "FORBIDDEN" };
-  }
-
-  const conversation = await chatRepo.getConversationForOwnerAndInstance(params.userId, params.instanceId, params.conversationId);
-
-  if (!conversation) {
-    return { ok: false as const, status: 404, error: "CONVERSATION_NOT_FOUND" };
-  }
-
-  const message = await chatRepo.getMessage(params.messageId);
-
-  if (!message) {
-    return { ok: false as const, status: 404, error: "MESSAGE_NOT_FOUND" };
-  }
+  const instance = await resolveInstanceAuthority({
+    actor: { kind: "user", id: params.userId },
+    instanceId: params.instanceId,
+  });
+  if (instance.ok === false) return { ok: false as const, status: instance.status, error: instance.code };
+  const conversation = await resolveConversationAuthority({ instance, conversationId: params.conversationId });
+  if (conversation.ok === false) return { ok: false as const, status: conversation.status, error: conversation.code };
+  const messageAuthority = await resolveConversationMessageAuthority({ conversation, messageId: params.messageId });
+  if (messageAuthority.ok === false) return { ok: false as const, status: messageAuthority.status, error: messageAuthority.code };
+  const message = messageAuthority.message;
   if (message.role !== "assistant") {
     return { ok: false as const, status: 400, error: "FEEDBACK_ASSISTANT_ONLY" };
-  }
-  if (message.instance_id && message.instance_id !== params.instanceId) {
-    return { ok: false as const, status: 404, error: "MESSAGE_NOT_FOUND" };
   }
 
   return { ok: true as const };

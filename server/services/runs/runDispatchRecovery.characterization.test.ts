@@ -1,4 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("../instances/resourceAuthorityService", () => ({
+  resolveRunDispatchAuthority: vi.fn(async (run: any) => ({
+    ok: true, actor: { kind: "system", id: "test" }, ownerId: run.user_id,
+    instance: { id: run.instance_id }, conversation: { id: run.conversation_id }, run,
+  })),
+}));
 import { chatRepo } from "../../repositories/chatRepo";
 import {
   RECONCILER_ID,

@@ -1,21 +1,20 @@
 import { Router, Response } from "express";
 import { AuthenticatedRequest, authenticateToken } from "../../../middlewares/auth";
-import { dbAdapter } from "../../../db";
 import { chatRepo, encodeConversationCursor } from "../../../repositories/chatRepo";
 import { filesRepo } from "../../../repositories/filesRepo";
 import { deleteConversationAttachmentDirectory } from "../../../services/chatAttachmentStorage";
 import { isValidInstanceId, isValidUUID } from "./validators";
 import { conversationSearchLimiter, conversationWriteLimiter } from "./conversationLimiters";
+import { resolveConversationAuthority, resolveInstanceAuthority } from "../../../services/instances/resourceAuthorityService";
 
 export function registerConversationRoutes(router: Router) {
 
   const assertInstanceAccess = async (instanceId: string, userId: string) => {
-    const instance = await dbAdapter.getInstanceById(instanceId);
-    if (!instance) return { ok: false as const, status: 404, error: "INSTANCE_NOT_FOUND" };
-    if (instance.user_id !== userId && instance.owner_id !== userId) {
-      return { ok: false as const, status: 403, error: "FORBIDDEN" };
+    const authority = await resolveInstanceAuthority({ actor: { kind: "user", id: userId }, instanceId });
+    if (authority.ok === false) {
+      return { ok: false as const, status: authority.status, error: authority.code };
     }
-    return { ok: true as const, instance };
+    return { ok: true as const, instance: authority.instance, authority };
   };
 
   // ======================================================================
@@ -141,15 +140,8 @@ export function registerConversationRoutes(router: Router) {
     }
 
     try {
-      const instance = await dbAdapter.getInstanceById(id);
-      if (!instance) {
-        return res.status(404).json({ success: false, error: "INSTANCE_NOT_FOUND", message: "未找到目标实例。" });
-      }
-
-      // Strict instance owner constraint: administrators cannot bypass owner boundary for normal multi-turn chats
-      if (instance.user_id !== req.user.id && instance.owner_id !== req.user.id) {
-        return res.status(403).json({ success: false, error: "FORBIDDEN", message: "您没有访问该实例的权限。" });
-      }
+      const access = await assertInstanceAccess(id, req.user.id);
+      if (!access.ok) return res.status(access.status).json({ success: false, error: access.error });
 
       if (!title || typeof title !== "string" || title.trim().length === 0) {
         return res.status(400).json({ success: false, error: "INVALID_REQUEST", message: "标题不可为空。" });
@@ -215,14 +207,8 @@ export function registerConversationRoutes(router: Router) {
     limit = Math.min(limit, 50); // Hard maximum of 50
 
     try {
-      const instance = await dbAdapter.getInstanceById(id);
-      if (!instance) {
-        return res.status(404).json({ success: false, error: "INSTANCE_NOT_FOUND", message: "未找到目标实例。" });
-      }
-
-      if (instance.user_id !== req.user.id && instance.owner_id !== req.user.id) {
-        return res.status(403).json({ success: false, error: "FORBIDDEN", message: "您没有访问该实例的权限。" });
-      }
+      const access = await assertInstanceAccess(id, req.user.id);
+      if (!access.ok) return res.status(access.status).json({ success: false, error: access.error });
 
       const conversations = await chatRepo.listConversations(req.user.id, id, limit, cursor);
       
@@ -272,19 +258,11 @@ export function registerConversationRoutes(router: Router) {
     }
 
     try {
-      const instance = await dbAdapter.getInstanceById(id);
-      if (!instance) {
-        return res.status(404).json({ success: false, error: "INSTANCE_NOT_FOUND", message: "未找到目标实例。" });
-      }
-
-      if (instance.user_id !== req.user.id && instance.owner_id !== req.user.id) {
-        return res.status(403).json({ success: false, error: "FORBIDDEN", message: "您没有访问该实例的权限。" });
-      }
-
-      const conversation = await chatRepo.getConversationForOwnerAndInstance(req.user.id, id, conversationId);
-      if (!conversation) {
-        return res.status(404).json({ success: false, error: "CONVERSATION_NOT_FOUND", message: "对话会话不存在或无权访问。" });
-      }
+      const access = await assertInstanceAccess(id, req.user.id);
+      if (!access.ok) return res.status(access.status).json({ success: false, error: access.error });
+      const conversationAccess = await resolveConversationAuthority({ instance: access.authority, conversationId });
+      if (conversationAccess.ok === false) return res.status(conversationAccess.status).json({ success: false, error: conversationAccess.code });
+      const conversation = conversationAccess.conversation;
 
       return res.json({ success: true, conversation });
     } catch (err: any) {
@@ -324,10 +302,9 @@ export function registerConversationRoutes(router: Router) {
       const access = await assertInstanceAccess(id, req.user.id);
       if (!access.ok) return res.status(access.status).json({ success: false, error: access.error });
 
-      const conversation = await chatRepo.getConversationForOwnerAndInstance(req.user.id, id, conversationId);
-      if (!conversation) {
-        return res.status(404).json({ success: false, error: "CONVERSATION_NOT_FOUND" });
-      }
+      const conversationAccess = await resolveConversationAuthority({ instance: access.authority, conversationId });
+      if (conversationAccess.ok === false) return res.status(conversationAccess.status).json({ success: false, error: conversationAccess.code });
+      const conversation = conversationAccess.conversation;
 
       let updated = conversation;
       if (hasTitle) {
@@ -377,19 +354,10 @@ export function registerConversationRoutes(router: Router) {
     }
 
     try {
-      const instance = await dbAdapter.getInstanceById(id);
-      if (!instance) {
-        return res.status(404).json({ success: false, error: "INSTANCE_NOT_FOUND", message: "未找到目标实例。" });
-      }
-
-      if (instance.user_id !== req.user.id && instance.owner_id !== req.user.id) {
-        return res.status(403).json({ success: false, error: "FORBIDDEN", message: "您没有访问该实例的权限。" });
-      }
-
-      const conversation = await chatRepo.getConversationForOwnerAndInstance(req.user.id, id, conversationId);
-      if (!conversation) {
-        return res.status(404).json({ success: false, error: "CONVERSATION_NOT_FOUND", message: "对话会话不存在或无权访问。" });
-      }
+      const access = await assertInstanceAccess(id, req.user.id);
+      if (!access.ok) return res.status(access.status).json({ success: false, error: access.error });
+      const conversationAccess = await resolveConversationAuthority({ instance: access.authority, conversationId });
+      if (conversationAccess.ok === false) return res.status(conversationAccess.status).json({ success: false, error: conversationAccess.code });
 
       await deleteConversationAttachmentDirectory(id, conversationId);
       await filesRepo.deleteByConversation(id, conversationId);
@@ -423,19 +391,10 @@ export function registerConversationRoutes(router: Router) {
     limit = Math.min(limit, 100); // Hard maximum of 100
 
     try {
-      const instance = await dbAdapter.getInstanceById(id);
-      if (!instance) {
-        return res.status(404).json({ success: false, error: "INSTANCE_NOT_FOUND", message: "未找到目标实例。" });
-      }
-
-      if (instance.user_id !== req.user.id && instance.owner_id !== req.user.id) {
-        return res.status(403).json({ success: false, error: "FORBIDDEN", message: "您没有访问该实例的权限。" });
-      }
-
-      const conversation = await chatRepo.getConversationForOwnerAndInstance(req.user.id, id, conversationId);
-      if (!conversation) {
-        return res.status(404).json({ success: false, error: "CONVERSATION_NOT_FOUND", message: "对话会话不存在或无权访问。" });
-      }
+      const access = await assertInstanceAccess(id, req.user.id);
+      if (!access.ok) return res.status(access.status).json({ success: false, error: access.error });
+      const conversationAccess = await resolveConversationAuthority({ instance: access.authority, conversationId });
+      if (conversationAccess.ok === false) return res.status(conversationAccess.status).json({ success: false, error: conversationAccess.code });
 
       const messages = await chatRepo.listMessages(conversationId, limit, beforeSeq);
       const assistantMessageIds = messages

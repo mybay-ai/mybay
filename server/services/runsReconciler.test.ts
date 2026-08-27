@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { chatRepo } from "../repositories/chatRepo";
-import { completeRunFromHermesEvent, requestRunsReconcile, startRunsReconciler, stopRunsReconciler, toHermesReasoningModelOptions } from "./runsReconciler";
+import { dbAdapter } from "../db";
+import { completeRunFromHermesEvent, processSingleRun, requestRunsReconcile, startRunsReconciler, stopRunsReconciler, toHermesReasoningModelOptions } from "./runsReconciler";
 
 describe("runs reconciler timer lifecycle", () => {
   afterEach(() => {
@@ -83,6 +84,36 @@ describe("runs reconciler timer lifecycle", () => {
       assistantContent: "done",
       expectedUpstreamRunId: "upstream-1",
       reconcilerId: undefined
+    }));
+  });
+
+  it("rejects a stale run authority chain before reading messages or contacting Runtime", async () => {
+    vi.spyOn(dbAdapter, "getInstanceById").mockResolvedValue({
+      id: "instance-1",
+      owner_id: "owner-1",
+      user_id: "owner-1",
+    } as any);
+    const listMessages = vi.spyOn(chatRepo, "listMessages");
+    const finish = vi.spyOn(chatRepo, "finishChatRun").mockResolvedValue({
+      status: "success",
+      assistant_message_id: "assistant-1",
+      assistant_sequence_no: 2,
+    });
+
+    await processSingleRun({
+      id: "run-foreign",
+      status: "queued",
+      user_id: "other-owner",
+      instance_id: "instance-1",
+      conversation_id: "conversation-1",
+      last_event_seq: 0,
+    }, new Set());
+
+    expect(listMessages).not.toHaveBeenCalled();
+    expect(finish).toHaveBeenCalledWith(expect.objectContaining({
+      runId: "run-foreign",
+      status: "failed",
+      errorCode: "RUN_NOT_FOUND",
     }));
   });
 });

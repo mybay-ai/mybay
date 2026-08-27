@@ -28,6 +28,13 @@ vi.mock("../../utils/traefikInternalSse", () => ({
   streamTraefikInternalSse: external.streamTraefikInternalSse
 }));
 
+vi.mock("../instances/resourceAuthorityService", () => ({
+  resolveRunDispatchAuthority: vi.fn(async (run: any) => ({
+    ok: true, actor: { kind: "system", id: "test" }, ownerId: run.user_id,
+    instance: { id: run.instance_id }, conversation: { id: run.conversation_id }, run,
+  })),
+}));
+
 const claimedRun = (status: string, overrides: Record<string, unknown> = {}) => ({
   id: "run-lease-order",
   conversation_id: "conversation-1",

@@ -99,6 +99,11 @@ export function sanitizeRunErrorCode(rawError: unknown): string {
     "INVALID_SESSION_ID",
     "SESSION_EXPIRED",
     "UNKNOWN_SESSION",
+    "INSTANCE_NOT_FOUND",
+    "INSTANCE_OWNERSHIP_INCONSISTENT",
+    "CONVERSATION_NOT_FOUND",
+    "RUN_NOT_FOUND",
+    "FILE_NOT_FOUND",
   ];
 
   if (whitelist.includes(upper)) return upper;

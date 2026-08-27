@@ -3,7 +3,6 @@ import { AuthenticatedRequest, authenticateToken } from "../../middlewares/auth"
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { dbAdapter } from "../../db";
 import { chatRepo } from "../../repositories/chatRepo";
 import { filesRepo } from "../../repositories/filesRepo";
 import { guardFileExport } from "../../services/instances/instanceFileLeakGuard";
@@ -23,6 +22,12 @@ import { normalizeMultipartFilename } from "../../utils/multipartFilename";
 import { streamLocalVideo } from "../../utils/mediaStream";
 import rateLimit from "express-rate-limit";
 import { getClientIp } from "../../utils/ip";
+import {
+  resolveConversationAuthority,
+  resolveConversationFileAuthority,
+  resolveInstanceAuthority,
+} from "../../services/instances/resourceAuthorityService";
+import { authorityActorFromRequest, sendAuthorityFailure } from "../../services/instances/resourceAuthorityHttp";
 
 const router = Router();
 
@@ -87,41 +92,26 @@ function getChatFileUrl(instanceId: string, conversationId: string, fileId: stri
 
 async function resolveChatFileForAccess(req: AuthenticatedRequest, res: Response) {
   const { id, conversationId, fileId } = req.params;
-  const user = req.user!;
-
-  const instance: any = await dbAdapter.getInstanceById(id);
-  if (!instance) {
-    res.status(404).json({ success: false, error: "INSTANCE_NOT_FOUND", message: "实例不存在。" });
+  const instanceAuthority = await resolveInstanceAuthority({ actor: authorityActorFromRequest(req), instanceId: id });
+  if (instanceAuthority.ok === false) {
+    sendAuthorityFailure(res, instanceAuthority, "无法访问目标实例。");
     return null;
   }
-
-  const isPrivileged = user.role === "admin" || user.role === "super_admin";
-  if (instance.user_id !== user.id && !isPrivileged) {
-    res.status(403).json({ success: false, error: "FORBIDDEN", message: "无权访问此实例。" });
+  const conversationAuthority = await resolveConversationAuthority({ instance: instanceAuthority, conversationId });
+  if (conversationAuthority.ok === false) {
+    sendAuthorityFailure(res, conversationAuthority, "会话不存在或无权访问。");
     return null;
   }
-
-  const ownerToUse = isPrivileged ? instance.user_id : user.id;
-  const conv = await chatRepo.getConversationForOwnerAndInstance(ownerToUse, id, conversationId);
-  if (!conv) {
-    res.status(404).json({ success: false, error: "CONVERSATION_NOT_FOUND", message: "会话不存在或不属于当前实例。" });
+  const fileAuthority = await resolveConversationFileAuthority({
+    conversation: conversationAuthority,
+    fileId,
+    includeDeleted: true,
+  });
+  if (fileAuthority.ok === false) {
+    sendAuthorityFailure(res, fileAuthority, "文件不存在或无权访问。");
     return null;
   }
-
-  const data = await filesRepo.findById(fileId);
-
-  if (!data) {
-    res.status(404).json({ success: false, error: "FILE_NOT_FOUND", message: "文件不存在。" });
-    return null;
-  }
-  if (data.instance_id !== id || data.conversation_id !== conversationId) {
-    res.status(403).json({ success: false, error: "FORBIDDEN", message: "文件不属于当前会话。" });
-    return null;
-  }
-  if (data.owner_id !== ownerToUse && !isPrivileged) {
-    res.status(403).json({ success: false, error: "FORBIDDEN", message: "无权访问此文件。" });
-    return null;
-  }
+  const data = fileAuthority.file;
   if (data.deleted_at) {
     res.status(410).json({ success: false, error: "FILE_DELETED", message: "文件已删除。" });
     return null;
@@ -175,21 +165,11 @@ router.post("/:id/conversations/:conversationId/files", authenticateToken, async
   let instanceRootDir = "";
 
   try {
-    instance = await dbAdapter.getInstanceById(id);
-    if (!instance) {
-      return res.status(404).json({ error: "实例不存在" });
-    }
-    const isPrivileged = user.role === "admin" || user.role === "super_admin";
-    if (instance.user_id !== user.id && !isPrivileged) {
-      return res.status(403).json({ error: "无权限访问此实例" });
-    }
-
-    // Check conversation ownership. Even if admin, check if the conversation belongs to the instance's owner and the instance itself.
-    const ownerToUse = isPrivileged ? instance.user_id : user.id;
-    const conv = await chatRepo.getConversationForOwnerAndInstance(ownerToUse, id, conversationId);
-    if (!conv) {
-      return res.status(404).json({ error: "会话不存在或不属于当前实例" });
-    }
+    const instanceAuthority = await resolveInstanceAuthority({ actor: authorityActorFromRequest(req), instanceId: id });
+    if (instanceAuthority.ok === false) return sendAuthorityFailure(res, instanceAuthority, "无法访问目标实例。");
+    const conversationAuthority = await resolveConversationAuthority({ instance: instanceAuthority, conversationId });
+    if (conversationAuthority.ok === false) return sendAuthorityFailure(res, conversationAuthority, "会话不存在或无权访问。");
+    instance = instanceAuthority.instance;
     instanceRootDir = instance.data_volume_path || path.resolve(process.cwd(), "data", "instances", id);
     const quota = await checkInstanceStorageQuota(instance, instanceRootDir);
     if (quota.storageExceeded || quota.storageStatus === "exceeded") {
@@ -321,21 +301,12 @@ router.post("/:id/conversations/:conversationId/files", authenticateToken, async
 
 router.get("/:id/conversations/:conversationId/files", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   const { id, conversationId } = req.params;
-  const user = req.user!;
 
   try {
-    const instance: any = await dbAdapter.getInstanceById(id);
-    if (!instance) return res.status(404).json({ error: "实例不存在" });
-    const isPrivileged = user.role === "admin" || user.role === "super_admin";
-    if (instance.user_id !== user.id && !isPrivileged) {
-      return res.status(403).json({ error: "无权限访问此实例" });
-    }
-
-    const ownerToUse = isPrivileged ? instance.user_id : user.id;
-    const conv = await chatRepo.getConversationForOwnerAndInstance(ownerToUse, id, conversationId);
-    if (!conv) {
-      return res.status(404).json({ error: "会话不存在或不属于当前实例" });
-    }
+    const instanceAuthority = await resolveInstanceAuthority({ actor: authorityActorFromRequest(req), instanceId: id });
+    if (instanceAuthority.ok === false) return sendAuthorityFailure(res, instanceAuthority, "无法访问目标实例。");
+    const conversationAuthority = await resolveConversationAuthority({ instance: instanceAuthority, conversationId });
+    if (conversationAuthority.ok === false) return sendAuthorityFailure(res, conversationAuthority, "会话不存在或无权访问。");
 
     const data = await filesRepo.listByConversation(id, conversationId);
 
