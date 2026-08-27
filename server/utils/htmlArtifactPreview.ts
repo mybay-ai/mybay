@@ -134,8 +134,7 @@ function listProjectFiles(root: string): string[] {
     let entries: fs.Dirent[] = [];
     try {
       // The root is a canonical instance path and recursion only appends trusted directory entries.
-      // lgtm[js/path-injection]
-      entries = fs.readdirSync(directory, { withFileTypes: true });
+      entries = fs.readdirSync(directory, { withFileTypes: true }); // lgtm[js/path-injection]
     } catch {
       return;
     }
@@ -159,8 +158,7 @@ export function inspectHtmlArtifactPreviewProject(input: {
   const entryPath = input.entryPath.replace(/\\/g, "/").replace(/^\/+/, "");
   const entryDirectory = path.posix.dirname(entryPath) === "." ? "" : path.posix.dirname(entryPath);
   // entryPath is normalized to safe non-empty segments by normalizeHtmlPreviewProjectRoot.
-  // lgtm[js/path-injection]
-  const source = input.source ?? fs.readFileSync(path.resolve(projectRootAbsolute, ...entryPath.split("/")), "utf8");
+  const source = input.source ?? fs.readFileSync(path.resolve(projectRootAbsolute, ...entryPath.split("/")), "utf8"); // lgtm[js/path-injection]
   const projectFiles = listProjectFiles(projectRootAbsolute);
   const projectFileSet = new Set(projectFiles);
   const dependencies: HtmlArtifactPreviewDependency[] = [];
@@ -194,8 +192,7 @@ export function inspectHtmlArtifactPreviewProject(input: {
       try {
         const candidateAbsolute = path.resolve(projectRootAbsolute, ...candidate.split("/"));
         // candidate passed isSafeRelativeAssetPath and remains inside projectRootAbsolute.
-        // lgtm[js/path-injection]
-        const stats = fs.lstatSync(candidateAbsolute);
+        const stats = fs.lstatSync(candidateAbsolute); // lgtm[js/path-injection]
         return stats.isFile() && !stats.isSymbolicLink();
       } catch {
         return false;

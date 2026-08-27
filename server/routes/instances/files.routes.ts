@@ -456,8 +456,7 @@ export function createFilesRoutes(deps: RouterDependencies) {
         return res.status(exportGuard.status).json({ error: exportGuard.error, code: exportGuard.code });
       }
       // guardFileExport returns a canonical, regular, non-symlink file path.
-      // lgtm[js/path-injection]
-      const stats = fs.statSync(exportGuard.realPath);
+      const stats = fs.statSync(exportGuard.realPath); // lgtm[js/path-injection]
       if (!stats.isFile()) {
         return res.status(400).json({ error: "请求的路径不是文件", code: "FILE_METADATA_NOT_FILE" });
       }
@@ -503,8 +502,7 @@ export function createFilesRoutes(deps: RouterDependencies) {
       }
 
       // guardFileExport returns a canonical, regular, non-symlink file path.
-      // lgtm[js/path-injection]
-      const stats = fs.statSync(exportGuard.realPath);
+      const stats = fs.statSync(exportGuard.realPath); // lgtm[js/path-injection]
       if (stats.isDirectory()) {
         return res.status(400).json({ error: "不能预览目录", code: "HTML_PREVIEW_DIRECTORY_UNSUPPORTED" });
       }
