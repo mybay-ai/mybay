@@ -246,11 +246,14 @@ export const VALID_HERMES_PROVIDERS = new Set([
   "groq",
   "siliconflow",
   "xai",
+  "xai-oauth",
+  "openai-codex",
   "zhipu",
   "moonshot",
   "mistral",
-  "together",
-  "doubao"
+  "alibaba",
+  "togetherai",
+  "custom-openai-compatible"
 ]);
 
 export function resolveHermesProvider(provider: string, baseUrl?: string): string {
@@ -289,7 +292,7 @@ export function resolveHermesProvider(provider: string, baseUrl?: string): strin
     return "minimax-cn";
   }
   if (pLower === "custom" || pLower === "custom-openai-compatible" || pLower === "openai-compatible") {
-    return "openai-api";
+    return "custom-openai-compatible";
   }
 
   return pLower;
@@ -324,9 +327,13 @@ export function buildHermesModelConfig(input: HermesModelConfigInput): HermesMod
     "custom-openai-compatible": "OPENAI_API_KEY"
   };
 
-  const apiKeyEnvName = envNameMap[regKey] || envNameMap[pLower] || `${provider.toUpperCase()}_API_KEY`;
-
   const registryConfig = providerRegistry[regKey] || providerRegistry[pLower];
+  const isOAuthProvider = registryConfig?.authMode === "oauth-device-code";
+  const apiKeyEnvName = isOAuthProvider
+    ? ""
+    : envNameMap[regKey]
+      || envNameMap[pLower]
+      || (registryConfig?.envPrefix ? `${registryConfig.envPrefix}_API_KEY` : `${provider.toUpperCase()}_API_KEY`);
   const effectiveBaseUrl = baseUrl || registryConfig?.defaultBaseUrl || "";
   const hermesProvider = resolveHermesProvider(provider, effectiveBaseUrl);
   const hermesModel = model;
@@ -340,6 +347,9 @@ export function buildHermesModelConfig(input: HermesModelConfigInput): HermesMod
   envVars.MODEL = model;
   if (effectiveBaseUrl) {
     envVars.BASE_URL = effectiveBaseUrl;
+    if (regKey === "qwen") {
+      envVars.DASHSCOPE_BASE_URL = effectiveBaseUrl;
+    }
     if (hermesProvider === "openai" || hermesProvider === "openai-api") {
       envVars.OPENAI_BASE_URL = effectiveBaseUrl;
     }
@@ -363,29 +373,30 @@ export function buildHermesModelConfig(input: HermesModelConfigInput): HermesMod
     }
   }
 
-  envVars.HERMES_API_KEY_ENV_NAME = apiKeyEnvName;
+  if (apiKeyEnvName) {
+    envVars.HERMES_API_KEY_ENV_NAME = apiKeyEnvName;
+  }
 
   const configYaml: { [key: string]: any } = {
-    current_provider: hermesProvider,
-    current_model: hermesModel,
-    base_url: effectiveBaseUrl,
-    api_key_env_name: apiKeyEnvName,
-    provider: {
-      name: hermesProvider,
-      model: hermesModel,
-      base_url: effectiveBaseUrl,
-      api_key_env_name: apiKeyEnvName
+    model: {
+      provider: hermesProvider,
+      default: hermesModel
     },
-    control_plane: {
-      provider: {
-        name: provider,
-        label: pLower,
-        model: model,
-        base_url: effectiveBaseUrl,
-        type: pLower
-      }
-    }
+    providers: {}
   };
+
+  if (regKey === "custom-openai-compatible") {
+    configYaml.providers[hermesProvider] = {
+      base_url: effectiveBaseUrl,
+      key_env: apiKeyEnvName,
+      api_mode: registryConfig?.apiMode || "chat_completions",
+      default_model: hermesModel
+    };
+
+    if (!apiKeyEnvName) {
+      delete configYaml.providers[hermesProvider].key_env;
+    }
+  }
 
   return {
     hermesProvider,

@@ -42,4 +42,15 @@ describe("instanceFileLeakGuard", () => {
     expect(blocked.ok).toBe(false);
     if (blocked.ok === false) expect(blocked.code).toBe("FILE_SECRET_CONTENT_BLOCKED");
   });
+
+  it("rejects a canonical file outside the allowed instance root", async () => {
+    const allowedRoot = fs.mkdtempSync(path.join(os.tmpdir(), "mybay-file-root-"));
+    const outsideFile = makeTempFile("outside.md", "normal content");
+    try {
+      await expect(guardFileExport(outsideFile, "outside.md", allowedRoot))
+        .resolves.toMatchObject({ ok: false, code: "FILE_OUTSIDE_INSTANCE_ROOT", status: 403 });
+    } finally {
+      fs.rmSync(allowedRoot, { recursive: true, force: true });
+    }
+  });
 });

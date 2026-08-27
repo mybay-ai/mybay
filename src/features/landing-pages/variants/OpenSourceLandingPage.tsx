@@ -12,8 +12,8 @@ import {
 } from "lucide-react";
 import { Button } from "../../../components/ui";
 
-const quickStartCommand = `git clone https://github.com/mybay-ai/mybay.git
-cd mybay
+const quickStartCommand = `git clone https://github.com/mybay-ai/mybay-core.git
+cd mybay-core
 bash quick-start.sh`;
 
 function CommandBlock({ command, label }: { command: string; label: string }) {

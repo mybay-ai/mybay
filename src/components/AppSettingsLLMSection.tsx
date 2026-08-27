@@ -4,6 +4,7 @@ import { resolveProviderRegistryKey } from "@/shared/providerRegistryUtils";
 import { cn } from "../lib/utils";
 import type { Credential } from "../types";
 import { useTranslation } from "react-i18next";
+import { ProviderSelect } from "./ProviderSelect";
 
 interface AppSettingsLLMSectionProps {
   password: string;
@@ -18,7 +19,7 @@ interface AppSettingsLLMSectionProps {
   setBaseUrl: (v: string) => void;
   providerApiKey: string;
   setProviderApiKey: (v: string) => void;
-  handleProviderChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  handleProviderChange: (value: string) => void;
   providerCredentialId: string;
   setProviderCredentialId: (v: string) => void;
   credentials: Credential[];
@@ -42,25 +43,14 @@ export function AppSettingsLLMSection({
   const currentModels = currentProviderConf ? currentProviderConf.models || [] : [];
   const isModelDeprecated = !!(currentProviderConf && model && !isCustomModel && !currentModels.includes(model));
 
-  const activeProviders = Object.values(providerRegistry).filter(p => p.enabled);
-  const providerOptions = [...activeProviders];
-  if (isProviderDeprecated && provider) {
-    providerOptions.unshift({
-      id: provider,
-      label: provider + " (deprecated / unsupported)",
-      enabled: false,
-    } as any);
-  }
-
   const modelOptions = Array.from(new Set(currentModels));
   if (isModelDeprecated && model) {
     modelOptions.unshift(model);
   }
 
-  const handleCanonicalProviderChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const nextProvider = e.target.value;
+  const handleCanonicalProviderChange = (nextProvider: string) => {
     const nextConf = providerRegistry[nextProvider];
-    handleProviderChange(e);
+    handleProviderChange(nextProvider);
     setProviderCredentialId("");
     setProviderApiKey("");
     if (nextConf) {
@@ -157,15 +147,12 @@ export function AppSettingsLLMSection({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label>{t("settings_model_provider")}</Label>
-          <select
+          <ProviderSelect
             value={registryProvider}
-            onChange={handleCanonicalProviderChange}
-            className="flex h-9 w-full rounded-md border border-outline bg-surface px-3 text-sm text-content focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 mt-1"
-          >
-            {providerOptions.map(p => (
-              <option key={p.id} value={p.id}>{p.label}</option>
-            ))}
-          </select>
+            onValueChange={handleCanonicalProviderChange}
+            className="mt-1"
+            legacyOption={isProviderDeprecated && provider ? { id: provider, label: t("settings_llm_legacy_provider_label", { provider }) } : undefined}
+          />
         </div>
 
         <div>
@@ -200,7 +187,7 @@ export function AppSettingsLLMSection({
             </select>
           ) : (
             <Input
-              placeholder={registryProvider === "doubao" ? t("settings_custom_model_placeholder_doubao") : t("settings_custom_model_placeholder")}
+              placeholder={t("settings_custom_model_placeholder")}
               value={model}
               onChange={e => setModel(e.target.value)}
               className="font-mono text-[13px] mt-1"

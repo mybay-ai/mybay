@@ -288,10 +288,10 @@ export function ChatConversationSidebar({
 
   return (
     <div
-      className={`absolute inset-y-0 left-0 z-30 w-[min(82vw,280px)] bg-slate-100/80 dark:bg-slate-950 max-sm:dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 shrink-0 transition-transform sm:transition-all duration-300 flex flex-col ${
-        mobileSidebarOpen ? "translate-x-0 shadow-xl max-sm:shadow-2xl max-sm:shadow-slate-950/40" : "-translate-x-full"
-      } sm:relative sm:inset-auto sm:translate-x-0 sm:shadow-none ${
-        sidebarOpen ? "sm:w-[292px]" : "sm:w-0 sm:overflow-hidden sm:border-r-0"
+      className={`absolute inset-y-0 left-0 z-30 w-[min(82vw,280px)] bg-slate-100/80 dark:bg-slate-950 max-md:dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 shrink-0 transition-transform md:transition-all duration-300 flex flex-col ${
+        mobileSidebarOpen ? "translate-x-0 shadow-xl max-md:shadow-2xl max-md:shadow-slate-950/40" : "-translate-x-full"
+      } md:relative md:inset-auto md:translate-x-0 md:shadow-none ${
+        sidebarOpen ? "md:w-[292px]" : "md:w-0 md:overflow-hidden md:border-r-0"
       }`}
     >
       <div className="p-3 border-b border-outline bg-surface/70 max-sm:dark:bg-slate-950 shrink-0 flex items-center gap-2">
@@ -314,7 +314,7 @@ export function ChatConversationSidebar({
         </button>
         <button
           onClick={onCloseSidebar}
-          className="p-2 text-content-muted hover:text-content-secondary rounded-lg hidden sm:block hover:bg-surface-muted"
+          className="p-2 text-content-muted hover:text-content-secondary rounded-lg hidden md:block hover:bg-surface-muted"
           title={t("chatWorkspace.sidebarToggle")}
         >
           <ChevronLeft className="w-4 h-4" />
@@ -322,7 +322,7 @@ export function ChatConversationSidebar({
         <button
           type="button"
           onClick={onCloseMobileSidebar}
-          className="p-2 text-content-muted hover:text-content-secondary rounded-lg sm:hidden hover:bg-surface-muted"
+          className="p-2 text-content-muted hover:text-content-secondary rounded-lg md:hidden hover:bg-surface-muted"
           title={t("chatWorkspace.sidebarToggle")}
         >
           <X className="w-4 h-4" />

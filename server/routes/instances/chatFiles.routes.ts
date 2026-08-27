@@ -13,8 +13,30 @@ import { getChatAttachmentConfig } from "../../config/chatAttachmentConfig";
 import { DEFAULT_CHAT_ATTACHMENT_CONFIG } from "../../../shared/chatAttachmentContract";
 import { deleteChatAttachmentFile } from "../../services/chatAttachmentStorage";
 import { checkInstanceStorageQuota, formatDiskLimitLabel, resolveInstanceDiskLimitMb } from "../../services/instances/instanceStorageQuotaService";
+import {
+  HTML_ARTIFACT_PREVIEW_MAX_BYTES,
+  HTML_SINGLE_FILE_PREVIEW_CSP,
+  isHtmlArtifactPreview,
+} from "../../utils/htmlArtifactPreview";
+import { renderLocalOfficePreview } from "../../utils/officeArtifactPreview";
+import { normalizeMultipartFilename } from "../../utils/multipartFilename";
+import { streamLocalVideo } from "../../utils/mediaStream";
+import rateLimit from "express-rate-limit";
+import { getClientIp } from "../../utils/ip";
 
 const router = Router();
+
+const chatFileReadLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 300,
+  keyGenerator: (req: AuthenticatedRequest) => `chat_file_read:ip:${getClientIp(req)}:user:${req.user?.id || "anon"}`,
+  message: {
+    success: false,
+    error: "CHAT_FILE_RATE_LIMITED",
+    code: "CHAT_FILE_RATE_LIMITED",
+    message: "文件读取请求过于频繁，请稍后重试。",
+  },
+});
 
 const chatStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -44,6 +66,7 @@ function createChatUploadMiddleware() {
     storage: chatStorage,
     limits,
     fileFilter: (_req, file, cb) => {
+      file.originalname = normalizeMultipartFilename(file.originalname);
       const ext = path.extname(file.originalname).toLowerCase();
       const allowed = chatAttachmentConfig.allowedExtensions;
       if (!ext || (allowed !== null && !allowed.includes(ext))) {
@@ -123,12 +146,12 @@ async function resolveChatFileForAccess(req: AuthenticatedRequest, res: Response
       res.status(403).json({ success: false, error: "INVALID_FILE_PATH", message: "文件路径未通过安全校验。" });
       return null;
     }
+    return { file: data, storagePath: realStoragePath, rootDir: realBaseDir };
   } catch {
     res.status(404).json({ success: false, error: "FILE_MISSING", message: "文件记录存在，但物理文件不存在。" });
     return null;
   }
 
-  return { file: data, storagePath };
 }
 function isFilesSchemaMismatch(error: any): boolean {
   const message = String(error?.message || error?.details || error?.hint || "");
@@ -249,7 +272,7 @@ router.post("/:id/conversations/:conversationId/files", authenticateToken, async
           owner_id: user.id,
           instance_id: id,
           conversation_id: conversationId,
-          original_name: file.originalname,
+          original_name: normalizeMultipartFilename(file.originalname),
           filename: file.filename,
           mime_type: file.mimetype,
           size: file.size,
@@ -262,7 +285,7 @@ router.post("/:id/conversations/:conversationId/files", authenticateToken, async
 
         records.push({
           id: data.id,
-          originalName: data.original_name || data.filename,
+          originalName: normalizeMultipartFilename(data.original_name || data.filename),
           mimeType: data.mime_type,
           size: data.size,
           createdAt: data.created_at,
@@ -318,7 +341,7 @@ router.get("/:id/conversations/:conversationId/files", authenticateToken, async 
 
     const mapped = (data || []).map(f => ({
       id: f.id,
-      originalName: f.original_name || f.filename,
+      originalName: normalizeMultipartFilename(f.original_name || f.filename),
       filename: f.filename,
       mimeType: f.mime_type,
       size: f.size,
@@ -344,14 +367,87 @@ router.get("/:id/conversations/:conversationId/files", authenticateToken, async 
   }
 });
 
+router.use([
+  "/:id/conversations/:conversationId/files/:fileId/html-preview",
+  "/:id/conversations/:conversationId/files/:fileId/office-preview",
+  "/:id/conversations/:conversationId/files/:fileId/download",
+  "/:id/conversations/:conversationId/files/:fileId/media-preview",
+], chatFileReadLimiter);
 
+// These four handlers are protected by the path-scoped chatFileReadLimiter above.
+// lgtm[js/missing-rate-limiting]
+router.get("/:id/conversations/:conversationId/files/:fileId/html-preview", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const resolved = await resolveChatFileForAccess(req, res);
+    if (!resolved) return;
+
+    const displayName = normalizeMultipartFilename(resolved.file.original_name || resolved.file.filename || path.basename(resolved.storagePath));
+    const mimeType = resolved.file.mime_type || "";
+    if (!isHtmlArtifactPreview(displayName, mimeType)) {
+      return res.status(415).json({ success: false, error: "CHAT_HTML_PREVIEW_TYPE_UNSUPPORTED", message: "该附件不是 HTML 文档。" });
+    }
+    const exportGuard = await guardFileExport(resolved.storagePath, displayName, resolved.rootDir);
+    if (exportGuard.ok === false) {
+      return res.status(exportGuard.status).json({ success: false, error: exportGuard.code, message: exportGuard.error });
+    }
+    const stats = fs.statSync(exportGuard.realPath);
+    if (stats.size > HTML_ARTIFACT_PREVIEW_MAX_BYTES) {
+      return res.status(413).json({ success: false, error: "CHAT_HTML_PREVIEW_TOO_LARGE", message: "HTML 附件过大，请下载查看。", size: stats.size });
+    }
+
+    res.setHeader("X-Frame-Options", "SAMEORIGIN");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Content-Security-Policy", HTML_SINGLE_FILE_PREVIEW_CSP);
+    res.setHeader("Cross-Origin-Resource-Policy", "same-origin");
+    res.setHeader("Referrer-Policy", "no-referrer");
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Content-Disposition", `inline; filename*=UTF-8''${encodeURIComponent(displayName)}`);
+    return res.sendFile(exportGuard.realPath, (error) => {
+      if (!error) return;
+      console.error("[Chat File Preview] HTML stream failed", { filePath: exportGuard.realPath, error });
+      if (!res.headersSent) res.status(Number((error as any).statusCode) || 500).json({ success: false, error: "CHAT_HTML_PREVIEW_TRANSFER_FAILED", message: "HTML 附件预览传输失败。" });
+      else res.destroy(error);
+    });
+  } catch (e: any) {
+    console.error(JSON.stringify({
+      operation: "chat_html_preview_failed",
+      instanceId: req.params.id,
+      conversationId: req.params.conversationId,
+      fileId: req.params.fileId,
+      error: e?.message || "Unknown Error"
+    }));
+    return res.status(500).json({ success: false, error: "CHAT_HTML_PREVIEW_FAILED", message: "HTML 附件预览失败，请稍后重试。" });
+  }
+});
+
+// lgtm[js/missing-rate-limiting]
+router.get("/:id/conversations/:conversationId/files/:fileId/office-preview", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const resolved = await resolveChatFileForAccess(req, res);
+    if (!resolved) return;
+    const displayName = normalizeMultipartFilename(resolved.file.original_name || resolved.file.filename || path.basename(resolved.storagePath));
+    const exportGuard = await guardFileExport(resolved.storagePath, displayName, resolved.rootDir);
+    if (exportGuard.ok === false) {
+      return res.status(exportGuard.status).json({ success: false, error: exportGuard.code, message: exportGuard.error });
+    }
+    const preview = await renderLocalOfficePreview(exportGuard.realPath, displayName, exportGuard.rootPath);
+    return res.json({ success: true, ...preview });
+  } catch (e: any) {
+    const status = Number(e?.status) || 500;
+    const code = String(e?.code || "CHAT_OFFICE_PREVIEW_FAILED");
+    return res.status(status).json({ success: false, error: code, code, message: code === "OFFICE_PREVIEW_TOO_LARGE" ? "Office 文件过大，请下载查看。" : "Office 文件预览失败，请下载后查看。" });
+  }
+});
+
+
+// lgtm[js/missing-rate-limiting]
 router.get("/:id/conversations/:conversationId/files/:fileId/download", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const resolved = await resolveChatFileForAccess(req, res);
     if (!resolved) return;
 
-    const displayName = resolved.file.original_name || resolved.file.filename || path.basename(resolved.storagePath);
-    const exportGuard = await guardFileExport(resolved.storagePath, displayName);
+    const displayName = normalizeMultipartFilename(resolved.file.original_name || resolved.file.filename || path.basename(resolved.storagePath));
+    const exportGuard = await guardFileExport(resolved.storagePath, displayName, resolved.rootDir);
     if (exportGuard.ok === false) {
       return res.status(exportGuard.status).json({ success: false, error: exportGuard.code, message: exportGuard.error });
     }
@@ -371,6 +467,23 @@ router.get("/:id/conversations/:conversationId/files/:fileId/download", authenti
       error: e?.message || "Unknown Error"
     }));
     return res.status(500).json({ success: false, error: "CHAT_FILE_DOWNLOAD_FAILED", message: "文件下载失败，请稍后重试。" });
+  }
+});
+
+// lgtm[js/missing-rate-limiting]
+router.get("/:id/conversations/:conversationId/files/:fileId/media-preview", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const resolved = await resolveChatFileForAccess(req, res);
+    if (!resolved) return;
+    const displayName = normalizeMultipartFilename(resolved.file.original_name || resolved.file.filename || path.basename(resolved.storagePath));
+    const exportGuard = await guardFileExport(resolved.storagePath, displayName, resolved.rootDir);
+    if (exportGuard.ok === false) {
+      return res.status(exportGuard.status).json({ success: false, error: exportGuard.code, message: exportGuard.error });
+    }
+    return streamLocalVideo(req, res, exportGuard.realPath, displayName, exportGuard.rootPath);
+  } catch (e: any) {
+    console.error(JSON.stringify({ operation: "chat_media_preview_failed", instanceId: req.params.id, conversationId: req.params.conversationId, fileId: req.params.fileId, error: e?.message || "Unknown Error" }));
+    return res.status(500).json({ success: false, error: "CHAT_MEDIA_PREVIEW_FAILED", code: "CHAT_MEDIA_PREVIEW_FAILED", message: "视频预览失败，请稍后重试。" });
   }
 });
 router.delete("/:id/conversations/:conversationId/files/:fileId", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {

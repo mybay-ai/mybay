@@ -1061,56 +1061,56 @@
     "timelineTip": "Preview Release",
     "releases": [
       {
-        "version": "v0.1.22-preview",
-        "date": "2026.08.25",
+        "version": "v0.1.23-preview",
+        "date": "2026.08.27",
         "badge": "PREVIEW",
-        "summary": "MyBay Open Source v0.1.22-preview adds outbound model-request and conversation API security hardening to the local instance and chat experience improvements.",
+        "summary": "MyBay Open Source v0.1.23-preview completes the local generated-artifact lifecycle, safe previews, responsive chat workspace, and model configuration diagnostics.",
         "sections": [
           {
-            "title": "Local security hardening",
+            "title": "Generated files and safe previews",
             "type": "fix",
             "items": [
-              "Revalidates the final model API Base URL immediately before each runtime request to block legacy or bypassed configuration from reaching local, private, or cloud metadata addresses.",
-              "Fails closed on DNS errors and checks every resolved IPv4 and IPv6 address, URL credentials, and restricted internal hostname.",
-              "Adds dedicated limits for conversation search and for conversation and project creation, ordering, moves, renames, and deletion.",
-              "Preserves local instances, Desktop/LAN/Server deployment checks, and every attachment rule."
+              "Normalizes generated paths, preview selection recovery, refresh recovery, and download names across the container workspace.",
+              "Adds local dependency inspection, asset remapping, missing-dependency diagnostics, and a single security sandbox for HTML projects.",
+              "Strengthens security boundaries for instance file paths, HTML assets, and managed local operations.",
+              "Fixes UTF-8 attachment filename handling while preserving all existing upload limits and validation rules."
             ]
           },
           {
-            "title": "Instance chat stability",
-            "type": "fix",
-            "items": [
-              "Binds new runs precisely by runId, requestId, and assistantMessageId so a previous answer cannot be overwritten.",
-              "Uses consistent run state across Results, chat bubbles, and Steps while preventing terminal-state regression.",
-              "Recovers conversations from server snapshots after refresh, isolates cross-run events, and avoids duplicated streamed text."
-            ]
-          },
-          {
-            "title": "Local instance and deployment lifecycle",
-            "type": "fix",
-            "items": [
-              "Separates instance running, chat initialization, chat configuration required, and chat authentication or routing failures.",
-              "Adapts deployment forms through a local field allowlist into the existing instance creation endpoint.",
-              "Strengthens instance health checks, physical-state reconciliation, and local Feishu runtime dependency validation.",
-              "Preserves Desktop, LAN, and Server preflight checks without introducing SaaS capabilities."
-            ]
-          },
-          {
-            "title": "Local conversation management",
+            "title": "Responsive chat workspace",
             "type": "feature",
             "items": [
-              "Adds persistent conversation and project ordering, moves, and rollback on failure.",
-              "Adds local search across conversation titles and message content while preserving user and instance isolation."
+              "Improves conversation history, chat, and workspace panel switching and scrolling across desktop, tablet, and mobile layouts.",
+              "Adds local generated-file cards, added/modified file summaries, collapsible execution details, and per-response duration.",
+              "Preserves Result, Steps, Files, and Preview tab state and reveals the workspace when a generated file is selected."
             ]
           },
           {
-            "title": "Mobile workspace experience",
+            "title": "Model and deployment reliability",
+            "type": "fix",
+            "items": [
+              "Unifies provider, model ID, saved credential, and custom Base URL selection and validation.",
+              "Improves model API hot-update persistence and configuration application after container restart.",
+              "Strengthens deployment error classification, port-conflict recovery, and local Feishu runtime preparation diagnostics.",
+              "Preserves Desktop, LAN, and Server preflight checks and the existing instance creation entry."
+            ]
+          },
+          {
+            "title": "Local file format support",
             "type": "feature",
             "items": [
-              "Makes conversation history and workspace drawers mutually exclusive and preserves Result, Steps, Files, and Preview tab state.",
-              "Improves sizing and scrolling for long results, steps, and file previews.",
-              "Compacts the composer when the software keyboard opens to prevent content obstruction.",
-              "Leaves attachment upload, preview, type, count, size, and retry rules unchanged."
+              "Adds workspace content previews for Office documents and direct source viewing for TypeScript and TSX.",
+              "Streams MP4 and MOV with byte-range responses and explains browser codec compatibility boundaries."
+            ]
+          },
+          {
+            "title": "Documentation and repository",
+            "type": "feature",
+            "items": [
+              "Corrects GitHub repository URLs, clone commands, badges, and npm package metadata.",
+              "Adds product screenshots and bilingual 10-minute first-Agent guides.",
+              "Adds bilingual troubleshooting for deployment, models, Feishu, HTML, video, and UTF-8 filenames.",
+              "Introduces no hosted SaaS, managed model, plan, billing, multi-tenant, or cloud scheduling capability."
             ]
           }
         ]

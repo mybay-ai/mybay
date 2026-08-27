@@ -298,6 +298,7 @@
                           "container_traefik":  "Cluster-adaptive ingress gateway reverse proxy is ready",
                           "container_port":  "Host port automatic allocation logic has been activated",
                           "model_test_required":  "Please test LLM connectivity and pass before proceeding",
+                          "model_oauth_after_deploy":  "Model settings are ready. Complete OAuth from the Hermes Dashboard Accounts page after the instance starts",
                           "model_success":  "Large Language Model and Provider connection succeeded",
                           "channel_test_required":  "⚠️ IM channel is not yet configured or tested. Please fill in the API credentials above and click \u0027Test Channel Connection\u0027 before proceeding.",
                           "channel_empty_allowlist":  "Channel can connect, but no allowed users/chats configured; bot might not respond to any messages.",
@@ -536,6 +537,8 @@
                                      "test":  "Test model connection",
                                      "success":  "Model service connected. The configuration is valid.",
                                      "successDetail":  "Connection test succeeded. The API configuration is valid.",
+                                     "oauthAfterDeployTitle":  "OAuth authorization is completed after deployment",
+                                     "oauthAfterDeployDescription":  "No API key or pre-deployment test is required. After the instance starts, open its Hermes Dashboard and sign in from the Accounts page before using the model.",
                                      "failure":  "Model connection failed. Check the configuration.",
                                      "unknownError":  "An unknown authentication or network error occurred.",
                                      "byokTitle":  "Bring your own API key (BYOK)",
@@ -934,7 +937,8 @@
                                 "CONTAINER_MISSING": "The instance exists in the database, but its Docker container is missing.",
                                 "CLEANUP_FAILED": "Some instance resources could not be cleaned up.",
                                 "QUOTA_EXCEEDED": "The instance quota has been reached.",
-                                "PATH_CONFLICT": "Another instance already uses this access path."
+                                "PATH_CONFLICT": "Another instance already uses this access path.",
+                                "PROVIDER_UNSUPPORTED": "The selected model provider is not supported by the current Agent runtime. Choose another provider or review the runtime mapping."
                             }
                         },
                                       "deployedTitle":  "Deployment submitted",

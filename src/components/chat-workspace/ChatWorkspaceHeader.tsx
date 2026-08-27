@@ -60,7 +60,7 @@ export function ChatWorkspaceHeader({
       <div className="flex items-center gap-3 min-w-0 flex-1 sm:flex-initial">
         <button
           onClick={onOpenMobileSidebar}
-          className="p-1.5 hover:bg-slate-150 text-content-muted rounded-lg shrink-0 sm:hidden block mr-1 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+          className="p-1.5 hover:bg-slate-150 text-content-muted rounded-lg shrink-0 md:hidden block mr-1 dark:hover:bg-slate-800 dark:hover:text-slate-100"
           title={t("dashboard:chatWorkspace.sidebarToggle")}
           aria-expanded={mobileSidebarOpen}
         >

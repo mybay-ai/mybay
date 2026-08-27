@@ -3,7 +3,7 @@ import { Key, Plus, Trash2, Edit2, ShieldAlert, Check, X, Search, Filter, Extern
 import { Button, Card, cn } from "./ui";
 import { motion, AnimatePresence } from "motion/react";
 import { useFeedback } from "./FeedbackProvider";
-import { providerRegistry } from "../../shared/providerRegistry";
+import { getProviderDisplayGroups } from "../../shared/providerRegistryUtils";
 import type { Credential } from "../types";
 
 import { api } from "../lib/api";
@@ -13,7 +13,7 @@ import { extractApiErrorPayload, translateApiError } from "../lib/apiError";
 
 export function CredentialsSection({ currentUser }: { currentUser: any }) {
   const { showToast, showAlert, showConfirm } = useFeedback();
-  const { t, i18n } = useTranslation(["dashboard", "errors"]);
+  const { t, i18n } = useTranslation(["dashboard", "errors", "common"]);
   const [credentials, setCredentials] = useState<Credential[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -37,6 +37,7 @@ export function CredentialsSection({ currentUser }: { currentUser: any }) {
     baseUrl: "",
     isCustom: false
   });
+  const providerGroups = getProviderDisplayGroups();
 
   const fetchCredentials = async () => {
     try {
@@ -275,11 +276,13 @@ export function CredentialsSection({ currentUser }: { currentUser: any }) {
                       value={formData.type}
                       onChange={(e) => setFormData({...formData, type: e.target.value})}
                     >
-                      <optgroup label={t("credentials.llmProviders")} className="bg-surface text-content">
-                        {Object.values(providerRegistry).map(p => (
-                          <option key={p.id} value={p.id}>{p.label}</option>
-                        ))}
-                      </optgroup>
+                      {providerGroups.map((group) => (
+                        <optgroup key={group.id} label={t(`common:providerPicker.groups.${group.id}`)} className="bg-surface text-content">
+                          {group.providers.map((provider) => (
+                            <option key={provider.id} value={provider.id}>{provider.label}</option>
+                          ))}
+                        </optgroup>
+                      ))}
                       <optgroup label={t("credentials.searchProviders")} className="bg-surface text-content">
                         <option value="tavily">{t("credentials.providerTavily")}</option>
                         <option value="serper">{t("credentials.providerSerper")}</option>

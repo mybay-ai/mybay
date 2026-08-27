@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildChatAttachmentMetadata, isChatAttachmentDeleted } from "./chatAttachments";
+import { buildChatAttachmentMetadata, getAttachmentDisplayName, isChatAttachmentDeleted } from "./chatAttachments";
 
 describe("chat attachment message metadata", () => {
   it("stores an immutable display snapshot alongside attachment ids", () => {
@@ -27,5 +27,10 @@ describe("chat attachment message metadata", () => {
     expect(isChatAttachmentDeleted({ deleted_at: null })).toBe(false);
     expect(isChatAttachmentDeleted({ deleted_at: "" })).toBe(false);
     expect(isChatAttachmentDeleted({ deleted_at: "2026-08-16T12:00:00.000Z" })).toBe(true);
+  });
+
+  it("repairs a legacy mojibake display name before it reaches chat metadata", () => {
+    const original_name = Buffer.from("8月3日.mp4", "utf8").toString("latin1");
+    expect(getAttachmentDisplayName({ original_name, filename: "stored.mp4" })).toBe("8月3日.mp4");
   });
 });

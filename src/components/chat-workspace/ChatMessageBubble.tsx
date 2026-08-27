@@ -1,8 +1,6 @@
 import { Children, isValidElement, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import { AlertCircle, Brain, Check, Clock3, Copy, CornerDownRight, Edit3, ExternalLink, FileText, Gauge, Sparkles, ThumbsDown, ThumbsUp } from "lucide-react";
+import { Brain, Check, Clock3, Copy, ExternalLink, FileText, Gauge, Sparkles, ThumbsDown, ThumbsUp } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { User as UserType } from "../../types";
 import type { ChatMessage } from "../../lib/chatWorkspaceState";
@@ -15,6 +13,13 @@ import type { ChatApprovalChoice, ChatApprovalRequest, ChatRunMetrics } from "./
 import type { RunExecutionState } from "./run/runTypes";
 import { InlineRunTimeline } from "./run/InlineRunTimeline";
 import { InlineApprovalCard } from "./run/InlineApprovalCard";
+import { GENERATED_FILE_PATH_PATTERN } from "./generatedFilePath";
+import type { GeneratedArtifact } from "./generatedArtifacts";
+import { ChatGeneratedArtifactCards, selectMessageGeneratedArtifacts } from "./ChatGeneratedArtifactCards";
+import { ChatMessageAttachments } from "./ChatMessageAttachments";
+import { ChatMessageStatusNotices } from "./ChatMessageStatusNotices";
+import { ChatRunFileChanges } from "./ChatRunFileChanges";
+import { ChatMarkdownRenderer } from "./ChatMessageContent";
 
 interface ChatMessageBubbleProps {
   message: ChatMessage;
@@ -28,6 +33,8 @@ interface ChatMessageBubbleProps {
   conversationFiles?: PendingAttachment[];
   onOpenConversationFile?: (file: PendingAttachment) => void;
   onOpenInstanceFilePath?: (filePath: string) => void;
+  onDownloadInstanceFilePath?: (filePath: string) => void;
+  generatedArtifacts?: GeneratedArtifact[];
   fallbackModelLabel?: string;
   instanceId?: string;
   onMessageFeedbackChange?: (messageId: string, feedback: "like" | "dislike" | null) => void;
@@ -65,7 +72,6 @@ function escapeRegExp(value: string) {
 }
 
 const MARKDOWN_URL_WRAPPERS = ["**", "__", "`", "*", "_"];
-const GENERATED_FILE_PATH_PATTERN = /(?:(?:[A-Za-z]:[\\/]+|\\\\|\/|\.\/|outputs\/|uploads\/|documents\/|reports\/|tmp\/|opt\/data\/)[^\s<>"']+?\.(?:xlsx|xls|jpg|jpeg|png|webp|gif|pdf|doc|docx|csv|txt|md|markdown|html|htm|json|zip))(?![A-Za-z0-9])/giu;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function normalizeUrlHref(rawValue: string) {
@@ -137,6 +143,14 @@ function getAssistantTokenUsage(message: ChatMessage) {
 function formatTokenUsage(value: number | null | undefined) {
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return "";
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(value);
+}
+
+function formatMessageDuration(value: number | null | undefined) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return "";
+  if (value < 1000) return `${Math.round(value)}ms`;
+  const seconds = Math.round(value / 1000);
+  if (seconds < 60) return `${seconds}s`;
+  return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
 }
 
 function getAssistantModelLabel(message: ChatMessage, fallbackModelLabel?: string) {
@@ -390,9 +404,8 @@ function MarkdownChatContent({
   };
 
   return (
-    <div className="chat-message-markdown min-w-0 space-y-2 break-words [overflow-wrap:anywhere]">
-      <Markdown
-        remarkPlugins={[remarkGfm]}
+      <ChatMarkdownRenderer
+        content={content}
         components={{
           p: ({ children }) => <p className="m-0 whitespace-pre-wrap leading-6">{linkifyMarkdownChildren(children, linkContext)}</p>,
           strong: ({ children }) => <strong className="font-semibold text-slate-950 dark:text-white">{linkifyMarkdownChildren(children, linkContext)}</strong>,
@@ -458,10 +471,7 @@ function MarkdownChatContent({
           th: ({ children }) => <th className="whitespace-nowrap border-b border-outline px-2.5 py-2 font-semibold">{linkifyMarkdownChildren(children, linkContext)}</th>,
           td: ({ children }) => <td className="border-b border-outline px-2.5 py-2 align-top break-words">{linkifyMarkdownChildren(children, linkContext)}</td>
         }}
-      >
-        {content}
-      </Markdown>
-    </div>
+      />
   );
 }
 export function ChatMessageBubble({
@@ -476,6 +486,8 @@ export function ChatMessageBubble({
   conversationFiles = [],
   onOpenConversationFile,
   onOpenInstanceFilePath,
+  onDownloadInstanceFilePath,
+  generatedArtifacts = [],
   fallbackModelLabel,
   instanceId,
   onMessageFeedbackChange,
@@ -492,13 +504,17 @@ export function ChatMessageBubble({
   const [feedbackSaving, setFeedbackSaving] = useState(false);
   const isUser = message.role === "user";
   const retryTarget = isUser ? message : retrySourceMessage;
-  const terminalActionClass = isUser ? "border-white/30 bg-white/15 text-white hover:bg-white/25" : "border-outline bg-surface text-content-secondary hover:bg-surface-muted";
   const canSaveFeedback = !isUser && !!instanceId && !!selectedConversationId && UUID_PATTERN.test(message.id || "");
   const displayContent = sanitizeChatDisplayContent(
     message.content,
     t("chatWorkspace.toolCallProtocolHidden")
   );
   const messageAttachments = useMemo(() => getMessageAttachments(message, conversationFiles), [message, conversationFiles]);
+  const messageRunId = runExecutionState?.runId || readStringField(message.metadata, ["runId", "run_id"]);
+  const messageGeneratedArtifacts = useMemo(
+    () => selectMessageGeneratedArtifacts(generatedArtifacts, message.id, messageRunId),
+    [generatedArtifacts, message.id, messageRunId]
+  );
 
   useEffect(() => {
     setFeedback(message.user_feedback === "like" ? "up" : message.user_feedback === "dislike" ? "down" : null);
@@ -512,6 +528,7 @@ export function ChatMessageBubble({
   const failureMessage = failureInfo.message;
   const assistantTokenUsage = useMemo(() => getAssistantTokenUsage(message), [message]);
   const assistantTokenUsageLabel = useMemo(() => formatTokenUsage(assistantTokenUsage), [assistantTokenUsage]);
+  const assistantDurationLabel = formatMessageDuration(message.duration_ms ?? runMetrics?.durationMs);
 
   const handleCopyAssistantMessage = async () => {
     if (!displayContent) return;
@@ -583,23 +600,9 @@ export function ChatMessageBubble({
             onOpenInstanceFilePath={onOpenInstanceFilePath}
           />
         )}
-        {isUser && messageAttachments.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1.5 border-t border-white/15 pt-2">
-            {messageAttachments.map(({ file, available }) => (
-              <button
-                key={file.id}
-                type="button"
-                disabled={!available || !onOpenConversationFile}
-                onClick={() => available && onOpenConversationFile?.(file)}
-                className="inline-flex max-w-[240px] items-center gap-1.5 rounded-md border border-white/20 bg-white/10 px-2 py-1 text-[12px] text-white transition-colors enabled:hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
-                title={available ? t("chatWorkspace.openFile") : t("chatWorkspace.attachmentUnavailable")}
-              >
-                <FileText className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">{file.originalName}</span>
-              </button>
-            ))}
-          </div>
-        )}
+        {isUser && <ChatMessageAttachments attachments={messageAttachments} onOpen={onOpenConversationFile} />}
+        {!isUser && <ChatGeneratedArtifactCards artifacts={messageGeneratedArtifacts} onPreview={onOpenInstanceFilePath} onDownload={onDownloadInstanceFilePath} />}
+        {!isUser && <ChatRunFileChanges execution={runExecutionState} artifacts={messageGeneratedArtifacts} onOpen={onOpenInstanceFilePath} />}
         {!isUser && displayContent.trim() && (
           <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-outline pt-2 text-content-muted">
             <button
@@ -632,6 +635,12 @@ export function ChatMessageBubble({
               <Brain className="h-3.5 w-3.5 shrink-0" />
               <span className="truncate">{assistantModelLabel}</span>
             </span>
+            {assistantDurationLabel && (
+              <span className="inline-flex min-w-0 items-center gap-1 rounded-full px-2 py-1 text-[12px] font-medium text-content-muted" title={t("chatWorkspace.messageProcessedDuration", { duration: assistantDurationLabel })}>
+                <Clock3 className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{assistantDurationLabel}</span>
+              </span>
+            )}
             {assistantTokenUsageLabel && (
               <span className="inline-flex min-w-0 items-center gap-1 rounded-full px-2 py-1 text-[12px] font-medium text-content-muted" title={t("chatWorkspace.messageTokensUsed")}>
                 <Gauge className="h-3.5 w-3.5 shrink-0" />
@@ -640,91 +649,7 @@ export function ChatMessageBubble({
             )}
           </div>
         )}
-        {message.status === "failed" && (
-          <div className={`mt-2 flex flex-wrap items-center gap-2 text-[13px] ${isUser ? "text-red-100" : "text-red-600"}`}>
-            <div className="flex min-w-0 items-center gap-1.5">
-              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-              <span className="leading-relaxed">{failureMessage}</span>
-              {message.error_code && <code className="rounded bg-red-100/70 px-1.5 py-0.5 text-[10px] font-mono text-red-700" title={t("chatWorkspace.errorCodeHelp")}>{t("chatWorkspace.errorCodeLabel")}: {message.error_code}</code>}
-            </div>
-            {retryTarget && (
-              <div className="flex items-center gap-1.5 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => onRetry(retryTarget)}
-                  disabled={sending}
-                  className={`rounded-md border px-2 py-0.5 text-[11px] font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${terminalActionClass}`}
-                >
-                  {t("chatWorkspace.retryMessage")}
-                </button>
-                {onEdit && (
-                  <button
-                    type="button"
-                    onClick={() => onEdit(retryTarget)}
-                    disabled={sending}
-                    className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${terminalActionClass}`}
-                  >
-                    <Edit3 className="w-3 h-3" />
-                    {t("chatWorkspace.editAndResend")}
-                  </button>
-                )}
-                {onSwitchToAssistAndDiagnose && (message.error_code === "API_KEY_MISSING" || message.error_code === "MODEL_CONFIG_MISSING" || message.error_code === "DIRECT_MODEL_CHAT_FAILED") && (
-                  <button
-                    type="button"
-                    onClick={onSwitchToAssistAndDiagnose}
-                    disabled={sending}
-                    className={`rounded-md border px-2 py-0.5 text-[11px] font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${terminalActionClass}`}
-                  >
-                    {t("chatWorkspace.diagnoseWithAssist")}
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-        {message.status === "stopped" && (
-          <div className={`mt-2 flex flex-wrap items-center gap-2 text-[13px] ${isUser ? "text-amber-100" : "text-amber-600"}`}>
-            <div className="flex min-w-0 items-center gap-1.5">
-              <Clock3 className="w-3.5 h-3.5 shrink-0" />
-              <span className="leading-relaxed">{message.error_message || t("chatWorkspace.messageStopped")}</span>
-            </div>
-            {retryTarget && (
-              <div className="flex items-center gap-1.5 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => onRetry(retryTarget)}
-                  disabled={sending}
-                  className={`rounded-md border px-2 py-0.5 text-[11px] font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${terminalActionClass}`}
-                >
-                  {t("chatWorkspace.retryMessage")}
-                </button>
-                {onEdit && (
-                  <button
-                    type="button"
-                    onClick={() => onEdit(retryTarget)}
-                    disabled={sending}
-                    className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${terminalActionClass}`}
-                  >
-                    <Edit3 className="w-3 h-3" />
-                    {t("chatWorkspace.editAndResend")}
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-        {message.status === "queued" && (
-          <div className={`mt-2 flex items-center gap-1.5 text-[13px] ${isUser ? "text-amber-100" : "text-amber-600"}`}>
-            <Clock3 className="w-3.5 h-3.5 shrink-0" />
-            <span className="leading-relaxed">{message.error_message || t("chatWorkspace.messageQueued")}</span>
-          </div>
-        )}
-        {message.status === "superseded" && (
-          <div className={`mt-2 flex items-center gap-1.5 text-[13px] ${isUser ? "text-indigo-100" : "text-slate-500"}`}>
-            <CornerDownRight className="w-3.5 h-3.5 shrink-0" />
-            <span className="leading-relaxed">{message.error_message || t("chatWorkspace.messageSuperseded")}</span>
-          </div>
-        )}
+        <ChatMessageStatusNotices message={message} isUser={isUser} sending={sending} failureMessage={failureMessage} retryTarget={retryTarget} onRetry={onRetry} onEdit={onEdit} onSwitchToAssistAndDiagnose={onSwitchToAssistAndDiagnose} t={t} />
       </div>
 
       {isUser && <ChatUserAvatar currentUser={currentUser} />}

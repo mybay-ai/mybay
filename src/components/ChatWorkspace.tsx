@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { createPortal } from "react-dom";
 import type { Socket } from "socket.io-client";
 import { useTranslation } from "react-i18next";
 import { ChevronRight, Layers, UploadCloud, X } from "lucide-react";
@@ -19,8 +20,14 @@ import { useChatWorkspaceFiles } from "./chat-workspace/useChatWorkspaceFiles";
 import { useChatConversations } from "./chat-workspace/useChatConversations";
 import { computeMobileWorkspaceFrame, type MobileWorkspaceFrame } from "./chat-workspace/mobileWorkspaceLayout";
 import { recoverActiveRunMessages } from "./chat-workspace/run/runRecovery";
+import { executeStopLifecycle, pollRunRelease, type RunReleaseResult } from "./chat-workspace/run/runStopLifecycle";
 import { markRunMessagesStopped } from "./chat-workspace/run/runTerminalMessages";
 import { getRetryAttachments } from "./chat-workspace/run/retryAttachments";
+import { resolveSelectedWorkspaceRunContext } from "./chat-workspace/run/workspaceRunContext";
+import { useGeneratedArtifacts } from "./chat-workspace/useGeneratedArtifacts";
+import { isGeneratedArtifactPreviewable } from "./chat-workspace/generatedArtifacts";
+import { clearGeneratedPreviewSelection, loadGeneratedPreviewSelection } from "./chat-workspace/previewSelectionStorage";
+import { CHAT_WORKSPACE_TABLET_BREAKPOINT, shouldUseOverlayWorkspace } from "./chat-workspace/chatWorkspaceResponsiveLayout";
 import { MAX_CHAT_USER_MESSAGE_CHARS, countChatMessageCharacters } from "../../shared/chatMessageContract";
 import {
   isConcurrencyTakeoverError,
@@ -71,7 +78,6 @@ export function generateUUIDv4(): string {
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-const ACTIVE_CHAT_RUN_STATUSES = new Set(["queued", "dispatching", "running", "stopping", "stop_requested"]);
 type QueuedFollowUp = {
   id: string;
   content: string;
@@ -176,6 +182,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     handleDrop,
     handleRemoveAttachment,
     handleOpenInstanceFilePath,
+    handleDownloadInstanceFilePath,
     handleDownloadConversationFile,
     handleOpenConversationFile,
     handlePreviewConversationFile,
@@ -187,6 +194,27 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     chatMode,
     showToast
   });
+
+  const revealWorkspaceOnNarrowViewport = () => {
+    if (typeof window === "undefined" || !shouldUseOverlayWorkspace(window.innerWidth)) return;
+    setMobileWorkspaceTab("preview");
+    setMobileOverlay("workspace");
+  };
+
+  const handleOpenInstanceFileFromChat = async (filePath: string) => {
+    await handleOpenInstanceFilePath(filePath);
+    revealWorkspaceOnNarrowViewport();
+  };
+
+  const handleOpenConversationFileFromChat = async (file: PendingAttachment) => {
+    await handleOpenConversationFile(file);
+    revealWorkspaceOnNarrowViewport();
+  };
+
+  const handlePreviewConversationFileFromWorkspace = async (file: PendingAttachment) => {
+    await handlePreviewConversationFile(file);
+    revealWorkspaceOnNarrowViewport();
+  };
   const selectInstanceId = (id: string) => {
     selectedIdRef.current = id;
     setSelectedId(id);
@@ -251,7 +279,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
       frameId = window.requestAnimationFrame(() => {
         frameId = null;
         const root = workspaceRootRef.current;
-        if (!root || window.innerWidth >= 640) {
+        if (!root || window.innerWidth >= CHAT_WORKSPACE_TABLET_BREAKPOINT) {
           setMobileWorkspaceFrame(null);
           return;
         }
@@ -344,7 +372,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     };
 
     const applyMobileScrollLock = () => {
-      if (window.innerWidth < 640) {
+      if (window.innerWidth < CHAT_WORKSPACE_TABLET_BREAKPOINT) {
         if (!lockApplied) {
           lockedScrollY = window.scrollY || window.pageYOffset || 0;
         }
@@ -391,6 +419,8 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     setToolSteps,
     initializeRunExecution,
     finalizeActiveRunUi,
+    isCurrentRunContext,
+    markActiveRunStatusUnknown,
     streamActiveRun,
     handleStopRun,
     respondToApproval,
@@ -411,6 +441,30 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     t,
     notificationUserId: String(currentUser?.id || currentUser?.username || "")
   });
+
+  const { generatedArtifacts, refreshGeneratedArtifacts } = useGeneratedArtifacts({
+    selectedId,
+    selectedConversationId,
+    messages,
+    activeRunId,
+  });
+
+  useEffect(() => {
+    if (!selectedId || !selectedConversationId) return;
+    const selectedPath = loadGeneratedPreviewSelection(window.sessionStorage, selectedId, selectedConversationId);
+    if (!selectedPath) return;
+    const artifact = generatedArtifacts.find(item => item.path === selectedPath);
+    if (artifact && isGeneratedArtifactPreviewable(artifact) && !conversationFilePreview) {
+      void handleOpenInstanceFilePath(artifact.path);
+      return;
+    }
+    if (artifact?.status === "missing") {
+      clearGeneratedPreviewSelection(window.sessionStorage, selectedId, selectedConversationId);
+      if (conversationFilePreview?.source === "instance" && conversationFilePreview.instancePath === artifact.path) {
+        clearConversationFilePreview();
+      }
+    }
+  }, [clearConversationFilePreview, conversationFilePreview, generatedArtifacts, handleOpenInstanceFilePath, selectedConversationId, selectedId]);
 
   // Reset states immediately on selectedId change to prevent cross-instance leaks
   useEffect(() => {
@@ -907,21 +961,14 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     };
   }, [socket, currentUser?.id, refreshConversationFiles]);
 
-  const waitForRunRelease = async (instanceId: string, runId: string) => {
-    for (let attempt = 0; attempt < 8; attempt += 1) {
-      await sleep(attempt === 0 ? 180 : 320);
-      try {
+  const waitForRunRelease = async (instanceId: string, runId: string): Promise<RunReleaseResult> => {
+    return pollRunRelease({
+      delay: async (ms) => { await sleep(ms); },
+      readStatus: async () => {
         const res = await api.get(`/api/instances/${instanceId}/runs/${runId}`);
-        const status = String(res?.run?.status || "").toLowerCase();
-        if (!status || !ACTIVE_CHAT_RUN_STATUSES.has(status)) {
-          return true;
-        }
-      } catch (err) {
-        console.warn("[Chat Interrupt] Failed to poll stopped run status:", err);
-        return false;
+        return res?.run?.status;
       }
-    }
-    return false;
+    });
   };
 
   const createChatRunWithRetry = async (
@@ -1679,26 +1726,38 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
   };
 
   const handleStopActiveRun = async () => {
-    const runId = activeRunId;
-    const instanceId = selectedIdRef.current;
-    const conversationId = selectedConversationIdRef.current;
-    if (!instanceId || !conversationId || !runId) return;
-    const stopResult = await handleStopRun(runId, instanceId);
-    if (!stopResult.ok) return;
-    const released = await waitForRunRelease(instanceId, runId);
-    if (!released) {
-      setRunMetrics(prev => prev?.runId === runId ? { ...prev, status: "status_unknown" } : prev);
-      return;
+    const targetRunId = activeRunId;
+    const targetInstanceId = selectedIdRef.current;
+    const targetConversationId = selectedConversationIdRef.current;
+    if (!targetInstanceId || !targetConversationId || !targetRunId) return;
+
+    const outcome = await executeStopLifecycle({
+      requestStop: () => handleStopRun(targetRunId, targetInstanceId),
+      waitForRelease: () => waitForRunRelease(targetInstanceId, targetRunId),
+      isCurrentTarget: () => (
+        selectedIdRef.current === targetInstanceId
+        && selectedConversationIdRef.current === targetConversationId
+        && isCurrentRunContext(targetRunId, targetConversationId)
+      ),
+      onTerminal: (terminalStatus) => {
+        stopActiveRunStreams();
+        finalizeActiveRunUi(targetRunId, terminalStatus);
+        setActiveRunConversationId(null);
+        activeChatGenerationRef.current += 1;
+        activeChatRequestIdRef.current = null;
+        setSending(false);
+        if (terminalStatus === "stopped" || terminalStatus === "cancelled") {
+          markStoppedRunMessages(targetRunId, targetConversationId);
+          scheduleSyncCancellationReconciliation(targetInstanceId, targetConversationId);
+        } else {
+          void refreshAuthoritativeHistoryRef.current(targetInstanceId, targetConversationId);
+        }
+      }
+    });
+
+    if (outcome === "status_unknown" && isCurrentRunContext(targetRunId, targetConversationId)) {
+      markActiveRunStatusUnknown(targetRunId);
     }
-    if (selectedIdRef.current !== instanceId || selectedConversationIdRef.current !== conversationId) return;
-    finalizeActiveRunUi(runId, "stopped");
-    stopActiveRunStreams();
-    setActiveRunConversationId(null);
-    activeChatGenerationRef.current += 1;
-    activeChatRequestIdRef.current = null;
-    setSending(false);
-    markStoppedRunMessages(runId, conversationId);
-    scheduleSyncCancellationReconciliation(instanceId, conversationId);
   };
 
   const handleRetry = (msg: ChatMessage) => {
@@ -1764,16 +1823,28 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     }
   };
 
-  const selectedConversationIsRunning = sending && Boolean(selectedConversationId) && (!activeRunConversationId || activeRunConversationId === selectedConversationId);
-  const selectedActiveRunId = selectedConversationIsRunning ? activeRunId : null;
-  const selectedRunMetrics = (!activeRunConversationId || activeRunConversationId === selectedConversationId) ? runMetrics : null;
-  const selectedRunExecution = runExecutionState?.conversationId === selectedConversationId ? runExecutionState : null;
+  const selectedRunContext = useMemo(() => resolveSelectedWorkspaceRunContext({
+    selectedConversationId,
+    activeRunConversationId,
+    sending,
+    activeRunId,
+    runExecutionState,
+    runMetrics,
+    toolSteps,
+    approvalRequests,
+  }), [activeRunConversationId, activeRunId, approvalRequests, runExecutionState, runMetrics, selectedConversationId, sending, toolSteps]);
+  const selectedConversationIsRunning = selectedRunContext.running;
+  const selectedActiveRunId = selectedRunContext.activeRunId;
+  const selectedRunMetrics = selectedRunContext.metrics;
+  const selectedRunExecution = selectedRunContext.execution;
+  const selectedToolSteps = selectedRunContext.toolSteps;
+  const selectedApprovalRequests = selectedRunContext.approvalRequests;
 
   return (
     <div
       ref={workspaceRootRef}
       style={mobileWorkspaceFrame ? ({ "--chat-workspace-mobile-top": `${mobileWorkspaceFrame.top}px`, "--chat-workspace-mobile-bottom": `${mobileWorkspaceFrame.bottom}px` } as React.CSSProperties) : undefined}
-      className="flex flex-col w-full max-w-[1680px] h-[calc(100dvh-104px)] min-h-0 max-sm:fixed max-sm:left-0 max-sm:right-0 max-sm:top-[var(--chat-workspace-mobile-top,48px)] max-sm:bottom-[var(--chat-workspace-mobile-bottom,0px)] max-sm:h-auto max-sm:z-30 max-sm:rounded-none max-sm:border-x-0 max-sm:border-b-0 sm:h-[calc(100dvh-104px)] sm:max-h-[920px] sm:min-h-[640px] mx-auto bg-surface-muted/70 border border-outline/80 rounded-xl sm:rounded-2xl shadow-lg shadow-slate-200/50 dark:shadow-slate-950/30 overflow-hidden animate-fade-in"
+      className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-surface-muted/70 animate-fade-in max-md:fixed max-md:left-0 max-md:right-0 max-md:top-[var(--chat-workspace-mobile-top,48px)] max-md:bottom-[var(--chat-workspace-mobile-bottom,0px)] max-md:h-auto max-md:z-30"
     >
       {/* Header */}
       <ChatWorkspaceHeader
@@ -1825,7 +1896,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
         {mobileSidebarOpen && (
           <button
             type="button"
-            className="absolute inset-0 z-20 bg-slate-950/45 sm:hidden"
+            className="absolute inset-0 z-20 bg-slate-950/45 md:hidden"
             onClick={() => setMobileOverlay(null)}
             aria-label={t("dashboard:chatWorkspace.sidebarToggle")}
           />
@@ -1887,7 +1958,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
         {!sidebarOpen && (
           <button
             onClick={() => setSidebarOpen(true)}
-            className="absolute left-2 top-2 p-1.5 bg-surface hover:bg-surface-muted text-content-muted hover:text-slate-700 border border-outline rounded-lg z-20 sm:block hidden shadow-xs dark:hover:text-slate-100"
+            className="absolute left-2 top-2 p-1.5 bg-surface hover:bg-surface-muted text-content-muted hover:text-slate-700 border border-outline rounded-lg z-20 md:block hidden shadow-xs dark:hover:text-slate-100"
             title={t("dashboard:chatWorkspace.expandHistory")}
           >
             <ChevronRight className="w-4 h-4" />
@@ -1902,7 +1973,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
               setShowSettings(false);
               setMobileOverlay("workspace");
             }}
-            className="sm:hidden absolute right-3 top-3 z-20 h-9 w-9 rounded-xl border border-outline bg-surface/95 text-content-secondary shadow-sm inline-flex items-center justify-center active:scale-95 transition-all"
+            className="xl:hidden absolute right-3 top-3 z-20 h-9 w-9 rounded-xl border border-outline bg-surface/95 text-content-secondary shadow-sm inline-flex items-center justify-center active:scale-95 transition-all"
             title={t("dashboard:chatWorkspace.workspaceTitle")}
             aria-label={t("dashboard:chatWorkspace.workspaceTitle")}
             aria-expanded={mobileWorkspaceOpen}
@@ -1981,10 +2052,10 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
             currentUser={currentUser}
             sending={selectedConversationIsRunning}
             activeRunId={selectedActiveRunId}
-            toolSteps={toolSteps}
+            toolSteps={selectedToolSteps}
             runExecutionState={selectedRunExecution}
             runMetrics={selectedRunMetrics}
-            approvalRequests={approvalRequests}
+            approvalRequests={selectedApprovalRequests}
             canRespondToApproval={runCapabilities.runApprovalResponse}
             onRespondToApproval={respondToApproval}
             error={error}
@@ -1995,8 +2066,10 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
             onEditMessage={handleEditMessage}
             onSwitchToAssistAndDiagnose={handleSwitchToAssistAndDiagnose}
             conversationFiles={conversationFiles}
-            onOpenConversationFile={handleOpenConversationFile}
-            onOpenInstanceFilePath={handleOpenInstanceFilePath}
+            onOpenConversationFile={handleOpenConversationFileFromChat}
+            onOpenInstanceFilePath={handleOpenInstanceFileFromChat}
+            onDownloadInstanceFilePath={handleDownloadInstanceFilePath}
+            generatedArtifacts={generatedArtifacts}
             onMessageFeedbackChange={(messageId, feedback) => {
               setMessages(prev => prev.map(message => (
                 message.id === messageId ? { ...message, user_feedback: feedback } : message
@@ -2035,7 +2108,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
               onKeyDown={handleKeyDown}
               onStopRun={handleCancelOrStop}
               onInputFocus={() => {
-                if (typeof window !== "undefined" && window.innerWidth < 640) {
+                if (typeof window !== "undefined" && window.innerWidth < CHAT_WORKSPACE_TABLET_BREAKPOINT) {
                   window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" }));
                 }
               }}
@@ -2046,65 +2119,66 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
           selectedId={selectedId}
           selectedConversationId={selectedConversationId}
           conversationFiles={conversationFiles}
+          generatedArtifacts={generatedArtifacts}
+          onRefreshGeneratedArtifacts={refreshGeneratedArtifacts}
+          onPreviewGeneratedArtifact={handleOpenInstanceFileFromChat}
+          onDownloadGeneratedArtifact={handleDownloadInstanceFilePath}
           onDeleteConversationFile={handleDeleteConversationFile}
           onDownloadConversationFile={handleDownloadConversationFile}
-          onOpenConversationFile={handleOpenConversationFile}
-          onPreviewConversationFile={handlePreviewConversationFile}
+          onOpenConversationFile={handleOpenConversationFileFromChat}
+          onPreviewConversationFile={handlePreviewConversationFileFromWorkspace}
           conversationFilePreview={conversationFilePreview}
           onClearConversationFilePreview={clearConversationFilePreview}
           selectedInstance={selectedInstance}
           messages={messages}
-          toolSteps={toolSteps}
+          toolSteps={selectedToolSteps}
           activeRunId={selectedActiveRunId}
           runExecutionState={selectedRunExecution}
           runMetrics={selectedRunMetrics}
-          approvalRequests={approvalRequests}
+          approvalRequests={selectedApprovalRequests}
           runCapabilities={runCapabilities}
           onRespondToApproval={respondToApproval}
         />
 
-        {mobileWorkspaceOpen && (
-          <div className="sm:hidden absolute inset-0 z-40 flex items-end bg-slate-950/35" role="dialog" aria-modal="true">
+        {mobileWorkspaceOpen && typeof document !== "undefined" && createPortal(
+          <div className="fixed inset-0 z-[80] flex min-h-0 flex-col overflow-hidden bg-surface xl:hidden" role="dialog" aria-modal="true" aria-label={t("dashboard:chatWorkspace.workspaceTitle")}>
             <button
               type="button"
-              className="absolute inset-0"
               onClick={() => setMobileOverlay(null)}
+              className="absolute right-3 top-[calc(0.75rem+env(safe-area-inset-top))] z-[90] h-9 w-9 rounded-full border border-outline bg-surface text-content-muted hover:text-content inline-flex items-center justify-center shadow-sm"
               aria-label={t("dashboard:files_close_preview_title")}
-            />
-            <div id="mobile-chat-workspace-panel" className="relative flex h-[82%] max-h-[720px] min-h-[min(360px,100%)] w-full flex-col overflow-hidden rounded-t-3xl border border-outline bg-surface shadow-2xl">
-              <button
-                type="button"
-                onClick={() => setMobileOverlay(null)}
-                className="absolute right-3 top-3 z-10 h-8 w-8 rounded-full border border-outline bg-surface text-slate-500 hover:text-slate-800 inline-flex items-center justify-center shadow-sm dark:text-slate-300 dark:hover:text-white"
-                aria-label={t("dashboard:files_close_preview_title")}
-              >
-                <X className="w-4 h-4" />
-              </button>
-              <ChatWorkspacePanel
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <ChatWorkspacePanel
                 variant="mobile"
                 activeTab={mobileWorkspaceTab}
                 onActiveTabChange={setMobileWorkspaceTab}
                 selectedId={selectedId}
                 selectedConversationId={selectedConversationId}
                 conversationFiles={conversationFiles}
+                generatedArtifacts={generatedArtifacts}
+                onRefreshGeneratedArtifacts={refreshGeneratedArtifacts}
+                onPreviewGeneratedArtifact={handleOpenInstanceFileFromChat}
+                onDownloadGeneratedArtifact={handleDownloadInstanceFilePath}
                 onDeleteConversationFile={handleDeleteConversationFile}
                 onDownloadConversationFile={handleDownloadConversationFile}
-                onOpenConversationFile={handleOpenConversationFile}
-                onPreviewConversationFile={handlePreviewConversationFile}
+                onOpenConversationFile={handleOpenConversationFileFromChat}
+                onPreviewConversationFile={handlePreviewConversationFileFromWorkspace}
                 conversationFilePreview={conversationFilePreview}
                 onClearConversationFilePreview={clearConversationFilePreview}
                 selectedInstance={selectedInstance}
                 messages={messages}
-                toolSteps={toolSteps}
+                toolSteps={selectedToolSteps}
                 activeRunId={selectedActiveRunId}
                 runExecutionState={selectedRunExecution}
                 runMetrics={selectedRunMetrics}
-                approvalRequests={approvalRequests}
+                approvalRequests={selectedApprovalRequests}
                 runCapabilities={runCapabilities}
                 onRespondToApproval={respondToApproval}
-              />
-            </div>
-          </div>
+            />
+          </div>,
+          document.body
         )}
       </div>
     </div>

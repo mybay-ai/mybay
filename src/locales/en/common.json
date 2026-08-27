@@ -4,5 +4,28 @@
   "save": "Save",
   "loading": "Loading...",
   "english": "English",
-  "chinese": "简体中文"
+  "chinese": "简体中文",
+  "providerPicker": {
+    "placeholder": "Select a model provider",
+    "search": "Search providers or models…",
+    "empty": "No matching model providers",
+    "groups": {
+      "recommended": "⭐ Recommended",
+      "domestic": "🇨🇳 More mainland China services",
+      "international": "🌍 More global services",
+      "aggregator": "🔀 Model aggregators",
+      "custom": "⚙️ Advanced and custom",
+      "legacy": "Legacy configuration"
+    },
+    "badges": {
+      "recommended": "Recommended",
+      "mainstream": "Mainstream",
+      "fast": "Fast",
+      "aggregator": "Aggregator",
+      "oauth": "OAuth",
+      "cn-direct": "Mainland China direct",
+      "global": "Global service",
+      "custom": "Custom network"
+    }
+  }
 }

@@ -42,6 +42,11 @@ export const getMimeType = (filename: string) => {
     '.md': 'text/markdown',
     '.html': 'text/html',
     '.htm': 'text/html',
+    '.css': 'text/css',
+    '.js': 'text/javascript',
+    '.mjs': 'text/javascript',
+    '.ts': 'text/plain',
+    '.tsx': 'text/plain',
     '.json': 'application/json',
     '.csv': 'text/csv',
     '.log': 'text/plain',
@@ -52,7 +57,25 @@ export const getMimeType = (filename: string) => {
     '.jpeg': 'image/jpeg',
     '.webp': 'image/webp',
     '.gif': 'image/gif',
+    '.svg': 'image/svg+xml',
+    '.avif': 'image/avif',
+    '.ico': 'image/x-icon',
+    '.bmp': 'image/bmp',
+    '.woff': 'font/woff',
+    '.woff2': 'font/woff2',
+    '.ttf': 'font/ttf',
+    '.otf': 'font/otf',
+    '.mp3': 'audio/mpeg',
+    '.wav': 'audio/wav',
+    '.ogg': 'audio/ogg',
+    '.webm': 'video/webm',
     '.pdf': 'application/pdf',
+    '.doc': 'application/msword',
+    '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    '.xls': 'application/vnd.ms-excel',
+    '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    '.ppt': 'application/vnd.ms-powerpoint',
+    '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     '.zip': 'application/zip',
     '.mp4': 'video/mp4',
     '.mov': 'video/quicktime',
@@ -60,7 +83,23 @@ export const getMimeType = (filename: string) => {
   return map[ext] || 'application/octet-stream';
 };
 
+function resolveExistingDirectory(candidate: unknown): string | null {
+  if (typeof candidate !== "string" || !candidate || candidate.length > 4096 || /[\0-\x1f\x7f]/.test(candidate)) return null;
+  try {
+    const canonical = fs.realpathSync(path.resolve(candidate));
+    return fs.statSync(canonical).isDirectory() ? canonical : null;
+  } catch {
+    return null;
+  }
+}
+
 export const validateFileAccess = async (req: AuthenticatedRequest, instanceId: string, requestedPathRaw: string) => {
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(instanceId)) {
+    return { error: "无效的实例标识", status: 400 };
+  }
+  if (typeof requestedPathRaw !== "string" || requestedPathRaw.length > 4096 || /[\0-\x1f\x7f]/.test(requestedPathRaw)) {
+    return { error: "无效的文件路径", status: 400 };
+  }
   const instance: any = await dbAdapter.getInstanceById(instanceId);
   if (!instance) return { error: "实例不存在", status: 404 };
   
@@ -92,13 +131,9 @@ export const validateFileAccess = async (req: AuthenticatedRequest, instanceId: 
   }
 
   const localDir = path.resolve(process.cwd(), "data", "instances", instanceId);
-  let rootDir = localDir;
-  
-  if (!fs.existsSync(rootDir) && instance.data_volume_path) {
-    rootDir = instance.data_volume_path;
-  }
+  let rootDir = resolveExistingDirectory(localDir) || resolveExistingDirectory(instance.data_volume_path);
 
-  if (!fs.existsSync(rootDir)) {
+  if (!rootDir) {
     try {
       const container = await getValidatedContainer(docker, instance);
       const inspectData = await container.inspect();
@@ -120,40 +155,31 @@ export const validateFileAccess = async (req: AuthenticatedRequest, instanceId: 
             }
           }
         } catch (me: any) {
-          console.warn(`[File Manager] Self-container inspect failed:`, me.message);
+          console.warn("[File Manager] Self-container inspect failed", { error: me.message });
         }
 
-        if (resolvedLocal && fs.existsSync(resolvedLocal)) {
-           rootDir = resolvedLocal;
-        } else if (fs.existsSync(hostPathFound)) {
-           rootDir = hostPathFound;
-        } else if (fs.existsSync(localDir)) {
-           rootDir = localDir;
-        }
+        rootDir = resolveExistingDirectory(resolvedLocal)
+          || resolveExistingDirectory(hostPathFound)
+          || resolveExistingDirectory(localDir);
         
         dbAdapter.updateInstanceVersionInfo(instanceId, { data_volume_path: hostPathFound }).catch((e: any) => {
-          console.warn(`[File Manager] Failed to auto-heal data_volume_path for ${instanceId}:`, e.message);
+          console.warn("[File Manager] Failed to auto-heal data_volume_path", { instanceId, error: e.message });
         });
       }
     } catch (e: any) {
-      console.warn(`[File Manager] Docker inspect fallback failed for ${instanceId}:`, e.message);
+      console.warn("[File Manager] Docker inspect fallback failed", { instanceId, error: e.message });
     }
   }
 
-  if (!fs.existsSync(rootDir)) {
+  if (!rootDir) {
     return { error: "该实例暂无可浏览的数据目录，或未找到有效的挂载", status: 404 };
   }
 
   try {
-    const baseDir = path.resolve(rootDir);
-    const realBaseDir = fs.realpathSync(baseDir); 
+    const realBaseDir = rootDir;
     
     const relativePath = path.relative("/", path.join("/", requestedPath));
     const absolutePath = path.resolve(realBaseDir, relativePath);
-
-    if (!fs.existsSync(absolutePath)) {
-      return { error: "文件或目录不存在", status: 404 };
-    }
 
     const realAbsolutePath = fs.realpathSync(absolutePath);
 
@@ -170,6 +196,9 @@ export const validateFileAccess = async (req: AuthenticatedRequest, instanceId: 
 
     return { absolutePath: realAbsolutePath, candidatePath: absolutePath, rootDir: realBaseDir, instance };
   } catch (err: any) {
+    if (err?.code === "ENOENT" || err?.code === "ENOTDIR") {
+      return { error: "文件或目录不存在", status: 404 };
+    }
     console.error("[File Manager] Path validation error:", err);
     return { error: "路径解析错误", status: 400 };
   }

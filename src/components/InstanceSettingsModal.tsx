@@ -196,8 +196,7 @@ export function InstanceSettingsModal({ instance: initialInstance, onClose, onSa
 
   const [loading, setLoading] = useState(false);
 
-  const handleProviderChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const nextProv = e.target.value;
+  const handleProviderChange = (nextProv: string) => {
     setProvider(nextProv);
     const conf = providerRegistry[nextProv];
     if (conf) {

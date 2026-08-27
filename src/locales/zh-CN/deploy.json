@@ -298,6 +298,7 @@
                           "container_traefik":  "群集自适应内部网关反代已就绪",
                           "container_port":  "宿主机端口自动分配逻辑已激活",
                           "model_test_required":  "需先完成所设智能 LLM 的连通测试并通过",
+                          "model_oauth_after_deploy":  "模型配置已就绪；实例启动后请在 Hermes Dashboard 的 Accounts 页面完成 OAuth 授权",
                           "model_success":  "大语言模型及 provider 连通成功",
                           "channel_test_required":  "⚠️ 当前即时通讯渠道尚未配置或尚未通过连通测试。请在上方输入相应的 API 凭据，并点击「测试通道网络」验证通过后再试。",
                           "channel_empty_allowlist":  "平台可以连接，但没有允许用户，机器人可能不会响应任何消息。",
@@ -536,6 +537,8 @@
                                      "test":  "测试模型连接",
                                      "success":  "模型服务连接成功，当前配置有效。",
                                      "successDetail":  "连接测试成功，API 配置有效。",
+                                     "oauthAfterDeployTitle":  "此供应商将在部署后完成 OAuth 授权",
+                                     "oauthAfterDeployDescription":  "无需填写 API Key 或执行部署前测试。实例启动后，请进入该实例的 Hermes Dashboard，在 Accounts 页面登录并授权，然后即可使用模型。",
                                      "failure":  "模型连接测试失败，请检查配置。",
                                      "unknownError":  "发生未知的鉴权或网络错误。",
                                      "byokTitle":  "使用自己的 API Key（BYOK）",
@@ -934,7 +937,8 @@
                                 "CONTAINER_MISSING": "数据库中存在实例记录，但对应 Docker 容器不存在。",
                                 "CLEANUP_FAILED": "部分实例资源未能完成清理。",
                                 "QUOTA_EXCEEDED": "当前实例配额已用尽。",
-                                "PATH_CONFLICT": "已有其他实例使用相同访问路径。"
+                                "PATH_CONFLICT": "已有其他实例使用相同访问路径。",
+                                "PROVIDER_UNSUPPORTED": "所选模型供应商不受当前 Agent 运行时支持，请更换供应商或检查运行时映射配置。"
                             }
                         },
                                       "deployedTitle":  "部署任务已提交",

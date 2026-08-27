@@ -1,9 +1,10 @@
 import { useEffect, useState, useRef, type FormEvent, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Activity, Brain, ChevronDown, Clock3, CornerDownLeft, FileText, Gauge, HelpCircle, Image as ImageIcon, Layers, Paperclip, Send, Sparkles, X, Zap } from "lucide-react";
+import { Activity, Brain, ChevronDown, CornerDownLeft, FileText, Gauge, HelpCircle, Image as ImageIcon, Layers, Paperclip, Send, Sparkles, Square, X, Zap } from "lucide-react";
 
 import type { ChatRunMetrics, RunsCapabilityState } from "./useChatRuns";
 import { DIRECT_CHAT_ATTACHMENT_EXTENSIONS, type ChatAttachmentConfig, isChatAttachmentLimitReached } from "../../../shared/chatAttachmentContract";
+import { CHAT_WORKSPACE_TABLET_BREAKPOINT } from "./chatWorkspaceResponsiveLayout";
 export type PendingAttachment = {
   id: string;
   originalName: string;
@@ -84,7 +85,7 @@ export function ChatInputBar({
 
 
   useEffect(() => {
-    const updateCompactState = () => setIsCompactInput(window.innerWidth < 640);
+    const updateCompactState = () => setIsCompactInput(window.innerWidth < CHAT_WORKSPACE_TABLET_BREAKPOINT);
     updateCompactState();
     window.addEventListener("resize", updateCompactState);
     return () => window.removeEventListener("resize", updateCompactState);
@@ -93,9 +94,9 @@ export function ChatInputBar({
   useEffect(() => {
     const textarea = textareaRef.current;
     if (!textarea) return;
-    const mobile = window.innerWidth < 640;
-    const minHeight = mobile && mobileKeyboardOpen ? 56 : 88;
-    const maxHeight = mobile ? (mobileKeyboardOpen ? 120 : 200) : 240;
+    const mobile = window.innerWidth < CHAT_WORKSPACE_TABLET_BREAKPOINT;
+    const minHeight = mobile ? 56 : 64;
+    const maxHeight = mobile ? (mobileKeyboardOpen ? 120 : 200) : 220;
     textarea.style.height = "auto";
     const nextHeight = Math.min(Math.max(textarea.scrollHeight, minHeight), maxHeight);
     textarea.style.height = `${nextHeight}px`;
@@ -183,41 +184,18 @@ export function ChatInputBar({
   );
 
 
-  const inputStatusItems = [
-    {
-      id: "instance",
-      icon: Layers,
-      label: t("dashboard:chatWorkspace.inputStatusInstance"),
-      value: selectedInstanceName?.trim() || t("dashboard:chatWorkspace.inputStatusNoInstance")
-    },
-    {
-      id: "mode",
-      icon: ActiveModeIcon,
-      label: t("dashboard:chatWorkspace.inputStatusMode"),
-      value: activeMode.label
-    },
-    {
-      id: "reasoning",
-      icon: ActiveReasoningIcon,
-      label: t("dashboard:chatWorkspace.inputStatusReasoning"),
-      value: activeReasoning.label
-    },
-    {
-      id: "attachments",
-      icon: Paperclip,
-      label: t("dashboard:chatWorkspace.inputStatusAttachments"),
-      value: String(pendingAttachments.length) + "/" + (attachmentConfig.maxFiles === null ? "∞" : String(attachmentConfig.maxFiles))
-    },
-    {
-      id: "usage",
-      icon: Activity,
-      label: t("dashboard:chatWorkspace.inputStatusLastRun"),
-      value: formatDuration(runMetrics?.durationMs) + " · " + formatTokens(runMetrics?.usageTotalTokens) + " tokens"
-    }
-  ];
+  const runActivityLabel = runMetrics?.status === "status_unknown"
+    ? t("dashboard:chatWorkspace.runStatusUnknown")
+    : runMetrics?.transportState === "reconnecting"
+      ? t("dashboard:chatWorkspace.inputStatusReconnecting")
+      : runMetrics?.transportState === "polling"
+        ? t("dashboard:chatWorkspace.inputStatusPollingRecovery")
+        : runMetrics?.transportState === "connecting"
+          ? t("dashboard:chatWorkspace.inputStatusConnecting")
+          : t("dashboard:chatWorkspace.inputStatusRunning");
 
   return (
-    <div className={"shrink-0 border-t border-outline/80 bg-surface/90 px-3 backdrop-blur sm:p-4 " + (mobileKeyboardOpen ? "pb-2 pt-1.5" : "pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2.5")}>
+    <div className={"shrink-0 border-t border-outline/80 bg-surface/90 px-3 backdrop-blur sm:px-4 sm:pb-3 sm:pt-3 " + (mobileKeyboardOpen ? "pb-2 pt-1.5" : "pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2.5")}>
 
       {(pendingAttachments.length > 0 || isUploading) && (
         <div className="flex flex-wrap gap-2 mb-2 px-1 max-w-5xl mx-auto">
@@ -238,7 +216,7 @@ export function ChatInputBar({
         </div>
       )}
       <form onSubmit={onSubmit} className="w-full max-w-5xl mx-auto">
-        <div className="relative rounded-2xl border border-outline bg-surface shadow-lg shadow-slate-200/60 transition-all focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/15 dark:shadow-slate-950/40 dark:focus-within:border-indigo-400 dark:focus-within:ring-indigo-400/20">
+        <div className="relative rounded-2xl border border-outline bg-surface shadow-sm shadow-slate-200/60 transition-all focus-within:border-indigo-500 focus-within:shadow-md focus-within:shadow-indigo-100/60 focus-within:ring-2 focus-within:ring-indigo-500/10 dark:shadow-slate-950/40 dark:focus-within:border-indigo-400 dark:focus-within:shadow-slate-950/60 dark:focus-within:ring-indigo-400/15">
           <textarea
             ref={textareaRef}
             value={input}
@@ -248,7 +226,7 @@ export function ChatInputBar({
             placeholder={placeholder}
             disabled={!isChatReady}
             rows={1}
-            className={"w-full resize-none border-0 bg-transparent px-4 pb-12 text-[16px] leading-6 text-content placeholder:text-content-muted focus:outline-none scrollbar-none disabled:cursor-not-allowed disabled:text-content-muted sm:min-h-[92px] sm:max-h-[240px] sm:pt-4 sm:text-[14px] " + (mobileKeyboardOpen ? "min-h-14 max-h-[120px] pt-2.5" : "min-h-[88px] max-h-[200px] pt-4")}
+            className={"w-full resize-none border-0 bg-transparent px-4 pb-12 text-[16px] leading-6 text-content placeholder:text-content-muted focus:outline-none scrollbar-none disabled:cursor-not-allowed disabled:text-content-muted sm:min-h-16 sm:max-h-[220px] sm:pt-3 sm:text-[14px] " + (mobileKeyboardOpen ? "min-h-14 max-h-[120px] pt-2.5" : "min-h-14 max-h-[200px] pt-3")}
           />
 
 
@@ -269,14 +247,19 @@ export function ChatInputBar({
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={!isChatReady || !hasActiveConversation || attachmentLimitReached || isUploading}
-            className="absolute left-3 bottom-2.5 h-8 w-8 rounded-lg text-content-muted hover:text-indigo-600 hover:bg-indigo-50 inline-flex items-center justify-center transition-all dark:hover:text-indigo-300 dark:hover:bg-indigo-500/10 disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`absolute left-3 bottom-2.5 h-8 ${pendingAttachments.length > 0 ? "min-w-8 px-2" : "w-8"} rounded-lg text-content-muted hover:text-indigo-600 hover:bg-indigo-50 inline-flex items-center justify-center gap-1 transition-all dark:hover:text-indigo-300 dark:hover:bg-indigo-500/10 disabled:opacity-50 disabled:cursor-not-allowed`}
             title={!hasActiveConversation ? t("dashboard:chatWorkspace.dropFilesNoConversation") : t("dashboard:chatWorkspace.attachmentEntry")}
             aria-label={t("dashboard:chatWorkspace.attachmentEntry")}
           >
             <Paperclip className="w-4 h-4" />
+            {pendingAttachments.length > 0 && (
+              <span className="text-[10px] font-semibold tabular-nums">
+                {pendingAttachments.length}/{attachmentConfig.maxFiles === null ? "∞" : attachmentConfig.maxFiles}
+              </span>
+            )}
           </button>
 
-          <div className="absolute left-12 bottom-2.5 flex items-center gap-1.5 select-none">
+          <div className={`absolute bottom-2.5 flex items-center gap-1.5 select-none ${pendingAttachments.length > 0 ? "left-[5.5rem]" : "left-12"}`}>
             <div className="relative">
               <button
                 type="button"
@@ -290,7 +273,7 @@ export function ChatInputBar({
                 aria-expanded={modeMenuOpen}
               >
                 <ActiveModeIcon className="w-3.5 h-3.5 shrink-0" />
-                <span className="max-sm:max-w-[72px] truncate">{activeMode.label}</span>
+                <span className="max-md:max-w-[72px] truncate">{activeMode.label}</span>
                 <ChevronDown className="w-3 h-3 shrink-0 text-slate-400" />
               </button>
               {modeMenuOpen && (
@@ -342,7 +325,7 @@ export function ChatInputBar({
                 aria-expanded={reasoningMenuOpen}
               >
                 <ActiveReasoningIcon className="w-3.5 h-3.5 shrink-0" />
-                <span className="max-sm:max-w-[56px] truncate">{activeReasoning.label}</span>
+                <span className="max-md:max-w-[56px] truncate">{activeReasoning.label}</span>
                 <ChevronDown className="w-3 h-3 shrink-0 text-slate-400" />
               </button>
               {reasoningMenuOpen && (
@@ -381,45 +364,60 @@ export function ChatInputBar({
 
           <div className="absolute right-2.5 bottom-2.5 flex items-center gap-1.5 select-none">
             {sending && (
+              <span
+                className="inline-flex h-8 items-center gap-1.5 px-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-300"
+                aria-label={runActivityLabel}
+                title={runActivityLabel}
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 motion-safe:animate-pulse" />
+                <span className="hidden md:inline">{runActivityLabel}</span>
+              </span>
+            )}
+            {sending && (
               <button
                 type="button"
                 onClick={onStopRun}
                 disabled={stopPending}
-                className="h-8 w-8 bg-rose-50 hover:bg-rose-100 disabled:cursor-wait disabled:opacity-60 text-rose-600 rounded-lg transition-all inline-flex items-center justify-center border border-rose-200 shadow-xs cursor-pointer dark:bg-rose-950/40 dark:hover:bg-rose-900/60 dark:text-rose-300 dark:border-rose-500/40"
+                className="h-8 w-8 bg-transparent hover:bg-rose-50 disabled:cursor-wait disabled:opacity-60 text-rose-600 rounded-lg transition-all inline-flex items-center justify-center border border-rose-200 cursor-pointer dark:hover:bg-rose-950/40 dark:text-rose-300 dark:border-rose-500/40"
                 title={t("dashboard:chatWorkspace.stopTaskTitle")}
+                aria-label={t("dashboard:chatWorkspace.stopTaskTitle")}
               >
-                <X className="w-4 h-4 shrink-0" />
+                {stopPending ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" /> : <Square className="w-3.5 h-3.5 shrink-0 fill-current" />}
               </button>
             )}
-            <span className="hidden md:inline-flex items-center gap-0.5 text-[11px] text-content-muted font-medium bg-surface-muted px-1.5 py-0.5 rounded border border-outline/60">
+            <span className="hidden lg:inline-flex items-center gap-0.5 px-0.5 text-[11px] text-content-muted font-medium">
               <CornerDownLeft className="w-2.5 h-2.5" />
               Enter
             </span>
             <button
               type="submit"
               disabled={!input.trim() || !isChatReady || isUploading || agentModeBlocked}
-              className="h-8 w-8 bg-slate-950 hover:bg-slate-800 disabled:bg-outline disabled:text-content-muted text-white rounded-lg transition-all inline-flex items-center justify-center shadow-xs dark:bg-indigo-600 dark:hover:bg-indigo-500"
+              className="h-8 w-8 bg-indigo-600 hover:bg-indigo-700 disabled:bg-outline disabled:text-content-muted text-white rounded-lg transition-all inline-flex items-center justify-center shadow-sm shadow-indigo-200/70 dark:bg-indigo-600 dark:hover:bg-indigo-500 dark:shadow-none"
               title={agentModeBlocked ? agentUnavailableMessage : sending ? t("dashboard:chatWorkspace.interruptAndSendTitle") : t("dashboard:chatWorkspace.sendBtnTitle")}
+              aria-label={agentModeBlocked ? agentUnavailableMessage : sending ? t("dashboard:chatWorkspace.interruptAndSendTitle") : t("dashboard:chatWorkspace.sendBtnTitle")}
             >
               <Send className="w-4 h-4" />
             </button>
           </div>
         </div>
-        <div className={"mt-2 items-center gap-1.5 px-1 text-[11px] text-content-muted sm:flex sm:flex-wrap " + (mobileKeyboardOpen ? "hidden" : "flex flex-nowrap overflow-x-auto overscroll-x-contain pb-0.5 [-webkit-overflow-scrolling:touch]")}>
-          {inputStatusItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <div key={item.id} className="inline-flex min-w-0 max-w-full shrink-0 items-center gap-1.5 rounded-lg border border-outline/70 bg-surface/75 px-2 py-1 shadow-xs">
-                <Icon className="h-3 w-3 shrink-0 text-slate-400" />
-                <span className="shrink-0 text-slate-400">{item.label}</span>
-                <span className="min-w-0 truncate font-medium text-content-secondary">{item.value}</span>
-              </div>
-            );
-          })}
-          {sending && (
-            <div className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-2 py-1 font-semibold text-indigo-600 dark:border-indigo-400/25 dark:bg-indigo-500/10 dark:text-indigo-300">
-              <Clock3 className="h-3 w-3 motion-safe:animate-pulse" />
-              {t("dashboard:chatWorkspace.inputStatusRunning")}
+        <div className={`mt-1.5 items-center gap-3 px-2 text-[11px] text-content-muted ${mobileKeyboardOpen ? "hidden" : "hidden md:flex"}`}>
+          <div
+            className="inline-flex min-w-0 items-center gap-1.5"
+            title={`${t("dashboard:chatWorkspace.inputStatusInstance")}: ${selectedInstanceName?.trim() || t("dashboard:chatWorkspace.inputStatusNoInstance")}`}
+          >
+            <Layers className="h-3 w-3 shrink-0 text-slate-400" />
+            <span className="shrink-0">{t("dashboard:chatWorkspace.inputStatusInstance")}</span>
+            <span className="max-w-40 truncate font-medium text-content-secondary">
+              {selectedInstanceName?.trim() || t("dashboard:chatWorkspace.inputStatusNoInstance")}
+            </span>
+          </div>
+          {(typeof runMetrics?.durationMs === "number" || typeof runMetrics?.usageTotalTokens === "number") && (
+            <div className="inline-flex min-w-0 items-center gap-1.5" title={t("dashboard:chatWorkspace.inputStatusLastRun")}>
+              <Activity className="h-3 w-3 shrink-0 text-slate-400" />
+              <span className="shrink-0">{t("dashboard:chatWorkspace.inputStatusLastRun")}</span>
+              <span className="min-w-0 truncate font-medium text-content-secondary">
+                {formatDuration(runMetrics?.durationMs)} · {formatTokens(runMetrics?.usageTotalTokens)} tokens
+              </span>
             </div>
           )}
         </div>

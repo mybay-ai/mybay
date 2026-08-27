@@ -874,8 +874,22 @@ export async function executeDeployment(instance: any, io: SocketIOServer, updat
       status: "failed",
       message: `工作流底座审计未通过：${errorMsg}`
     }).catch(() => {});
-    dbAdapter.updateInstanceVersionInfo(instanceId, { deployment_error: errorMsg }).catch(() => {});
-    updateInstanceStatusStmt.run({ status: "failed", id: instanceId });
+    dbAdapter.updateInstanceVersionInfo(instanceId, {
+      deployment_error: errorMsg,
+      error_code: "PROVIDER_UNSUPPORTED",
+      error_message: errorMsg,
+      error_detail: errorMsg,
+      failed_at: new Date().toISOString(),
+    }).catch(() => {});
+    updateInstanceStatusStmt.run({
+      status: "failed",
+      id: instanceId,
+      deployment_error: errorMsg,
+      error_code: "PROVIDER_UNSUPPORTED",
+      error_message: errorMsg,
+      error_detail: errorMsg,
+      retryable: false,
+    });
     io.emit(`deploy_status_${instanceId}`, "failed");
     return;
   }
@@ -893,8 +907,22 @@ export async function executeDeployment(instance: any, io: SocketIOServer, updat
       status: "failed",
       message: `工作流底座审计未通过：${errorMsg}`
     }).catch(() => {});
-    dbAdapter.updateInstanceVersionInfo(instanceId, { deployment_error: errorMsg }).catch(() => {});
-    updateInstanceStatusStmt.run({ status: "failed", id: instanceId });
+    dbAdapter.updateInstanceVersionInfo(instanceId, {
+      deployment_error: errorMsg,
+      error_code: "PROVIDER_UNSUPPORTED",
+      error_message: errorMsg,
+      error_detail: errorMsg,
+      failed_at: new Date().toISOString(),
+    }).catch(() => {});
+    updateInstanceStatusStmt.run({
+      status: "failed",
+      id: instanceId,
+      deployment_error: errorMsg,
+      error_code: "PROVIDER_UNSUPPORTED",
+      error_message: errorMsg,
+      error_detail: errorMsg,
+      retryable: false,
+    });
     io.emit(`deploy_status_${instanceId}`, "failed");
     return;
   }

@@ -35,7 +35,11 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/Dockerfile.feishu ./Dockerfile.feishu
 
-RUN apk add --no-cache curl && rm -rf /usr/local/lib/node_modules/npm && rm -f /usr/local/bin/npm /usr/local/bin/npx && mkdir -p /app/data
+RUN apk upgrade --no-cache libcrypto3 libssl3 \
+    && apk add --no-cache curl \
+    && rm -rf /usr/local/lib/node_modules/npm \
+    && rm -f /usr/local/bin/npm /usr/local/bin/npx \
+    && mkdir -p /app/data
 
 EXPOSE 3000
 

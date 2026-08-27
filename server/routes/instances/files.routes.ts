@@ -26,9 +26,46 @@ import { checkInstanceStorageQuota, resolveInstanceDiskLimitMb, formatDiskLimitL
 import { sanitizeErrorMessage } from "../../utils/sanitizer";
 import { buildFileContentDisposition } from "../../utils/fileResponseHeaders";
 import { DEFAULT_USER_DISK_LIMIT_MB } from "../../constants/resourceLimits";
+import {
+  createHtmlArtifactPreviewToken,
+  HTML_ARTIFACT_PREVIEW_CSP,
+  HTML_ARTIFACT_PREVIEW_MAX_BYTES,
+  isAllowedHtmlPreviewAsset,
+  isHtmlArtifactPreview,
+  inspectHtmlArtifactPreviewProject,
+  normalizeHtmlPreviewProjectRoot,
+  renderHtmlArtifactPreviewDiagnostic,
+  verifyHtmlArtifactPreviewToken,
+} from "../../utils/htmlArtifactPreview";
+import { JWT_SECRET } from "../../utils/authSecrets";
+import { renderLocalOfficePreview } from "../../utils/officeArtifactPreview";
+import { streamLocalVideo } from "../../utils/mediaStream";
+import { createLocalGeneratedArtifactSnapshot } from "../../utils/localGeneratedArtifactLifecycle";
+import rateLimit from "express-rate-limit";
+import { getClientIp } from "../../utils/ip";
 
 
 type FileUsageCategory = "document" | "spreadsheet" | "image" | "web" | "log" | "archive" | "cache" | "other";
+
+const instanceFileReadLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 300,
+  keyGenerator: (req: AuthenticatedRequest) => `instance_file_read:ip:${getClientIp(req)}:user:${req.user?.id || "anon"}`,
+  message: {
+    error: "文件读取请求过于频繁，请稍后重试。",
+    code: "INSTANCE_FILE_RATE_LIMITED",
+  },
+});
+
+const htmlPreviewAssetLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 600,
+  keyGenerator: (req: AuthenticatedRequest) => `html_preview_asset:ip:${getClientIp(req)}`,
+  message: {
+    error: "HTML 预览资源请求过于频繁，请稍后重试。",
+    code: "HTML_PREVIEW_ASSET_RATE_LIMITED",
+  },
+});
 
 type FileUsageEntry = {
   name: string;
@@ -205,6 +242,33 @@ export function createFilesRoutes(deps: RouterDependencies) {
   const router = Router();
   const { io, wrappedUpdateStatus, docker, setupSessionMap, containerStatsCache } = deps;
 
+  router.use([
+    "/:id/files/office-preview",
+    "/:id/files/metadata",
+    "/:id/files/html-preview",
+    "/:id/files/download",
+    "/:id/files/media-preview",
+  ], instanceFileReadLimiter);
+  router.use("/:id/files/html-preview-assets/:token/*", htmlPreviewAssetLimiter);
+
+  const inspectHtmlPreview = async (req: AuthenticatedRequest, requestedPath: string, entryRealPath: string) => {
+    const project = normalizeHtmlPreviewProjectRoot(requestedPath);
+    if (!project) return null;
+    const projectPath = project.projectRoot === "." ? "/" : project.projectRoot;
+    const projectValidation = await validateFileAccess(req, req.params.id, projectPath);
+    if ("error" in projectValidation) return null;
+    const projectRootAbsolute = fs.realpathSync(projectValidation.absolutePath);
+    const entryAbsolute = fs.realpathSync(entryRealPath);
+    if (entryAbsolute !== projectRootAbsolute && !entryAbsolute.startsWith(projectRootAbsolute + path.sep)) return null;
+    return {
+      project,
+      inspection: inspectHtmlArtifactPreviewProject({
+        projectRootAbsolute,
+        entryPath: project.entryPath,
+      }),
+    };
+  };
+
 
 
   router.get("/:id/files/usage", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
@@ -313,7 +377,7 @@ export function createFilesRoutes(deps: RouterDependencies) {
       }
 
       const { absolutePath } = validation;
-      const exportGuard = await guardFileExport(absolutePath);
+      const exportGuard = await guardFileExport(absolutePath, path.basename(absolutePath), validation.rootDir);
       if (exportGuard.ok === false) return res.status(exportGuard.status).json({ error: exportGuard.error, code: exportGuard.code });
       const safeAbsolutePath = exportGuard.realPath;
 
@@ -355,12 +419,220 @@ export function createFilesRoutes(deps: RouterDependencies) {
     }
   });
 
+  // The read-only handlers below are protected by the path-scoped instanceFileReadLimiter.
+  // lgtm[js/missing-rate-limiting]
+  router.get("/:id/files/office-preview", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const requestedPath = (req.query.path as string) || "";
+      if (!requestedPath || requestedPath === "/") {
+        return res.status(400).json({ error: "未指定文件路径", code: "OFFICE_PREVIEW_PATH_REQUIRED" });
+      }
+      const validation = await validateFileAccess(req, req.params.id, requestedPath);
+      if ("error" in validation) return res.status(validation.status).json({ error: validation.error, code: "OFFICE_PREVIEW_PATH_UNAVAILABLE" });
+      const exportGuard = await guardFileExport(validation.absolutePath, path.basename(validation.absolutePath), validation.rootDir);
+      if (exportGuard.ok === false) return res.status(exportGuard.status).json({ error: exportGuard.error, code: exportGuard.code });
+      const preview = await renderLocalOfficePreview(exportGuard.realPath, path.basename(exportGuard.realPath), exportGuard.rootPath);
+      return res.json({ ok: true, ...preview });
+    } catch (e: any) {
+      const status = Number(e?.status) || 500;
+      const code = String(e?.code || "OFFICE_PREVIEW_FAILED");
+      return res.status(status).json({ error: code === "OFFICE_PREVIEW_TOO_LARGE" ? "Office 文件过大，请下载查看。" : "Office 文件预览失败，请下载后查看。", code });
+    }
+  });
+
+  // lgtm[js/missing-rate-limiting]
+  router.get("/:id/files/metadata", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const requestedPath = (req.query.path as string) || "";
+      if (!requestedPath || requestedPath === "/") {
+        return res.status(400).json({ error: "未指定文件路径", code: "FILE_METADATA_PATH_REQUIRED" });
+      }
+      const validation = await validateFileAccess(req, req.params.id, requestedPath);
+      if ("error" in validation) {
+        return res.status(validation.status).json({ error: validation.error, code: validation.status === 404 ? "FILE_NOT_FOUND" : "FILE_METADATA_FORBIDDEN" });
+      }
+      const exportGuard = await guardFileExport(validation.absolutePath, path.basename(validation.absolutePath), validation.rootDir);
+      if (exportGuard.ok === false) {
+        return res.status(exportGuard.status).json({ error: exportGuard.error, code: exportGuard.code });
+      }
+      const metadataRoot = fs.realpathSync(path.resolve(exportGuard.rootPath));
+      const metadataPath = fs.realpathSync(path.resolve(exportGuard.realPath));
+      if (metadataPath !== metadataRoot && !metadataPath.startsWith(metadataRoot + path.sep)) {
+        return res.status(403).json({ error: "文件路径超出实例数据目录", code: "FILE_METADATA_PATH_FORBIDDEN" });
+      }
+      const stats = fs.statSync(metadataPath);
+      if (!stats.isFile()) {
+        return res.status(400).json({ error: "请求的路径不是文件", code: "FILE_METADATA_NOT_FILE" });
+      }
+      const mime = getMimeType(exportGuard.realPath);
+      const htmlPreview = isHtmlArtifactPreview(exportGuard.realPath, mime)
+        ? await inspectHtmlPreview(req, requestedPath, exportGuard.realPath)
+        : null;
+      return res.json({
+        ok: true,
+        path: requestedPath.replace(/^\/+/, "").replace(/\\/g, "/"),
+        name: path.basename(exportGuard.realPath),
+        size: stats.size,
+        mime,
+        updatedAt: stats.mtime.toISOString(),
+        artifact: createLocalGeneratedArtifactSnapshot({
+          requestedPath,
+          size: stats.size,
+          modifiedAt: stats.mtime,
+          htmlPreview: htmlPreview?.inspection,
+        }),
+      });
+    } catch (e: any) {
+      return res.status(500).json({ error: "文件状态检查失败: " + sanitizeErrorMessage(e.message), code: "FILE_METADATA_FAILED" });
+    }
+  });
+
+  // lgtm[js/missing-rate-limiting]
+  router.get("/:id/files/html-preview", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const requestedPath = (req.query.path as string) || "";
+      if (!requestedPath || requestedPath === "/") {
+        return res.status(400).json({ error: "未指定文件路径", code: "HTML_PREVIEW_PATH_REQUIRED" });
+      }
+
+      const validation = await validateFileAccess(req, req.params.id, requestedPath);
+      if ("error" in validation) {
+        return res.status(validation.status).json({ error: validation.error });
+      }
+
+      const exportGuard = await guardFileExport(validation.absolutePath, path.basename(validation.absolutePath), validation.rootDir);
+      if (exportGuard.ok === false) {
+        return res.status(exportGuard.status).json({ error: exportGuard.error, code: exportGuard.code });
+      }
+
+      const previewRoot = fs.realpathSync(path.resolve(exportGuard.rootPath));
+      const previewPath = fs.realpathSync(path.resolve(exportGuard.realPath));
+      if (previewPath !== previewRoot && !previewPath.startsWith(previewRoot + path.sep)) {
+        return res.status(403).json({ error: "文件路径超出实例数据目录", code: "HTML_PREVIEW_PATH_FORBIDDEN" });
+      }
+      const stats = fs.statSync(previewPath);
+      if (stats.isDirectory()) {
+        return res.status(400).json({ error: "不能预览目录", code: "HTML_PREVIEW_DIRECTORY_UNSUPPORTED" });
+      }
+
+      const mime = getMimeType(exportGuard.realPath);
+      if (!isHtmlArtifactPreview(exportGuard.realPath, mime)) {
+        return res.status(415).json({ error: "该文件不是 HTML 文档", code: "HTML_PREVIEW_TYPE_UNSUPPORTED" });
+      }
+      if (stats.size > HTML_ARTIFACT_PREVIEW_MAX_BYTES) {
+        return res.status(413).json({ error: "HTML 文件过大，请下载查看", code: "HTML_PREVIEW_TOO_LARGE", size: stats.size });
+      }
+
+      const preview = await inspectHtmlPreview(req, requestedPath, exportGuard.realPath);
+      if (!preview) {
+        return res.status(400).json({ error: "HTML 项目路径无效", code: "HTML_PREVIEW_PROJECT_PATH_INVALID" });
+      }
+      const { project, inspection } = preview;
+      if (inspection.status === "incomplete") {
+        res.status(422);
+        res.setHeader("Content-Type", "text/html; charset=utf-8");
+        res.setHeader("Content-Security-Policy", "sandbox; default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'");
+        res.setHeader("X-MyBay-Preview-Status", "incomplete");
+        return res.send(renderHtmlArtifactPreviewDiagnostic(inspection));
+      }
+      const token = createHtmlArtifactPreviewToken({
+        instanceId: req.params.id,
+        ownerId: String(req.user.id),
+        viewerRole: String(req.user.role || "user"),
+        projectRoot: project.projectRoot,
+        assetAliases: inspection.aliases,
+        secret: JWT_SECRET,
+      });
+      const encodedEntryPath = project.entryPath.split("/").map(encodeURIComponent).join("/");
+      return res.redirect(302, `/api/instances/${encodeURIComponent(req.params.id)}/files/html-preview-assets/${token}/${encodedEntryPath}`);
+    } catch (e: any) {
+      return res.status(500).json({ error: "HTML 预览失败: " + sanitizeErrorMessage(e.message), code: "HTML_PREVIEW_FAILED" });
+    }
+  });
+
+  // This capability route is protected by the path-scoped htmlPreviewAssetLimiter.
+  // lgtm[js/missing-rate-limiting]
+  router.get("/:id/files/html-preview-assets/:token/*", async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const token = verifyHtmlArtifactPreviewToken(req.params.token, JWT_SECRET);
+      if (!token || token.instanceId !== req.params.id) {
+        return res.status(403).json({ error: "HTML 预览链接无效或已过期", code: "HTML_PREVIEW_TOKEN_INVALID" });
+      }
+
+      const assetPath = String(req.params[0] || "").replace(/^\/+/, "");
+      const assetSegments = assetPath.split("/");
+      if (!assetPath || assetPath.includes("\\") || assetSegments.some(segment => !segment || segment === "." || segment === "..")) {
+        return res.status(400).json({ error: "HTML 资源路径无效", code: "HTML_PREVIEW_ASSET_PATH_INVALID" });
+      }
+      if (!isAllowedHtmlPreviewAsset(assetPath)) {
+        return res.status(415).json({ error: "该资源类型不允许在 HTML 预览中加载", code: "HTML_PREVIEW_ASSET_TYPE_UNSUPPORTED" });
+      }
+
+      const capabilityRequest = {
+        ...req,
+        user: { id: token.ownerId, role: token.viewerRole },
+      } as AuthenticatedRequest;
+      const projectPath = token.projectRoot === "." ? "/" : token.projectRoot;
+      const resolvedAssetPath = token.assetAliases?.[assetPath] || assetPath;
+      const requestedAssetPath = path.posix.join(token.projectRoot, resolvedAssetPath);
+      const projectValidation = await validateFileAccess(capabilityRequest, req.params.id, projectPath);
+      if ("error" in projectValidation) {
+        return res.status(projectValidation.status).json({ error: projectValidation.error, code: "HTML_PREVIEW_PROJECT_UNAVAILABLE" });
+      }
+      const assetValidation = await validateFileAccess(capabilityRequest, req.params.id, requestedAssetPath);
+      if ("error" in assetValidation) {
+        return res.status(assetValidation.status).json({ error: assetValidation.error, code: "HTML_PREVIEW_ASSET_UNAVAILABLE" });
+      }
+
+      const projectRoot = fs.realpathSync(projectValidation.absolutePath);
+      const assetRealPath = fs.realpathSync(assetValidation.absolutePath);
+      if (assetRealPath !== projectRoot && !assetRealPath.startsWith(projectRoot + path.sep)) {
+        return res.status(403).json({ error: "HTML 资源超出项目目录", code: "HTML_PREVIEW_ASSET_OUTSIDE_PROJECT" });
+      }
+      const exportGuard = await guardFileExport(assetRealPath, path.basename(assetRealPath), projectRoot);
+      if (exportGuard.ok === false) {
+        return res.status(exportGuard.status).json({ error: exportGuard.error, code: exportGuard.code });
+      }
+      const stats = fs.statSync(exportGuard.realPath);
+      if (stats.isDirectory()) {
+        return res.status(400).json({ error: "不能加载目录资源", code: "HTML_PREVIEW_ASSET_DIRECTORY_UNSUPPORTED" });
+      }
+      if (stats.size > HTML_ARTIFACT_PREVIEW_MAX_BYTES) {
+        return res.status(413).json({ error: "HTML 项目资源过大", code: "HTML_PREVIEW_ASSET_TOO_LARGE", size: stats.size });
+      }
+
+      const mime = getMimeType(exportGuard.realPath);
+      res.setHeader("X-Frame-Options", "SAMEORIGIN");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Referrer-Policy", "no-referrer");
+      res.setHeader("Content-Type", isHtmlArtifactPreview(exportGuard.realPath, mime) ? "text/html; charset=utf-8" : mime);
+      res.setHeader("Content-Disposition", buildFileContentDisposition(path.basename(exportGuard.realPath), "inline"));
+      res.setHeader(
+        "Content-Security-Policy",
+        isHtmlArtifactPreview(exportGuard.realPath, mime)
+          ? HTML_ARTIFACT_PREVIEW_CSP
+          : "sandbox; default-src 'none'"
+      );
+      return res.sendFile(exportGuard.realPath, (error) => {
+        if (!error) return;
+        console.error("[File Manager] HTML asset stream failed", { filePath: exportGuard.realPath, error });
+        if (!res.headersSent) res.status(Number((error as any).statusCode) || 500).json({ error: "HTML asset transfer failed", code: "HTML_PREVIEW_ASSET_TRANSFER_FAILED" });
+        else res.destroy(error);
+      });
+    } catch (e: any) {
+      return res.status(500).json({ error: "HTML 资源加载失败: " + sanitizeErrorMessage(e.message), code: "HTML_PREVIEW_ASSET_FAILED" });
+    }
+  });
+
+  // lgtm[js/missing-rate-limiting]
   router.get("/:id/files/download", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const instance = await dbAdapter.getInstanceById(req.params.id);
       const requestedPath = (req.query.path as string) || "";
       if (!requestedPath || requestedPath === "/") {
-        return res.status(400).json({ error: "未指定文件路径" });
+        return res.status(400).json({ error: "未指定文件路径", code: "FILE_DOWNLOAD_PATH_REQUIRED" });
       }
 
       const validation = await validateFileAccess(req, req.params.id, requestedPath);
@@ -370,7 +642,7 @@ export function createFilesRoutes(deps: RouterDependencies) {
       }
 
       const { absolutePath } = validation;
-      const exportGuard = await guardFileExport(absolutePath);
+      const exportGuard = await guardFileExport(absolutePath, path.basename(absolutePath), validation.rootDir);
       if (exportGuard.ok === false) return res.status(exportGuard.status).json({ error: exportGuard.error, code: exportGuard.code });
       const safeAbsolutePath = exportGuard.realPath;
 
@@ -386,12 +658,29 @@ export function createFilesRoutes(deps: RouterDependencies) {
       res.setHeader("Content-Disposition", buildFileContentDisposition(path.basename(safeAbsolutePath)));
       return res.sendFile(safeAbsolutePath, (error) => {
         if (!error) return;
-        console.error(`[File Manager] Download stream failed: ${safeAbsolutePath} -`, error);
+        console.error("[File Manager] Download stream failed", { filePath: safeAbsolutePath, error });
         if (!res.headersSent) res.status(Number((error as any).statusCode) || 500).json({ error: "File download transfer failed" });
         else res.destroy(error);
       });
     } catch (e: any) {
       res.status(500).json({ error: "下载失败: " + sanitizeErrorMessage(e.message) });
+    }
+  });
+
+  // lgtm[js/missing-rate-limiting]
+  router.get("/:id/files/media-preview", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const requestedPath = (req.query.path as string) || "";
+      if (!requestedPath || requestedPath === "/") {
+        return res.status(400).json({ error: "未指定文件路径", code: "FILE_PREVIEW_PATH_REQUIRED" });
+      }
+      const validation = await validateFileAccess(req, req.params.id, requestedPath);
+      if ("error" in validation) return res.status(validation.status).json({ error: validation.error });
+      const exportGuard = await guardFileExport(validation.absolutePath, path.basename(validation.absolutePath), validation.rootDir);
+      if (exportGuard.ok === false) return res.status(exportGuard.status).json({ error: exportGuard.error, code: exportGuard.code });
+      return streamLocalVideo(req, res, exportGuard.realPath, path.basename(exportGuard.realPath), exportGuard.rootPath);
+    } catch (e: any) {
+      return res.status(500).json({ error: "视频预览失败: " + sanitizeErrorMessage(e.message), code: "VIDEO_PREVIEW_FAILED" });
     }
   });
 

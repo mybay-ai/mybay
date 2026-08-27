@@ -15,4 +15,18 @@ describe("Docker error callback envelope", () => {
       retryable: true,
     });
   });
+
+  it("preserves unsupported-provider validation failures instead of reporting a container error", () => {
+    expect(classifyDockerError({
+      error_code: "PROVIDER_UNSUPPORTED",
+      error_message: "Unsupported Hermes runtime provider: qwen.",
+      error_detail: "Unsupported Hermes runtime provider: qwen.",
+      retryable: false,
+    })).toEqual({
+      code: "PROVIDER_UNSUPPORTED",
+      message: "Unsupported Hermes runtime provider: qwen.",
+      detail: "Unsupported Hermes runtime provider: qwen.",
+      retryable: false,
+    });
+  });
 });

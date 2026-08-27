@@ -9,6 +9,7 @@ import { api } from "../../lib/api";
 import { sanitizeDeployPayload } from "./sanitizeDeployPayload";
 import { buildLocalDeploymentRequest } from "./localDeploymentRequestAdapter";
 import { isDeploymentSuccessful, isDeploymentTerminal } from "./deploymentUiState";
+import { hasBasicStepError, hasModelStepError, requiresPredeployModelTest } from "./deployStepValidation";
 
 // Import modular sub-components
 import { WizardStepper, StepStatus } from "./WizardStepper";
@@ -555,8 +556,8 @@ export function DeployWizard({
       disableReason = t("validation.template_consent_required");
     }
   } else if (step === 3) {
-    const success = testResults.llm?.result?.success;
-    if (!success) {
+    const hasError = hasModelStepError(data, testResults.llm?.result?.success === true);
+    if (hasError) {
       nextDisabled = true;
       disableReason = t("validation.test_llm_first");
     }
@@ -613,8 +614,8 @@ export function DeployWizard({
     if (i === step) return "current";
     if (i < step) {
       if (i === 0 && preflight?.checks?.some((c: any) => c.status === "fail")) return "error";
-      if (i === 1 && (!data.name || !data.username || !data.password || data.password.length < 8)) return "error";
-      if (i === 3 && !testResults.llm?.result?.success) return "error";
+      if (i === 1 && hasBasicStepError(data)) return "error";
+      if (i === 3 && hasModelStepError(data, testResults.llm?.result?.success === true)) return "error";
       if (i === 4 && data.channel && data.channel !== "none" && data.channel !== "web" && !testResults.channel?.result?.success) return "error";
       return "completed";
     }
@@ -807,7 +808,9 @@ export function DeployWizard({
   } else if (step === 2) {
     footerStatus = { text: isTraefik ? t("footer_status.container_traefik") : t("footer_status.container_port"), type: "success" };
   } else if (step === 3) {
-    if (!testResults.llm?.result?.success) {
+    if (!requiresPredeployModelTest(data.provider) && !hasModelStepError(data, false)) {
+      footerStatus = { text: t("footer_status.model_oauth_after_deploy"), type: "success" };
+    } else if (!testResults.llm?.result?.success) {
       footerStatus = { text: t("footer_status.model_test_required"), type: "info" };
     } else {
       footerStatus = { text: t("footer_status.model_success"), type: "success" };
