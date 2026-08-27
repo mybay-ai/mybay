@@ -1,5 +1,7 @@
 # 麦贝开源版（MyBay Open Source）
 
+![麦贝开源版概览](./docs/images/main-zh.jpg)
+
 [![CI](https://github.com/mybay-ai/mybay-core/actions/workflows/ci.yml/badge.svg)](https://github.com/mybay-ai/mybay-core/actions/workflows/ci.yml)
 [![Security](https://github.com/mybay-ai/mybay-core/actions/workflows/security.yml/badge.svg)](https://github.com/mybay-ai/mybay-core/actions/workflows/security.yml)
 [![License: AGPL-3.0-only](https://img.shields.io/badge/license-AGPL--3.0--only-blue.svg)](./LICENSE)
@@ -22,19 +24,19 @@ MyBay Open Source 是可自行部署的社区开源版本；[mybay.ai](https://m
 
 通过 Quick Start 或手动 Docker 部署，在自己的基础设施上运行和管理 AI Agent。
 
-![麦贝开源版首页与部署方式](./docs/images/mybay-home.png)
+![麦贝开源版首页与部署方式](./docs/images/mybay-home-zh.png)
 
 ### Agent 部署与实例管理
 
 在本地控制台中完成环境预检、模型凭据配置、Agent 部署、消息渠道连接和运行状态诊断。
 
-![Agent 部署中心](./docs/images/agent-deployment-center.png)
+![Agent 部署中心](./docs/images/agent-deployment-center-zh.png)
 
 ### 实例对话与文件工作区
 
 在同一界面中与 Agent 对话，并查看执行进度、生成文件、文件变更摘要和支持的文件预览。
 
-![实例对话与文件工作区](./docs/images/chat-file-workspace.png)
+![实例对话与文件工作区](./docs/images/chat-file-workspace-zh.png)
 
 ## 与 Hermes Agent 的项目关系
 
