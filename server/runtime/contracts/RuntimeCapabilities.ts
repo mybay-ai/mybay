@@ -1,16 +1,30 @@
 export interface RuntimeCapabilityDescriptor {
-  conversation: {
-    modes: Array<"streaming" | "batch">;
+  readonly conversation: {
+    readonly modes: ReadonlyArray<"streaming" | "batch">;
   };
-  cancellation: {
-    supported: boolean;
-    granularity?: "run" | "turn";
+  readonly cancellation: {
+    readonly supported: boolean;
+    readonly granularity?: "run" | "turn";
   };
-  terminal: {
-    observation: "status" | "events" | "unsupported";
+  readonly terminal: {
+    readonly observation: "status" | "events" | "unsupported";
   };
-  interactions: {
-    approvals: boolean;
-    questions: boolean;
+  readonly interactions: {
+    readonly approvals: boolean;
+    readonly questions: boolean;
   };
+}
+
+/** Build a capability declaration that cannot drift after registration. */
+export function defineRuntimeCapabilities(
+  descriptor: RuntimeCapabilityDescriptor,
+): RuntimeCapabilityDescriptor {
+  return Object.freeze({
+    conversation: Object.freeze({
+      modes: Object.freeze([...descriptor.conversation.modes]),
+    }),
+    cancellation: Object.freeze({ ...descriptor.cancellation }),
+    terminal: Object.freeze({ ...descriptor.terminal }),
+    interactions: Object.freeze({ ...descriptor.interactions }),
+  });
 }

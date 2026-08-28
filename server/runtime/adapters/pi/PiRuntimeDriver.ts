@@ -1,5 +1,4 @@
 import type {
-  RuntimeCapabilityDescriptor,
   RuntimeDriver,
   RuntimeRunEventController,
   RuntimeRunEventDependencies,
@@ -12,6 +11,7 @@ import type {
   RuntimeRunPreparationDependencies,
   RuntimeRunPreparationProvider,
 } from "../../contracts";
+import { defineRuntimeCapabilities } from "../../contracts";
 import { PI_RUNTIME_RELEASE_CODE } from "../../../utils/runtimeReleaseBoundary";
 
 function previewOnlyError(): Error {
@@ -76,12 +76,12 @@ class PiPreviewExecutionProvider implements RuntimeRunExecutionProvider {
   }
 }
 
-export const PI_RUNTIME_CAPABILITIES: RuntimeCapabilityDescriptor = Object.freeze({
+export const PI_RUNTIME_CAPABILITIES = defineRuntimeCapabilities({
   conversation: { modes: [] },
   cancellation: { supported: false },
   terminal: { observation: "unsupported" },
   interactions: { approvals: false, questions: false },
-} satisfies RuntimeCapabilityDescriptor);
+});
 
 export const piRuntimeDriver: RuntimeDriver = Object.freeze({
   runtimeType: "pi",

@@ -87,6 +87,22 @@ describe("server RuntimeRegistry", () => {
     expect(() => new RuntimeRegistry([], "hermes")).toThrow("Default Runtime is not registered");
   });
 
+  it("rejects malformed identities, versions, and duplicate provider keys", () => {
+    expect(() => new RuntimeRegistry([
+      { ...hermesRuntimeDriver, runtimeType: "Invalid Runtime" },
+    ], "Invalid Runtime")).toThrow("Runtime Driver type is invalid");
+    expect(() => new RuntimeRegistry([
+      { ...hermesRuntimeDriver, providerKey: "Invalid Provider" },
+    ], "hermes")).toThrow("Runtime Driver provider key is invalid");
+    expect(() => new RuntimeRegistry([
+      { ...hermesRuntimeDriver, contractVersion: 0 },
+    ], "hermes")).toThrow("Runtime Driver contract version is invalid");
+    expect(() => new RuntimeRegistry([
+      hermesRuntimeDriver,
+      { ...piRuntimeDriver, providerKey: hermesRuntimeDriver.providerKey },
+    ], "hermes")).toThrow("provider key is registered more than once");
+  });
+
   it("accepts a new registered Runtime type without changing the Contract", () => {
     const testDriver = { ...hermesRuntimeDriver, runtimeType: "test-runtime", providerKey: "test-core" };
     const registry = new RuntimeRegistry([hermesRuntimeDriver, testDriver], "hermes");
