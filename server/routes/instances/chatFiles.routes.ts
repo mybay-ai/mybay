@@ -7,10 +7,10 @@ import { chatRepo } from "../../repositories/chatRepo";
 import { filesRepo } from "../../repositories/filesRepo";
 import { guardFileExport } from "../../services/instances/instanceFileLeakGuard";
 import { randomUUID } from "node:crypto";
-import { validateUploadedFilePath } from "../../utils/uploadSecurity";
+import { resolveContentValidatedExtensions, validateUploadedFilePath } from "../../utils/uploadSecurity";
 import { getChatAttachmentConfig } from "../../config/chatAttachmentConfig";
 import { DEFAULT_CHAT_ATTACHMENT_CONFIG } from "../../../shared/chatAttachmentContract";
-import { deleteChatAttachmentFile } from "../../services/chatAttachmentStorage";
+import { deleteChatAttachmentFile, inspectChatAttachmentFile, purgeDeletedChatAttachments } from "../../services/chatAttachmentStorage";
 import { checkInstanceStorageQuota, formatDiskLimitLabel, resolveInstanceDiskLimitMb } from "../../services/instances/instanceStorageQuotaService";
 import {
   HTML_ARTIFACT_PREVIEW_MAX_BYTES,
@@ -198,6 +198,7 @@ router.post("/:id/conversations/:conversationId/files", authenticateToken, async
 
     const uploadedFiles = req.files as Express.Multer.File[];
     const configuredExtensions = chatAttachmentConfig.allowedExtensions;
+    const validatedExtensions = resolveContentValidatedExtensions(configuredExtensions, contentValidatedExtensions);
     const validatedUploads = uploadedFiles.map((file) => {
       if (file.size === 0) return { ok: false as const, error: "Empty files are not allowed." };
       const ext = path.extname(file.originalname).toLowerCase();
@@ -212,7 +213,7 @@ router.post("/:id/conversations/:conversationId/files", authenticateToken, async
         filePath: file.path,
         originalName: file.originalname,
         declaredMime: file.mimetype,
-        allowedExtensions: new Set(configuredExtensions || []),
+        allowedExtensions: validatedExtensions,
       });
     });
     const invalidUpload = validatedUploads.find((result) => !result.ok);
@@ -460,17 +461,77 @@ router.get("/:id/conversations/:conversationId/files/:fileId/media-preview", aut
 router.delete("/:id/conversations/:conversationId/files/:fileId", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   const { id, conversationId, fileId } = req.params;
   try {
-    const resolved = await resolveChatFileForAccess(req, res);
-    if (!resolved) return;
-    const activeRun = await chatRepo.getActiveRunForConversation(resolved.file.owner_id, id, conversationId);
+    const instanceAuthority = await resolveInstanceAuthority({ actor: authorityActorFromRequest(req), instanceId: id });
+    if (instanceAuthority.ok === false) return sendAuthorityFailure(res, instanceAuthority, "无法访问目标实例。");
+    const conversationAuthority = await resolveConversationAuthority({ instance: instanceAuthority, conversationId });
+    if (conversationAuthority.ok === false) return sendAuthorityFailure(res, conversationAuthority, "会话不存在或无权访问。");
+    const fileAuthority = await resolveConversationFileAuthority({ conversation: conversationAuthority, fileId, includeDeleted: true });
+    if (fileAuthority.ok === false) return sendAuthorityFailure(res, fileAuthority, "文件不存在或无权访问。");
+    if (fileAuthority.file.deleted_at) return res.status(410).json({ success: false, code: "FILE_DELETED", error: "FILE_DELETED", message: "文件已删除。" });
+    const activeRun = await chatRepo.getActiveRunForConversation(fileAuthority.file.owner_id, id, conversationId);
     if (activeRun) {
       return res.status(409).json({ code: "ATTACHMENT_IN_USE", error: "ATTACHMENT_IN_USE", message: "当前会话任务仍在运行，暂不能删除附件。" });
     }
-    await deleteChatAttachmentFile({ instanceId: id, conversationId, storagePath: resolved.storagePath });
-    await filesRepo.delete(fileId);
-    res.json({ success: true });
+    const physicalFile = await inspectChatAttachmentFile({ instanceId: id, conversationId, storagePath: fileAuthority.file.storage_path });
+    await filesRepo.softDelete(fileId);
+    let cleanupPending = false;
+    let physicalMissing = !physicalFile.exists;
+    try {
+      if (physicalFile.exists) {
+        await deleteChatAttachmentFile({ instanceId: id, conversationId, storagePath: physicalFile.storagePath });
+      }
+      await filesRepo.markCleanupComplete(fileId);
+    } catch (error: any) {
+      if (error?.code === "ENOENT") {
+        physicalMissing = true;
+        await filesRepo.markCleanupComplete(fileId);
+      } else {
+        cleanupPending = true;
+        console.warn(JSON.stringify({ operation: "chat_file_physical_delete_deferred", fileId }));
+        void purgeDeletedChatAttachments({ limit: 20 }).catch(() => {});
+      }
+    }
+    res.json({ success: true, cleanupPending, physicalMissing });
   } catch (e: any) {
     res.status(500).json({ error: "删除文件失败: " + e.message });
+  }
+});
+
+router.post("/:id/conversations/:conversationId/files/batch-resolve", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  const { id, conversationId } = req.params;
+  const fileIds = req.body?.fileIds;
+  if (!Array.isArray(fileIds) || fileIds.length > 100 || fileIds.some((value) => typeof value !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.trim()))) {
+    return res.status(400).json({ success: false, code: "INVALID_REQUEST", error: "INVALID_REQUEST", message: "fileIds 必须是最多 100 个有效 UUID。" });
+  }
+  try {
+    const instanceAuthority = await resolveInstanceAuthority({ actor: authorityActorFromRequest(req), instanceId: id });
+    if (instanceAuthority.ok === false) return sendAuthorityFailure(res, instanceAuthority, "无法访问目标实例。");
+    const conversationAuthority = await resolveConversationAuthority({ instance: instanceAuthority, conversationId });
+    if (conversationAuthority.ok === false) return sendAuthorityFailure(res, conversationAuthority, "会话不存在或无权访问。");
+    const requestedIds = Array.from(new Set(fileIds.map((value: string) => value.trim()))) as string[];
+    const files: Record<string, any> = {};
+    await Promise.all(requestedIds.map(async (requestedId) => {
+      const record = await filesRepo.findById(requestedId);
+      const belongsToConversation = record
+        && record.owner_id === conversationAuthority.ownerId
+        && record.instance_id === id
+        && record.conversation_id === conversationId;
+      if (!belongsToConversation) {
+        files[requestedId] = { availability: "unavailable", fileId: requestedId };
+        return;
+      }
+      files[requestedId] = {
+        availability: record.deleted_at ? "deleted" : "available",
+        fileId: record.id,
+        originalName: normalizeMultipartFilename(record.original_name || record.filename),
+        mimeType: record.mime_type || "application/octet-stream",
+        size: Number.isFinite(record.size) ? record.size : 0,
+      };
+    }));
+    return res.json({ success: true, files });
+  } catch (e: any) {
+    console.error(JSON.stringify({ operation: "chat_files_batch_resolve_failed", instanceId: id, conversationId, error: e?.message || "Unknown Error" }));
+    return res.status(500).json({ success: false, code: "BATCH_RESOLVE_FAILED", error: "BATCH_RESOLVE_FAILED", message: "批量解析文件状态失败。" });
   }
 });
 

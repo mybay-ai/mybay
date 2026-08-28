@@ -252,6 +252,8 @@ export const dbAdapter = {
   async deleteFileRecord(id: string) { return mutateStore((data) => { data.files = data.files.filter((f) => f.id !== id); }); },
   async deleteFileRecordsByConversation(instanceId: string, conversationId: string) { return mutateStore((data) => { data.files = data.files.filter((f) => !(f.instance_id === instanceId && f.conversation_id === conversationId)); }); },
   async listFilesByConversation(instanceId: string, conversationId: string) { return readStore().files.filter((f) => f.instance_id === instanceId && f.conversation_id === conversationId && !f.deleted_at).sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || ""))); },
+  async listPendingDeletedFileRecords(limit = 50) { return readStore().files.filter((f) => f.deleted_at && !f.cleanup_completed_at).sort((a, b) => String(a.deleted_at || "").localeCompare(String(b.deleted_at || ""))).slice(0, Math.max(1, limit)); },
+  async hasActiveFileRecord(instanceId: string, conversationId: string, filename: string) { return readStore().files.some((f) => f.instance_id === instanceId && f.conversation_id === conversationId && f.filename === filename && !f.deleted_at); },
   async listUnboundFilesByOwner(ownerId: string) { return readStore().files.filter((f) => f.owner_id === ownerId && !f.instance_id); },
   async listLocalTemplates() { return readStore().templates; },
   async upsertLocalTemplate(template: any) { return mutateStore((data) => upsertById(data.templates, template)); },

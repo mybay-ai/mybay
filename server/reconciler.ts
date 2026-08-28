@@ -6,6 +6,7 @@ import { parseTraefikEnv } from "./infrastructure/traefik/traefikConfig";
 import { buildDeploymentContext } from "./deploymentContext";
 import { cleanupInstanceResources, compensateDeployment } from "./services/instanceCleanup";
 import { instanceOperationCoordinator } from "./services/instances/instanceOperationCoordinator";
+import { reconcileChatAttachmentStorage } from "./services/chatAttachmentStorage";
 import type { Server as SocketIOServer } from "socket.io";
 
 async function reloadGatewayOfInstance(instanceId: string) {
@@ -286,6 +287,17 @@ async function healLegacyTraefikLabels() {
  */
 let reconcilerTimer: NodeJS.Timeout | null = null;
 let reconcileCycleActive = false;
+let attachmentMaintenanceActive = false;
+
+function scheduleChatAttachmentMaintenance() {
+  if (attachmentMaintenanceActive) return;
+  attachmentMaintenanceActive = true;
+  void reconcileChatAttachmentStorage()
+    .catch((error: any) => {
+      console.warn(JSON.stringify({ operation: "chat_attachment_storage_reconcile_failed", error: error?.message || "unknown" }));
+    })
+    .finally(() => { attachmentMaintenanceActive = false; });
+}
 
 interface ReconcilerOptions {
   allowInTest?: boolean;
@@ -310,6 +322,7 @@ export async function startReconciler(intervalMs: number = 60000, options: Recon
     if (reconcileCycleActive) return;
     reconcileCycleActive = true;
     try {
+      scheduleChatAttachmentMaintenance();
       // 1. Get all instances from DB
       const dbInstances = await dbAdapter.getAllInstances();
       const deploymentTasks = await dbAdapter.listAllDeploymentTasks().catch(() => []);

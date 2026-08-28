@@ -11,6 +11,7 @@ export interface FileRecord {
   size: number;
   storage_path: string;
   deleted_at?: string | null;
+  cleanup_completed_at?: string | null;
   created_at: string;
 }
 
@@ -38,7 +39,25 @@ export const filesRepo = {
   },
 
   softDelete(id: string) {
-    return dbAdapter.updateFileRecord(id, { deleted_at: new Date().toISOString() }) as Promise<FileRecord | null>;
+    return dbAdapter.updateFileRecord(id, { deleted_at: new Date().toISOString(), cleanup_completed_at: null }) as Promise<FileRecord | null>;
+  },
+
+  markCleanupComplete(id: string) {
+    return dbAdapter.updateFileRecord(id, { cleanup_completed_at: new Date().toISOString() }) as Promise<FileRecord | null>;
+  },
+
+  listPendingDeleted(limit = 50) {
+    const listPending = (dbAdapter as any).listPendingDeletedFileRecords;
+    return typeof listPending === "function"
+      ? listPending.call(dbAdapter, limit) as Promise<FileRecord[]>
+      : Promise.resolve([]);
+  },
+
+  hasActiveStorageIdentity(instanceId: string, conversationId: string, filename: string) {
+    const hasActive = (dbAdapter as any).hasActiveFileRecord;
+    return typeof hasActive === "function"
+      ? hasActive.call(dbAdapter, instanceId, conversationId, filename) as Promise<boolean>
+      : Promise.resolve(true);
   },
 
   async delete(id: string) {
