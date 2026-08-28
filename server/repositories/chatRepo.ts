@@ -5,6 +5,14 @@ import {
   CHAT_CONTEXT_MESSAGE_LIMIT,
   selectRecentMessagesForContext
 } from "../../shared/chatMessageContract";
+import type { RuntimeBinding } from "../runtime/contracts";
+import { runtimeRegistry } from "../runtime/runtimeRegistry";
+
+const IMMUTABLE_RUN_BINDING_FIELDS = [
+  "runtime_type",
+  "runtime_provider_key",
+  "runtime_contract_version",
+] as const;
 
 export interface Conversation {
   id: string;
@@ -432,7 +440,7 @@ export const chatRepo = {
     });
   },
 
-  async beginChatRun(params: { conversationId: string; userId: string; instanceId: string; content: string; requestId: string; runId: string; reasoningEffort?: "fast" | "balanced" | "deep"; }): Promise<{ status: string; user_message_id: string | null; sequence_no: number | null; run_id?: string | null; run_status?: string | null }> {
+  async beginChatRun(params: { conversationId: string; userId: string; instanceId: string; content: string; requestId: string; runId: string; reasoningEffort?: "fast" | "balanced" | "deep"; runtimeBinding?: RuntimeBinding; }): Promise<{ status: string; user_message_id: string | null; sequence_no: number | null; run_id?: string | null; run_status?: string | null }> {
     return mutateStore((data) => {
       const conv = data.conversations.find((c: any) => c.id === params.conversationId && c.user_id === params.userId && c.instance_id === params.instanceId);
       if (!conv) throw new Error("CONVERSATION_NOT_FOUND_OR_ACCESS_DENIED");
@@ -456,9 +464,11 @@ export const chatRepo = {
       if (activeRun) return { status: "CONCURRENT_RUN", user_message_id: null, sequence_no: null };
 
       const now = nowIso();
+      const runtimeBinding = params.runtimeBinding || runtimeRegistry.createBindingForInstance(undefined);
+      runtimeRegistry.getForBinding(runtimeBinding);
       const userMessage = { id: randomUUID(), conversation_id: params.conversationId, instance_id: params.instanceId, role: "user", content: params.content, status: "pending", sequence_no: nextSequence(data.chatMessages, params.conversationId), request_id: params.requestId, error_code: null, usage_prompt_tokens: null, usage_completion_tokens: null, usage_total_tokens: null, duration_ms: null, metadata: { run_id: params.runId }, created_at: now, updated_at: now };
       data.chatMessages.push(userMessage);
-      data.chatRuns.push({ id: params.runId, conversation_id: params.conversationId, user_id: params.userId, instance_id: params.instanceId, user_message_id: userMessage.id, status: "queued", upstream_run_id: null, dispatch_attempts: 0, request_id: params.requestId, partial_output: null, error_code: null, last_event_seq: 0, stop_attempts: 0, stop_requested_at: null, reconciled_by: null, lease_expires_at: null, reasoning_effort: params.reasoningEffort || "balanced", created_at: now, updated_at: now, started_at: null, completed_at: null, last_observed_at: null });
+      data.chatRuns.push({ id: params.runId, conversation_id: params.conversationId, user_id: params.userId, instance_id: params.instanceId, user_message_id: userMessage.id, status: "queued", upstream_run_id: null, dispatch_attempts: 0, request_id: params.requestId, partial_output: null, error_code: null, last_event_seq: 0, stop_attempts: 0, stop_requested_at: null, reconciled_by: null, lease_expires_at: null, reasoning_effort: params.reasoningEffort || "balanced", runtime_type: runtimeBinding.runtimeType, runtime_provider_key: runtimeBinding.providerKey, runtime_contract_version: runtimeBinding.contractVersion, created_at: now, updated_at: now, started_at: null, completed_at: null, last_observed_at: null });
       Object.assign(conv, { updated_at: now, last_message_at: now });
       return { status: "success", user_message_id: userMessage.id, sequence_no: userMessage.sequence_no };
     });
@@ -546,6 +556,10 @@ export const chatRepo = {
   },
 
   async updateChatRun(runId: string, updates: any, reconcilerId?: string): Promise<boolean> {
+    if (!updates || typeof updates !== "object"
+      || IMMUTABLE_RUN_BINDING_FIELDS.some((field) => Object.prototype.hasOwnProperty.call(updates, field))) {
+      return false;
+    }
     return mutateStore((data) => {
       const run = data.chatRuns.find((r: any) => r.id === runId);
       if (!run) return false;

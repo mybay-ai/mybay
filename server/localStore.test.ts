@@ -79,12 +79,19 @@ describe("local SQLite store", () => {
     before.close();
 
     const migrated = readStore().chatRuns[0];
-    expect(migrated).toMatchObject({ id: "run-old", status: "completed", preserved: "yes" });
+    expect(migrated).toMatchObject({
+      id: "run-old",
+      status: "completed",
+      preserved: "yes",
+      runtime_type: "hermes",
+      runtime_provider_key: "hermes-core",
+      runtime_contract_version: 1,
+    });
     expect(Object.prototype.hasOwnProperty.call(migrated, "node_id")).toBe(false);
     closeLocalDatabase();
 
     const verified = new DatabaseSync(sqlitePath);
-    expect((verified.prepare("SELECT value FROM localMetadata WHERE key = ?").get("schema_version") as { value: string }).value).toBe("5");
+    expect((verified.prepare("SELECT value FROM localMetadata WHERE key = ?").get("schema_version") as { value: string }).value).toBe("6");
     expect(JSON.parse((verified.prepare("SELECT data FROM chatRuns WHERE id = ?").get("run-old") as { data: string }).data)).toEqual(migrated);
     verified.close();
 

@@ -18,6 +18,7 @@ import {
   resolveInstanceRunAuthority,
 } from "../../../services/instances/resourceAuthorityService";
 import { authorityActorFromRequest, sendAuthorityFailure } from "../../../services/instances/resourceAuthorityHttp";
+import { runtimeRegistry } from "../../../runtime/runtimeRegistry";
 
 export function requireInteractiveRunsEnabled(_req: AuthenticatedRequest, res: Response, next: NextFunction) {
   if (!isInteractiveRunsEnabled()) {
@@ -175,7 +176,8 @@ export function registerRunRoutes(router: Router) {
         content: content.trim(),
         requestId: requestId.trim(),
         runId,
-        reasoningEffort: normalizedReasoningEffort
+        reasoningEffort: normalizedReasoningEffort,
+        runtimeBinding: runtimeRegistry.createBindingForInstance(instance),
       });
 
 

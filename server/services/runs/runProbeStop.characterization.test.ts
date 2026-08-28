@@ -41,6 +41,9 @@ function runningRun(overrides: Record<string, unknown> = {}) {
     created_at: new Date(Date.now() - 1_000).toISOString(),
     last_event_seq: 0,
     partial_output: "",
+    runtime_type: "hermes",
+    runtime_provider_key: "hermes-core",
+    runtime_contract_version: 1,
     ...overrides,
   };
 }
@@ -76,6 +79,18 @@ afterEach(() => {
 });
 
 describe("running probe characterization", () => {
+  it("fails an invalid Runtime Binding before any upstream request", async () => {
+    const finish = prepareRepository();
+
+    await processSingleRun(runningRun({ runtime_provider_key: "unknown-core" }), new Set());
+
+    expect(requestTraefikInternal).not.toHaveBeenCalled();
+    expect(finish).toHaveBeenCalledWith(expect.objectContaining({
+      status: "failed",
+      errorCode: "UNSUPPORTED_RUNTIME_BINDING",
+    }));
+  });
+
   it("persists heartbeat before terminalizing a completed upstream run", async () => {
     const finish = prepareRepository();
     vi.mocked(requestTraefikInternal).mockResolvedValue({

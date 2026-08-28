@@ -37,6 +37,8 @@ export interface RuntimeRunTransport {
  */
 export interface RuntimeDriver {
   readonly runtimeType: RuntimeType;
+  readonly providerKey: string;
+  readonly contractVersion: number;
   readonly capabilities: RuntimeCapabilityDescriptor;
   readonly runs: RuntimeRunTransport;
 }

@@ -30,6 +30,9 @@ function queuedRun() {
     user_id: "user-1",
     last_event_seq: 0,
     partial_output: "",
+    runtime_type: "hermes",
+    runtime_provider_key: "hermes-core",
+    runtime_contract_version: 1,
   };
 }
 

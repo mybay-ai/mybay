@@ -46,6 +46,9 @@ const claimedRun = (status: string, overrides: Record<string, unknown> = {}) => 
   dispatch_attempts: 0,
   partial_output: "",
   last_event_seq: 0,
+  runtime_type: "hermes",
+  runtime_provider_key: "hermes-core",
+  runtime_contract_version: 1,
   created_at: new Date().toISOString(),
   ...overrides
 });

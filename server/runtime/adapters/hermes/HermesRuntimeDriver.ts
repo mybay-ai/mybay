@@ -17,6 +17,8 @@ export const HERMES_RUNTIME_CAPABILITIES: RuntimeCapabilityDescriptor = Object.f
 
 export const hermesRuntimeDriver: RuntimeDriver = Object.freeze({
   runtimeType: "hermes",
+  providerKey: "hermes-core",
+  contractVersion: 1,
   capabilities: HERMES_RUNTIME_CAPABILITIES,
   runs: Object.freeze({
     request: (options: RuntimeRequestOptions) => {

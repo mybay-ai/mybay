@@ -18,7 +18,8 @@ function createDatabase() {
   temporaryPaths.push(root);
   const file = path.join(root, "mybay.sqlite");
   const db = new DatabaseSync(file);
-  db.exec("PRAGMA journal_mode=WAL; CREATE TABLE localMetadata(key TEXT PRIMARY KEY, value TEXT); INSERT INTO localMetadata VALUES ('schema_version', '5'); CREATE TABLE sample(value TEXT); INSERT INTO sample VALUES ('durable');");
+  db.exec("PRAGMA journal_mode=WAL; CREATE TABLE localMetadata(key TEXT PRIMARY KEY, value TEXT); CREATE TABLE sample(value TEXT); INSERT INTO sample VALUES ('durable');");
+  db.prepare("INSERT INTO localMetadata VALUES ('schema_version', ?)").run(String(schemaVersion.current));
   db.close();
   return { root, file };
 }
@@ -46,8 +47,8 @@ describe("self-host backup operations", () => {
     const source = createDatabase();
     const output = path.join(source.root, "backup");
     const result = await createBackup({ database: source.file, output });
-    expect(result.manifest.schemaVersion).toBe(5);
-    expect(verifyBackup({ backup: output })).toMatchObject({ ok: true, schemaVersion: 5 });
+    expect(result.manifest.schemaVersion).toBe(schemaVersion.current);
+    expect(verifyBackup({ backup: output })).toMatchObject({ ok: true, schemaVersion: schemaVersion.current });
   });
 
   it("rejects a backup whose database checksum no longer matches", async () => {

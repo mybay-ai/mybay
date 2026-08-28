@@ -104,6 +104,7 @@ export function sanitizeRunErrorCode(rawError: unknown): string {
     "CONVERSATION_NOT_FOUND",
     "RUN_NOT_FOUND",
     "FILE_NOT_FOUND",
+    "UNSUPPORTED_RUNTIME_BINDING",
   ];
 
   if (whitelist.includes(upper)) return upper;

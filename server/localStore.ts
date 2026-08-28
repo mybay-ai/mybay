@@ -286,6 +286,24 @@ function applySchemaMigrations(db: DatabaseSync) {
       }
       version = 5;
     }
+    if (version < 6) {
+      const rows = db.prepare("SELECT id, data FROM chatRuns").all() as Array<{ id: string; data: string }>;
+      const update = db.prepare("UPDATE chatRuns SET data = ? WHERE id = ?");
+      for (const runRow of rows) {
+        const data = JSON.parse(runRow.data);
+        if (!data || typeof data !== "object") continue;
+        const bindingFields = ["runtime_type", "runtime_provider_key", "runtime_contract_version"];
+        const isLegacyUnboundRun = bindingFields.every((field) => !Object.prototype.hasOwnProperty.call(data, field));
+        if (!isLegacyUnboundRun) continue;
+        Object.assign(data, {
+          runtime_type: "hermes",
+          runtime_provider_key: "hermes-core",
+          runtime_contract_version: 1,
+        });
+        update.run(JSON.stringify(data), runRow.id);
+      }
+      version = 6;
+    }
     db.prepare("INSERT OR REPLACE INTO localMetadata (key, value) VALUES (?, ?)").run("schema_version", String(version));
     db.exec("COMMIT");
   } catch (error) {

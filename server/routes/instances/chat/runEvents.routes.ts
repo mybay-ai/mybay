@@ -51,7 +51,7 @@ export function registerRunEventRoutes(router: Router) {
           resolve_all: req.body?.resolveAll === true || req.body?.all === true
         },
         timeoutMs: 10000
-      });
+      }, run);
 
       if (!approvalResult.ok) {
         return res.status(approvalResult.statusCode || 502).json({
