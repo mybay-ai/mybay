@@ -51,7 +51,6 @@ import {
   createRunSseStreamController,
   type CachedRunEvent,
 } from "./runs/runEventLifecycle";
-import { createRunHermesEventInterpreter } from "./runs/runHermesEventInterpreter";
 import {
   type RunsRequestOptions,
   type RunsRequestResult,
@@ -83,8 +82,10 @@ import { runtimeRegistry } from "../runtime/runtimeRegistry";
 import type {
   PersistedRuntimeBindingSubject,
   RuntimeDriver,
+  RuntimeRunEventController,
   RuntimeRunPreparationController,
   RuntimeSessionBinding,
+  RuntimeRunTerminalOutcome,
 } from "../runtime/contracts";
 import { toHermesReasoningModelOptions } from "../runtime/adapters/hermes/HermesRunPreparation";
 
@@ -183,14 +184,25 @@ function createRuntimeRunPreparation(driver: RuntimeDriver): RuntimeRunPreparati
     systemPolicy: MANAGED_OPERATION_SYSTEM_POLICY
   });
 }
-const runHermesEventInterpreter = createRunHermesEventInterpreter({
-  addEvent: (runId, event, data, ownerId) => addEventToCache(runId, event, data, ownerId),
-  completeTerminal: (run, event, upstreamRunId) => completeRunFromHermesEvent(run, event, upstreamRunId),
-  requestReconcile: () => requestRunsReconcile(),
-  warn: (message, detail) => console.warn(message, detail),
-  randomUUID: () => crypto.randomUUID(),
-  now: () => Date.now()
-});
+const runtimeRunEventControllers = new Map<string, RuntimeRunEventController>();
+
+function getRuntimeRunEventController(driver: RuntimeDriver): RuntimeRunEventController {
+  const key = `${driver.runtimeType}:${driver.providerKey}:${driver.contractVersion}`;
+  const existing = runtimeRunEventControllers.get(key);
+  if (existing) return existing;
+
+  const controller = driver.events.createController({
+    addEvent: (runId, event, data, ownerId) => addEventToCache(runId, event, data, ownerId),
+    completeTerminal: (run, outcome, upstreamRunId) =>
+      completeRunFromRuntimeEvent(run, outcome, upstreamRunId),
+    requestReconcile: () => requestRunsReconcile(),
+    warn: (message, detail) => console.warn(message, detail),
+    randomUUID: () => crypto.randomUUID(),
+    now: () => Date.now(),
+  });
+  runtimeRunEventControllers.set(key, controller);
+  return controller;
+}
 const runSseStreamController = createRunSseStreamController();
 const runEventCacheController = createRunEventCacheController({
   persistSequence: (runId, sequence, ownerId) =>
@@ -200,7 +212,7 @@ const runEventCacheController = createRunEventCacheController({
   },
   onClear: (runId) => {
     runSseStreamController.clear(runId);
-    runHermesEventInterpreter.clear(runId);
+    for (const controller of runtimeRunEventControllers.values()) controller.clear(runId);
   },
   warn: (message) => console.warn(message),
   now: () => Date.now(),
@@ -288,19 +300,15 @@ export function clearEventsCache(runId: string) {
   runEventCacheController.clear(runId);
 }
 
-export async function completeRunFromHermesEvent(run: any, event: any, upstreamRunId: string): Promise<boolean> {
-  if (!run || !event || !/^[A-Za-z0-9_.-]{1,128}$/.test(upstreamRunId || "")) return false;
-  const eventType = String(event.event || event.type || "");
-  const tracker = runHermesEventInterpreter.get(run.id);
-  const durationMs = Number.isFinite(Number(event.duration_ms)) ? Number(event.duration_ms) : null;
+export async function completeRunFromRuntimeEvent(
+  run: any,
+  outcome: RuntimeRunTerminalOutcome,
+  upstreamRunId: string,
+): Promise<boolean> {
+  if (!run || !outcome || !/^[A-Za-z0-9_.-]{1,128}$/.test(upstreamRunId || "")) return false;
 
-  if (["run.completed", "run.complete"].includes(eventType)) {
-    const finalContent = typeof event.output === "string"
-      ? event.output
-      : typeof event.output?.message?.content === "string"
-        ? event.output.message.content
-        : tracker?.lastPartialOutput || "";
-    return completeRun(run.id, "completed", finalContent, undefined, event.usage, durationMs, {
+  if (outcome.status === "completed") {
+    return completeRun(run.id, "completed", outcome.assistantContent, undefined, outcome.usage, outcome.durationMs, {
       expectedUpstreamRunId: upstreamRunId,
       runSnapshot: {
         ...run,
@@ -310,29 +318,30 @@ export async function completeRunFromHermesEvent(run: any, event: any, upstreamR
     });
   }
 
-  if (["run.failed", "run.error"].includes(eventType)) {
-    const upstreamError = event.error || event.message || event.error_code || "RUN_FAILED_UPSTREAM";
-    if (!tracker?.lastPartialOutput && isStreamingDecoderCompatError(upstreamError)) {
-      requestRunsReconcile();
-      return false;
-    }
-    return completeRun(run.id, "failed", "", String(upstreamError), event.usage, durationMs, { expectedUpstreamRunId: upstreamRunId });
+  if (outcome.status === "failed") {
+    return completeRun(run.id, "failed", "", outcome.errorCode, outcome.usage, outcome.durationMs, {
+      expectedUpstreamRunId: upstreamRunId,
+    });
   }
 
-  if (["run.cancelled", "run.canceled"].includes(eventType)) {
-    return completeRun(run.id, "cancelled", "", "CANCELLED_UPSTREAM", event.usage, durationMs, { expectedUpstreamRunId: upstreamRunId });
-  }
-  return false;
+  return completeRun(run.id, "cancelled", "", outcome.errorCode, outcome.usage, outcome.durationMs, {
+    expectedUpstreamRunId: upstreamRunId,
+  });
 }
 
-export function handleHermesRunEvent(run: any, event: any, upstreamRunId = String(event?.run_id || "")) {
-  runHermesEventInterpreter.handle(run, event, upstreamRunId);
+export function handleRuntimeRunEvent(
+  driver: RuntimeDriver,
+  run: any,
+  event: unknown,
+  upstreamRunId = String((event as any)?.run_id || ""),
+) {
+  getRuntimeRunEventController(driver).handle(run, event, upstreamRunId);
 }
 function ensureUpstreamRunEventStream(run: any, upstreamRunId: string, driver: RuntimeDriver) {
   runSseStreamController.ensure(
     run.id,
     (signal, onChunk) => driver.runs.streamEvents(run.instance_id, upstreamRunId, signal, onChunk),
-    (event) => handleHermesRunEvent(run, event, upstreamRunId),
+    (event) => handleRuntimeRunEvent(driver, run, event, upstreamRunId),
   );
 }
 
@@ -556,9 +565,10 @@ export async function processSingleRun(run: any, leaseLostRuns: Set<string>) {
   const requestRunsForRun = (options: RunsRequestOptions) => requestRuntimeRunsAPI(runtimeDriver, options);
   const completeRunViaNonStreamingChat = createNonStreamingChatExecutor(requestRunsForRun);
   const runPreparation = createRuntimeRunPreparation(runtimeDriver);
+  const runEvents = getRuntimeRunEventController(runtimeDriver);
 
   // Retrieve or initialize incremental tracker
-  const tracker = runHermesEventInterpreter.getOrCreate(run.id, run.partial_output);
+  const tracker = runEvents.getOrCreate(run.id, run.partial_output);
 
   if (status === "queued") {
     if (!run.upstream_run_id) {
@@ -833,8 +843,8 @@ export async function processSingleRun(run: any, leaseLostRuns: Set<string>) {
         const dispatchActive = await handleDispatchRecordResult(run, recordRes, upstreamId, leaseLostRuns, runtimeDriver);
         if (dispatchActive && canRecoverApprovalInteractions(runtimeDriver.capabilities)) {
           publishPendingRuntimeInteractions(run, dispatchRes.json, "immediate_post_dispatch", {
-            getTracker: (runId, initialPartialOutput) => runHermesEventInterpreter.getOrCreate(runId, initialPartialOutput),
-            consume: (target, event) => runHermesEventInterpreter.handle(target, event, upstreamId),
+            getTracker: (runId, initialPartialOutput) => runEvents.getOrCreate(runId, initialPartialOutput),
+            consume: (target, event) => runEvents.handle(target, event, upstreamId),
             log: (entry) => console.log(JSON.stringify(entry)),
           });
         }
@@ -937,8 +947,8 @@ export async function processSingleRun(run: any, leaseLostRuns: Set<string>) {
 
       if (canRecoverApprovalInteractions(runtimeDriver.capabilities)) {
         publishPendingRuntimeInteractions(run, statusRes.json, "status_probe", {
-          getTracker: (runId, initialPartialOutput) => runHermesEventInterpreter.getOrCreate(runId, initialPartialOutput),
-          consume: (target, event) => runHermesEventInterpreter.handle(target, event, run.upstream_run_id),
+          getTracker: (runId, initialPartialOutput) => runEvents.getOrCreate(runId, initialPartialOutput),
+          consume: (target, event) => runEvents.handle(target, event, run.upstream_run_id),
           log: (entry) => console.log(JSON.stringify(entry)),
         });
       }
@@ -1018,7 +1028,7 @@ export async function processSingleRun(run: any, leaseLostRuns: Set<string>) {
         const steps = statusRes.json.steps || statusRes.json.tool_steps || [];
         if (Array.isArray(steps)) {
           for (const step of steps) {
-            runHermesEventInterpreter.emitStep(run.id, tracker, step, RECONCILER_ID);
+            runEvents.emitStep(run.id, tracker, step, RECONCILER_ID);
           }
         }
         // Save progress to database

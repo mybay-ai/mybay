@@ -1,38 +1,53 @@
 import { describe, expect, it, vi } from "vitest";
-import { createRunHermesEventInterpreter } from "./runHermesEventInterpreter";
+import { hermesRunEventProvider } from "./HermesRunEvents";
 
 function createHarness(completeTerminal = vi.fn(async () => true)) {
   const events: Array<{ runId: string; event: string; data: string; ownerId?: string }> = [];
   const requestReconcile = vi.fn();
   const warn = vi.fn();
   let uuidSequence = 0;
-  const interpreter = createRunHermesEventInterpreter({
+  const interpreter = hermesRunEventProvider.createController({
     addEvent: (runId, event, data, ownerId) => events.push({ runId, event, data, ownerId }),
     completeTerminal,
     requestReconcile,
     warn,
     randomUUID: () => `uuid-${++uuidSequence}`,
-    now: () => 1_700_000_000_000
+    now: () => 1_700_000_000_000,
   });
   return { interpreter, events, completeTerminal, requestReconcile, warn };
 }
 
-describe("runHermesEventInterpreter", () => {
+describe("HermesRunEventProvider", () => {
   it("owns tracker creation and cleanup without replacing an existing tracker", () => {
     const { interpreter } = createHarness();
     const tracker = interpreter.getOrCreate("run-1", "initial");
-
     expect(interpreter.getOrCreate("run-1", "replacement")).toBe(tracker);
     expect(tracker.lastPartialOutput).toBe("initial");
-
     interpreter.clear("run-1");
     expect(interpreter.get("run-1")).toBeUndefined();
+  });
+
+  it("normalizes terminal completion before committing it", async () => {
+    const { interpreter, completeTerminal } = createHarness();
+    const run = { id: "run-1", partial_output: "fallback" };
+    interpreter.getOrCreate(run.id, run.partial_output);
+
+    await expect(interpreter.completeTerminalEvent(
+      run,
+      { event: "run.completed", duration_ms: 42 },
+      "upstream-1",
+    )).resolves.toBe(true);
+    expect(completeTerminal).toHaveBeenCalledWith(run, {
+      status: "completed",
+      assistantContent: "fallback",
+      usage: undefined,
+      durationMs: 42,
+    }, "upstream-1");
   });
 
   it("creates a safe step id for an unmatched tool completion", () => {
     const { interpreter, events } = createHarness();
     interpreter.handle({ id: "run-1" }, { event: "tool.completed", tool: "search" });
-
     const step = JSON.parse(events[0].data);
     expect(step.id).toBe("step-uuid-1");
     expect(step.status).toBe("completed");
@@ -42,15 +57,14 @@ describe("runHermesEventInterpreter", () => {
     const { interpreter, events } = createHarness();
     interpreter.handle(
       { id: "run-1" },
-      { event: "approval.request", approval_id: "invalid id", choices: ["invalid"] }
+      { event: "approval.request", approval_id: "invalid id", choices: ["invalid"] },
     );
-
     const approval = JSON.parse(events[0].data);
     expect(approval).toMatchObject({
       id: "approval-uuid-1",
       status: "pending",
       choices: ["once", "deny"],
-      timestamp: 1_700_000_000
+      timestamp: 1_700_000_000,
     });
     expect(JSON.parse(events[1].data)).toEqual({ status: "waiting_for_approval" });
   });
@@ -64,22 +78,19 @@ describe("runHermesEventInterpreter", () => {
   });
 
   it("requests reconciliation when immediate terminal handling rejects", async () => {
-    const terminalError = new Error("terminal write failed");
     const { interpreter, completeTerminal, requestReconcile, warn } = createHarness(
-      vi.fn(async () => { throw terminalError; })
+      vi.fn(async () => { throw new Error("terminal write failed"); }),
     );
-
     interpreter.handle({ id: "run-1" }, { event: "run.failed", run_id: "upstream-1" });
     await vi.waitFor(() => expect(requestReconcile).toHaveBeenCalledOnce());
-
     expect(completeTerminal).toHaveBeenCalledWith(
       { id: "run-1" },
-      { event: "run.failed", run_id: "upstream-1" },
-      "upstream-1"
+      expect.objectContaining({ status: "failed", errorCode: "RUN_FAILED_UPSTREAM" }),
+      "upstream-1",
     );
     expect(warn).toHaveBeenCalledWith(
       "[RunsReconciler] Immediate terminal handling failed for run run-1:",
-      "terminal write failed"
+      "terminal write failed",
     );
   });
 });

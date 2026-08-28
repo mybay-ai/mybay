@@ -1,4 +1,4 @@
-import type { RunEventTracker } from "./runHermesEventInterpreter";
+import type { RuntimeRunEventTracker } from "../../runtime/contracts";
 
 type InteractionSource = "immediate_post_dispatch" | "status_probe";
 
@@ -9,7 +9,7 @@ export interface PendingInteractionTarget {
 }
 
 export interface PendingInteractionRecoveryDependencies {
-  getTracker(runId: string, initialPartialOutput?: unknown): RunEventTracker;
+  getTracker(runId: string, initialPartialOutput?: unknown): RuntimeRunEventTracker;
   consume(run: PendingInteractionTarget, event: Record<string, unknown>): void;
   log?(entry: Record<string, unknown>): void;
 }

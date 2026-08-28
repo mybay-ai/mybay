@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { chatRepo } from "../repositories/chatRepo";
 import { dbAdapter } from "../db";
-import { completeRunFromHermesEvent, processSingleRun, requestRunsReconcile, startRunsReconciler, stopRunsReconciler, toHermesReasoningModelOptions } from "./runsReconciler";
+import { completeRunFromRuntimeEvent, processSingleRun, requestRunsReconcile, startRunsReconciler, stopRunsReconciler, toHermesReasoningModelOptions } from "./runsReconciler";
 
 describe("runs reconciler timer lifecycle", () => {
   afterEach(() => {
@@ -60,7 +60,7 @@ describe("runs reconciler timer lifecycle", () => {
     });
   });
 
-  it("finishes directly from a terminal Hermes event using upstream identity", async () => {
+  it("finishes directly from a normalized Runtime event using upstream identity", async () => {
     const finish = vi.spyOn(chatRepo, "finishChatRun").mockResolvedValue({
       status: "success",
       assistant_message_id: "assistant-1",
@@ -72,9 +72,9 @@ describe("runs reconciler timer lifecycle", () => {
       upstream_run_id: "upstream-1",
     } as any);
 
-    await completeRunFromHermesEvent(
+    await completeRunFromRuntimeEvent(
       { id: "run-1", partial_output: "" },
-      { event: "run.completed", output: "done" },
+      { status: "completed", assistantContent: "done" },
       "upstream-1"
     );
 

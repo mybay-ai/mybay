@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import { publishPendingRuntimeInteractions } from "./runPendingInteractionRecovery";
-import type { RunEventTracker } from "./runHermesEventInterpreter";
+import type { RuntimeRunEventTracker } from "../../runtime/contracts";
 
 function harness() {
-  const tracker: RunEventTracker = { lastPartialOutput: "", sentSteps: new Map(), activeToolIds: new Map() };
+  const tracker: RuntimeRunEventTracker = { lastPartialOutput: "", sentSteps: new Map(), activeToolIds: new Map() };
   return {
     tracker,
     consume: vi.fn(),
