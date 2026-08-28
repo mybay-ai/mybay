@@ -21,6 +21,15 @@ describe("quick deployment validation", () => {
     expect(validateQuickDeployDraft(draft)).toContainEqual(expect.objectContaining({ code: "apiKeyRequired" }));
     draft.modelStrategy = { mode: "byok", provider: "openai-codex", model: "gpt-5.5" };
     expect(validateQuickDeployDraft(draft)).not.toContainEqual(expect.objectContaining({ code: "apiKeyRequired" }));
+    expect(validateQuickDeployDraft(draft)).toContainEqual(expect.objectContaining({ code: "oauthCredentialRequired" }));
+  });
+
+  it("accepts completed OpenAI and xAI OAuth credentials", () => {
+    const draft = validDraft();
+    draft.modelStrategy = { mode: "saved_credential", credentialId: "oauth-openai", provider: "openai-codex", model: "gpt-5.5" };
+    expect(validateQuickDeployDraft(draft)).toEqual([]);
+    draft.modelStrategy = { mode: "saved_credential", credentialId: "oauth-xai", provider: "xai-oauth", model: "grok-4.5" };
+    expect(validateQuickDeployDraft(draft)).toEqual([]);
   });
 
   it("fails closed and routes unsupported runtime, channels, and sensitive skills to advanced setup", () => {

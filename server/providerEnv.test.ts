@@ -35,10 +35,12 @@ describe("Hermes provider compatibility", () => {
 
   it("accepts the runtime-native OAuth providers without inventing API-key variables", () => {
     for (const provider of ["openai-codex", "xai-oauth"]) {
-      const result = buildHermesModelConfig({ provider, model: "test-model" });
+      const result = buildHermesModelConfig({ provider, model: "test-model", apiKey: "structured-oauth-payload" });
       expect(result.hermesProvider).toBe(provider);
       expect(result.apiKeyEnvName).toBe("");
       expect(result.envVars.HERMES_API_KEY_ENV_NAME).toBeUndefined();
+      expect(result.envVars[""]).toBeUndefined();
+      expect(result.envVars.PROVIDER_API_KEY).toBeUndefined();
       expect(VALID_HERMES_PROVIDERS.has(result.hermesProvider)).toBe(true);
     }
   });

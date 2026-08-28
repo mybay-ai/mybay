@@ -27,6 +27,9 @@ export function validateQuickDeployDraft(draft: QuickDeployDraft): QuickDeployVa
   if (strategy?.mode === "saved_credential" && !strategy.credentialId?.trim()) {
     issues.push({ code: "savedCredentialRequired", field: "modelStrategy.credentialId" });
   }
+  if (config?.authMode === "oauth-device-code" && strategy?.mode !== "saved_credential") {
+    issues.push({ code: "oauthCredentialRequired", field: "modelStrategy.credentialId" });
+  }
   if (strategy?.mode === "byok" && config?.requiresApiKey && !strategy.apiKey?.trim()) {
     issues.push({ code: "apiKeyRequired", field: "modelStrategy.apiKey" });
   }

@@ -14,6 +14,7 @@ import type { QuickDeployDraft, QuickDeployValidationIssue } from "./quickDeploy
 import { validateQuickDeployDraft } from "./quickDeployValidation";
 import { requiresPredeployModelTest } from "./deployStepValidation";
 import { QuickDeployDelivery } from "./QuickDeployDelivery";
+import { useProviderOAuth } from "./useProviderOAuth";
 
 interface QuickDeployPageProps {
   currentUser: any;
@@ -49,6 +50,7 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
 
   const strategy = draft.modelStrategy;
   const providerConfig = providerRegistry[strategy.provider];
+  const isOAuthProvider = providerConfig?.authMode === "oauth-device-code";
   const modelNeedsTest = requiresPredeployModelTest(strategy.provider);
   const validationIssues = useMemo(() => validateQuickDeployDraft(draft), [draft]);
   const visibleIssues = submitted ? validationIssues : [];
@@ -66,6 +68,30 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
     setModelTest("idle");
     setModelTestMessage("");
   };
+
+  const oauth = useProviderOAuth({
+    provider: strategy.provider,
+    enabled: isOAuthProvider,
+    onComplete: (credential, refreshed) => {
+      setCredentials(refreshed);
+      const provider = resolveProviderRegistryKey(credential.provider || credential.type, undefined, credential.baseUrl);
+      const config = providerRegistry[provider];
+      setDraft((current) => ({
+        ...current,
+        permissionConfirmed: false,
+        modelStrategy: {
+          mode: "saved_credential",
+          credentialId: credential.id,
+          provider,
+          model: config?.defaultModel || current.modelStrategy.model,
+          baseUrl: credential.baseUrl || config?.defaultBaseUrl,
+          isCustomModel: credential.isCustom,
+        },
+      }));
+      setModelTest("idle");
+      setModelTestMessage("");
+    },
+  });
 
   useEffect(() => {
     let active = true;
@@ -264,10 +290,30 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
             </div>
             {strategy.mode === "saved_credential" ? (
               <div><Label>{t("quickDeploy.model.credential")}</Label><select value={strategy.credentialId} onChange={(event) => selectCredential(event.target.value)} className="mt-2 h-11 w-full rounded-lg border border-outline bg-control px-3 text-sm text-content">{credentials.map((credential) => <option key={credential.id} value={credential.id}>{credential.name} ({credential.type})</option>)}</select></div>
-            ) : (
+            ) : !isOAuthProvider ? (
               <div><Label>{t("quickDeploy.model.apiKey")}</Label><Input type="password" autoComplete="new-password" value={strategy.apiKey || ""} onChange={(event) => updateStrategy({ apiKey: event.target.value })} /></div>
+            ) : null}
+            <div><Label>{t("quickDeploy.model.provider")}</Label><ProviderSelect className="mt-2" value={strategy.provider} onValueChange={selectProvider} includeOAuth disabled={strategy.mode === "saved_credential" || oauth.loading} /></div>
+            {isOAuthProvider && (
+              <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-4 text-sm text-blue-900 dark:border-blue-400/30 dark:bg-blue-400/10 dark:text-blue-100">
+                <div className="flex items-start gap-3">
+                  <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <p className="font-semibold">{t("wizardCopy.model.oauthConnectTitle")}</p>
+                    <p className="text-xs leading-5 opacity-80">{t("wizardCopy.model.oauthConnectDescription")}</p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button type="button" onClick={oauth.connect} disabled={oauth.loading || strategy.mode === "saved_credential"}>
+                        {oauth.loading ? t("wizardCopy.model.oauthConnecting") : strategy.mode === "saved_credential" ? t("wizardCopy.model.oauthConnected") : t("wizardCopy.model.oauthConnect")}
+                      </Button>
+                      {oauth.loading && <Button type="button" variant="outline" onClick={() => oauth.cancel()}>{t("wizardCopy.model.oauthCancel")}</Button>}
+                    </div>
+                    {oauth.session?.userCode && <p className="font-mono text-xs">{t("wizardCopy.model.oauthCode")}: {oauth.session.userCode}</p>}
+                    {oauth.error && <p role="alert" className="text-xs text-red-700 dark:text-red-300">{oauth.error}</p>}
+                    {strategy.provider === "xai-oauth" && <p className="text-xs text-amber-700 dark:text-amber-300">{t("wizardCopy.model.xaiOAuthTierNotice")}</p>}
+                  </div>
+                </div>
+              </div>
             )}
-            <div><Label>{t("quickDeploy.model.provider")}</Label><ProviderSelect className="mt-2" value={strategy.provider} onValueChange={selectProvider} includeOAuth={false} disabled={strategy.mode === "saved_credential"} /></div>
             <div><Label>{t("quickDeploy.model.model")}</Label>{providerConfig?.models?.length && !strategy.isCustomModel ? <select value={strategy.model} onChange={(event) => updateStrategy({ model: event.target.value })} className="mt-2 h-11 w-full rounded-lg border border-outline bg-control px-3 text-sm text-content">{providerConfig.models.map((model) => <option key={model} value={model}>{model}</option>)}</select> : <Input value={strategy.model} onChange={(event) => updateStrategy({ model: event.target.value })} />}</div>
             {(strategy.provider === "custom-openai-compatible" || strategy.isCustomModel) && <div><Label>{t("quickDeploy.model.baseUrl")}</Label><Input value={strategy.baseUrl || ""} onChange={(event) => updateStrategy({ baseUrl: event.target.value })} /></div>}
             {modelNeedsTest && <Button type="button" variant="outline" onClick={testModel} disabled={modelTest === "testing" || optionsLoading}>{modelTest === "testing" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}{modelTest === "passed" ? t("quickDeploy.model.testPassed") : t("quickDeploy.model.test")}</Button>}

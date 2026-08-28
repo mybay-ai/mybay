@@ -19,6 +19,7 @@ vi.mock("../../../repositories/chatRepo", () => ({
 }));
 
 import { hermesRuntimeDriver } from "./HermesRuntimeDriver";
+import { HERMES_CONVERSATION_EFFICIENCY_POLICY } from "./HermesSessionContext";
 
 const preparation = hermesRuntimeDriver.preparation.createController({
   request: (options) => hermesRuntimeDriver.runs.request(options),
@@ -66,7 +67,7 @@ describe("Hermes session context characterization", () => {
   });
 
   it("uses current input only for an existing session when history deduplication is enabled", () => {
-    expect(preparation.buildRunPayload({
+    const payload = preparation.buildRunPayload({
       userContent: "question",
       agentAttachmentContext: "attachment context",
       sessionBinding: { sessionId: "native-session", state: "existing" },
@@ -74,19 +75,22 @@ describe("Hermes session context characterization", () => {
       deduplicateHistoryEnabled: true,
       reasoningEffort: "deep",
       systemPolicy: "managed policy"
-    })).toEqual({
+    });
+
+    expect(payload).toEqual({
       input: "question\n\nattachment context",
-      instructions: "managed policy",
+      instructions: expect.stringContaining("managed policy"),
       session_id: "native-session",
       model_options: {
         reasoning_effort: "high",
         reasoning: { enabled: true, effort: "high" }
       }
     });
+    expect(payload.instructions).toContain(HERMES_CONVERSATION_EFFICIENCY_POLICY);
   });
 
   it("filters the current message and builds ordered full history for fallback sessions", () => {
-    expect(preparation.buildRunPayload({
+    const payload = preparation.buildRunPayload({
       userContent: "current question",
       currentUserMessageId: "message-current",
       currentRequestId: "request-current",
@@ -99,17 +103,22 @@ describe("Hermes session context characterization", () => {
       deduplicateHistoryEnabled: true,
       reasoningEffort: "fast",
       systemPolicy: "managed policy"
-    })).toEqual({
+    });
+
+    expect(payload).toEqual({
       input: [
-        { role: "system", content: "managed policy" },
+        { role: "system", content: expect.stringContaining("managed policy") },
         { role: "assistant", content: "old answer" },
         { role: "user", content: "current question" }
       ],
+      instructions: expect.stringContaining("managed policy"),
       session_id: "fallback-session",
       model_options: {
         reasoning_effort: "low",
         reasoning: { enabled: true, effort: "low" }
       }
     });
+    expect(payload.instructions).toBe((payload.input as Array<{ role: string; content: string }>)[0].content);
+    expect(payload.instructions).toContain(HERMES_CONVERSATION_EFFICIENCY_POLICY);
   });
 });

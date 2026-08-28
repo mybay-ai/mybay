@@ -41,6 +41,7 @@ export type QuickDeployValidationCode =
   | "modelRequired"
   | "customBaseUrlRequired"
   | "savedCredentialRequired"
+  | "oauthCredentialRequired"
   | "apiKeyRequired"
   | "permissionConfirmationRequired"
   | "skillRequiresAdvancedConfiguration";

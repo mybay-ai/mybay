@@ -21,6 +21,7 @@ import { isKnownClientRoute } from "./server/utils/clientRoutes";
 import authRouter from "./server/routes/auth";
 import systemRouter from "./server/routes/system";
 import credentialsRouter from "./server/routes/credentials";
+import oauthProvidersRouter from "./server/routes/oauthProviders";
 import { createInstancesRouter } from "./server/routes/instances";
 import { createDeploymentsRouter } from "./server/routes/deployments";
 import instanceSessionAuthRouter, { handleSessionComplete } from "./server/routes/instanceSessionAuth";
@@ -302,6 +303,7 @@ async function startServer() {
   app.use("/api/auth", authRouter);
   app.use("/api/system", authenticateToken, systemRouter);
   app.use("/api/credentials", authenticateToken, credentialsRouter);
+  app.use("/api/oauth/providers", authenticateToken, oauthProvidersRouter);
   app.use("/api/deployments", createDeploymentsRouter());
   app.use("/api/instances", authenticateToken, createInstancesRouter(io));
 

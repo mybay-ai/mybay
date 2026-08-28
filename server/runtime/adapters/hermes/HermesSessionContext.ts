@@ -9,6 +9,11 @@ import type { RuntimeRequestOptions, RuntimeRequestResult } from "../../contract
 
 export type AgentReasoningEffort = "fast" | "balanced" | "deep";
 
+export const HERMES_CONVERSATION_EFFICIENCY_POLICY = `Hermes 对话执行策略：
+- 对于能够仅根据当前消息和随请求提供的对话历史回答的问题，直接回答，不要搜索网页、读取文件、执行命令或写入用户档案。
+- “请记住”默认表示在当前对话中记住；除非用户明确要求跨会话持久保存，否则不要调用工具或写入文件、长期记忆、用户画像。
+- 只有用户明确要求操作工作区、文件、终端、网页或其他外部资源时，才调用相应工具。`;
+
 export interface HermesSessionBindingResult {
   sessionId: string;
   state: "existing" | "created" | "fallback";
@@ -135,6 +140,7 @@ export function createRunHermesSessionContextController(
       reasoningEffort = "balanced",
       systemPolicy = dependencies.systemPolicy
     } = options;
+    const effectiveSystemPolicy = `${systemPolicy.trim()}\n\n${HERMES_CONVERSATION_EFFICIENCY_POLICY}`;
 
     const userPromptWithAttachment = agentAttachmentContext
       ? `${userContent}\n\n${agentAttachmentContext}`
@@ -148,7 +154,7 @@ export function createRunHermesSessionContextController(
     if (deduplicateHistoryEnabled && sessionBinding.state === "existing") {
       return {
         input: userPromptWithAttachment,
-        instructions: systemPolicy,
+        instructions: effectiveSystemPolicy,
         session_id: sessionBinding.sessionId,
         model_options: dependencies.toReasoningModelOptions(reasoningEffort)
       };
@@ -158,11 +164,15 @@ export function createRunHermesSessionContextController(
       role: message.role,
       content: message.content
     }));
-    hermesMessages.unshift({ role: "system", content: systemPolicy });
+    hermesMessages.unshift({ role: "system", content: effectiveSystemPolicy });
     hermesMessages.push({ role: "user", content: userPromptWithAttachment });
 
     return {
       input: hermesMessages,
+      // Keep instructions explicit even while database history remains authoritative.
+      // This gives Hermes the native-session system prompt write path it needs to
+      // persist the policy and reuse the provider prefix cache on later turns.
+      instructions: effectiveSystemPolicy,
       session_id: sessionBinding.sessionId,
       model_options: dependencies.toReasoningModelOptions(reasoningEffort)
     };
