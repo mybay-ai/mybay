@@ -53,8 +53,6 @@ import {
 } from "./runs/runEventLifecycle";
 import { createRunHermesEventInterpreter } from "./runs/runHermesEventInterpreter";
 import {
-  requestHermesRunsAPI,
-  streamHermesRunEventsAPI,
   type RunsRequestOptions,
   type RunsRequestResult,
 } from "./runs/runHermesTransport";
@@ -80,13 +78,13 @@ import { publishPendingRuntimeInteractions } from "./runs/runPendingInteractionR
 import { convergeRunTerminalProbe } from "./runs/runTerminalConvergence";
 import { recoverStoppingRun } from "./runs/runStopRecovery";
 import {
-  HERMES_RUNTIME_CAPABILITIES,
   canRecoverApprovalInteractions,
   resolveConversationDispatchMode,
   resolveTerminalObservationCapability,
 } from "./runs/runtimeCapabilityConsumers";
 import { containsDsmlToolCallProtocol } from "../utils/dsmlToolCallGuard";
 import { resolveRunDispatchAuthority } from "./instances/resourceAuthorityService";
+import { runtimeRegistry } from "../runtime/runtimeRegistry";
 
 export { sanitizeStep } from "./runs/runStepSanitizer";
 export {
@@ -97,6 +95,7 @@ export {
 } from "./runs/runHermesProtocol";
 
 export const runsEventsEmitter = new EventEmitter();
+const runtimeDriver = runtimeRegistry.get("hermes");
 
 // Unique identifier for this reconciler instance to manage leases
 export const RECONCILER_ID = `reconciler-${crypto.randomUUID()}`;
@@ -339,7 +338,7 @@ export function handleHermesRunEvent(run: any, event: any, upstreamRunId = Strin
 function ensureUpstreamRunEventStream(run: any, upstreamRunId: string) {
   runSseStreamController.ensure(
     run.id,
-    (signal, onChunk) => streamHermesRunEventsAPI(run.instance_id, upstreamRunId, signal, onChunk),
+    (signal, onChunk) => runtimeDriver.runs.streamEvents(run.instance_id, upstreamRunId, signal, onChunk),
     (event) => handleHermesRunEvent(run, event, upstreamRunId),
   );
 }
@@ -350,7 +349,15 @@ function cleanupInactiveRunCaches() {
 }
 
 export async function requestRunsAPI(options: RunsRequestOptions): Promise<RunsRequestResult> {
-  return requestHermesRunsAPI(options);
+  return runtimeDriver.runs.request({
+    instanceId: options.instanceId,
+    method: options.method,
+    path: options.path,
+    body: options.body,
+    headers: options.headers,
+    timeoutMs: options.timeoutMs,
+    sessionId: options.hermesSessionId,
+  });
 }
 
 export async function createHermesSessionBinding(
@@ -670,7 +677,7 @@ export async function processSingleRun(run: any, leaseLostRuns: Set<string>) {
       addEventToCache(run.id, "status", JSON.stringify({ status: "queued" }));
 
       const dispatchInstance = await dbAdapter.getInstanceById(run.instance_id);
-      const conversationDecision = resolveConversationDispatchMode(HERMES_RUNTIME_CAPABILITIES, {
+      const conversationDecision = resolveConversationDispatchMode(runtimeDriver.capabilities, {
         preferBatch: shouldPreferNonStreamingChatForInstance(dispatchInstance),
       });
       if (conversationDecision.supported === false) {
@@ -822,7 +829,7 @@ export async function processSingleRun(run: any, leaseLostRuns: Set<string>) {
         });
 
         const dispatchActive = await handleDispatchRecordResult(run, recordRes, upstreamId, leaseLostRuns);
-        if (dispatchActive && canRecoverApprovalInteractions(HERMES_RUNTIME_CAPABILITIES)) {
+        if (dispatchActive && canRecoverApprovalInteractions(runtimeDriver.capabilities)) {
           publishPendingRuntimeInteractions(run, dispatchRes.json, "immediate_post_dispatch", {
             getTracker: (runId, initialPartialOutput) => runHermesEventInterpreter.getOrCreate(runId, initialPartialOutput),
             consume: (target, event) => runHermesEventInterpreter.handle(target, event, upstreamId),
@@ -882,7 +889,7 @@ export async function processSingleRun(run: any, leaseLostRuns: Set<string>) {
 
     ensureUpstreamRunEventStream(run, run.upstream_run_id);
 
-    const terminalObservation = resolveTerminalObservationCapability(HERMES_RUNTIME_CAPABILITIES);
+    const terminalObservation = resolveTerminalObservationCapability(runtimeDriver.capabilities);
     if (terminalObservation.supported === false) {
       await completeRun(run.id, "failed", "", terminalObservation.errorCode);
       return;
@@ -926,7 +933,7 @@ export async function processSingleRun(run: any, leaseLostRuns: Set<string>) {
         return;
       }
 
-      if (canRecoverApprovalInteractions(HERMES_RUNTIME_CAPABILITIES)) {
+      if (canRecoverApprovalInteractions(runtimeDriver.capabilities)) {
         publishPendingRuntimeInteractions(run, statusRes.json, "status_probe", {
           getTracker: (runId, initialPartialOutput) => runHermesEventInterpreter.getOrCreate(runId, initialPartialOutput),
           consume: (target, event) => runHermesEventInterpreter.handle(target, event, run.upstream_run_id),
@@ -1049,6 +1056,7 @@ export async function processSingleRun(run: any, leaseLostRuns: Set<string>) {
       markLeaseLost: (runId) => leaseLostRuns.add(runId),
       hasLeaseBeenLost: (runId) => leaseLostRuns.has(runId),
       clearEvents: clearEventsCache,
+      capabilities: runtimeDriver.capabilities,
       log: (entry) => console.log(JSON.stringify(entry)),
     });
   }

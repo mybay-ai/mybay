@@ -1,26 +1,7 @@
-export interface RuntimeCapabilityDescriptor {
-  conversation: {
-    modes: Array<"streaming" | "batch">;
-  };
-  cancellation: {
-    supported: boolean;
-    granularity?: "run" | "turn";
-  };
-  terminal: {
-    observation: "status" | "events" | "unsupported";
-  };
-  interactions: {
-    approvals: boolean;
-    questions: boolean;
-  };
-}
+import type { RuntimeCapabilityDescriptor } from "../../runtime/contracts";
 
-export const HERMES_RUNTIME_CAPABILITIES: RuntimeCapabilityDescriptor = Object.freeze({
-  conversation: { modes: ["streaming", "batch"] },
-  cancellation: { supported: true, granularity: "run" },
-  terminal: { observation: "status" },
-  interactions: { approvals: true, questions: false },
-} satisfies RuntimeCapabilityDescriptor);
+export type { RuntimeCapabilityDescriptor } from "../../runtime/contracts";
+export { HERMES_RUNTIME_CAPABILITIES } from "../../runtime/adapters/hermes/HermesRuntimeDriver";
 
 export type ConversationDispatchDecision =
   | { supported: true; mode: "streaming" | "batch" }
