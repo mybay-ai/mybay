@@ -112,8 +112,9 @@ describe("server RuntimeRegistry", () => {
 
   it("routes Reconciler transport, preparation, and capabilities through the Registry boundary", () => {
     const source = fs.readFileSync(path.join(process.cwd(), "server/services/runsReconciler.ts"), "utf8");
-    expect(source).toContain("runtimeRegistry.resolveRunBinding(run)");
-    expect(source).toContain("runtimeRegistry.getForBinding");
+    expect(source).toContain("const registry = options.runtimeRegistry || runtimeRegistry");
+    expect(source).toContain("registry.resolveRunBinding(run)");
+    expect(source).toContain("registry.getForBinding");
     expect(source).toContain("driver.runs.request");
     expect(source).toContain("driver.runs.streamEvents");
     expect(source).toContain("driver.preparation.createController");

@@ -63,7 +63,7 @@ import {
 } from "./runs/runtimeCapabilityConsumers";
 import { containsDsmlToolCallProtocol } from "../utils/dsmlToolCallGuard";
 import { resolveRunDispatchAuthority } from "./instances/resourceAuthorityService";
-import { runtimeRegistry } from "../runtime/runtimeRegistry";
+import { runtimeRegistry, type RuntimeRegistry } from "../runtime/runtimeRegistry";
 import type {
   PersistedRuntimeBindingSubject,
   RuntimeDriver,
@@ -520,7 +520,15 @@ async function handleDispatchRecordResult(
     failRun: (runId, errorCode) => completeRun(runId, "failed", "", errorCode),
   });
 }
-export async function processSingleRun(run: any, leaseLostRuns: Set<string>) {
+export interface ProcessSingleRunOptions {
+  runtimeRegistry?: Pick<RuntimeRegistry, "resolveRunBinding" | "getForBinding">;
+}
+
+export async function processSingleRun(
+  run: any,
+  leaseLostRuns: Set<string>,
+  options: ProcessSingleRunOptions = {},
+) {
   const status = run.status;
   initRunSequence(run.id, run.last_event_seq || 0);
 
@@ -533,7 +541,8 @@ export async function processSingleRun(run: any, leaseLostRuns: Set<string>) {
 
   let runtimeDriver: RuntimeDriver;
   try {
-    runtimeDriver = runtimeRegistry.getForBinding(runtimeRegistry.resolveRunBinding(run));
+    const registry = options.runtimeRegistry || runtimeRegistry;
+    runtimeDriver = registry.getForBinding(registry.resolveRunBinding(run));
   } catch (error: any) {
     logOperation("RUN_RUNTIME_BINDING_REJECTED", run.id, run.instance_id, 422, error?.code || "UNSUPPORTED_RUNTIME_BINDING");
     await completeRun(run.id, "failed", "", "UNSUPPORTED_RUNTIME_BINDING");

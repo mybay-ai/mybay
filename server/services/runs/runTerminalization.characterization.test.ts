@@ -6,6 +6,7 @@ import {
   completeRun,
   getEventsFromCache,
 } from "../runsReconciler";
+import { sanitizeRunErrorCode } from "./runTerminalization";
 
 describe("run terminalization characterization", () => {
   const runId = "terminal-run-1";
@@ -13,6 +14,14 @@ describe("run terminalization characterization", () => {
   afterEach(() => {
     clearEventsCache(runId);
     vi.restoreAllMocks();
+  });
+
+  it.each([
+    "RUNTIME_CONVERSATION_MODE_UNSUPPORTED",
+    "RUNTIME_RUN_CANCELLATION_UNSUPPORTED",
+    "RUNTIME_TERMINAL_OBSERVATION_UNSUPPORTED",
+  ])("preserves the Runtime capability contract code %s", (errorCode) => {
+    expect(sanitizeRunErrorCode(errorCode)).toBe(errorCode);
   });
 
   it("persists a completed run before publishing final events", async () => {
