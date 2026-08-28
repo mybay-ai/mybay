@@ -1,85 +1,11 @@
 import { dbAdapter } from "../db";
 import { runExecInContainer } from "./containerProbe";
 import { testTelegramBotReachable, verifyTelegramMessageAfterApproval } from "./channelProbe";
+import { GATEWAY_CONTAINER_PROBE_SCRIPT, parseGatewayContainerProbeOutput } from "./gatewayContainerProbe";
+import { hasGatewayRuntimeEvidence, resolveWeixinChannelState } from "./gatewayReadinessPolicy";
 
-export type WeixinChannelState = {
-  configured: boolean;
-  platformLoaded: boolean;
-  transportConnected: boolean;
-  authorizationRequired: boolean;
-  authorizationApproved: boolean | null;
-  status: string;
-  reason: string;
-};
-
-export function hasGatewayRuntimeEvidence(input: {
-  gatewayServices: Record<string, string>;
-  hasSuccessfulHttpProbe: boolean;
-  hasLogRunningEvidence: boolean;
-  connectedChannels: number;
-}): boolean {
-  const services = input.gatewayServices || {};
-  const s6GatewayRunning = (
-    services["main_hermes"] === "running"
-    || services["gateway_default"] === "running"
-    || services["gateway"] === "running"
-    || services["dashboard"] === "running"
-  );
-  return s6GatewayRunning
-    || input.hasSuccessfulHttpProbe
-    || input.hasLogRunningEvidence
-    || input.connectedChannels > 0;
-}
-
-export function resolveWeixinChannelState(input: {
-  hasCredentials: boolean;
-  logsLower: string;
-  pendingAuthorizationCount: number;
-  approvedAuthorizationCount: number;
-  capturedAuthorizationCount: number;
-}): WeixinChannelState {
-  const { hasCredentials, logsLower, pendingAuthorizationCount, approvedAuthorizationCount, capturedAuthorizationCount } = input;
-  const isAuthError = ["weixin auth failed", "weixin token invalid", "ilink unauthorized", "ilink http 401"]
-    .some((keyword) => logsLower.includes(keyword));
-  const adapterFailed = logsLower.includes("no adapter available for weixin") || logsLower.includes("weixin adapter failed");
-  const hasExplicitConnectedLog = ["[weixin] connected", "weixin connected", "weixin ready", "connected to weixin", "weixin gateway ready"]
-    .some((keyword) => logsLower.includes(keyword));
-  const hasInboundActivity = [" on weixin", "weixin inbound", "weixin message", "weixin update", "received weixin"]
-    .some((keyword) => logsLower.includes(keyword));
-  const isConnecting = ["weixin starting", "connecting to weixin", "initializing weixin", "ilink bot starting"]
-    .some((keyword) => logsLower.includes(keyword));
-  // A captured authorization event can only be produced after a real inbound Weixin message.
-  // Keep it as durable transport evidence because the iLink adapter does not always log a
-  // dedicated connected/ready line and the relevant inbound line can rotate out of the log tail.
-  const hasInboundEvidence = hasInboundActivity || capturedAuthorizationCount > 0;
-  const isConnected = hasExplicitConnectedLog || hasInboundEvidence;
-  const runtimeEvidence = isConnected || isConnecting || isAuthError || adapterFailed || logsLower.includes("weixin") || logsLower.includes("ilink");
-  const platformLoaded = hasCredentials && runtimeEvidence;
-  const transportConnected = hasCredentials && isConnected && !adapterFailed && !isAuthError;
-
-  if (!hasCredentials) {
-    return { configured: false, platformLoaded: false, transportConnected: false, authorizationRequired: true, authorizationApproved: null, status: "config_missing", reason: "Personal WeChat iLink credentials are missing" };
-  }
-  if (adapterFailed) {
-    return { configured: true, platformLoaded, transportConnected: false, authorizationRequired: true, authorizationApproved: null, status: "adapter_failed", reason: "Personal WeChat adapter failed to load" };
-  }
-  if (isAuthError) {
-    return { configured: true, platformLoaded, transportConnected: false, authorizationRequired: true, authorizationApproved: null, status: "auth_failed", reason: "Personal WeChat iLink credentials were rejected" };
-  }
-  if (transportConnected) {
-    if (pendingAuthorizationCount > 0) {
-      return { configured: true, platformLoaded: true, transportConnected: true, authorizationRequired: true, authorizationApproved: false, status: "awaiting_authorization", reason: `Personal WeChat is connected; ${pendingAuthorizationCount} authorization request(s) pending` };
-    }
-    if (approvedAuthorizationCount > 0) {
-      return { configured: true, platformLoaded: true, transportConnected: true, authorizationRequired: true, authorizationApproved: true, status: "connected", reason: "Personal WeChat connected and approved" };
-    }
-    return { configured: true, platformLoaded: true, transportConnected: true, authorizationRequired: true, authorizationApproved: false, status: "awaiting_authorization", reason: "Personal WeChat is connected; waiting for authorization" };
-  }
-  if (isConnecting) {
-    return { configured: true, platformLoaded, transportConnected: false, authorizationRequired: true, authorizationApproved: null, status: "starting", reason: "Personal WeChat iLink connection is starting" };
-  }
-  return { configured: true, platformLoaded, transportConnected: false, authorizationRequired: true, authorizationApproved: null, status: "connection_failed", reason: "Personal WeChat iLink connection is not ready" };
-}
+export { hasGatewayRuntimeEvidence, resolveWeixinChannelState } from "./gatewayReadinessPolicy";
+export type { WeixinChannelState } from "./gatewayReadinessPolicy";
 
 export async function probeGatewayReadiness(
   container: any,
@@ -134,107 +60,11 @@ export async function probeGatewayReadiness(
     }
 
     // Execute compound shell script inside container
-    const cmd = `
-echo "=== HTTP PROBES ==="
-for port in 9119 8000 8642 8644; do
-  if [ "\$port" = "8642" ] || [ "\$port" = "8644" ]; then
-    paths="health v1/chat/completions"
-  else
-    paths="health ready api/health api/ready status"
-  fi
-  for path in \$paths; do
-    url="http://127.0.0.1:\${port}/\${path}"
-    if [ -n "\$API_SERVER_KEY" ] && { [ "\$port" = "8642" ] || [ "\$port" = "8644" ]; }; then
-      res=\$(curl -s -H "Authorization: Bearer \$API_SERVER_KEY" -o /dev/null -w "%{http_code}" --max-time 1 "\$url" 2>/dev/null || echo "fail")
-    else
-      res=\$(curl -s -o /dev/null -w "%{http_code}" --max-time 1 "\$url" 2>/dev/null || wget -q -S --spider --timeout=1 "\$url" 2>&1 | grep "HTTP/" | awk '{print \$2}' || echo "fail")
-    fi
-    # 401/403 also prove that an HTTP service is alive but protected by auth.
-    if [ "\$res" = "200" ] || [ "\$res" = "201" ] || [ "\$res" = "204" ] || [ "\$res" = "401" ] || [ "\$res" = "403" ] || [ "\$res" = "405" ]; then
-      echo "PORT_\${port}_PATH_\${path}: OK (HTTP \$res)"
-    fi
-  done
-done
-
-echo "=== TCP LISTEN PROBES ==="
-cat /proc/net/tcp /proc/net/tcp6 2>/dev/null | grep -i ':21C2' >/dev/null && echo "PORT_8642_LISTEN: OK"
-cat /proc/net/tcp /proc/net/tcp6 2>/dev/null | grep -i ':21C4' >/dev/null && echo "PORT_8644_LISTEN: OK"
-
-echo "=== NETWORK/DNS ==="
-timeout 2 ping -c 1 open.feishu.cn > /dev/null 2>&1 && echo "DNS_open.feishu.cn: OK" || echo "DNS_open.feishu.cn: FAIL"
-
-echo "=== s6 SERVICES ==="
-s6_svstat=$(command -v s6-svstat 2>/dev/null || true)
-if [ -z "$s6_svstat" ] && [ -x /command/s6-svstat ]; then
-  s6_svstat=/command/s6-svstat
-fi
-s6_dirs="/run/service /var/run/s6/services /etc/services.d"
-for s6_dir in $s6_dirs; do
-  if [ -d "$s6_dir" ]; then
-    for svc in $(ls "$s6_dir"); do
-      if [ "$svc" != "." ] && [ "$svc" != ".." ] && [ -d "$s6_dir/$svc" ]; then
-        stat=""
-        if [ -n "$s6_svstat" ]; then
-          stat=$("$s6_svstat" "$s6_dir/$svc" 2>/dev/null || "$s6_svstat" -o status "$s6_dir/$svc" 2>/dev/null)
-        fi
-        if [ -n "$stat" ]; then
-          echo "SERVICE_$svc: $stat"
-        fi
-      fi
-    done
-  fi
-done
-`;
-
-    const execOutput = await runExecInContainer(container, cmd);
-    const lines = execOutput.split(/\r?\n/);
-    
-    let hasSuccessfulHttpProbe = false;
-    let s6ServicesCount = 0;
-    let isApiPortListening = false;
-    let isWebhookPortListening = false;
-
-    let dnsOk = true;
-
-    for (const line of lines) {
-      if (line.includes("PORT_8642_LISTEN: OK") || line.includes("PORT_8642_PATH_")) {
-        isApiPortListening = true;
-      }
-      if (line.includes("PORT_8644_LISTEN: OK") || line.includes("PORT_8644_PATH_")) {
-        isWebhookPortListening = true;
-      }
-
-      // 0. DNS Probe
-      if (line.includes("DNS_open.feishu.cn: FAIL")) {
-        dnsOk = false;
-      }
-
-      // 1. HTTP Probe detection
-      const httpMatch = line.match(/^PORT_(\d+)_PATH_([a-zA-Z0-9_\/]+):\s*OK/);
-      if (httpMatch) {
-        hasSuccessfulHttpProbe = true;
-      }
-
-      // 2. s6 Service status Parsing
-      const svcMatch = line.match(/^SERVICE_([^:]+):\s*(.*)$/);
-      if (svcMatch) {
-         s6ServicesCount++;
-         const svcName = svcMatch[1].trim();
-         const svcStat = svcMatch[2].trim();
-         let status = "stopped";
-         if (svcStat.includes("up (pid") || svcStat.includes("running")) {
-           status = "running";
-         } else if (svcStat.includes("exit") || svcStat.includes("fail") || svcStat.includes("error")) {
-           status = "error";
-         } else if (svcStat.includes("down")) {
-           status = "stopped";
-         } else if (svcStat) {
-           status = "starting";
-         }
-         const key = svcName.replace(/-/g, '_');
-         result.gateway_services[key] = status;
-      }
-    }
+    const execOutput = await runExecInContainer(container, GATEWAY_CONTAINER_PROBE_SCRIPT);
+    const probe = parseGatewayContainerProbeOutput(execOutput);
+    const { hasSuccessfulHttpProbe, isApiPortListening, isWebhookPortListening, dnsOk } = probe;
+    const s6ServicesCount = probe.servicesCount;
+    result.gateway_services = probe.services;
 
     result.chat_ready = isApiPortListening;
 
