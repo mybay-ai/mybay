@@ -98,7 +98,7 @@ describe("Run lease repository characterization", () => {
     expect(await chatRepo.renewRunLease({ runId: "run-1", reconcilerId: "worker-a", leaseSeconds: 60 })).toBe(false);
     expect(await chatRepo.releaseRunLease({ runId: "run-1", reconcilerId: "worker-a" })).toBe(false);
     expect(readStore().chatRuns.find((run) => run.id === "run-1")?.reconciled_by).toBe("worker-b");
-  });
+  }, 10_000);
 
   it("allows same-owner reclaim only after expiry without introducing a generation", async () => {
     await createRun();

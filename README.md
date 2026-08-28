@@ -16,7 +16,7 @@ This edition operates completely standalone with no hosted SaaS dependencies, cl
 
 MyBay Open Source is the self-hosted community edition. The hosted MyBay service at [mybay.ai](https://mybay.ai) is a separate commercial offering and is not required to install or operate this repository.
 
-> **Release status: Early Preview (`v0.1.23-preview`).** Public interfaces, runtime adapters, deployment details, and upgrade behavior may still change during the 0.x series.
+> **Release status: `v0.1.24`.** Public interfaces, runtime adapters, deployment details, and upgrade behavior may still change during the 0.x series.
 
 ## Product Preview
 
