@@ -349,6 +349,10 @@ export function requestRunsReconcile(): boolean {
   return runReconcileScheduler.requestReconcile();
 }
 
+export function requestRunReconcile(runId: string): boolean {
+  return runReconcileScheduler.requestRun(runId);
+}
+
 export async function startRunsReconciler(
   intervalMs = 5000,
   options: StartRunReconcileSchedulerOptions = {}

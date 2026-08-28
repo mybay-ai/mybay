@@ -13,6 +13,7 @@ const requestStopChatRun = vi.hoisted(() => vi.fn());
 const probeCapabilities = vi.hoisted(() => vi.fn());
 const probeCapabilitiesDetailed = vi.hoisted(() => vi.fn());
 const requestRunsReconcile = vi.hoisted(() => vi.fn());
+const requestRunReconcile = vi.hoisted(() => vi.fn(() => true));
 
 vi.mock("../../../middlewares/auth", () => ({
   authenticateToken: (req: any, _res: any, next: any) => {
@@ -32,7 +33,7 @@ vi.mock("../../../repositories/chatRepo", () => ({
   }
 }));
 vi.mock("../../../utils/capabilities", () => ({ probeCapabilities, probeCapabilitiesDetailed }));
-vi.mock("../../../services/runsReconciler", () => ({ emitRunLifecycleStep: vi.fn(), requestRunsAPI: vi.fn(), requestRunsReconcile }));
+vi.mock("../../../services/runsReconciler", () => ({ emitRunLifecycleStep: vi.fn(), requestRunsAPI: vi.fn(), requestRunReconcile, requestRunsReconcile }));
 vi.mock("../../../services/chatRealtime", () => ({ emitChatConversationUpdated: vi.fn() }));
 vi.mock("./limiters", () => ({ runsLimiter: (_req: any, _res: any, next: any) => next() }));
 vi.mock("../../../utils/chatAttachments", () => ({ loadAndValidateChatAttachments: vi.fn().mockResolvedValue([]) }));
@@ -91,7 +92,8 @@ describe("Interactive Agent POST /runs integration", () => {
         requestId: "request-1",
         reasoningEffort: "fast"
       }));
-      expect(requestRunsReconcile).toHaveBeenCalledOnce();
+      expect(requestRunReconcile).toHaveBeenCalledWith(body.runId);
+      expect(requestRunsReconcile).not.toHaveBeenCalled();
     } finally {
       await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     }

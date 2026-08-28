@@ -2,7 +2,14 @@ import fs from "fs";
 import path from "path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { closeLocalDatabase, getLocalDatabasePath, mutateStore, readStore } from "./localStore";
+import {
+  closeLocalDatabase,
+  getLocalDatabasePath,
+  mutateStore,
+  mutateStoreCollections,
+  readStore,
+  readStoreCollections,
+} from "./localStore";
 
 const testDir = path.resolve(process.cwd(), "data", "test-sqlite");
 const sqlitePath = path.join(testDir, "mybay-test.sqlite");
@@ -48,6 +55,35 @@ describe("local SQLite store", () => {
       mutateStore((store) => { store.tasks.push({ id: `task-${index}`, title: `Task ${index}` }); });
     })));
     expect(readStore().tasks).toHaveLength(30);
+  });
+
+  it("mutates only the selected collections in one transaction", () => {
+    mutateStore((store) => {
+      store.users.push({ id: "user-1", username: "preserved" });
+      store.chatRuns.push({ id: "run-1", status: "queued" });
+    });
+
+    mutateStoreCollections(["chatRuns"] as const, (store) => {
+      store.chatRuns[0].status = "running";
+    });
+
+    expect(readStoreCollections(["chatRuns"] as const).chatRuns[0].status).toBe("running");
+    expect(readStoreCollections(["users"] as const).users).toEqual([
+      { id: "user-1", username: "preserved" },
+    ]);
+  });
+
+  it("rolls back a failed selected-collection transaction", () => {
+    mutateStore((store) => {
+      store.chatRuns.push({ id: "run-rollback", status: "queued" });
+    });
+
+    expect(() => mutateStoreCollections(["chatRuns"] as const, (store) => {
+      store.chatRuns[0].status = "running";
+      throw new Error("stop scoped transaction");
+    })).toThrow("stop scoped transaction");
+
+    expect(readStoreCollections(["chatRuns"] as const).chatRuns[0].status).toBe("queued");
   });
 
   it("migrates legacy JSON once and keeps a recoverable backup", () => {

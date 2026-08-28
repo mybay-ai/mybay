@@ -7,6 +7,7 @@ interface ScheduledRun {
 interface SchedulerLeaseController {
   lostRunIds: Set<string>;
   claim(): Promise<ScheduledRun[]>;
+  claimById(runId: string): Promise<ScheduledRun | null>;
   startRenewal(runs: ScheduledRun[]): () => void;
   hasLost(runId: string): boolean;
   release(runId: string): Promise<unknown>;
@@ -81,6 +82,7 @@ export async function processClaimedRunsByInstance<T extends ScheduledRun>(
 
 export interface RunReconcileScheduler {
   requestReconcile(): boolean;
+  requestRun(runId: string): boolean;
   start(intervalMs?: number, options?: StartRunReconcileSchedulerOptions): Promise<void>;
   stop(): void;
 }
@@ -94,6 +96,44 @@ export function createRunReconcileScheduler(
   let runReconcileCycle: (() => Promise<void>) | null = null;
   let reconcileWakeScheduled = false;
   let reconcileWakePending = false;
+  let targetedRunHandler: ((runId: string) => Promise<void>) | null = null;
+  const targetedRunTimers = new Map<string, NodeJS.Immediate>();
+
+  async function processClaimedRuns(
+    leaseController: SchedulerLeaseController,
+    claimedRuns: ScheduledRun[],
+    concurrency: number,
+  ) {
+    if (claimedRuns.length === 0) return;
+    const leaseLostRuns = leaseController.lostRunIds;
+    const stopLeaseRenewal = leaseController.startRenewal(claimedRuns);
+
+    try {
+      await processClaimedRunsByInstance(claimedRuns, concurrency, async (run) => {
+        if (leaseLostRuns.has(run.id)) {
+          dependencies.logError(
+            `[RunsReconciler] Skipping run ${run.id} processing because lease was lost.`
+          );
+          return;
+        }
+        try {
+          dependencies.emitClaimed(run);
+          await dependencies.processRun(run, leaseLostRuns);
+        } catch (error) {
+          dependencies.logError(
+            `[RunsReconciler] Exception processing run ${run.id}:`,
+            error instanceof Error ? error.message : "unknown"
+          );
+        } finally {
+          if (!leaseController.hasLost(run.id)) {
+            await leaseController.release(run.id).catch(() => {});
+          }
+        }
+      });
+    } finally {
+      stopLeaseRenewal();
+    }
+  }
 
   function requestReconcile(): boolean {
     if (!runReconcileCycle) return false;
@@ -109,6 +149,17 @@ export function createRunReconcileScheduler(
     return true;
   }
 
+  function requestRun(runId: string): boolean {
+    if (!targetedRunHandler || !/^[0-9a-f-]{36}$/i.test(runId)) return false;
+    if (targetedRunTimers.has(runId)) return true;
+    const timer = setImmediate(() => {
+      targetedRunTimers.delete(runId);
+      void targetedRunHandler?.(runId);
+    });
+    targetedRunTimers.set(runId, timer);
+    return true;
+  }
+
   async function start(
     intervalMs = 5000,
     options: StartRunReconcileSchedulerOptions = {}
@@ -118,6 +169,20 @@ export function createRunReconcileScheduler(
     const claimLimit = resolveRunReconcilerClaimLimit(concurrency);
     dependencies.logStarted(intervalMs, dependencies.ownerId);
 
+    targetedRunHandler = async (runId: string) => {
+      const leaseController = dependencies.createLeaseController(1);
+      try {
+        const claimedRun = await leaseController.claimById(runId);
+        if (claimedRun) await processClaimedRuns(leaseController, [claimedRun], 1);
+      } catch (error) {
+        dependencies.logError(
+          `[RunsReconciler] Targeted dispatch failed for run ${runId}:`,
+          error instanceof Error ? error.message : "unknown"
+        );
+        requestReconcile();
+      }
+    };
+
     runReconcileCycle = async () => {
       if (isCycleRunning) {
         reconcileWakePending = true;
@@ -125,38 +190,10 @@ export function createRunReconcileScheduler(
       }
       isCycleRunning = true;
       const leaseController = dependencies.createLeaseController(claimLimit);
-      const leaseLostRuns = leaseController.lostRunIds;
 
       try {
         const claimedRuns = await leaseController.claim();
-        if (claimedRuns.length === 0) return;
-        const stopLeaseRenewal = leaseController.startRenewal(claimedRuns);
-
-        try {
-          await processClaimedRunsByInstance(claimedRuns, concurrency, async (run) => {
-            if (leaseLostRuns.has(run.id)) {
-              dependencies.logError(
-                `[RunsReconciler] Skipping run ${run.id} processing because lease was lost.`
-              );
-              return;
-            }
-            try {
-              dependencies.emitClaimed(run);
-              await dependencies.processRun(run, leaseLostRuns);
-            } catch (error) {
-              dependencies.logError(
-                `[RunsReconciler] Exception processing run ${run.id}:`,
-                error instanceof Error ? error.message : "unknown"
-              );
-            } finally {
-              if (!leaseController.hasLost(run.id)) {
-                await leaseController.release(run.id).catch(() => {});
-              }
-            }
-          });
-        } finally {
-          stopLeaseRenewal();
-        }
+        await processClaimedRuns(leaseController, claimedRuns, concurrency);
       } catch (error) {
         dependencies.logError(
           "[RunsReconciler] Reconciliation cycle exception:",
@@ -184,10 +221,13 @@ export function createRunReconcileScheduler(
     if (cacheCleanupTimer) clearInterval(cacheCleanupTimer);
     cacheCleanupTimer = null;
     runReconcileCycle = null;
+    targetedRunHandler = null;
+    for (const timer of targetedRunTimers.values()) clearImmediate(timer);
+    targetedRunTimers.clear();
     reconcileWakeScheduled = false;
     reconcileWakePending = false;
     dependencies.clearStreams();
   }
 
-  return { requestReconcile, start, stop };
+  return { requestReconcile, requestRun, start, stop };
 }

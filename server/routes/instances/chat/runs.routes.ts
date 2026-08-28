@@ -3,7 +3,7 @@ import * as crypto from "crypto";
 import { AuthenticatedRequest, authenticateToken } from "../../../middlewares/auth";
 import { chatRepo } from "../../../repositories/chatRepo";
 import { probeCapabilities, probeCapabilitiesDetailed } from "../../../utils/capabilities";
-import { emitRunLifecycleStep, requestRunsAPI, requestRunsReconcile } from "../../../services/runsReconciler";
+import { emitRunLifecycleStep, requestRunReconcile, requestRunsAPI, requestRunsReconcile } from "../../../services/runsReconciler";
 import { emitChatConversationUpdated } from "../../../services/chatRealtime";
 import { runsLimiter } from "./limiters";
 import { isValidInstanceId, isValidUUID } from "./validators";
@@ -248,7 +248,7 @@ export function registerRunRoutes(router: Router) {
       );
 
       // Keep the periodic scan as crash recovery, but dispatch interactive work now.
-      requestRunsReconcile();
+      if (!requestRunReconcile(runId)) requestRunsReconcile();
 
       return res.status(202).json({
         success: true,

@@ -1,5 +1,11 @@
 import { randomUUID } from "crypto";
-import { mutateStore, nowIso, readStore } from "../localStore";
+import {
+  mutateStore,
+  mutateStoreCollections,
+  nowIso,
+  readStore,
+  readStoreCollections,
+} from "../localStore";
 import {
   CHAT_CONTEXT_CHAR_BUDGET,
   CHAT_CONTEXT_MESSAGE_LIMIT,
@@ -348,26 +354,26 @@ export const chatRepo = {
   },
 
   async ensureConversationSessionId(conversationId: string): Promise<string> {
-    const conv = readStore().conversations.find((c) => c.id === conversationId);
+    const conv = readStoreCollections(["conversations"] as const).conversations.find((c) => c.id === conversationId);
     if (!conv) throw new Error("CONVERSATION_NOT_FOUND");
     if (conv.session_id && typeof conv.session_id === "string" && conv.session_id.trim()) return conv.session_id;
     throw new Error("CONVERSATION_SESSION_NOT_AVAILABLE");
   },
 
   async getConversationForSessionBinding(conversationId: string): Promise<Pick<Conversation, "id" | "title" | "session_id"> | null> {
-    const conv = readStore().conversations.find((c) => c.id === conversationId);
+    const conv = readStoreCollections(["conversations"] as const).conversations.find((c) => c.id === conversationId);
     return conv ? { id: conv.id, title: conv.title, session_id: conv.session_id || null } : null;
   },
 
   async bindConversationSessionId(conversationId: string, sessionId: string): Promise<void> {
-    mutateStore((data) => {
+    mutateStoreCollections(["conversations"] as const, (data) => {
       const conv = data.conversations.find((c: any) => c.id === conversationId);
       if (conv) Object.assign(conv, { session_id: sessionId, updated_at: nowIso() });
     });
   },
 
   async listMessages(conversationId: string, limit = 50, beforeSeq?: number): Promise<ChatMessage[]> {
-    let rows = readStore().chatMessages.filter((m) => m.conversation_id === conversationId);
+    let rows = readStoreCollections(["chatMessages"] as const).chatMessages.filter((m) => m.conversation_id === conversationId);
     if (beforeSeq !== undefined && beforeSeq !== null) rows = rows.filter((m) => Number(m.sequence_no || 0) < beforeSeq);
     rows.sort((a, b) => Number(b.sequence_no || 0) - Number(a.sequence_no || 0));
     return rows.slice(0, limit).reverse();
@@ -378,7 +384,7 @@ export const chatRepo = {
     limit = CHAT_CONTEXT_MESSAGE_LIMIT,
     maxChars = CHAT_CONTEXT_CHAR_BUDGET
   ): Promise<ChatMessage[]> {
-    const rows = readStore().chatMessages
+    const rows = readStoreCollections(["chatMessages"] as const).chatMessages
       .filter((m) => m.conversation_id === conversationId && m.status === "completed")
       .sort((a, b) => Number(b.sequence_no || 0) - Number(a.sequence_no || 0))
       .slice(0, limit)
@@ -387,7 +393,7 @@ export const chatRepo = {
   },
 
   async getMessage(messageId: string): Promise<ChatMessage | null> {
-    return readStore().chatMessages.find((m) => m.id === messageId) || null;
+    return readStoreCollections(["chatMessages"] as const).chatMessages.find((m) => m.id === messageId) || null;
   },
 
   async beginChatTurn(params: { conversationId: string; userId: string; instanceId: string; content: string; requestId: string; timeoutSeconds?: number; metadata?: any; }): Promise<{ status: string; message_id: string | null; sequence_no: number | null }> {
@@ -444,7 +450,7 @@ export const chatRepo = {
   },
 
   async beginChatRun(params: { conversationId: string; userId: string; instanceId: string; content: string; requestId: string; runId: string; reasoningEffort?: "fast" | "balanced" | "deep"; runtimeBinding?: RuntimeBinding; }): Promise<{ status: string; user_message_id: string | null; sequence_no: number | null; run_id?: string | null; run_status?: string | null }> {
-    return mutateStore((data) => {
+    return mutateStoreCollections(["conversations", "chatMessages", "chatRuns"] as const, (data) => {
       const conv = data.conversations.find((c: any) => c.id === params.conversationId && c.user_id === params.userId && c.instance_id === params.instanceId);
       if (!conv) throw new Error("CONVERSATION_NOT_FOUND_OR_ACCESS_DENIED");
 
@@ -478,7 +484,7 @@ export const chatRepo = {
   },
 
   async claimRuns(params: { reconcilerId: string; leaseSeconds: number; limit?: number; }): Promise<any[]> {
-    return mutateStore((data) => {
+    return mutateStoreCollections(["chatRuns"] as const, (data) => {
       const now = Date.now();
       const leaseMs = Math.max(5, Math.min(Number(params.leaseSeconds || 60), 3600)) * 1000;
       const leaseExpiresAt = new Date(now + leaseMs).toISOString();
@@ -492,8 +498,27 @@ export const chatRepo = {
     });
   },
 
+  async claimRunById(params: { runId: string; reconcilerId: string; leaseSeconds: number; }): Promise<any | null> {
+    return mutateStoreCollections(["chatRuns"] as const, (data) => {
+      const now = Date.now();
+      const run = data.chatRuns.find((candidate: any) => candidate.id === params.runId);
+      if (!run
+        || !["queued", "running", "stopping"].includes(run.status)
+        || (run.reconciled_by && run.lease_expires_at && new Date(run.lease_expires_at).getTime() >= now)) {
+        return null;
+      }
+      const leaseMs = Math.max(5, Math.min(Number(params.leaseSeconds || 60), 3600)) * 1000;
+      Object.assign(run, {
+        reconciled_by: params.reconcilerId,
+        lease_expires_at: new Date(now + leaseMs).toISOString(),
+        updated_at: nowIso()
+      });
+      return normalizeClaimedRun(run);
+    });
+  },
+
   async requestStopChatRun(params: { runId: string; userId: string; instanceId: string; }): Promise<{ status: string; run_status: string | null }> {
-    return mutateStore((data) => {
+    return mutateStoreCollections(["chatRuns"] as const, (data) => {
       const run = data.chatRuns.find((r: any) => r.id === params.runId && r.user_id === params.userId && r.instance_id === params.instanceId);
       if (!run) return { status: "run_not_found", run_status: null };
       if (["completed", "failed", "cancelled", "expired"].includes(run.status)) return { status: "already_terminal", run_status: run.status };
@@ -504,7 +529,7 @@ export const chatRepo = {
 
   async recordDispatchedChatRun(params: { runId: string; reconcilerId: string; upstreamRunId: string; startedAt?: string; }): Promise<{ status: string; run_status: string | null }> {
     if (!/^[A-Za-z0-9_\-.]{1,128}$/.test(params.upstreamRunId || "")) return { status: "invalid_upstream_run_id", run_status: null };
-    return mutateStore((data) => {
+    return mutateStoreCollections(["chatRuns"] as const, (data) => {
       const run = data.chatRuns.find((r: any) => r.id === params.runId);
       if (!run) return { status: "run_not_found", run_status: null };
       if (run.reconciled_by !== params.reconcilerId || !run.lease_expires_at || new Date(run.lease_expires_at).getTime() <= Date.now()) return { status: "lease_lost", run_status: null };
@@ -517,7 +542,7 @@ export const chatRepo = {
   },
 
   async renewRunLease(params: { runId: string; reconcilerId: string; leaseSeconds: number }): Promise<boolean> {
-    return mutateStore((data) => {
+    return mutateStoreCollections(["chatRuns"] as const, (data) => {
       const run = data.chatRuns.find((r: any) => r.id === params.runId && r.reconciled_by === params.reconcilerId && ["queued", "running", "stopping"].includes(r.status));
       if (!run) return false;
       const leaseMs = Math.max(5, Math.min(Number(params.leaseSeconds || 60), 3600)) * 1000;
@@ -527,7 +552,7 @@ export const chatRepo = {
   },
 
   async releaseRunLease(params: { runId: string; reconcilerId: string }): Promise<boolean> {
-    return mutateStore((data) => {
+    return mutateStoreCollections(["chatRuns"] as const, (data) => {
       const run = data.chatRuns.find((r: any) => r.id === params.runId && r.reconciled_by === params.reconcilerId);
       if (!run) return false;
       Object.assign(run, { reconciled_by: null, lease_expires_at: null, updated_at: nowIso() });
@@ -536,7 +561,7 @@ export const chatRepo = {
   },
 
   async finishChatRun(params: { runId: string; status: 'completed' | 'failed' | 'cancelled' | 'expired'; assistantContent?: string; errorCode?: string; usagePromptTokens?: number | null; usageCompletionTokens?: number | null; usageTotalTokens?: number | null; durationMs?: number | null; reconcilerId?: string; expectedUpstreamRunId?: string; completionAudit?: Record<string, unknown>; }): Promise<{ status: string; assistant_message_id: string | null; assistant_sequence_no: number | null }> {
-    return mutateStore((data) => {
+    return mutateStoreCollections(["conversations", "chatMessages", "chatRuns"] as const, (data) => {
       const run = data.chatRuns.find((r: any) => r.id === params.runId);
       if (!run) return { status: "run_not_found", assistant_message_id: null, assistant_sequence_no: null };
       if (["completed", "failed", "cancelled", "expired"].includes(run.status)) return { status: "already_terminal", assistant_message_id: null, assistant_sequence_no: null };
@@ -555,7 +580,7 @@ export const chatRepo = {
   },
 
   async getChatRun(runId: string): Promise<any | null> {
-    return readStore().chatRuns.find((r) => r.id === runId) || null;
+    return readStoreCollections(["chatRuns"] as const).chatRuns.find((r) => r.id === runId) || null;
   },
 
   async updateChatRun(runId: string, updates: any, reconcilerId?: string): Promise<boolean> {
@@ -563,7 +588,7 @@ export const chatRepo = {
       || IMMUTABLE_RUN_BINDING_FIELDS.some((field) => Object.prototype.hasOwnProperty.call(updates, field))) {
       return false;
     }
-    return mutateStore((data) => {
+    return mutateStoreCollections(["chatRuns"] as const, (data) => {
       const run = data.chatRuns.find((r: any) => r.id === runId);
       if (!run) return false;
       if (reconcilerId && (run.reconciled_by !== reconcilerId || !run.lease_expires_at || new Date(run.lease_expires_at).getTime() <= Date.now())) return false;
@@ -578,7 +603,7 @@ export const chatRepo = {
   },
 
   async getActiveRunForConversation(userId: string, instanceId: string, conversationId: string): Promise<any | null> {
-    return readStore().chatRuns
+    return readStoreCollections(["chatRuns"] as const).chatRuns
       .filter((r) => r.user_id === userId && r.instance_id === instanceId && r.conversation_id === conversationId && ["queued", "running", "stopping"].includes(r.status))
       .sort((a, b) => String(b.updated_at || "").localeCompare(String(a.updated_at || "")))[0] || null;
   },

@@ -220,6 +220,15 @@ function writeStoreToDb(db: DatabaseSync, input: LocalStoreData) {
   for (const [key, value] of Object.entries(data.systemSettings)) insertSetting.run(key, String(value));
 }
 
+function writeCollectionToDb(db: DatabaseSync, collection: CollectionName, rows: any[]) {
+  db.exec(`DELETE FROM ${quoteIdentifier(collection)}`);
+  const insert = db.prepare(`INSERT INTO ${quoteIdentifier(collection)} (id, data) VALUES (?, ?)`);
+  rows.forEach((row: any, index: number) => {
+    const id = String(row?.id || row?.key || `_row_${index}_${randomUUID()}`);
+    insert.run(id, JSON.stringify(row));
+  });
+}
+
 function applySchemaMigrations(db: DatabaseSync) {
   const row = db.prepare("SELECT value FROM localMetadata WHERE key = ?").get("schema_version") as { value?: string } | undefined;
   let version = Number(row?.value || 0);
@@ -405,6 +414,47 @@ export function mutateStore<T>(fn: (data: LocalStoreData) => T): T {
     db.exec("ROLLBACK");
     throw error;
   }
+}
+
+/**
+ * Transactionally mutate only the named JSON collections.
+ *
+ * The broad mutateStore helper rewrites every collection. Interactive Run
+ * operations use this scoped variant so unrelated control-plane data is not
+ * read and rewritten for every lifecycle update.
+ */
+export function mutateStoreCollections<K extends CollectionName, T>(
+  collections: readonly K[],
+  fn: (data: Pick<LocalStoreData, K>) => T,
+): T {
+  const db = openDatabase();
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const data = {} as Pick<LocalStoreData, K>;
+    for (const collection of collections) {
+      data[collection] = readRows(db, collection) as Pick<LocalStoreData, K>[K];
+    }
+    const result = fn(data);
+    for (const collection of collections) {
+      writeCollectionToDb(db, collection, data[collection] as any[]);
+    }
+    db.exec("COMMIT");
+    return result;
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+}
+
+export function readStoreCollections<K extends CollectionName>(
+  collections: readonly K[],
+): Pick<LocalStoreData, K> {
+  const db = openDatabase();
+  const data = {} as Pick<LocalStoreData, K>;
+  for (const collection of collections) {
+    data[collection] = readRows(db, collection) as Pick<LocalStoreData, K>[K];
+  }
+  return data;
 }
 
 function parseJsonColumn(value: unknown) {

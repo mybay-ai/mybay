@@ -10,6 +10,7 @@ function createHarness(claim = vi.fn(async () => [] as Array<{ id: string }>)) {
   const lostRunIds = new Set<string>();
   const stopRenewal = vi.fn();
   const release = vi.fn(async () => true);
+  const claimById = vi.fn(async (runId: string) => ({ id: runId }));
   const processRun = vi.fn(async () => undefined);
   const emitClaimed = vi.fn();
   const cleanupInactiveCaches = vi.fn();
@@ -20,6 +21,7 @@ function createHarness(claim = vi.fn(async () => [] as Array<{ id: string }>)) {
     createLeaseController: () => ({
       lostRunIds,
       claim,
+      claimById,
       startRenewal: vi.fn(() => stopRenewal),
       hasLost: (runId) => lostRunIds.has(runId),
       release
@@ -34,6 +36,7 @@ function createHarness(claim = vi.fn(async () => [] as Array<{ id: string }>)) {
   return {
     scheduler,
     claim,
+    claimById,
     lostRunIds,
     stopRenewal,
     release,
@@ -103,6 +106,28 @@ describe("runReconcileScheduler", () => {
 
     expect(order).toEqual(["process", "release", "stop-renewal"]);
     expect(harness.emitClaimed).toHaveBeenCalledWith({ id: "run-1" });
+    harness.scheduler.stop();
+  });
+
+  it("dispatches a targeted run while the broad reconciliation claim is blocked", async () => {
+    let releaseBroadClaim!: () => void;
+    const broadClaim = new Promise<Array<{ id: string }>>((resolve) => {
+      releaseBroadClaim = () => resolve([]);
+    });
+    const harness = createHarness(vi.fn(() => broadClaim));
+
+    await harness.scheduler.start(60_000, { allowInTest: true });
+    expect(harness.scheduler.requestRun("11111111-1111-4111-8111-111111111111")).toBe(true);
+
+    await vi.waitFor(() => {
+      expect(harness.processRun).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "11111111-1111-4111-8111-111111111111" }),
+        expect.any(Set),
+      );
+    });
+    expect(harness.claimById).toHaveBeenCalledWith("11111111-1111-4111-8111-111111111111");
+
+    releaseBroadClaim();
     harness.scheduler.stop();
   });
 
