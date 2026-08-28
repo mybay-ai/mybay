@@ -98,7 +98,7 @@ async function saveCredential(userId: string, provider: LocalOAuthProvider, payl
 router.post("/start", authenticateToken, async (req: any, res) => {
   purgeExpiredSessions();
   const provider = normalizeLocalOAuthProvider(req.body?.provider);
-  if (!provider) return res.status(400).json({ success: false, error: "Unsupported OAuth provider" });
+  if (!provider) return res.status(400).json({ success: false, code: "OAUTH_PROVIDER_UNSUPPORTED", error: "Unsupported OAuth provider" });
 
   try {
     let session: LocalOAuthSession;
@@ -109,12 +109,12 @@ router.post("/start", authenticateToken, async (req: any, res) => {
         body: JSON.stringify({ client_id: CODEX_CLIENT_ID }),
       });
       if (!response.ok) {
-        return res.status(502).json({ success: false, error: `OpenAI device code request failed (${response.status})` });
+        return res.status(502).json({ success: false, code: "OPENAI_DEVICE_CODE_REQUEST_FAILED", error: `OpenAI device code request failed (${response.status})` });
       }
       const deviceCode = String(body?.device_auth_id || "");
       const userCode = String(body?.user_code || "");
       if (!deviceCode || !userCode) {
-        return res.status(502).json({ success: false, error: "OpenAI device code response was incomplete" });
+        return res.status(502).json({ success: false, code: "OPENAI_DEVICE_CODE_RESPONSE_INVALID", error: "OpenAI device code response was incomplete" });
       }
       session = {
         id: crypto.randomUUID(), userId: req.user.id, provider,
@@ -126,7 +126,7 @@ router.post("/start", authenticateToken, async (req: any, res) => {
     } else {
       const discovery = await fetchJson(`${XAI_ISSUER}/.well-known/openid-configuration`);
       if (!discovery.response.ok || !discovery.body?.token_endpoint) {
-        return res.status(502).json({ success: false, error: "xAI OAuth discovery failed" });
+        return res.status(502).json({ success: false, code: "XAI_OAUTH_DISCOVERY_FAILED", error: "xAI OAuth discovery failed" });
       }
       const { response, body } = await fetchJson(`${XAI_ISSUER}/oauth2/device/code`, {
         method: "POST",
@@ -134,13 +134,13 @@ router.post("/start", authenticateToken, async (req: any, res) => {
         body: new URLSearchParams({ client_id: XAI_CLIENT_ID, scope: XAI_SCOPE }).toString(),
       });
       if (!response.ok) {
-        return res.status(502).json({ success: false, error: `xAI device code request failed (${response.status})` });
+        return res.status(502).json({ success: false, code: "XAI_DEVICE_CODE_REQUEST_FAILED", error: `xAI device code request failed (${response.status})` });
       }
       const deviceCode = String(body?.device_code || "");
       const userCode = String(body?.user_code || "");
       const verificationUrl = String(body?.verification_uri_complete || body?.verification_uri || "");
       if (!deviceCode || !userCode || !verificationUrl) {
-        return res.status(502).json({ success: false, error: "xAI device code response was incomplete" });
+        return res.status(502).json({ success: false, code: "XAI_DEVICE_CODE_RESPONSE_INVALID", error: "xAI device code response was incomplete" });
       }
       session = {
         id: crypto.randomUUID(), userId: req.user.id, provider,
@@ -163,7 +163,7 @@ router.post("/start", authenticateToken, async (req: any, res) => {
     });
   } catch (error: any) {
     console.error("[Local OAuth] start failed:", error?.message || error);
-    return res.status(502).json({ success: false, error: "OAuth authorization could not be started" });
+    return res.status(502).json({ success: false, code: "OAUTH_START_FAILED", error: "OAuth authorization could not be started" });
   }
 });
 
@@ -172,7 +172,7 @@ router.post("/poll", authenticateToken, async (req: any, res) => {
   const session = sessions.get(sessionId);
   if (!session || session.userId !== req.user.id || session.expiresAt <= Date.now()) {
     sessions.delete(sessionId);
-    return res.status(404).json({ success: false, error: "OAuth session not found or expired" });
+    return res.status(404).json({ success: false, code: "OAUTH_SESSION_NOT_FOUND", error: "OAuth session not found or expired" });
   }
 
   try {
@@ -187,12 +187,12 @@ router.post("/poll", authenticateToken, async (req: any, res) => {
         return res.json({ success: true, status: "pending", pollIntervalMs: session.pollIntervalMs });
       }
       if (!codeResult.response.ok) {
-        return res.status(502).json({ success: false, error: `OpenAI device authorization failed (${codeResult.response.status})` });
+        return res.status(502).json({ success: false, code: "OPENAI_DEVICE_AUTH_FAILED", error: `OpenAI device authorization failed (${codeResult.response.status})` });
       }
       const authorizationCode = String(codeResult.body?.authorization_code || "");
       const codeVerifier = String(codeResult.body?.code_verifier || "");
       if (!authorizationCode || !codeVerifier) {
-        return res.status(502).json({ success: false, error: "OpenAI device authorization response was incomplete" });
+        return res.status(502).json({ success: false, code: "OPENAI_DEVICE_AUTH_RESPONSE_INVALID", error: "OpenAI device authorization response was incomplete" });
       }
       const tokenResult = await fetchJson(CODEX_TOKEN_URL, {
         method: "POST",
@@ -206,10 +206,10 @@ router.post("/poll", authenticateToken, async (req: any, res) => {
         }).toString(),
       });
       if (!tokenResult.response.ok) {
-        return res.status(502).json({ success: false, error: `OpenAI token exchange failed (${tokenResult.response.status})` });
+        return res.status(502).json({ success: false, code: "OPENAI_TOKEN_EXCHANGE_FAILED", error: `OpenAI token exchange failed (${tokenResult.response.status})` });
       }
       if (!tokenResult.body?.access_token || !tokenResult.body?.refresh_token) {
-        return res.status(502).json({ success: false, error: "OpenAI token response was incomplete" });
+        return res.status(502).json({ success: false, code: "OPENAI_TOKEN_RESPONSE_INVALID", error: "OpenAI token response was incomplete" });
       }
       payload = buildLocalOAuthCredentialPayload("openai-codex", tokenResult.body, {
         auth_mode: "chatgpt",
@@ -233,12 +233,12 @@ router.post("/poll", authenticateToken, async (req: any, res) => {
         }
         if (["access_denied", "expired_token"].includes(oauthError)) {
           sessions.delete(sessionId);
-          return res.status(400).json({ success: false, error: oauthError });
+          return res.status(400).json({ success: false, code: "XAI_OAUTH_AUTHORIZATION_REJECTED", error: oauthError });
         }
-        return res.status(502).json({ success: false, error: `xAI OAuth authorization failed (${tokenResult.response.status})` });
+        return res.status(502).json({ success: false, code: "XAI_OAUTH_AUTHORIZATION_FAILED", error: `xAI OAuth authorization failed (${tokenResult.response.status})` });
       }
       if (!tokenResult.body?.access_token || !tokenResult.body?.refresh_token) {
-        return res.status(502).json({ success: false, error: "xAI OAuth token response was incomplete" });
+        return res.status(502).json({ success: false, code: "XAI_OAUTH_TOKEN_RESPONSE_INVALID", error: "xAI OAuth token response was incomplete" });
       }
       payload = buildLocalOAuthCredentialPayload("xai-oauth", tokenResult.body, {
         auth_mode: "oauth_device_code",
@@ -252,7 +252,7 @@ router.post("/poll", authenticateToken, async (req: any, res) => {
     return res.json({ success: true, status: "complete", credentialId, provider: session.provider });
   } catch (error: any) {
     console.error("[Local OAuth] poll failed:", error?.message || error);
-    return res.status(502).json({ success: false, error: "OAuth authorization could not be completed" });
+    return res.status(502).json({ success: false, code: "OAUTH_POLL_FAILED", error: "OAuth authorization could not be completed" });
   }
 });
 
