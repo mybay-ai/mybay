@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { hermesRuntimeDriver } from "./adapters/hermes/HermesRuntimeDriver";
+import { piRuntimeDriver } from "./adapters/pi/PiRuntimeDriver";
 import {
   RuntimeRegistry,
   UnsupportedRuntimeBindingError,
@@ -11,9 +12,9 @@ import {
 
 describe("server RuntimeRegistry", () => {
   it("registers the truthful Hermes execution boundary", () => {
-    expect(runtimeRegistry.listRuntimeTypes()).toEqual(["hermes"]);
+    expect(runtimeRegistry.listRuntimeTypes()).toEqual(["hermes", "pi"]);
     expect(runtimeRegistry.get("hermes")).toBe(hermesRuntimeDriver);
-    expect(runtimeRegistry.listProviderKeys()).toEqual(["hermes-core"]);
+    expect(runtimeRegistry.listProviderKeys()).toEqual(["hermes-core", "pi-preview"]);
     expect(runtimeRegistry.get().runs.request).toBeTypeOf("function");
     expect(runtimeRegistry.get().runs.streamEvents).toBeTypeOf("function");
     expect(runtimeRegistry.get().preparation.createController).toBeTypeOf("function");
@@ -27,12 +28,31 @@ describe("server RuntimeRegistry", () => {
   });
 
   it("fails closed for an unregistered Runtime instead of falling back to Hermes", () => {
-    expect(() => runtimeRegistry.resolveRuntimeType("pi")).toThrowError(UnsupportedRuntimeTypeError);
+    expect(() => runtimeRegistry.resolveRuntimeType("unknown-runtime")).toThrowError(UnsupportedRuntimeTypeError);
     try {
-      runtimeRegistry.resolveRuntimeType("pi");
+      runtimeRegistry.resolveRuntimeType("unknown-runtime");
     } catch (error) {
-      expect(error).toMatchObject({ code: "UNSUPPORTED_RUNTIME_TYPE", requestedRuntimeType: "pi" });
+      expect(error).toMatchObject({ code: "UNSUPPORTED_RUNTIME_TYPE", requestedRuntimeType: "unknown-runtime" });
     }
+  });
+
+  it("registers Pi as an explicit preview-only execution boundary", async () => {
+    expect(runtimeRegistry.get("pi")).toBe(piRuntimeDriver);
+    expect(runtimeRegistry.createBindingForInstance({ runtime_type: "pi" })).toEqual({
+      runtimeType: "pi",
+      providerKey: "pi-preview",
+      contractVersion: 1,
+    });
+    expect(piRuntimeDriver.capabilities).toMatchObject({
+      conversation: { modes: [] },
+      cancellation: { supported: false },
+      terminal: { observation: "unsupported" },
+    });
+    await expect(piRuntimeDriver.runs.request({
+      instanceId: "preview",
+      method: "POST",
+      path: "/v1/runs",
+    })).resolves.toEqual({ ok: false, statusCode: 501, error: "PI_RUNTIME_PREVIEW_ONLY" });
   });
 
   it("creates and resolves an immutable persisted Run Binding", () => {
@@ -50,7 +70,7 @@ describe("server RuntimeRegistry", () => {
   it.each([
     ["MISSING", {}],
     ["INVALID", { runtime_type: "hermes", runtime_provider_key: "hermes-core", runtime_contract_version: 0 }],
-    ["UNREGISTERED", { runtime_type: "pi", runtime_provider_key: "pi-core", runtime_contract_version: 1 }],
+    ["UNREGISTERED", { runtime_type: "unknown-runtime", runtime_provider_key: "unknown-provider", runtime_contract_version: 1 }],
     ["INCONSISTENT", { runtime_type: "other", runtime_provider_key: "hermes-core", runtime_contract_version: 1 }],
   ])("fails closed for a %s persisted Run Binding", (reason, subject) => {
     expect(() => runtimeRegistry.resolveRunBinding(subject)).toThrowError(UnsupportedRuntimeBindingError);
@@ -81,6 +101,7 @@ describe("server RuntimeRegistry", () => {
     expect(source).toContain("driver.runs.request");
     expect(source).toContain("driver.runs.streamEvents");
     expect(source).toContain("driver.preparation.createController");
+    expect(source).toContain("driver.execution.createController");
     expect(source).toContain("runPreparation.ensureSessionForConversation(run)");
     expect(source).toContain("runPreparation.buildRunPayload({");
     expect(source).toContain("runtimeDriver.capabilities");

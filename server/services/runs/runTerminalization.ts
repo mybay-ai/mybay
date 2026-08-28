@@ -105,6 +105,7 @@ export function sanitizeRunErrorCode(rawError: unknown): string {
     "RUN_NOT_FOUND",
     "FILE_NOT_FOUND",
     "UNSUPPORTED_RUNTIME_BINDING",
+    "PI_RUNTIME_PREVIEW_ONLY",
   ];
 
   if (whitelist.includes(upper)) return upper;

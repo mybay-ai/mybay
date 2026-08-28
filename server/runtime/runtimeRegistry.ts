@@ -1,4 +1,5 @@
 import { hermesRuntimeDriver } from "./adapters/hermes/HermesRuntimeDriver";
+import { piRuntimeDriver } from "./adapters/pi/PiRuntimeDriver";
 import type {
   PersistedRuntimeBindingSubject,
   RuntimeBinding,
@@ -128,4 +129,4 @@ export class RuntimeRegistry {
   }
 }
 
-export const runtimeRegistry = new RuntimeRegistry([hermesRuntimeDriver], "hermes");
+export const runtimeRegistry = new RuntimeRegistry([hermesRuntimeDriver, piRuntimeDriver], "hermes");
