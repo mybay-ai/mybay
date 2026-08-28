@@ -21,6 +21,7 @@ import { isKnownClientRoute } from "./server/utils/clientRoutes";
 import authRouter from "./server/routes/auth";
 import systemRouter from "./server/routes/system";
 import credentialsRouter from "./server/routes/credentials";
+import oauthProvidersRouter from "./server/routes/oauthProviders";
 import { createInstancesRouter } from "./server/routes/instances";
 import { createDeploymentsRouter } from "./server/routes/deployments";
 import instanceSessionAuthRouter, { handleSessionComplete } from "./server/routes/instanceSessionAuth";
@@ -265,6 +266,12 @@ async function startServer() {
     keyGenerator: (req) => `login:ip:${ipKeyGenerator(getClientIp(req))}`,
     message: { error: "Too many login attempts. Please try again in 15 minutes." }
   });
+  const protectedApiLimiter = rateLimit({
+    windowMs: 5 * 60 * 1000,
+    max: 600,
+    keyGenerator: (req) => `protected-api:ip:${ipKeyGenerator(getClientIp(req))}`,
+    message: { error: "Too many API requests. Please try again shortly." }
+  });
   
   // Socket IO runtime logs streaming
   setupSocketLogger(io);
@@ -300,10 +307,11 @@ async function startServer() {
   }, webhooksRouter);
   app.use("/api/auth/login", loginLimiter);
   app.use("/api/auth", authRouter);
-  app.use("/api/system", authenticateToken, systemRouter);
-  app.use("/api/credentials", authenticateToken, credentialsRouter);
-  app.use("/api/deployments", createDeploymentsRouter());
-  app.use("/api/instances", authenticateToken, createInstancesRouter(io));
+  app.use("/api/system", protectedApiLimiter, authenticateToken, systemRouter);
+  app.use("/api/credentials", protectedApiLimiter, authenticateToken, credentialsRouter);
+  app.use("/api/oauth/providers", protectedApiLimiter, authenticateToken, oauthProvidersRouter);
+  app.use("/api/deployments", protectedApiLimiter, createDeploymentsRouter());
+  app.use("/api/instances", protectedApiLimiter, authenticateToken, createInstancesRouter(io));
 
   // Log all registered routes for diagnostics
   console.log("[System] MyBay Open Source starting...");

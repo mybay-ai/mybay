@@ -1607,7 +1607,7 @@
         "count": 1
       },
       {
-        "fingerprint": "src/config/seo.ts|copy-property:description|查看麦贝开源版 v0.1.23-preview 已发布并验证的 Preview 能力。",
+        "fingerprint": "src/config/seo.ts|copy-property:description|查看麦贝开源版 v0.1.24 已发布并验证的稳定版能力。",
         "count": 1
       },
       {
@@ -2601,443 +2601,15 @@
     ],
     "i18n-fallbacks": [
       {
-        "fingerprint": "src/components/AppSettingsChannelSection.tsx|t-second-argument|\"API 模式用于 program 模式调用实例；需要使用实例 URL 的 API 入口和 API Key；如果 Web UI 被关闭，只有明确白名单路径可访问。\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/auth/ProfileModal.tsx|t-default-value|\"Back to dashboard\"",
-        "count": 1
-      },
-      {
         "fingerprint": "src/components/Changelog.tsx|t-default-value|\"Back to Home\"",
         "count": 1
       },
       {
-        "fingerprint": "src/components/ChannelPendingAuthPanel.tsx|t-second-argument|\"检测通道状态失败，正在后台继续重试...\"",
+        "fingerprint": "src/components/chat-workspace/chatCancellationController.ts|t-default-value|\"已停止，可编辑后重新发送\"",
         "count": 1
       },
       {
-        "fingerprint": "src/components/ChannelPendingAuthPanel.tsx|t-second-argument|\"实例未运行，已保存白名单，将在实例下次启动时生效。\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/ChannelPendingAuthPanel.tsx|t-second-argument|\"通道已成功连接并激活！\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/ChannelPendingAuthPanel.tsx|t-second-argument|\"已授权，但暂未检测到通道连接。请让用户再次发送消息，或点击重新检测。\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/ChannelPendingAuthPanel.tsx|t-second-argument|\"已授权，正在重新检测通道...\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/ChannelPendingAuthPanel.tsx|t-second-argument|\"已写入白名单，等待通道侧下一次消息确认。\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/ChannelPendingAuthPanel.tsx|t-second-argument|\"重新检测通道\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatInputBar.tsx|t-default-value|\"附件\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatInputBar.tsx|t-default-value|\"附件上传中...\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatInputBar.tsx|t-default-value|\"模式\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatInputBar.tsx|t-default-value|\"请先新建或选择一个会话\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatInputBar.tsx|t-default-value|\"上轮\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatInputBar.tsx|t-default-value|\"实例\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatInputBar.tsx|t-default-value|\"推理\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatInputBar.tsx|t-default-value|\"未选择\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatInputBar.tsx|t-default-value|\"运行中\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatMessageBubble.tsx|t-default-value|\"编辑\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatMessageBubble.tsx|t-default-value|\"错误码\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatMessageBubble.tsx|t-default-value|\"已停止，可编辑后重新发送\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatMessageBubble.tsx|t-default-value|\"Agent tool-call details are shown in the workspace timeline.\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatMessageBubble.tsx|t-default-value|\"Copied\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatMessageBubble.tsx|t-default-value|\"Copy\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatMessageBubble.tsx|t-default-value|\"Diagnose with Assist\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatMessageBubble.tsx|t-default-value|\"Dislike\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatMessageBubble.tsx|t-default-value|\"Edit\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatMessageBubble.tsx|t-default-value|\"Like\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatMessageBubble.tsx|t-default-value|\"Tokens used\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatToolProgress.tsx|t-default-value|\"工具\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatToolProgress.tsx|t-default-value|\"结果\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatToolProgress.tsx|t-default-value|\"来源\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatToolProgress.tsx|t-default-value|\"收起\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatToolProgress.tsx|t-default-value|\"搜索\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatToolProgress.tsx|t-default-value|\"网页\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatToolProgress.tsx|t-default-value|\"文件\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatToolProgress.tsx|t-default-value|\"展开\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatWorkspaceHeader.tsx|t-default-value|\"Agent\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatWorkspaceHeader.tsx|t-default-value|\"Quick\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatWorkspacePanel.tsx|t-default-value|\"本次允许\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatWorkspacePanel.tsx|t-default-value|\"本会话允许\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatWorkspacePanel.tsx|t-default-value|\"步骤\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatWorkspacePanel.tsx|t-default-value|\"当前会话文件（Agent 生成或用户上传）\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatWorkspacePanel.tsx|t-default-value|\"调试\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatWorkspacePanel.tsx|t-default-value|\"工具\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatWorkspacePanel.tsx|t-default-value|\"进行中\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatWorkspacePanel.tsx|t-default-value|\"拒绝\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatWorkspacePanel.tsx|t-default-value|\"模型\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatWorkspacePanel.tsx|t-default-value|\"全部\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatWorkspacePanel.tsx|t-default-value|\"失败\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatWorkspacePanel.tsx|t-default-value|\"始终允许\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatWorkspacePanel.tsx|t-default-value|\"搜索\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatWorkspacePanel.tsx|t-default-value|\"完成\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatWorkspacePanel.tsx|t-default-value|\"文件\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatWorkspacePanel.tsx|t-default-value|\"异常\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatWorkspacePanel.tsx|t-default-value|\"执行任务步骤\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/ChatWorkspacePanel.tsx|t-default-value|\"Agent 正在调用工具，执行细节已在工作区 Timeline 中展示。\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/useChatRuns.ts|t-default-value|\"审批提交失败\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/useChatRuns.ts|t-default-value|\"审批已提交\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/useChatRuns.ts|t-default-value|\"Failed to send stop request\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/useChatRuns.ts|t-default-value|\"Stop request sent\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/useChatWorkspaceFiles.ts|t-default-value|\"此文件类型暂不支持内嵌预览，可以打开或下载查看。\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/useChatWorkspaceFiles.ts|t-default-value|\"当前消息最多支持 5 个附件，请先移除部分附件\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/useChatWorkspaceFiles.ts|t-default-value|\"附件正在上传中，请稍候...\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/useChatWorkspaceFiles.ts|t-default-value|\"请先新建或选择一个会话，再上传附件。\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/useChatWorkspaceFiles.ts|t-default-value|\"上传失败\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/useChatWorkspaceFiles.ts|t-default-value|\"文件预览加载失败，请稍后重试。\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/useChatWorkspaceFiles.ts|t-default-value|\"暂不支持上传文件夹，请选择具体文件上传\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/useChatWorkspaceFiles.ts|t-default-value|\"Failed to load file preview. Please try again later.\"",
-        "count": 2
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/useChatWorkspaceFiles.ts|t-default-value|\"This file type cannot be previewed inline yet. Open or download it to view.\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/useChatWorkspaceFiles.ts|t-default-value|`文件 \"${file.name}\" 超出单文件上限 (5MB)`",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/useChatWorkspaceFiles.ts|t-default-value|`文件 \"${file.name}\" 格式不支持`",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/useChatWorkspaceFiles.ts|t-default-value|`文件 \"${file.name}\" 为 0 字节空文件，无法上传`",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/useChatWorkspaceFiles.ts|t-default-value|`最多还可添加 ${remainingSlots} 个附件，已自动忽略 ${ignoredCount} 个多余文件`",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceDebugTab.tsx|t-default-value|\"查看本轮 Agent 运行的结构化状态、工具输入输出和元数据。敏感信息以后端脱敏结果为准。\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceDebugTab.tsx|t-default-value|\"当 Agent 返回工具输入、输出或元数据时，会显示在这里。\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceDebugTab.tsx|t-default-value|\"高级调试\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceDebugTab.tsx|t-default-value|\"工具\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceDebugTab.tsx|t-default-value|\"耗时\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceDebugTab.tsx|t-default-value|\"进行中\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceDebugTab.tsx|t-default-value|\"输出\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceDebugTab.tsx|t-default-value|\"输入\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceDebugTab.tsx|t-default-value|\"完成\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceDebugTab.tsx|t-default-value|\"异常\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceDebugTab.tsx|t-default-value|\"元数据\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceDebugTab.tsx|t-default-value|\"暂无调试事件\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceDebugTab.tsx|t-default-value|\"状态\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceDebugTab.tsx|t-default-value|\"Run ID\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceDebugTab.tsx|t-default-value|\"Token\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceResultTab.tsx|t-default-value|\"工具调用\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceResultTab.tsx|t-default-value|\"耗时\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceResultTab.tsx|t-default-value|\"审批已提交，Agent 正在继续执行。\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceResultTab.tsx|t-default-value|\"未提供\"",
-        "count": 2
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceResultTab.tsx|t-default-value|\"需要你审批后继续\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceResultTab.tsx|t-default-value|\"Agent 请求执行一个需要确认的操作。\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceResultTab.tsx|t-default-value|\"Token\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceStepsTab.tsx|t-default-value|\"{{count}} 项\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceStepsTab.tsx|t-default-value|\"暂无执行步骤\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceStepsTab.tsx|t-default-value|\"正在等待 Agent 返回执行事件。本轮如果没有调用工具，系统会在完成时归档最终步骤。\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceStepsTab.tsx|t-default-value|\"执行过程\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceStepsTab.tsx|t-default-value|\"Agent 的搜索、读取、调用和生成步骤会归档在这里，不进入聊天气泡。\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceStepsTab.tsx|t-default-value|\"Agent 开始执行后，步骤会实时出现在这里。\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/chat-workspace/workspace-panel-tabs/WorkspaceStepsTab.tsx|t-default-value|\"Agent 正在建立执行流\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/ChatWorkspace.tsx|t-default-value|\"附件正在上传中，请稍候...\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/ChatWorkspace.tsx|t-default-value|\"已停止，可编辑后重新发送\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceDetailPanel.tsx|t-second-argument|\"部署日志\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceDetailPanel.tsx|t-second-argument|\"上下文\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceDetailPanel.tsx|t-second-argument|\"审计日志\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceDetailPanel.tsx|t-second-argument|\"实时运行日志\"",
+        "fingerprint": "src/components/ChatWorkspaceMessageSender.ts|t-default-value|\"附件正在上传中，请稍候...\"",
         "count": 1
       },
       {
@@ -3065,142 +2637,6 @@
         "count": 1
       },
       {
-        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"错误信息\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"当前实例未使用受支持的模板，业务配置中心已降级为通用存储模式。\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"当前实例已成功读取并注入模板运行上下文\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"店铺链接\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"告警阈值(时)\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"获取运行记录失败\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"监控 SKU 数量\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"模板识别结果\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"您可以基于当前业务配置，手动触发首次验证任务。\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"生成的执行步骤\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"通用运行模式\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"推送渠道就绪\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"完成时间\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"无摘要信息\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"下一步建议\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"校验结果摘要\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"业务目标\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"业务配置已生效\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"业务任务触发成功\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"业务任务触发失败\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"业务任务触发中...\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"业务任务执行\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"已完成 {{completed}} / {{total}}\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"运行结果发现\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"运行上下文摘要\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"运行首次监控任务\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"暂无运行记录\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"正在加载记录...\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"执行类型\"",
-        "count": 2
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"执行时间\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"最近一次执行结果\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"最近运行记录\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"Context unavailable\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/InstanceRuntimeContextViewer.tsx|t-second-argument|\"Loading runtime context...\"",
-        "count": 1
-      },
-      {
         "fingerprint": "src/components/dashboard/InstanceSetup.tsx|t-or-fallback|`请填写以下必填项: ${fieldNames}`",
         "count": 1
       },
@@ -3219,22 +2655,6 @@
       {
         "fingerprint": "src/components/dashboard/MobileInstanceSheet.tsx|t-second-argument|\"上下文\"",
         "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/useInstanceActions.ts|t-or-fallback|\"您的操作频率过高，请稍后再试。\"",
-        "count": 2
-      },
-      {
-        "fingerprint": "src/components/dashboard/useInstanceActions.ts|t-or-fallback|\"确定要归档此实例吗？\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/dashboard/useInstanceActions.ts|t-or-fallback|\"确定要删除此实例吗？该操作不可逆。\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/DashboardLayout.tsx|t-default-value|\"对话工作台\"",
-        "count": 2
       },
       {
         "fingerprint": "src/components/DashboardLayout.tsx|t-default-value|\"开源社区\"",
@@ -3282,46 +2702,6 @@
       },
       {
         "fingerprint": "src/components/marketing/Footer.tsx|t-default-value|\"Security\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/OverviewSection.tsx|t-default-value|\"浏览文件\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/OverviewSection.tsx|t-default-value|\"模型\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/OverviewSection.tsx|t-default-value|\"启动中\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/OverviewSection.tsx|t-default-value|\"渠道\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/OverviewSection.tsx|t-default-value|\"任务中心\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/OverviewSection.tsx|t-default-value|\"实例中心\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/OverviewSection.tsx|t-default-value|\"需要处理\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/OverviewSection.tsx|t-default-value|\"已停止\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/OverviewSection.tsx|t-default-value|\"运行中\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/OverviewSection.tsx|t-default-value|\"暂无运行中的 Agent\"",
         "count": 1
       },
       {
@@ -3407,221 +2787,9 @@
       {
         "fingerprint": "src/components/Terms.tsx|t-default-value|\"We are tailoring rules to safeguard standard compliance benchmarks. Reach out with feedback.\"",
         "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Agent version\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Audit logs\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Available\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Basic information\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Close\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Current version\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Failure reason\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Image tag\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Instance ID\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Instance name\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Last upgraded at\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Latest\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Pending upgrade\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Previous version / rollback target\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Resolved version\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Rollback availability\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Rollback\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Runtime status\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"System tags\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Unavailable\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Upgrade and rollback\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Upgrade details\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Upgrade failed\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Upgrade task status\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Upgrade to latest\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionDetailsDrawer.tsx|t-second-argument|\"Version status\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionFilters.tsx|t-second-argument|\"All statuses\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionFilters.tsx|t-second-argument|\"All system tags\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionFilters.tsx|t-second-argument|\"All versions\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionFilters.tsx|t-second-argument|\"Latest\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionFilters.tsx|t-second-argument|\"Pending upgrade\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionFilters.tsx|t-second-argument|\"Rollback available\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionFilters.tsx|t-second-argument|\"Search and filters\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionFilters.tsx|t-second-argument|\"Search instance name / ID\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionFilters.tsx|t-second-argument|\"Showing {{visible}} / {{total}}\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionFilters.tsx|t-second-argument|\"Upgrade failed\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionFilters.tsx|t-second-argument|\"Upgrade success\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionOfficialCard.tsx|t-second-argument|\"Latest\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionOfficialCard.tsx|t-second-argument|\"Prewarm cache\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionOfficialCard.tsx|t-second-argument|\"Ready\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionOfficialCard.tsx|t-second-argument|\"Recommended official version\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionOfficialCard.tsx|t-second-argument|\"Sync releases\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionOverviewCards.tsx|t-second-argument|\"items\"",
-        "count": 4
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionOverviewCards.tsx|t-second-argument|\"Latest batch upgrade\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionOverviewCards.tsx|t-second-argument|\"Latest version instances\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionOverviewCards.tsx|t-second-argument|\"No record\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionOverviewCards.tsx|t-second-argument|\"Pending upgrade\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionOverviewCards.tsx|t-second-argument|\"Refresh upgrade statistics\"",
-        "count": 2
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionOverviewCards.tsx|t-second-argument|\"Total instances\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "src/components/version-management/VersionOverviewCards.tsx|t-second-argument|\"Upgrade failed / abnormal\"",
-        "count": 1
       }
     ],
     "api-error-contract": [
-      {
-        "fingerprint": "server.ts|api-error-without-code|\"该任务正在执行中，请勿重复触发。\"",
-        "count": 7
-      },
-      {
-        "fingerprint": "server.ts|api-error-without-code|\"Feishu image variants are disabled in the local open-source edition.\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server.ts|api-error-without-code|\"Image prewarming is disabled in the local open-source edition.\"",
-        "count": 1
-      },
       {
         "fingerprint": "server.ts|api-error-without-code|\"No official version discovered yet.\"",
         "count": 1
@@ -3635,19 +2803,7 @@
         "count": 1
       },
       {
-        "fingerprint": "server.ts|api-error-without-code|\"Only platform administrators can manually build Feishu variants.\"",
-        "count": 1
-      },
-      {
         "fingerprint": "server.ts|api-error-without-code|\"Only platform administrators can manually trigger version discovery.\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server.ts|api-error-without-code|\"Only platform administrators can perform dependency checks.\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server.ts|api-error-without-code|\"Only platform administrators can trigger image pre-warming.\"",
         "count": 1
       },
       {
@@ -3683,24 +2839,16 @@
         "count": 1
       },
       {
-        "fingerprint": "server.ts|api-error-without-code|\"Version discovery is disabled in the local open-source edition.\"",
-        "count": 1
-      },
-      {
         "fingerprint": "server.ts|api-error-without-code|\"Workflow template not found.\"",
         "count": 1
       },
       {
         "fingerprint": "server.ts|api-error-without-code|e.message",
-        "count": 16
+        "count": 14
       },
       {
         "fingerprint": "server.ts|api-error-without-code|readiness.message",
         "count": 2
-      },
-      {
-        "fingerprint": "server.ts|api-error-without-code|sanitizeErrorMessage(e.message) || \"Failed to build Feishu variant.\"",
-        "count": 1
       },
       {
         "fingerprint": "server/middlewares/auth.ts|api-error-without-code|\"Access denied. Admin role required.\"",
@@ -3808,7 +2956,7 @@
       },
       {
         "fingerprint": "server/routes/instances/actions.routes.ts|api-error-without-code|\"Server error\"",
-        "count": 5
+        "count": 4
       },
       {
         "fingerprint": "server/routes/instances/actions.routes.ts|api-error-without-code|readiness.message",
@@ -3863,23 +3011,11 @@
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/chat.routes.ts|api-error-without-code|\"您没有访问该实例的权限。\"",
-        "count": 2
-      },
-      {
         "fingerprint": "server/routes/instances/chat.routes.ts|api-error-without-code|\"请求体中缺少必要的 messages 数组，或数组为空。\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/chat.routes.ts|api-error-without-code|\"未找到目标实例。\"",
-        "count": 2
-      },
-      {
         "fingerprint": "server/routes/instances/chat.routes.ts|api-error-without-code|`实例目前处于 [${instance.status || \"未知\"}] 状态，请确保其已完全启动并就绪后再进行对话。`",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/chat.routes.ts|api-error-without-code|`实例目前处于 [${instance.status || \"未知\"}] 状态，尚未启动。`",
         "count": 1
       },
       {
@@ -3891,15 +3027,7 @@
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/chat/assist.routes.ts|api-error-without-code|\"单条用户输入最多 4000 字符。\"",
-        "count": 1
-      },
-      {
         "fingerprint": "server/routes/instances/chat/assist.routes.ts|api-error-without-code|\"当前会话存在正在处理的挂起请求，请稍候再试。\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/chat/assist.routes.ts|api-error-without-code|\"对话会话不存在或无权访问。\"",
         "count": 1
       },
       {
@@ -3915,15 +3043,7 @@
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/chat/assist.routes.ts|api-error-without-code|\"您没有访问该实例的权限。\"",
-        "count": 1
-      },
-      {
         "fingerprint": "server/routes/instances/chat/assist.routes.ts|api-error-without-code|\"数据库并发冲突：无法获取连续的序列号，请重试。\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/chat/assist.routes.ts|api-error-without-code|\"未找到目标实例。\"",
         "count": 1
       },
       {
@@ -3963,10 +3083,6 @@
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/chat/conversation.routes.ts|api-error-without-code|\"对话会话不存在或无权访问。\"",
-        "count": 3
-      },
-      {
         "fingerprint": "server/routes/instances/chat/conversation.routes.ts|api-error-without-code|\"获取会话列表失败。\"",
         "count": 1
       },
@@ -3979,16 +3095,8 @@
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/chat/conversation.routes.ts|api-error-without-code|\"您没有访问该实例的权限。\"",
-        "count": 5
-      },
-      {
         "fingerprint": "server/routes/instances/chat/conversation.routes.ts|api-error-without-code|\"删除会话失败。\"",
         "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/chat/conversation.routes.ts|api-error-without-code|\"未找到目标实例。\"",
-        "count": 5
       },
       {
         "fingerprint": "server/routes/instances/chat/limiters.ts|api-error-without-code|\"异步对话任务请求过于频繁，请稍后再试。\"",
@@ -3999,15 +3107,7 @@
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/chat/quick.routes.ts|api-error-without-code|\"单条用户输入最多 4000 字符。\"",
-        "count": 1
-      },
-      {
         "fingerprint": "server/routes/instances/chat/quick.routes.ts|api-error-without-code|\"当前会话存在正在处理的挂起请求，请稍候再试。\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/chat/quick.routes.ts|api-error-without-code|\"对话会话不存在或无权访问。\"",
         "count": 1
       },
       {
@@ -4023,15 +3123,7 @@
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/chat/quick.routes.ts|api-error-without-code|\"您没有访问该实例的权限。\"",
-        "count": 1
-      },
-      {
         "fingerprint": "server/routes/instances/chat/quick.routes.ts|api-error-without-code|\"数据库并发冲突：无法获取连续的序列号，请重试。\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/chat/quick.routes.ts|api-error-without-code|\"未找到目标实例。\"",
         "count": 1
       },
       {
@@ -4067,23 +3159,11 @@
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/chat/runEvents.routes.ts|api-error-without-code|\"您没有访问该实例的权限。\"",
-        "count": 2
-      },
-      {
         "fingerprint": "server/routes/instances/chat/runEvents.routes.ts|api-error-without-code|\"审批选择无效。\"",
         "count": 1
       },
       {
         "fingerprint": "server/routes/instances/chat/runEvents.routes.ts|api-error-without-code|\"审批指令提交失败，请重试。\"",
-        "count": 2
-      },
-      {
-        "fingerprint": "server/routes/instances/chat/runEvents.routes.ts|api-error-without-code|\"未找到目标任务或无权访问。\"",
-        "count": 2
-      },
-      {
-        "fingerprint": "server/routes/instances/chat/runEvents.routes.ts|api-error-without-code|\"未找到目标实例。\"",
         "count": 2
       },
       {
@@ -4111,20 +3191,12 @@
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/chat/runs.routes.ts|api-error-without-code|\"您没有访问该实例的权限。\"",
-        "count": 4
-      },
-      {
         "fingerprint": "server/routes/instances/chat/runs.routes.ts|api-error-without-code|\"缺少 Request ID。\"",
         "count": 1
       },
       {
         "fingerprint": "server/routes/instances/chat/runs.routes.ts|api-error-without-code|\"未找到目标任务或无权访问。\"",
-        "count": 3
-      },
-      {
-        "fingerprint": "server/routes/instances/chat/runs.routes.ts|api-error-without-code|\"未找到目标实例。\"",
-        "count": 4
+        "count": 1
       },
       {
         "fingerprint": "server/routes/instances/chat/runs.routes.ts|api-error-without-code|\"消息内容不可为空。\"",
@@ -4163,30 +3235,6 @@
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"当前消息最多上传 5 个附件。\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"该文件不属于当前会话\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"该文件不属于当前实例\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"该文件已被删除\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"会话不存在或不属于当前实例。\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"会话不存在或不属于当前实例\"",
-        "count": 2
-      },
-      {
         "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"获取文件列表失败，请稍后重试。\"",
         "count": 1
       },
@@ -4196,22 +3244,6 @@
       },
       {
         "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"删除文件失败: \" + e.message",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"实例不存在。\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"实例不存在\"",
-        "count": 2
-      },
-      {
-        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"文件不存在。\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"文件不属于当前会话。\"",
         "count": 1
       },
       {
@@ -4235,63 +3267,11 @@
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"无权访问此实例。\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"无权访问此文件。\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"无权访问此文件\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"无权限访问此实例\"",
-        "count": 2
-      },
-      {
         "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"验证权限失败: \" + err.message",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|\"找不到该文件记录\"",
-        "count": 1
-      },
-      {
         "fingerprint": "server/routes/instances/chatFiles.routes.ts|api-error-without-code|err.message",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"安全拦截：备份包中包含绝对路径的文件\"",
-        "count": 2
-      },
-      {
-        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"安全拦截：备份包中包含路径穿越字符\"",
-        "count": 2
-      },
-      {
-        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"安全拦截：无效的备份包，只能导入安全的脱敏备份（redacted: true）\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"安全拦截：无效的备份包，Platform 必须是 MyBay\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"保存配置失败，服务器内部异常\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"备份包损坏或不是有效的 zip 压缩文件\"",
-        "count": 2
-      },
-      {
-        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"当前没有可用的已预热 Feishu 专版镜像。请先在版本库中拉取或构建 Feishu Variant 后再升级飞书实例。\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"访问路径（Slug）格式不正确：仅允许使用小写字母、数字和连字符(-)\"",
         "count": 1
       },
       {
@@ -4300,14 +3280,6 @@
       },
       {
         "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"飞书 App Secret 不能为空。\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"该访问路径（Slug）已经被占用，请换用其他路径\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"解析备份包失败，服务器内部异常\"",
         "count": 1
       },
       {
@@ -4347,14 +3319,6 @@
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"请选择需要上传并克隆的备份包文件\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"请选择需要上传并校验的备份包文件\"",
-        "count": 1
-      },
-      {
         "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"容器定位自检判定：由于该实例在数据库中没有容器标识（container_id 与 container_name 均为空），暂无法进行配置热更新保存并重启。请确认实例已被成功初次部署上线。\"",
         "count": 1
       },
@@ -4367,107 +3331,15 @@
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"无效的备份包：缺少 config.redacted.json 脱敏配置文件\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"无效的备份包：缺少 config.redacted.json\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"无效的备份包：缺少 manifest.json 描述文件\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"无效的备份包：缺少 manifest.json\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"新实例访问路径不能为空\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"新实例名称不能为空\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"应用打包导出失败，服务器内部异常\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"应用导出失败，服务器内部异常\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"business-config.json 大小超过了 2MB 限制\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"business-config.json 大小超限\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"business-config.json 解析失败，不是合法的 JSON 格式\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"config.redacted.json 大小超过了 2MB 限制\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"config.redacted.json 大小超限\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"config.redacted.json 解析失败，不是合法的 JSON 格式\"",
-        "count": 1
-      },
-      {
         "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"Forbidden: Access denied\"",
-        "count": 7
-      },
-      {
-        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"Invalid allowMode\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"Invalid or forged ZIP archive.\"",
-        "count": 2
-      },
-      {
-        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"manifest.json 大小超过了 2MB 限制\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"manifest.json 大小超限\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"manifest.json 解析失败，不是合法的 JSON 格式\"",
         "count": 1
       },
       {
         "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"Not found\"",
-        "count": 7
+        "count": 1
       },
       {
         "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"Server error\"",
-        "count": 4
-      },
-      {
-        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"template-inputs.json 大小超过了 2MB 限制\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"template-inputs.json 大小超限\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|\"template-inputs.json 解析失败，不是合法的 JSON 格式\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/instances/config.routes.ts|api-error-without-code|`安全拦截：不支持的备份包版本 (v${manifestData.archive_version || '未知'})`",
         "count": 1
       },
       {
@@ -4495,127 +3367,279 @@
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"当前没有可用的已预热 Feishu 专版镜像。请先在版本库中拉取或构建 Feishu Variant 后再部署飞书实例。\"",
+        "fingerprint": "server/routes/instances/config/runtimeConfig.routes.ts|api-error-without-code|\"保存配置失败，服务器内部异常\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"飞书 App ID 格式不正确，不得使用邮箱地址，必须以 cli_ 开头的 App ID。\"",
+        "fingerprint": "server/routes/instances/config/runtimeConfig.routes.ts|api-error-without-code|\"Forbidden: Access denied\"",
+        "count": 4
+      },
+      {
+        "fingerprint": "server/routes/instances/config/runtimeConfig.routes.ts|api-error-without-code|\"Invalid allowMode\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/config/runtimeConfig.routes.ts|api-error-without-code|\"Not found\"",
+        "count": 4
+      },
+      {
+        "fingerprint": "server/routes/instances/config/runtimeConfig.routes.ts|api-error-without-code|\"Server error\"",
+        "count": 3
+      },
+      {
+        "fingerprint": "server/routes/instances/configExport.routes.ts|api-error-without-code|\"应用打包导出失败，服务器内部异常\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/configExport.routes.ts|api-error-without-code|\"应用导出失败，服务器内部异常\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/configExport.routes.ts|api-error-without-code|\"Forbidden: Access denied\"",
         "count": 2
       },
       {
-        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"飞书 App Secret 不能为空。\"",
+        "fingerprint": "server/routes/instances/configExport.routes.ts|api-error-without-code|\"Not found\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/instances/configImport.routes.ts|api-error-without-code|\"安全拦截：备份包中包含绝对路径的文件\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/instances/configImport.routes.ts|api-error-without-code|\"安全拦截：备份包中包含路径穿越字符\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/instances/configImport.routes.ts|api-error-without-code|\"安全拦截：无效的备份包，只能导入安全的脱敏备份（redacted: true）\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"服务器安全策略未启用 Docker Socket 挂载。请先由服务器管理员在部署环境中设置 ENABLE_DOCKER_SOCKET_SKILL=true\"",
+        "fingerprint": "server/routes/instances/configImport.routes.ts|api-error-without-code|\"安全拦截：无效的备份包，Platform 必须是 MyBay\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"服务器内部错误：无法生成有效的实例唯一标识符(generatedId)。\"",
+        "fingerprint": "server/routes/instances/configImport.routes.ts|api-error-without-code|\"备份包损坏或不是有效的 zip 压缩文件\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/instances/configImport.routes.ts|api-error-without-code|\"访问路径（Slug）格式不正确：仅允许使用小写字母、数字和连字符(-)\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"后台安全设置未允许管理员实例挂载 Docker Socket。请先在管理员后台的安全设置中开启此项\"",
+        "fingerprint": "server/routes/instances/configImport.routes.ts|api-error-without-code|\"该访问路径（Slug）已经被占用，请换用其他路径\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"面板访问密码不可用，实例无法完成 Dashboard 登录配置。请重置访问密码后重新部署。\"",
+        "fingerprint": "server/routes/instances/configImport.routes.ts|api-error-without-code|\"解析备份包失败，服务器内部异常\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"模型 API Key 格式不正确，检测到被自动填充为了您的账号邮箱，请重新输入。\"",
+        "fingerprint": "server/routes/instances/configImport.routes.ts|api-error-without-code|\"请选择需要上传并克隆的备份包文件\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"配置格式验证错误：'apiKey' 必须是 string 字符串类型。\"",
+        "fingerprint": "server/routes/instances/configImport.routes.ts|api-error-without-code|\"请选择需要上传并校验的备份包文件\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"配置格式验证错误：'baseUrl' (base_url) 必须是 string 字符串类型。\"",
+        "fingerprint": "server/routes/instances/configImport.routes.ts|api-error-without-code|\"无效的备份包：缺少 config.redacted.json 脱敏配置文件\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"配置格式验证错误：'model' (current_model) 必须是 string 字符串类型。\"",
+        "fingerprint": "server/routes/instances/configImport.routes.ts|api-error-without-code|\"无效的备份包：缺少 config.redacted.json\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"配置格式验证错误：'provider' (current_provider) 必须是 string 字符串类型。\"",
+        "fingerprint": "server/routes/instances/configImport.routes.ts|api-error-without-code|\"无效的备份包：缺少 manifest.json 描述文件\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"配置格式验证错误：'providerApiKey' (apiKey) 必须是 string 字符串类型。\"",
+        "fingerprint": "server/routes/instances/configImport.routes.ts|api-error-without-code|\"无效的备份包：缺少 manifest.json\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"缺少必填的文件输入。\"",
+        "fingerprint": "server/routes/instances/configImport.routes.ts|api-error-without-code|\"新实例访问路径不能为空\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"上传文件的物理存储已丢失，请重新上传。\"",
+        "fingerprint": "server/routes/instances/configImport.routes.ts|api-error-without-code|\"新实例名称不能为空\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"无法自动分配可用端口，系统内部异常\"",
+        "fingerprint": "server/routes/instances/configImport.routes.ts|api-error-without-code|\"business-config.json 大小超过了 2MB 限制\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"校验预上传文件异常，文件可能损坏或被拦截\"",
+        "fingerprint": "server/routes/instances/configImport.routes.ts|api-error-without-code|\"business-config.json 大小超限\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"应用创建或部署调度失败: \" + e.message",
+        "fingerprint": "server/routes/instances/configImport.routes.ts|api-error-without-code|\"business-config.json 解析失败，不是合法的 JSON 格式\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|\"找不到可以绑定的有效上传文件或权限不足。\"",
+        "fingerprint": "server/routes/instances/configImport.routes.ts|api-error-without-code|\"config.redacted.json 大小超过了 2MB 限制\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|`该 Blueprint 已被禁用: ${blueprint.name}`",
+        "fingerprint": "server/routes/instances/configImport.routes.ts|api-error-without-code|\"config.redacted.json 大小超限\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|`高危技能拦截：该部署请求包含了需要您手动确认授权的敏感技能插件：[${names}]。您必须在创建请求中确认并同意授予对此技能的直接开启权限(confirmed_skill_ids 需包含对应 ID)。`",
+        "fingerprint": "server/routes/instances/configImport.routes.ts|api-error-without-code|\"config.redacted.json 解析失败，不是合法的 JSON 格式\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|`技能插件 [${policy.name}] 尚未开发完成或尚未上线。`",
+        "fingerprint": "server/routes/instances/configImport.routes.ts|api-error-without-code|\"Invalid or forged ZIP archive.\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/instances/configImport.routes.ts|api-error-without-code|\"manifest.json 大小超过了 2MB 限制\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|`模板已被禁用: ${template.name}`",
+        "fingerprint": "server/routes/instances/configImport.routes.ts|api-error-without-code|\"manifest.json 大小超限\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|`配置格式验证错误：不支持的模型供应商 \"${data.provider}\"，或该提供商已被废弃/下线。`",
+        "fingerprint": "server/routes/instances/configImport.routes.ts|api-error-without-code|\"manifest.json 解析失败，不是合法的 JSON 格式\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|`配置格式验证错误：模型供应商 \"${regConf.label}\" 不包含选中的模型 \"${data.model}\"。如果您欲使用其他自定义模型，请勾选“自定义模型”。`",
+        "fingerprint": "server/routes/instances/configImport.routes.ts|api-error-without-code|\"template-inputs.json 大小超过了 2MB 限制\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|`配置模板失败：缺少必填输入参数：${missingInputs.join(\"、\")}。\\n请返回“模板配置”步骤，确认上述内容已填写后重试。`",
+        "fingerprint": "server/routes/instances/configImport.routes.ts|api-error-without-code|\"template-inputs.json 大小超限\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|`未找到指定的工作流模板: ${data.template_id}`",
+        "fingerprint": "server/routes/instances/configImport.routes.ts|api-error-without-code|\"template-inputs.json 解析失败，不是合法的 JSON 格式\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|`未找到指定的行业场景 Blueprint: ${data.blueprint_id}`",
+        "fingerprint": "server/routes/instances/configImport.routes.ts|api-error-without-code|`安全拦截：不支持的备份包版本 (v${manifestData.archive_version || '未知'})`",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|`未知的技能插件: ${skillId}`",
+        "fingerprint": "server/routes/instances/createInstance.handler.ts|api-error-without-code|\"飞书 App ID 格式不正确，不得使用邮箱地址，必须以 cli_ 开头的 App ID。\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/instances/createInstance.handler.ts|api-error-without-code|\"飞书 App Secret 不能为空。\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|`无权开启管理员专用技能: ${policy.name}`",
+        "fingerprint": "server/routes/instances/createInstance.handler.ts|api-error-without-code|\"服务器安全策略未启用 Docker Socket 挂载。请先由服务器管理员在部署环境中设置 ENABLE_DOCKER_SOCKET_SKILL=true\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/instances/create.routes.ts|api-error-without-code|error.message",
+        "fingerprint": "server/routes/instances/createInstance.handler.ts|api-error-without-code|\"服务器内部错误：无法生成有效的实例唯一标识符(generatedId)。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/createInstance.handler.ts|api-error-without-code|\"后台安全设置未允许管理员实例挂载 Docker Socket。请先在管理员后台的安全设置中开启此项\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/createInstance.handler.ts|api-error-without-code|\"面板访问密码不可用，实例无法完成 Dashboard 登录配置。请重置访问密码后重新部署。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/createInstance.handler.ts|api-error-without-code|\"模型 API Key 格式不正确，检测到被自动填充为了您的账号邮箱，请重新输入。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/createInstance.handler.ts|api-error-without-code|\"配置格式验证错误：'apiKey' 必须是 string 字符串类型。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/createInstance.handler.ts|api-error-without-code|\"配置格式验证错误：'baseUrl' (base_url) 必须是 string 字符串类型。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/createInstance.handler.ts|api-error-without-code|\"配置格式验证错误：'model' (current_model) 必须是 string 字符串类型。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/createInstance.handler.ts|api-error-without-code|\"配置格式验证错误：'provider' (current_provider) 必须是 string 字符串类型。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/createInstance.handler.ts|api-error-without-code|\"配置格式验证错误：'providerApiKey' (apiKey) 必须是 string 字符串类型。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/createInstance.handler.ts|api-error-without-code|\"缺少必填的文件输入。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/createInstance.handler.ts|api-error-without-code|\"上传文件的物理存储已丢失，请重新上传。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/createInstance.handler.ts|api-error-without-code|\"无法自动分配可用端口，系统内部异常\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/createInstance.handler.ts|api-error-without-code|\"校验预上传文件异常，文件可能损坏或被拦截\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/createInstance.handler.ts|api-error-without-code|\"应用创建或部署调度失败: \" + e.message",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/createInstance.handler.ts|api-error-without-code|\"找不到可以绑定的有效上传文件或权限不足。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/createInstance.handler.ts|api-error-without-code|`高危技能拦截：该部署请求包含了需要您手动确认授权的敏感技能插件：[${names}]。您必须在创建请求中确认并同意授予对此技能的直接开启权限(confirmed_skill_ids 需包含对应 ID)。`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/createInstance.handler.ts|api-error-without-code|`技能插件 [${policy.name}] 尚未开发完成或尚未上线。`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/createInstance.handler.ts|api-error-without-code|`配置格式验证错误：不支持的模型供应商 \"${data.provider}\"，或该提供商已被废弃/下线。`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/createInstance.handler.ts|api-error-without-code|`配置格式验证错误：模型供应商 \"${regConf.label}\" 不包含选中的模型 \"${data.model}\"。如果您欲使用其他自定义模型，请勾选“自定义模型”。`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/createInstance.handler.ts|api-error-without-code|`未知的技能插件: ${skillId}`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/createInstance.handler.ts|api-error-without-code|`无权开启管理员专用技能: ${policy.name}`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/createInstance.handler.ts|api-error-without-code|error.message",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/createTemplateContext.ts|api-error-without-code|`该 Blueprint 已被禁用: ${blueprint.name}`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/createTemplateContext.ts|api-error-without-code|`模板已被禁用: ${template.name}`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/createTemplateContext.ts|api-error-without-code|`配置模板失败：缺少必填输入参数：${missingInputs.join(\"、\")}。\\n请返回“模板配置”步骤，确认上述内容已填写后重试。`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/createTemplateContext.ts|api-error-without-code|`未找到指定的工作流模板: ${data.template_id}`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/instances/createTemplateContext.ts|api-error-without-code|`未找到指定的行业场景 Blueprint: ${data.blueprint_id}`",
         "count": 1
       },
       {
@@ -4664,7 +3688,7 @@
       },
       {
         "fingerprint": "server/routes/instances/files.routes.ts|api-error-without-code|\"未指定文件路径\"",
-        "count": 2
+        "count": 1
       },
       {
         "fingerprint": "server/routes/instances/files.routes.ts|api-error-without-code|\"文件不存在或已经被删除\"",
@@ -4899,31 +3923,7 @@
         "count": 1
       },
       {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|\"参数格式错误：admin_docker_socket_enabled 必须为明确的布尔值 (true 或 false)\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|\"此渠道暂不支持真实测试环境连通性\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|\"达到速率限制 (429): 请求过于频繁或账户配额不足。\"",
-        "count": 1
-      },
-      {
         "fingerprint": "server/routes/system.ts|api-error-without-code|\"端口号无效\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|\"对接渠道或网络握手异常，请检查配置\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|\"飞书 App Secret 校验失败 (10014)。请确认您的 App ID 与 App Secret 隶属于同一个应用，且填入的是开放平台‘凭证与基础信息’项下的‘App Secret’，而不是‘Event Subscription(事件订阅)’中的 Verification Token 或 Encrypt Key。\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|\"该技能没有测试器\"",
         "count": 1
       },
       {
@@ -4943,91 +3943,7 @@
         "count": 1
       },
       {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|\"检测到输入的 App Secret 是安全遮罩（星号/点号）。“测试通道连接”需要输入真实且即时的 App Secret 私钥，不能使用本地带有的遮罩。请在输入框中重新填入来自飞书开放平台的 App Secret 真实值，然后再进行连通测试。\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|\"鉴权失败：API Key 无效\"",
-        "count": 2
-      },
-      {
         "fingerprint": "server/routes/system.ts|api-error-without-code|\"接口检测失败，服务器异常\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|\"请提供 admin_docker_socket_enabled 状态\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|\"权限不足 (403): 请检查该 API Key 是否有权访问所选模型。\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|\"权限不足，仅管理员可读取系统设置\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|\"权限不足，仅管理员可修改系统设置\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|\"缺少 钉钉 必填参数: AppKey 或 AppSecret\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|\"缺少 企业微信 必填参数: CorpID, AppSecret 或 AgentID\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|\"缺少 微信公众号 必填参数: AppID 或 AppSecret\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|\"缺少 API Key\"",
-        "count": 2
-      },
-      {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|\"缺少 App ID (例如以 cli_ 开头)\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|\"缺少 App Secret 安全私钥\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|\"缺少 Bot Token\"",
-        "count": 2
-      },
-      {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|\"缺少 GitHub Token\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|\"缺少 QQ 机器人 必填参数: AppID 或 Secret\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|\"缺少 Webhook URL\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|\"缺少 WhatsApp 必填参数: Phone Number ID 或 Access Token\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|\"缺少必填参数: apiKey, model 或 baseUrl\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|\"缺少必填参数: provider\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|\"缺少技能信息\"",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|\"认证失败 (401): API Key 可能无效或已过期。\"",
         "count": 1
       },
       {
@@ -5043,12 +3959,8 @@
         "count": 1
       },
       {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|\"Admin role required\"",
-        "count": 2
-      },
-      {
         "fingerprint": "server/routes/system.ts|api-error-without-code|\"Advanced resource configuration is disabled\"",
-        "count": 6
+        "count": 4
       },
       {
         "fingerprint": "server/routes/system.ts|api-error-without-code|\"Default per-instance disk quota cannot exceed the max per-instance disk quota.\"",
@@ -5071,10 +3983,6 @@
         "count": 1
       },
       {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|\"Invalid resource policy values\"",
-        "count": 1
-      },
-      {
         "fingerprint": "server/routes/system.ts|api-error-without-code|\"Missing required parameter: user_id\"",
         "count": 2
       },
@@ -5083,71 +3991,191 @@
         "count": 1
       },
       {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|\"SSRF 安全验证未通过: WhatsApp API 端点不合法\"",
+        "fingerprint": "server/routes/system/settings.routes.ts|api-error-without-code|\"参数格式错误：admin_docker_socket_enabled 必须为明确的布尔值 (true 或 false)\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|`${isLark ? 'Lark' : '飞书'}接口返回: ${data.msg || '未知错误'} (代号: ${data.code})`",
+        "fingerprint": "server/routes/system/settings.routes.ts|api-error-without-code|\"请提供 admin_docker_socket_enabled 状态\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|`钉钉 API 校验失败 code ${data.errcode}: ${data.errmsg}`",
+        "fingerprint": "server/routes/system/settings.routes.ts|api-error-without-code|\"权限不足，仅管理员可读取系统设置\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|`模型服务返回错误 [${status}]: ${errorMsg}`",
+        "fingerprint": "server/routes/system/settings.routes.ts|api-error-without-code|\"权限不足，仅管理员可修改系统设置\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|`模型服务商 \"${conf ? conf.label : provider}\" 设置了 no-predeploy-test 策略，不支持运行预配置连通性测试。`",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|`内部错误: ${formatError(err)}`",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|`企业微信校验失败 code ${data.errcode}: ${data.errmsg}`",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|`网络请求失败: ${formatError(err)}`",
-        "count": 1
-      },
-      {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|`网络异常: ${formatError(err)}`",
+        "fingerprint": "server/routes/system/settings.routes.ts|api-error-without-code|\"Admin role required\"",
         "count": 2
       },
       {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|`微信公众号校验失败 code ${data.errcode}: ${data.errmsg}`",
+        "fingerprint": "server/routes/system/settings.routes.ts|api-error-without-code|\"Advanced resource configuration is disabled\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/system/settings.routes.ts|api-error-without-code|\"Invalid resource policy values\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|`资源未找到 (404): 请检查 Base URL 或模型名称 (${model}) 是否正确。`",
+        "fingerprint": "server/routes/system/settings.routes.ts|api-error-without-code|sanitizeErrorMessage(error.message) || \"更新系统设置失败\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|`Slack 失败: ${JSON.stringify(data).substring(0, 500)}`",
+        "fingerprint": "server/routes/system/settings.routes.ts|api-error-without-code|sanitizeErrorMessage(error.message) || \"获取系统设置失败\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|`Webhook 请求失败 HTTP ${resp.status}`",
+        "fingerprint": "server/routes/system/settings.routes.ts|api-error-without-code|sanitizeErrorMessage(error.message) || \"Failed to save local resource policy\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|`WhatsApp 校验失败 HTTP ${resp.status}: ${JSON.stringify(data).substring(0, 500)}`",
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|\"此渠道暂不支持真实测试环境连通性\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|sanitizeErrorMessage(error.message) || \"更新系统设置失败\"",
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|\"达到速率限制 (429): 请求过于频繁或账户配额不足。\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|sanitizeErrorMessage(error.message) || \"获取系统设置失败\"",
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|\"对接渠道或网络握手异常，请检查配置\"",
         "count": 1
       },
       {
-        "fingerprint": "server/routes/system.ts|api-error-without-code|sanitizeErrorMessage(error.message) || \"Failed to save local resource policy\"",
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|\"飞书 App Secret 校验失败 (10014)。请确认您的 App ID 与 App Secret 隶属于同一个应用，且填入的是开放平台‘凭证与基础信息’项下的‘App Secret’，而不是‘Event Subscription(事件订阅)’中的 Verification Token 或 Encrypt Key。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|\"该技能没有测试器\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|\"检测到输入的 App Secret 是安全遮罩（星号/点号）。“测试通道连接”需要输入真实且即时的 App Secret 私钥，不能使用本地带有的遮罩。请在输入框中重新填入来自飞书开放平台的 App Secret 真实值，然后再进行连通测试。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|\"鉴权失败：API Key 无效\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|\"权限不足 (403): 请检查该 API Key 是否有权访问所选模型。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|\"缺少 钉钉 必填参数: AppKey 或 AppSecret\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|\"缺少 企业微信 必填参数: CorpID, AppSecret 或 AgentID\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|\"缺少 微信公众号 必填参数: AppID 或 AppSecret\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|\"缺少 API Key\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|\"缺少 App ID (例如以 cli_ 开头)\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|\"缺少 App Secret 安全私钥\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|\"缺少 Bot Token\"",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|\"缺少 GitHub Token\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|\"缺少 QQ 机器人 必填参数: AppID 或 Secret\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|\"缺少 Webhook URL\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|\"缺少 WhatsApp 必填参数: Phone Number ID 或 Access Token\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|\"缺少必填参数: apiKey, model 或 baseUrl\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|\"缺少必填参数: provider\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|\"缺少技能信息\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|\"认证失败 (401): API Key 可能无效或已过期。\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|\"SSRF 安全验证未通过: WhatsApp API 端点不合法\"",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|`${isLark ? 'Lark' : '飞书'}接口返回: ${data.msg || '未知错误'} (代号: ${data.code})`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|`钉钉 API 校验失败 code ${data.errcode}: ${data.errmsg}`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|`模型服务返回错误 [${status}]: ${errorMsg}`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|`模型服务商 \"${conf ? conf.label : provider}\" 设置了 no-predeploy-test 策略，不支持运行预配置连通性测试。`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|`内部错误: ${formatError(err)}`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|`企业微信校验失败 code ${data.errcode}: ${data.errmsg}`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|`网络请求失败: ${formatError(err)}`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|`网络异常: ${formatError(err)}`",
+        "count": 2
+      },
+      {
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|`微信公众号校验失败 code ${data.errcode}: ${data.errmsg}`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|`资源未找到 (404): 请检查 Base URL 或模型名称 (${model}) 是否正确。`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|`Slack 失败: ${JSON.stringify(data).substring(0, 500)}`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|`Webhook 请求失败 HTTP ${resp.status}`",
+        "count": 1
+      },
+      {
+        "fingerprint": "server/routes/systemDiagnostics.routes.ts|api-error-without-code|`WhatsApp 校验失败 HTTP ${resp.status}: ${JSON.stringify(data).substring(0, 500)}`",
         "count": 1
       },
       {
@@ -5183,10 +4211,6 @@
         "count": 1
       },
       {
-        "fingerprint": "server/routes/webhooks.ts|api-error-without-code|\"Unauthorized: Webhook Secret is missing or invalid in headers (X-Webhook-Secret is required).\"",
-        "count": 1
-      },
-      {
         "fingerprint": "server/routes/webhooks.ts|api-error-without-code|\"Unauthorized: Webhook secret is required but not configured on this instance.\"",
         "count": 1
       },
@@ -5196,7 +4220,7 @@
       },
       {
         "fingerprint": "server/routes/webhooks.ts|api-error-without-code|\"Unauthorized: Webhook Secret verification failed.\"",
-        "count": 2
+        "count": 1
       },
       {
         "fingerprint": "server/routes/webhooks.ts|api-error-without-code|`The target workflow template '${targetSlug}' is currently disabled or inactive.`",

@@ -8,6 +8,7 @@ import { resolveProviderRegistryKey } from "../../../shared/providerRegistryUtil
 import type { Credential } from "../../types";
 import { api } from "../../lib/api";
 import { ProviderSelect } from "../../components/ProviderSelect";
+import { useProviderOAuth } from "./useProviderOAuth";
 
 interface ModelStepProps {
   data: any;
@@ -40,8 +41,18 @@ export function ModelStep({ data, update, testLLM, testStatus, currentUser }: Mo
   const isPlatformModelMode = false;
 
   const selectedProviderConf = data.provider ? providerRegistry[data.provider as string] : undefined;
-  const usesPostDeployOAuth = selectedProviderConf?.testStrategy === "no-predeploy-test";
+  const isOAuthProvider = selectedProviderConf?.authMode === "oauth-device-code";
   const currentModels = selectedProviderConf ? selectedProviderConf.models || [] : [];
+  const oauth = useProviderOAuth({
+    provider: data.provider || "",
+    enabled: isOAuthProvider,
+    onComplete: (saved, refreshed) => {
+      setCredentials(refreshed);
+      update("providerCredentialId", saved.id);
+      update("providerApiKey", "");
+      update("baseUrl", saved.baseUrl || selectedProviderConf?.defaultBaseUrl || "");
+    },
+  });
 
   const handleProviderChange = (prov: string) => {
     update("provider", prov);
@@ -97,7 +108,7 @@ export function ModelStep({ data, update, testLLM, testStatus, currentUser }: Mo
     if (!data.provider || !data.model || isTesting) return false;
 
     const conf = providerRegistry[data.provider];
-    if (!conf || conf.testStrategy === "no-predeploy-test") return false;
+    if (!conf || isOAuthProvider || conf.testStrategy === "no-predeploy-test") return false;
     if (conf.requiresApiKey && !data.providerApiKey && !data.providerCredentialId) return false;
     // If it's custom, it MUST have a base URL
     if (data.provider === 'custom-openai-compatible' && !data.baseUrl) return false;
@@ -128,7 +139,7 @@ export function ModelStep({ data, update, testLLM, testStatus, currentUser }: Mo
           </p>
         </div>
 
-        {!usesPostDeployOAuth && <Button
+        {!isOAuthProvider && <Button
           type="button"
           onClick={testLLM}
           disabled={!canTest()}
@@ -179,17 +190,38 @@ export function ModelStep({ data, update, testLLM, testStatus, currentUser }: Mo
         </div>
       )}
 
-      {usesPostDeployOAuth && (
-        <div className="p-4 rounded-xl border border-blue-200 bg-blue-50 text-blue-900 flex items-start gap-2.5 text-[13px]">
+      {isOAuthProvider && (
+        <div className="p-4 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-900 dark:border-indigo-800/70 dark:bg-indigo-950/35 dark:text-indigo-100 flex items-start gap-2.5 text-[13px]">
           <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-          <div className="space-y-1">
-            <p className="font-semibold">{t("wizardCopy.model.oauthAfterDeployTitle")}</p>
-            <p className="leading-relaxed">{t("wizardCopy.model.oauthAfterDeployDescription")}</p>
+          <div className="space-y-2 flex-1">
+            <p className="font-semibold">{t("wizardCopy.model.oauthConnectTitle")}</p>
+            <p className="leading-relaxed">{t("wizardCopy.model.oauthConnectDescription")}</p>
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <Button type="button" className="h-9" onClick={oauth.connect} disabled={oauth.loading || !!data.providerCredentialId}>
+                {oauth.loading
+                  ? t("wizardCopy.model.oauthConnecting")
+                  : data.providerCredentialId
+                    ? t("wizardCopy.model.oauthConnected")
+                    : t("wizardCopy.model.oauthConnect")}
+              </Button>
+              {oauth.loading && (
+                <Button type="button" variant="outline" className="h-9" onClick={() => oauth.cancel()}>
+                  {t("wizardCopy.model.oauthCancel")}
+                </Button>
+              )}
+            </div>
+            {oauth.session?.userCode && (
+              <p className="font-mono text-xs">{t("wizardCopy.model.oauthCode")}: {oauth.session.userCode}</p>
+            )}
+            {oauth.error && <p role="alert" className="text-xs text-red-700 dark:text-red-300">{oauth.error}</p>}
+            {data.provider === "xai-oauth" && (
+              <p className="text-xs text-amber-700 dark:text-amber-300">{t("wizardCopy.model.xaiOAuthTierNotice")}</p>
+            )}
           </div>
         </div>
       )}
 
-      {!usesPostDeployOAuth && <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-left shadow-sm">
+      {!isOAuthProvider && <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-left shadow-sm">
         <div className="flex items-center gap-2 text-sm font-bold text-content">
           <Key className="h-4 w-4 text-blue-600" />
           {t("wizardCopy.model.byokTitle")}
@@ -202,7 +234,7 @@ export function ModelStep({ data, update, testLLM, testStatus, currentUser }: Mo
       {/* Two column form */}
       <div className={cn("grid grid-cols-1 md:grid-cols-2 gap-6 pt-2", isPlatformModelMode && "opacity-55 pointer-events-none")}>
         <div className="space-y-5">
-          {!usesPostDeployOAuth && <div>
+          {!isOAuthProvider && <div>
             <Label className="text-sm font-semibold text-content-secondary flex items-center gap-1.5">
               <Database className="w-4 h-4 text-content-muted" />
               {t("wizardCopy.model.savedCredential")}
@@ -237,7 +269,7 @@ export function ModelStep({ data, update, testLLM, testStatus, currentUser }: Mo
         </div>
 
         <div className="space-y-5">
-          {!usesPostDeployOAuth && <div>
+          {!isOAuthProvider && <div>
             <Label className="text-sm font-semibold text-content-secondary flex items-center gap-1.5">
               <Key className="w-4 h-4 text-content-muted" />
               {t("wizardCopy.model.apiKey")}
@@ -271,7 +303,7 @@ export function ModelStep({ data, update, testLLM, testStatus, currentUser }: Mo
             </div>
           </div>}
 
-          {!usesPostDeployOAuth && <div>
+          {!isOAuthProvider && <div>
             <Label className="text-sm font-semibold text-content-secondary flex items-center gap-1.5">
               <Link2 className="w-4 h-4 text-content-muted" />
               {t("wizardCopy.model.baseUrl")}
@@ -329,7 +361,7 @@ export function ModelStep({ data, update, testLLM, testStatus, currentUser }: Mo
         </div>
       </div>
 
-      {!isTestSuccess && !usesPostDeployOAuth && (
+      {!isTestSuccess && !isOAuthProvider && (
         <div className="p-4 bg-surface-muted border border-outline rounded-xl text-sm text-content-muted leading-relaxed shadow-sm">
           <strong className="text-content">{t("wizardCopy.model.securityTitle")}</strong>
           {data.providerCredentialId ? t("wizardCopy.model.securitySaved") : t("wizardCopy.model.securityByok")}

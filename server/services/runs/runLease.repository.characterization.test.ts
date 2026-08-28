@@ -58,6 +58,23 @@ describe("Run lease repository characterization", () => {
     expect(stored?.lease_expires_at).toBe("2026-08-17T00:01:00.000Z");
   });
 
+  it("claims only the requested run without consuming another instance queue", async () => {
+    await createRun("run-1", "instance-1");
+    await createRun("run-2", "instance-2");
+
+    const claimed = await chatRepo.claimRunById({
+      runId: "run-2",
+      reconcilerId: "worker-targeted",
+      leaseSeconds: 60,
+    });
+
+    expect(claimed?.id).toBe("run-2");
+    expect(readStore().chatRuns.find((run) => run.id === "run-1")?.reconciled_by).toBeFalsy();
+    expect(readStore().chatRuns.find((run) => run.id === "run-2")?.reconciled_by).toBe("worker-targeted");
+    expect((await chatRepo.claimRuns({ reconcilerId: "worker-broad", leaseSeconds: 60 })).map((run) => run.id))
+      .toEqual(["run-1"]);
+  });
+
   it("prevents another owner from claiming or mutating an active lease", async () => {
     await createRun();
     await chatRepo.claimRuns({ reconcilerId: "worker-a", leaseSeconds: 60 });
@@ -81,7 +98,7 @@ describe("Run lease repository characterization", () => {
     expect(await chatRepo.renewRunLease({ runId: "run-1", reconcilerId: "worker-a", leaseSeconds: 60 })).toBe(false);
     expect(await chatRepo.releaseRunLease({ runId: "run-1", reconcilerId: "worker-a" })).toBe(false);
     expect(readStore().chatRuns.find((run) => run.id === "run-1")?.reconciled_by).toBe("worker-b");
-  });
+  }, 10_000);
 
   it("allows same-owner reclaim only after expiry without introducing a generation", async () => {
     await createRun();

@@ -107,6 +107,11 @@ describe("chatRepo local status contract", () => {
       reasoningEffort: "deep",
     });
     expect(first.status).toBe("success");
+    expect(readStore().chatRuns.find(run => run.id === "run-1")).toMatchObject({
+      runtime_type: "hermes",
+      runtime_provider_key: "hermes-core",
+      runtime_contract_version: 1,
+    });
 
     const replay = await chatRepo.beginChatRun({
       conversationId: conversation.id,
@@ -146,6 +151,11 @@ describe("chatRepo local status contract", () => {
 
     const claimed = await chatRepo.claimRuns({ reconcilerId: "test-reconciler", leaseSeconds: 60 });
     expect(claimed[0]?.reasoning_effort).toBe("deep");
+    expect(claimed[0]).toMatchObject({
+      runtime_type: "hermes",
+      runtime_provider_key: "hermes-core",
+      runtime_contract_version: 1,
+    });
     expect((await chatRepo.recordDispatchedChatRun({
       runId: "run-1",
       reconcilerId: "test-reconciler",
@@ -163,6 +173,25 @@ describe("chatRepo local status contract", () => {
     const finished = await chatRepo.finishChatRun({ runId: "run-1", status: "completed", assistantContent: "done", expectedUpstreamRunId: "upstream-1" });
     expect(finished.status).toBe("success");
     expect((await chatRepo.finishChatRun({ runId: "run-1", status: "completed" })).status).toBe("already_terminal");
+  });
+
+  it("rejects mutation of a persisted Run Binding", async () => {
+    const conversation = await chatRepo.createConversation("user-1", "instance-1", "Test");
+    await chatRepo.beginChatRun({
+      conversationId: conversation.id,
+      userId: "user-1",
+      instanceId: "instance-1",
+      content: "run",
+      requestId: "binding-request",
+      runId: "binding-run",
+    });
+
+    expect(await chatRepo.updateChatRun("binding-run", { runtime_type: "pi" })).toBe(false);
+    expect(readStore().chatRuns.find(run => run.id === "binding-run")).toMatchObject({
+      runtime_type: "hermes",
+      runtime_provider_key: "hermes-core",
+      runtime_contract_version: 1,
+    });
   });
 
   it("merges message metadata without losing the run association", async () => {

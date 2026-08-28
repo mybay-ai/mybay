@@ -22,11 +22,13 @@ describe("hasBasicStepError", () => {
 });
 
 describe("model step validation", () => {
-  it("allows supported OAuth providers to continue without a predeploy API test", () => {
+  it("requires a connected OAuth credential but no predeploy API test", () => {
     expect(requiresPredeployModelTest("openai-codex")).toBe(false);
     expect(requiresPredeployModelTest("xai-oauth")).toBe(false);
-    expect(hasModelStepError({ provider: "openai-codex", model: "gpt-5.5" }, false)).toBe(false);
-    expect(hasModelStepError({ provider: "xai-oauth", model: "grok-4.5" }, false)).toBe(false);
+    expect(hasModelStepError({ provider: "openai-codex", model: "gpt-5.5" }, false)).toBe(true);
+    expect(hasModelStepError({ provider: "xai-oauth", model: "grok-4.5" }, false)).toBe(true);
+    expect(hasModelStepError({ provider: "openai-codex", model: "gpt-5.5", providerCredentialId: "oauth-1" }, false)).toBe(false);
+    expect(hasModelStepError({ provider: "xai-oauth", model: "grok-4.5", providerCredentialId: "oauth-2" }, false)).toBe(false);
   });
 
   it("still requires credentials and a successful test for API-key providers", () => {

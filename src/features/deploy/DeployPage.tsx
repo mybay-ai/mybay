@@ -1,28 +1,19 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Socket } from "socket.io-client";
 import { useTranslation } from "react-i18next";
 import { DeployWizard } from "./DeployWizard";
-import { DeployLimitReached } from "./DeployLimitReached";
+import { QuickDeployPage } from "./QuickDeployPage";
 import { ErrorBoundary } from "../../components/ErrorBoundary";
 import { 
-  Loader2, Mail, ShieldAlert, Compass, Terminal, ArrowRight, 
-  ArrowLeft, Search, Layout, Sparkles, Check, Settings, Cpu, Zap
+  Compass, Terminal, ArrowRight, ArrowLeft, Search, Layout, Check, Settings
 } from "lucide-react";
 
 import { api } from "../../lib/api";
 import { Card, Button } from "../../components/ui";
 import { resolveBlueprintCardContent, resolveWorkflowCardContent, getRiskLevelTranslationKey } from "../../components/template-center/utils";
 import type { WorkflowTemplate, IndustryBlueprint } from "../../components/template-center/types";
-
-interface QuotaStatus {
-  canCreate: boolean;
-  plan: string;
-  limit: number;
-  used: number;
-  reason?: string;
-  existingInstances: any[];
-}
+import type { SetupFormData } from "../../types";
 
 export function DeployPage({ currentUser, socket, fetchInstances, instances, templateWorkflowsEnabled = false, advancedResourceConfigEnabled = false }: {
   currentUser: any, 
@@ -33,9 +24,6 @@ export function DeployPage({ currentUser, socket, fetchInstances, instances, tem
   advancedResourceConfigEnabled?: boolean
 }) {
   const { t, i18n } = useTranslation(["deploy", "dashboard"]);
-  const [quota, setQuota] = useState<QuotaStatus | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -62,28 +50,8 @@ export function DeployPage({ currentUser, socket, fetchInstances, instances, tem
   const templatesLoading = workflowsLoading || blueprintsLoading;
   const [activeTab, setActiveTab] = useState<"all" | "blueprints" | "workflows">("all");
   const [searchQuery, setSearchQuery] = useState("");
-
-  const checkQuota = useCallback(async () => {
-    if (!currentUser) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await api.get("/api/instances/can-create");
-      if (data) {
-        setQuota(data);
-      } else {
-        throw new Error(t("quota_check.error_fail"));
-      }
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [currentUser, t]);
-
-  useEffect(() => {
-    checkQuota();
-  }, [checkQuota]);
+  const [deploymentMode, setDeploymentMode] = useState<"quick" | "advanced">("quick");
+  const [advancedInitialData, setAdvancedInitialData] = useState<Partial<SetupFormData>>();
 
   useEffect(() => {
     setWorkflowsLoaded(false);
@@ -144,48 +112,6 @@ export function DeployPage({ currentUser, socket, fetchInstances, instances, tem
 
   const hasTemplateParams = templateWorkflowsEnabled && !!(blueprintId || templateId);
   const currentPath = templateWorkflowsEnabled ? (hasTemplateParams ? "template" : selectedPath) : "blank";
-
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] text-content-muted">
-        <Loader2 className="w-8 h-8 animate-spin mb-4 text-blue-500" />
-        <p className="text-sm font-medium animate-pulse">{t("quota_check.loading")}</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] max-w-md mx-auto text-center px-4">
-        <div className="w-12 h-12 bg-red-50 text-red-500 rounded-xl flex items-center justify-center mb-4">
-          <Loader2 className="w-6 h-6" />
-        </div>
-        <h3 className="text-lg font-bold text-content mb-2">{t("quota_check.error_title")}</h3>
-        <p className="text-content-muted text-sm mb-6">{error}</p>
-        <button 
-          onClick={checkQuota}
-          className="px-6 h-11 bg-surface-muted hover:bg-outline text-content-secondary font-bold rounded-xl transition-colors cursor-pointer"
-        >
-          {t("quota_check.btn_retry")}
-        </button>
-      </div>
-    );
-  }
-
-  if (quota && !quota.canCreate) {
-    return (
-      <ErrorBoundary>
-        <DeployLimitReached 
-          limit={quota.limit}
-          used={quota.used}
-          existingInstances={quota.existingInstances}
-          plan={quota.plan}
-          onManage={() => navigate("/app/instances")}
-          onRefresh={checkQuota}
-        />
-      </ErrorBoundary>
-    );
-  }
 
   // 1. Path Selection Screen
   if (currentPath === null) {
@@ -258,7 +184,11 @@ export function DeployPage({ currentUser, socket, fetchInstances, instances, tem
           </Card>
 
           {/* Path B: From Scratch */}
-          <Card className="p-6 md:p-8 border-outline/80 hover:border-blue-300 shadow-sm hover:shadow-xl transition-all group flex flex-col justify-between h-full bg-surface rounded-3xl relative overflow-hidden text-left cursor-pointer" onClick={() => setSelectedPath("blank")}>
+          <Card className="p-6 md:p-8 border-outline/80 hover:border-blue-300 shadow-sm hover:shadow-xl transition-all group flex flex-col justify-between h-full bg-surface rounded-3xl relative overflow-hidden text-left cursor-pointer" onClick={() => {
+            setAdvancedInitialData(undefined);
+            setDeploymentMode("quick");
+            setSelectedPath("blank");
+          }}>
             <div className="absolute -top-6 -right-6 p-8 opacity-[0.03] text-content pointer-events-none group-hover:scale-110 transition-transform duration-300">
               <Settings className="w-48 h-48" />
             </div>
@@ -297,6 +227,8 @@ export function DeployPage({ currentUser, socket, fetchInstances, instances, tem
                 variant="outline"
                 onClick={(e: any) => {
                   e.stopPropagation();
+                  setAdvancedInitialData(undefined);
+                  setDeploymentMode("quick");
                   setSelectedPath("blank");
                 }}
                 className="w-full h-11 border-outline hover:border-outline-strong text-content-secondary font-bold text-sm rounded-2xl flex items-center justify-center gap-2"
@@ -533,6 +465,25 @@ export function DeployPage({ currentUser, socket, fetchInstances, instances, tem
   }
 
   // 3. Deployment Wizard (for blank path or active template deployment)
+  if (currentPath === "blank" && deploymentMode === "quick") {
+    return (
+      <ErrorBoundary>
+        <QuickDeployPage
+          currentUser={currentUser}
+          onAdvanced={(initialData) => {
+            setAdvancedInitialData(initialData);
+            setDeploymentMode("advanced");
+          }}
+          onCreated={() => {
+            fetchInstances();
+          }}
+          onOpenChat={(instanceId) => navigate(`/app/chat?instanceId=${encodeURIComponent(instanceId)}`)}
+          onViewInstances={() => navigate("/app/instances")}
+        />
+      </ErrorBoundary>
+    );
+  }
+
   return (
     <ErrorBoundary>
       <DeployWizard 
@@ -555,7 +506,12 @@ export function DeployPage({ currentUser, socket, fetchInstances, instances, tem
           if (params.blueprint_id) newParams.blueprint_id = params.blueprint_id;
           setSearchParams(newParams);
         }}
-        onBackToSelection={templateWorkflowsEnabled && !hasTemplateParams ? () => setSelectedPath(null) : undefined}
+        onBackToSelection={currentPath === "blank"
+          ? () => setDeploymentMode("quick")
+          : templateWorkflowsEnabled && !hasTemplateParams
+            ? () => setSelectedPath(null)
+            : undefined}
+        initialData={currentPath === "blank" ? advancedInitialData : undefined}
         onSuccess={(targetRoute?: string) => {
           fetchInstances();
           if (targetRoute) {

@@ -1,8 +1,13 @@
 import fs from "fs";
 import path from "path";
-import { filesRepo } from "../repositories/filesRepo";
 import { getChatAttachmentConfig } from "../config/chatAttachmentConfig";
 import { normalizeMultipartFilename } from "./multipartFilename";
+import {
+  resolveConversationAuthority,
+  resolveConversationFilesAuthority,
+  resolveInstanceAuthority,
+  type ConversationAuthorityContext,
+} from "../services/instances/resourceAuthorityService";
 
 export const TEXT_ATTACHMENT_EXTENSIONS = new Set([".txt", ".md", ".csv", ".json", ".log"]);
 
@@ -68,6 +73,7 @@ export async function loadAndValidateChatAttachments(params: {
   instanceId: string;
   conversationId: string;
   maxCount?: number | null;
+  authority?: ConversationAuthorityContext;
 }): Promise<ChatAttachmentRecord[]> {
   const { attachmentIds, userId, instanceId, conversationId } = params;
   const maxCount = params.maxCount === undefined ? getChatAttachmentConfig().maxFiles : params.maxCount;
@@ -84,24 +90,32 @@ export async function loadAndValidateChatAttachments(params: {
     }
   }
   if (attachmentIds.length === 0) return [];
-
-  const data = (await Promise.all(attachmentIds.map((fileId: string) => filesRepo.findById(fileId)))).filter(Boolean) as ChatAttachmentRecord[];
-
-  if (!data || data.length !== attachmentIds.length) {
-    throw { status: 400, error: "INVALID_ATTACHMENT", message: "Some attachments do not exist." };
+  if (new Set(attachmentIds).size !== attachmentIds.length) {
+    throw { status: 400, error: "INVALID_REQUEST", message: "Duplicate attachment IDs are not allowed." };
   }
 
-  for (const file of data as ChatAttachmentRecord[]) {
-    if (file.owner_id !== userId || file.instance_id !== instanceId || file.conversation_id !== conversationId) {
-      throw { status: 403, error: "FORBIDDEN", message: "You do not have access to one or more attachments." };
+  let authority = params.authority;
+  if (!authority) {
+    const instance = await resolveInstanceAuthority({ actor: { kind: "user", id: userId }, instanceId });
+    if (instance.ok === false) {
+      throw { status: instance.status, error: instance.code, message: "Attachment authority validation failed." };
     }
-    if (isChatAttachmentDeleted(file)) {
-      throw { status: 400, error: "ATTACHMENT_DELETED", message: "One or more attachments have been deleted." };
+    const conversation = await resolveConversationAuthority({ instance, conversationId });
+    if (conversation.ok === false) {
+      throw { status: conversation.status, error: conversation.code, message: "Attachment authority validation failed." };
     }
+    authority = conversation;
+  } else if (authority.ownerId !== userId
+    || String(authority.instance.id) !== instanceId
+    || String(authority.conversation.id) !== conversationId) {
+    throw { status: 403, error: "FORBIDDEN", message: "Attachment authority context mismatch." };
   }
 
-  const order = new Map(attachmentIds.map((id: string, idx: number) => [id, idx]));
-  return (data as ChatAttachmentRecord[]).sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+  const resolved = await resolveConversationFilesAuthority({ conversation: authority, fileIds: attachmentIds });
+  if (resolved.ok === false) {
+    throw { status: resolved.status, error: resolved.code, message: "One or more attachments do not exist." };
+  }
+  return resolved.files as ChatAttachmentRecord[];
 }
 
 export async function readAttachmentContent(file: any): Promise<{ content: string | null; error: string | null }> {

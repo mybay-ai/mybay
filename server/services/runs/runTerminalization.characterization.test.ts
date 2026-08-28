@@ -6,6 +6,7 @@ import {
   completeRun,
   getEventsFromCache,
 } from "../runsReconciler";
+import { sanitizeRunErrorCode } from "./runTerminalization";
 
 describe("run terminalization characterization", () => {
   const runId = "terminal-run-1";
@@ -15,18 +16,30 @@ describe("run terminalization characterization", () => {
     vi.restoreAllMocks();
   });
 
+  it.each([
+    "RUNTIME_CONVERSATION_MODE_UNSUPPORTED",
+    "RUNTIME_RUN_CANCELLATION_UNSUPPORTED",
+    "RUNTIME_TERMINAL_OBSERVATION_UNSUPPORTED",
+  ])("preserves the Runtime capability contract code %s", (errorCode) => {
+    expect(sanitizeRunErrorCode(errorCode)).toBe(errorCode);
+  });
+
   it("persists a completed run before publishing final events", async () => {
     const finish = vi.spyOn(chatRepo, "finishChatRun").mockImplementation(async () => {
       expect(getEventsFromCache(runId, 0).events).toEqual([]);
       return { status: "success", assistant_message_id: "assistant-1", assistant_sequence_no: 2 };
     });
-    vi.spyOn(chatRepo, "getChatRun").mockResolvedValue(null);
+    vi.spyOn(chatRepo, "getChatRun").mockResolvedValue({
+      id: runId,
+      status: "running",
+      upstream_run_id: "upstream-1",
+    } as any);
 
     await expect(completeRun(runId, "completed", "done", undefined, {
       prompt_tokens: 2,
       completion_tokens: 3,
       total_tokens: 5,
-    }, 41)).resolves.toBe(true);
+    }, 41, { expectedUpstreamRunId: "upstream-1" })).resolves.toBe(true);
 
     expect(finish).toHaveBeenCalledWith(expect.objectContaining({
       runId,
@@ -37,8 +50,11 @@ describe("run terminalization characterization", () => {
       usageCompletionTokens: 3,
       usageTotalTokens: 5,
       durationMs: 41,
-      reconcilerId: RECONCILER_ID,
-      expectedUpstreamRunId: undefined,
+      reconcilerId: undefined,
+      expectedUpstreamRunId: "upstream-1",
+      completionAudit: expect.objectContaining({
+        schemaVersion: "mybay.run-completion-verification.v1",
+      }),
     }));
     const events = getEventsFromCache(runId, 0).events;
     expect(events.map((event) => event.event)).toEqual(["step", "status"]);

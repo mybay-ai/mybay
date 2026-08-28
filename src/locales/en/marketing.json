@@ -1058,58 +1058,61 @@
   "changelog": {
     "title": "MyBay Open Source Changelog",
     "subtitle": "Only capabilities released and verified in the MyBay Open Source.",
-    "timelineTip": "Preview Release",
+    "timelineTip": "Stable Release",
     "releases": [
       {
-        "version": "v0.1.23-preview",
-        "date": "2026.08.27",
-        "badge": "PREVIEW",
-        "summary": "MyBay Open Source v0.1.23-preview completes the local generated-artifact lifecycle, safe previews, responsive chat workspace, and model configuration diagnostics.",
+        "version": "v0.1.24",
+        "date": "2026.08.29",
+        "badge": "STABLE",
+        "summary": "MyBay Open Source v0.1.24 completes local quick deployment, OAuth model authorization, Runtime resource boundaries, and the interactive Agent run path.",
         "sections": [
           {
-            "title": "Generated files and safe previews",
+            "title": "Resource authorization and file safety",
             "type": "fix",
             "items": [
-              "Normalizes generated paths, preview selection recovery, refresh recovery, and download names across the container workspace.",
-              "Adds local dependency inspection, asset remapping, missing-dependency diagnostics, and a single security sandbox for HTML projects.",
-              "Strengthens security boundaries for instance file paths, HTML assets, and managed local operations.",
-              "Fixes UTF-8 attachment filename handling while preserving all existing upload limits and validation rules."
+              "Validates ownership across users, instances, conversations, Runs, and attachments through one authority layer.",
+              "Shares resource authorization between Chat routes and the background Reconciler to prevent cross-instance and cross-conversation access.",
+              "Completes attachment upload, download, deletion, deleted-state, and background file reconciliation lifecycles.",
+              "Preserves strict boundaries for file paths, previews, and managed local operations."
             ]
           },
           {
-            "title": "Responsive chat workspace",
+            "title": "Runtime architecture and interactive performance",
             "type": "feature",
             "items": [
-              "Improves conversation history, chat, and workspace panel switching and scrolling across desktop, tablet, and mobile layouts.",
-              "Adds local generated-file cards, added/modified file summaries, collapsible execution details, and per-response duration.",
-              "Preserves Result, Steps, Files, and Preview tab state and reveals the workspace when a generated file is selected."
+              "Extracts Runtime Drivers, run preparation, event providers, and the Hermes execution adapter.",
+              "Hardens Run binding, background recovery, preview isolation, and second-driver lifecycle contract coverage.",
+              "Dispatches interactive Agent Runs immediately after creation to remove background-poll startup latency.",
+              "Keeps database history authoritative by default with an explicit opt-in for verified native Runtime session continuity."
             ]
           },
           {
-            "title": "Model and deployment reliability",
+            "title": "Quick deployment and OAuth model connections",
+            "type": "feature",
+            "items": [
+              "Adds a local quick-deployment flow with safe defaults for Agent details, models, access protection, and delivery.",
+              "Removes commercial instance-quota checks from the open-source edition and standardizes local BYOK credentials.",
+              "Supports pre-deployment device authorization for OpenAI Codex (ChatGPT OAuth) and xAI Grok OAuth.",
+              "Encrypts OAuth credentials locally, writes Hermes auth.json during deployment, and supports control-plane Responses calls."
+            ]
+          },
+          {
+            "title": "Deployment and chat experience",
             "type": "fix",
             "items": [
-              "Unifies provider, model ID, saved credential, and custom Base URL selection and validation.",
-              "Improves model API hot-update persistence and configuration application after container restart.",
-              "Strengthens deployment error classification, port-conflict recovery, and local Feishu runtime preparation diagnostics.",
-              "Preserves Desktop, LAN, and Server preflight checks and the existing instance creation entry."
-            ]
-          },
-          {
-            "title": "Local file format support",
-            "type": "feature",
-            "items": [
-              "Adds workspace content previews for Office documents and direct source viewing for TypeScript and TSX.",
-              "Streams MP4 and MOV with byte-range responses and explains browser codec compatibility boundaries."
+              "Shares model authorization and fail-closed validation between quick and advanced deployment.",
+              "Improves hover, icon, and text contrast for deployment progress cards in dark appearance.",
+              "Improves Agent execution state, step feedback, and Runtime startup observability.",
+              "Preserves Desktop, LAN, and Server preflight checks and local Docker operation."
             ]
           },
           {
             "title": "Documentation and repository",
             "type": "feature",
             "items": [
-              "Corrects GitHub repository URLs, clone commands, badges, and npm package metadata.",
-              "Adds product screenshots and bilingual 10-minute first-Agent guides.",
-              "Adds bilingual troubleshooting for deployment, models, Feishu, HTML, video, and UTF-8 filenames.",
+              "Adds automated coverage for OAuth routes, config writing, model calls, and quick-deployment validation.",
+              "Assigns stable error codes to new OAuth APIs and passes the API error-contract gate.",
+              "Refreshes bilingual product screenshots, release notes, and clean source-archive verification.",
               "Introduces no hosted SaaS, managed model, plan, billing, multi-tenant, or cloud scheduling capability."
             ]
           }

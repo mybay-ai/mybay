@@ -18,6 +18,11 @@ export interface RunLeaseRepository<TClaimedRun extends RunLeaseClaimedRun> {
     leaseSeconds: number;
     limit?: number;
   }): Promise<TClaimedRun[]>;
+  claimRunById(params: {
+    runId: string;
+    reconcilerId: string;
+    leaseSeconds: number;
+  }): Promise<TClaimedRun | null>;
   renewRunLease(params: {
     runId: string;
     reconcilerId: string;
@@ -57,6 +62,7 @@ export interface RunLeaseController<TClaimedRun extends RunLeaseClaimedRun> {
   readonly ownerId: string;
   readonly lostRunIds: Set<string>;
   claim(): Promise<TClaimedRun[]>;
+  claimById(runId: string): Promise<TClaimedRun | null>;
   hasLost(runId: string): boolean;
   startRenewal(runs: readonly TClaimedRun[]): () => void;
   release(runId: string): Promise<boolean>;
@@ -92,6 +98,14 @@ export function createRunLeaseController<TClaimedRun extends RunLeaseClaimedRun>
         reconcilerId: ownerId,
         leaseSeconds: policy.leaseSeconds,
         limit: policy.claimLimit
+      });
+    },
+
+    claimById(runId: string) {
+      return repository.claimRunById({
+        runId,
+        reconcilerId: ownerId,
+        leaseSeconds: policy.leaseSeconds
       });
     },
 

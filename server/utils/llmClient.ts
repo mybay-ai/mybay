@@ -71,6 +71,17 @@ function resolveLLMRuntime(llmConfig: LLMConfig) {
     }
   }
 
+  let oauthPayload: any = null;
+  if (decryptedApiKey && (regKey === "openai-codex" || regKey === "xai-oauth")) {
+    try {
+      const parsed = JSON.parse(decryptedApiKey);
+      if (parsed?.tokens?.access_token) oauthPayload = parsed;
+    } catch {}
+  }
+  if (oauthPayload?.tokens?.access_token) {
+    decryptedApiKey = String(oauthPayload.tokens.access_token);
+  }
+
   if (!decryptedApiKey) {
     if (regKey === "gemini") {
       decryptedApiKey = process.env.GEMINI_API_KEY || "";
@@ -91,8 +102,82 @@ function resolveLLMRuntime(llmConfig: LLMConfig) {
     baseUrl,
     model,
     decryptedApiKey,
-    strategy: conf ? conf.testStrategy : "openai-chat-completions"
+    oauthPayload,
+    strategy: oauthPayload ? "codex-responses" : (conf ? conf.testStrategy : "openai-chat-completions")
   };
+}
+
+function resolveOAuthAccountId(payload: any, accessToken: string): string | undefined {
+  const direct = payload?.tokens?.account_id || payload?.account_id;
+  if (typeof direct === "string" && direct.trim()) return direct.trim();
+  const parts = accessToken.split(".");
+  if (parts.length !== 3) return undefined;
+  try {
+    const claims = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
+    const accountId = claims?.["https://api.openai.com/auth"]?.chatgpt_account_id;
+    return typeof accountId === "string" && accountId.trim() ? accountId.trim() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function responsesInputFromMessages(messages: Array<{ role: string; content: string }>) {
+  return messages
+    .filter((message) => message.role !== "system")
+    .map((message) => ({
+      role: message.role === "assistant" ? "assistant" : "user",
+      content: [{
+        type: message.role === "assistant" ? "output_text" : "input_text",
+        text: message.content,
+      }],
+    }));
+}
+
+export async function readOAuthResponsesStream(response: Response): Promise<ChatCompletionResult> {
+  if (!response.body) throw new Error("OAuth Responses endpoint returned an empty stream");
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let content = "";
+  let usage: any = null;
+
+  const consumeEvent = (rawEvent: string) => {
+    const data = rawEvent
+      .split(/\r?\n/)
+      .filter((line) => line.startsWith("data:"))
+      .map((line) => line.slice(5).trimStart())
+      .join("\n")
+      .trim();
+    if (!data || data === "[DONE]") return;
+    let event: any;
+    try { event = JSON.parse(data); } catch { return; }
+    if (event.type === "response.failed" || event.type === "error") {
+      const message = event.response?.error?.message || event.error?.message || event.error || "Responses API execution failed";
+      throw new Error(`LLM 供应商返回错误: ${message}`);
+    }
+    if (event.type === "response.incomplete") {
+      const reason = event.response?.incomplete_details?.reason || event.incomplete_details?.reason;
+      if (reason === "error" || reason === "failed") {
+        const message = event.response?.error?.message || event.error?.message || "Responses stream failed";
+        throw new Error(`LLM 供应商返回错误: ${message}`);
+      }
+    }
+    if (event.type === "response.output_text.delta" && typeof event.delta === "string") content += event.delta;
+    if (event.type === "response.output_text.done" && !content && typeof event.text === "string") content = event.text;
+    if (event.response?.usage) usage = event.response.usage;
+    else if (event.usage) usage = event.usage;
+  };
+
+  while (true) {
+    const { done, value } = await reader.read();
+    buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
+    const events = buffer.split(/\r?\n\r?\n/);
+    buffer = events.pop() || "";
+    for (const event of events) consumeEvent(event);
+    if (done) break;
+  }
+  if (buffer.trim()) consumeEvent(buffer);
+  return { content, usage: usage || null };
 }
 
 async function assertSafeLLMRequestUrl(url: string): Promise<void> {
@@ -108,7 +193,7 @@ export async function generateChatCompletion(
   llmConfig: LLMConfig,
   options: GenerateChatCompletionOptions
 ): Promise<ChatCompletionResult> {
-  const { regKey, conf, baseUrl, model, decryptedApiKey, strategy } = resolveLLMRuntime(llmConfig);
+  const { regKey, conf, baseUrl, model, decryptedApiKey, oauthPayload, strategy } = resolveLLMRuntime(llmConfig);
   const timeoutMs = options.timeoutMs || 60000;
   const controller = new AbortController();
   const abortFromExternalSignal = () => {
@@ -144,7 +229,27 @@ export async function generateChatCompletion(
       redirect: "manual"
     };
 
-    if (strategy === "anthropic-messages") {
+    if (strategy === "codex-responses") {
+      url = `${baseUrl.replace(/\/$/, "")}/responses`;
+      opts.headers["Authorization"] = `Bearer ${decryptedApiKey}`;
+      opts.headers.Accept = "text/event-stream";
+      opts.headers["User-Agent"] = "mybay-local-quick-chat";
+      if (regKey === "openai-codex") {
+        const accountId = resolveOAuthAccountId(oauthPayload, decryptedApiKey);
+        if (accountId) opts.headers["ChatGPT-Account-Id"] = accountId;
+      }
+      const instructions = normalizedMessages
+        .filter((message) => message.role === "system")
+        .map((message) => message.content)
+        .join("\n\n") || undefined;
+      opts.body = JSON.stringify({
+        model,
+        input: responsesInputFromMessages(normalizedMessages),
+        store: false,
+        stream: true,
+        ...(instructions ? { instructions } : {}),
+      });
+    } else if (strategy === "anthropic-messages") {
       url = `${baseUrl.replace(/\/$/, "")}/messages`;
       opts.headers["x-api-key"] = decryptedApiKey;
       opts.headers["anthropic-version"] = "2023-06-01";
@@ -216,6 +321,10 @@ export async function generateChatCompletion(
 
       const msg = parsedErr?.error?.message || parsedErr?.error || errorText || `HTTP 错误 ${response.status}`;
       throw new Error(`LLM 供应商 [${llmConfig.provider}] 返回错误: ${msg}`);
+    }
+
+    if (strategy === "codex-responses") {
+      return await readOAuthResponsesStream(response);
     }
 
     const resJson = await response.json();

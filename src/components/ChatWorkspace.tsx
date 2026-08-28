@@ -18,23 +18,19 @@ import { ChatWorkspaceHeader } from "./chat-workspace/ChatWorkspaceHeader";
 import { ChatWorkspacePanel, type WorkspaceTab } from "./chat-workspace/ChatWorkspacePanel";
 import { useChatWorkspaceFiles } from "./chat-workspace/useChatWorkspaceFiles";
 import { useChatConversations } from "./chat-workspace/useChatConversations";
-import { computeMobileWorkspaceFrame, type MobileWorkspaceFrame } from "./chat-workspace/mobileWorkspaceLayout";
 import { recoverActiveRunMessages } from "./chat-workspace/run/runRecovery";
-import { executeStopLifecycle, pollRunRelease, type RunReleaseResult } from "./chat-workspace/run/runStopLifecycle";
-import { markRunMessagesStopped } from "./chat-workspace/run/runTerminalMessages";
 import { getRetryAttachments } from "./chat-workspace/run/retryAttachments";
 import { resolveSelectedWorkspaceRunContext } from "./chat-workspace/run/workspaceRunContext";
 import { useGeneratedArtifacts } from "./chat-workspace/useGeneratedArtifacts";
 import { isGeneratedArtifactPreviewable } from "./chat-workspace/generatedArtifacts";
 import { clearGeneratedPreviewSelection, loadGeneratedPreviewSelection } from "./chat-workspace/previewSelectionStorage";
 import { CHAT_WORKSPACE_TABLET_BREAKPOINT, shouldUseOverlayWorkspace } from "./chat-workspace/chatWorkspaceResponsiveLayout";
+import { useChatWorkspaceViewport } from "./chat-workspace/useChatWorkspaceViewport";
+import { useQueuedChatFollowUps } from "./chat-workspace/useQueuedChatFollowUps";
+import { createChatCancellationController } from "./chat-workspace/chatCancellationController";
+import { createChatRunWithRetry, waitForRunRelease } from "./chat-workspace/chatRunTransport";
 import { MAX_CHAT_USER_MESSAGE_CHARS, countChatMessageCharacters } from "../../shared/chatMessageContract";
-import {
-  isConcurrencyTakeoverError,
-  isRetryableRunCreationError,
-  normalizeStoredMessageError,
-  normalizeStoredMessageStatus
-} from "./chat-workspace/chatMessagePolicy";
+import { normalizeStoredMessageError, normalizeStoredMessageStatus } from "./chat-workspace/chatMessagePolicy";
 import {
   normalizeChatReadinessProbe,
   unavailableChatReadiness,
@@ -50,59 +46,19 @@ import {
   shouldAcceptMessageHistory,
   shouldAcceptConversationHistory
 } from "../lib/chatWorkspaceState";
+import { createChatWorkspaceMessageSender } from "./ChatWorkspaceMessageSender";
+import { resolveInitialChatInstanceId } from "./chat-workspace/chatInitialInstanceSelection";
 
-export function generateUUIDv4(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
-    const arr = new Uint8Array(16);
-    crypto.getRandomValues(arr);
-    arr[6] = (arr[6] & 0x0f) | 0x40;
-    arr[8] = (arr[8] & 0x3f) | 0x80;
-    
-    let uuid = "";
-    for (let i = 0; i < 16; i++) {
-      if (i === 4 || i === 6 || i === 8 || i === 10) {
-        uuid += "-";
-      }
-      uuid += arr[i].toString(16).padStart(2, "0");
-    }
-    return uuid;
-  }
-  
-  const error = new Error("SECURE_RANDOM_UNAVAILABLE");
-  (error as any).code = "SECURE_RANDOM_UNAVAILABLE";
-  throw error;
-}
-
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-type QueuedFollowUp = {
-  id: string;
-  content: string;
-  instanceId: string;
-  conversationId: string | null;
-  createdAt: number;
-  attachments: PendingAttachment[];
-};
-
-const buildOptimisticAttachmentMetadata = (attachments: PendingAttachment[]) => attachments.length > 0 ? {
-  attachmentIds: attachments.map((file) => file.id),
-  attachments: attachments.map((file) => ({ ...file }))
-} : undefined;
-
-type SendOptions = {
-  suppressOptimisticUser?: boolean;
-  queuedMessageIds?: string[];
-  replaceMessageId?: string;
-  attachments?: PendingAttachment[];
-};
+export { generateUUIDv4 } from "./chat-workspace/chatWorkspaceSendPolicy";
 
 export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType | null; socket?: Socket | null }) {
   const { t } = useTranslation(["dashboard", "common"]);
   const navigate = useNavigate();
   const { showConfirm, showToast } = useFeedback();
+  const preferredInstanceId = useMemo(
+    () => typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("instanceId") || "",
+    [],
+  );
   
   // States
   const [instances, setInstances] = useState<AgentInstance[]>([]);
@@ -135,7 +91,6 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
   const [reasoningEffort, setReasoningEffort] = useState<ChatReasoningEffort>("balanced");
   const [chatMode, setChatMode] = useState<"quick" | "assist" | "agent">("quick");
   const [selectedSkillId, setSelectedSkillId] = useState<string>("model_config_diagnosis");
-  const [mobileWorkspaceFrame, setMobileWorkspaceFrame] = useState<MobileWorkspaceFrame | null>(null);
   const [mobileWorkspaceTab, setMobileWorkspaceTab] = useState<WorkspaceTab>("result");
 
   // Refs
@@ -153,13 +108,18 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
   const optimisticChatContextRef = useRef<OptimisticChatContext | null>(null);
   const activeSyncChatRequestRef = useRef<{ controller: AbortController; requestId: string; instanceId: string; conversationId: string | null } | null>(null);
   const syncCancelReconciliationTimersRef = useRef<number[]>([]);
-  const pendingFollowUpsRef = useRef<QueuedFollowUp[]>([]);
   const editingRetryMessageIdRef = useRef<string | null>(null);
-  const [queuedFollowUpSignal, setQueuedFollowUpSignal] = useState(0);
 
   const selectedIdRef = useRef(selectedId);
   const selectedConversationIdRef = useRef<string | null>(selectedConversationId);
   const refreshAuthoritativeHistoryRef = useRef<(instanceId: string, convId: string) => Promise<void>>(async () => {});
+  const mobileWorkspaceFrame = useChatWorkspaceViewport({
+    workspaceRootRef,
+    scrollContainerRef,
+    shouldScrollToBottomRef,
+    mobileOverlay,
+    closeMobileOverlay: () => setMobileOverlay(null),
+  });
 
   const {
     attachmentConfig,
@@ -267,142 +227,6 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     t
   });
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    let frameId: number | null = null;
-    const updateMobileWorkspaceFrame = () => {
-      if (frameId !== null) {
-        window.cancelAnimationFrame(frameId);
-      }
-
-      frameId = window.requestAnimationFrame(() => {
-        frameId = null;
-        const root = workspaceRootRef.current;
-        if (!root || window.innerWidth >= CHAT_WORKSPACE_TABLET_BREAKPOINT) {
-          setMobileWorkspaceFrame(null);
-          return;
-        }
-
-        const visualViewport = window.visualViewport;
-        const viewportHeight = visualViewport?.height ?? window.innerHeight;
-        const viewportOffsetTop = visualViewport?.offsetTop ?? 0;
-        // Keep the workspace pinned below the dashboard mobile header.
-        // iOS changes visualViewport.offsetTop while the keyboard opens; deriving the
-        // top position from getBoundingClientRect() makes the app header disappear.
-        const dashboardHeaderOffset = 48;
-        setMobileWorkspaceFrame(computeMobileWorkspaceFrame({
-          innerHeight: window.innerHeight,
-          viewportHeight,
-          viewportOffsetTop,
-          headerOffset: dashboardHeaderOffset
-        }));
-
-        if (shouldScrollToBottomRef.current) {
-          const container = scrollContainerRef.current;
-          if (container) {
-            container.scrollTo({ top: container.scrollHeight, behavior: "auto" });
-          }
-        }
-      });
-    };
-
-    updateMobileWorkspaceFrame();
-    window.addEventListener("resize", updateMobileWorkspaceFrame);
-    window.addEventListener("orientationchange", updateMobileWorkspaceFrame);
-    window.visualViewport?.addEventListener("resize", updateMobileWorkspaceFrame);
-    window.visualViewport?.addEventListener("scroll", updateMobileWorkspaceFrame);
-
-    return () => {
-      if (frameId !== null) {
-        window.cancelAnimationFrame(frameId);
-      }
-      window.removeEventListener("resize", updateMobileWorkspaceFrame);
-      window.removeEventListener("orientationchange", updateMobileWorkspaceFrame);
-      window.visualViewport?.removeEventListener("resize", updateMobileWorkspaceFrame);
-      window.visualViewport?.removeEventListener("scroll", updateMobileWorkspaceFrame);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!mobileOverlay) return;
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setMobileOverlay(null);
-      }
-    };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [mobileOverlay]);
-
-  useEffect(() => {
-    if (typeof window === "undefined" || typeof document === "undefined") return;
-
-    const html = document.documentElement;
-    const body = document.body;
-    const previousHtmlOverflow = html.style.overflow;
-    const previousHtmlOverscroll = html.style.overscrollBehaviorY;
-    const previousHtmlHeight = html.style.height;
-    const previousBodyOverflow = body.style.overflow;
-    const previousBodyOverscroll = body.style.overscrollBehaviorY;
-    const previousBodyPosition = body.style.position;
-    const previousBodyTop = body.style.top;
-    const previousBodyLeft = body.style.left;
-    const previousBodyRight = body.style.right;
-    const previousBodyWidth = body.style.width;
-    const previousBodyHeight = body.style.height;
-    let lockedScrollY = 0;
-    let lockApplied = false;
-
-    const restoreScrollLock = () => {
-      if (!lockApplied) return;
-      html.style.overflow = previousHtmlOverflow;
-      html.style.overscrollBehaviorY = previousHtmlOverscroll;
-      html.style.height = previousHtmlHeight;
-      body.style.overflow = previousBodyOverflow;
-      body.style.overscrollBehaviorY = previousBodyOverscroll;
-      body.style.position = previousBodyPosition;
-      body.style.top = previousBodyTop;
-      body.style.left = previousBodyLeft;
-      body.style.right = previousBodyRight;
-      body.style.width = previousBodyWidth;
-      body.style.height = previousBodyHeight;
-      window.scrollTo({ top: lockedScrollY, behavior: "auto" });
-      lockApplied = false;
-    };
-
-    const applyMobileScrollLock = () => {
-      if (window.innerWidth < CHAT_WORKSPACE_TABLET_BREAKPOINT) {
-        if (!lockApplied) {
-          lockedScrollY = window.scrollY || window.pageYOffset || 0;
-        }
-        html.style.overflow = "hidden";
-        html.style.overscrollBehaviorY = "none";
-        html.style.height = "100%";
-        body.style.position = "fixed";
-        body.style.top = "-" + lockedScrollY + "px";
-        body.style.left = "0";
-        body.style.right = "0";
-        body.style.width = "100%";
-        body.style.height = "100%";
-        body.style.overflow = "hidden";
-        body.style.overscrollBehaviorY = "none";
-        lockApplied = true;
-      } else {
-        restoreScrollLock();
-      }
-    };
-
-    applyMobileScrollLock();
-    window.addEventListener("resize", applyMobileScrollLock);
-    window.addEventListener("orientationchange", applyMobileScrollLock);
-
-    return () => {
-      window.removeEventListener("resize", applyMobileScrollLock);
-      window.removeEventListener("orientationchange", applyMobileScrollLock);
-      restoreScrollLock();
-    };
-  }, []);
 
   const {
     runsCapabilityState,
@@ -420,7 +244,6 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     initializeRunExecution,
     finalizeActiveRunUi,
     isCurrentRunContext,
-    markActiveRunStatusUnknown,
     streamActiveRun,
     handleStopRun,
     respondToApproval,
@@ -440,6 +263,25 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     showToast,
     t,
     notificationUserId: String(currentUser?.id || currentUser?.username || "")
+  });
+
+  const {
+    clearQueuedFollowUps,
+    enqueueFollowUpMessage,
+    queuedFollowUpSenderRef,
+  } = useQueuedChatFollowUps({
+    selectedId,
+    selectedConversationId,
+    selectedIdRef,
+    selectedConversationIdRef,
+    activeRunId,
+    sending,
+    isUploading,
+    uploadInFlightRef,
+    setMessages,
+    setError,
+    shouldScrollToBottomRef,
+    t,
   });
 
   const { generatedArtifacts, refreshGeneratedArtifacts } = useGeneratedArtifacts({
@@ -476,8 +318,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     activeChatGenerationRef.current += 1;
     activeChatRequestIdRef.current = null;
     optimisticChatContextRef.current = null;
-    pendingFollowUpsRef.current = [];
-    setQueuedFollowUpSignal(signal => signal + 1);
+    clearQueuedFollowUps();
     messageLoadRequestIdRef.current += 1;
 
     stopActiveRunStreams();
@@ -567,12 +408,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
 
           // Determine the initial selectedId exactly once after readiness state resolves
           if (activeList.length > 0) {
-            const firstReady = activeList.find((inst: any) => readinessMap[inst.id]?.ready);
-            if (firstReady) {
-              selectInstanceId(firstReady.id);
-            } else {
-              selectInstanceId(activeList[0].id);
-            }
+            selectInstanceId(resolveInitialChatInstanceId(activeList, readinessMap, preferredInstanceId));
           }
         }
       } catch (err: any) {
@@ -961,705 +797,62 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     };
   }, [socket, currentUser?.id, refreshConversationFiles]);
 
-  const waitForRunRelease = async (instanceId: string, runId: string): Promise<RunReleaseResult> => {
-    return pollRunRelease({
-      delay: async (ms) => { await sleep(ms); },
-      readStatus: async () => {
-        const res = await api.get(`/api/instances/${instanceId}/runs/${runId}`);
-        return res?.run?.status;
-      }
-    });
+  const handleSend = createChatWorkspaceMessageSender({
+    uploadInFlightRef,
+    isUploading,
+    showToast,
+    t,
+    pendingAttachments,
+    input,
+    editingRetryMessageIdRef,
+    selectedId,
+    setError,
+    chatMode,
+    runsSupported,
+    runsCapabilityState,
+    sending,
+    activeRunConversationId,
+    selectedConversationIdRef,
+    setInput,
+    enqueueFollowUpMessage,
+    setPendingAttachments,
+    setMessages,
+    shouldScrollToBottomRef,
+    selectedConversationId,
+    activeRunId,
+    waitForRunRelease,
+    stopActiveRunStreams,
+    resetRunState,
+    activeChatGenerationRef,
+    activeChatRequestIdRef,
+    setSending,
+    setToolSteps,
+    messageLoadRequestIdRef,
+    setLoadingMessages,
+    activeSyncChatRequestRef,
+    optimisticChatContextRef,
+    conversations,
+    buildConversationTitleFromMessage,
+    selectedIdRef,
+    internallySelectingConversationRef,
+    setConversations,
+    selectConversationId,
+    maybeRenameDefaultConversation,
+    createChatRunWithRetry,
+    reasoningEffort,
+    setActiveRunId,
+    setActiveRunConversationId,
+    initializeRunExecution,
+    setRunMetrics,
+    streamActiveRun,
+    temperature,
+    selectedSkillId,
+    refreshAuthoritativeHistory,
+  });
+
+  queuedFollowUpSenderRef.current = (content, options) => {
+    void handleSend(undefined, content, options);
   };
-
-  const createChatRunWithRetry = async (
-    instanceId: string,
-    payload: { conversationId: string | null; content: string; requestId: string; reasoningEffort?: ChatReasoningEffort; attachmentIds?: string[] },
-    shouldRetryConcurrency: boolean
-  ) => {
-    let concurrencyRetries = 0;
-    let transientRetries = 0;
-
-    while (true) {
-      try {
-        return await api.post(`/api/instances/${instanceId}/runs`, payload);
-      } catch (err: any) {
-        if (shouldRetryConcurrency && isConcurrencyTakeoverError(err) && concurrencyRetries < 5) {
-          const delayMs = 300 + concurrencyRetries * 250;
-          concurrencyRetries += 1;
-          await sleep(delayMs);
-          continue;
-        }
-        if (isRetryableRunCreationError(err) && transientRetries < 1) {
-          transientRetries += 1;
-          await sleep(400);
-          continue;
-        }
-        throw err;
-      }
-    }
-  };
-
-  const enqueueFollowUpMessage = (content: string, attachments: PendingAttachment[]) => {
-    if (!content.trim() || !selectedIdRef.current || !selectedConversationIdRef.current) return;
-
-    let queuedMessageId: string;
-    try {
-      queuedMessageId = `queued-user-${generateUUIDv4()}`;
-    } catch (err: any) {
-      if (err?.code === "SECURE_RANDOM_UNAVAILABLE") {
-        setError(t("dashboard:chatWorkspace.secureRandomUnavailable"));
-        return;
-      }
-      throw err;
-    }
-
-    const queuedItem: QueuedFollowUp = {
-      id: queuedMessageId,
-      content: content.trim(),
-      instanceId: selectedIdRef.current,
-      conversationId: selectedConversationIdRef.current,
-      createdAt: Date.now(),
-      attachments: [...attachments]
-    };
-
-    pendingFollowUpsRef.current = [...pendingFollowUpsRef.current, queuedItem];
-
-    const queuedMessage: ChatMessage = {
-      id: queuedMessageId,
-      role: "user",
-      content: queuedItem.content,
-      status: "queued",
-      error_code: "QUEUED_FOLLOW_UP",
-      conversation_id: queuedItem.conversationId,
-      error_message: t("dashboard:chatWorkspace.messageQueued"),
-      metadata: buildOptimisticAttachmentMetadata(queuedItem.attachments)
-    };
-
-    setMessages(prev => deduplicateMessages([...prev, queuedMessage], selectedConversationIdRef.current));
-    shouldScrollToBottomRef.current = true;
-    setQueuedFollowUpSignal(signal => signal + 1);
-  };
-
-  const handleSend = async (e?: React.FormEvent, customContent?: string, options?: SendOptions) => {
-    if (e) {
-      e.preventDefault();
-    }
-
-    if (uploadInFlightRef.current || isUploading) {
-      showToast(t("dashboard:chatWorkspace.attachmentUploading", { defaultValue: "附件正在上传中，请稍候..." }), "warning");
-      return;
-    }
-    const usesAttachmentOverride = options?.attachments !== undefined;
-    const attachmentsForSend = [...(options?.attachments || pendingAttachments)];
-
-    const messageContent = customContent !== undefined ? customContent : input;
-    const userMsgContent = messageContent.trim();
-    const editingReplaceMessageId = customContent === undefined ? editingRetryMessageIdRef.current : null;
-    const sendOptions: SendOptions | undefined = editingReplaceMessageId
-      ? { ...options, suppressOptimisticUser: true, replaceMessageId: editingReplaceMessageId }
-      : options;
-    if (!userMsgContent || !selectedId) return;
-    if (countChatMessageCharacters(userMsgContent) > MAX_CHAT_USER_MESSAGE_CHARS) {
-      showToast(
-        t("dashboard:chatWorkspace.messageTooLong", { max: MAX_CHAT_USER_MESSAGE_CHARS.toLocaleString() }),
-        "warning"
-      );
-      return;
-    }
-
-    if (chatMode === "agent" && !runsSupported) {
-      const message = runsCapabilityState === "disabled"
-        ? t("dashboard:chatWorkspace.asyncRunsDisabled")
-        : runsCapabilityState === "checking"
-          ? t("dashboard:chatWorkspace.asyncRunsChecking")
-          : t("dashboard:chatWorkspace.asyncRunsUnavailable");
-      setError(message);
-      showToast(message, "warning");
-      return;
-    }
-
-    const isSameConversationRunning = sending && (!activeRunConversationId || activeRunConversationId === selectedConversationIdRef.current);
-    if (isSameConversationRunning) {
-      if (customContent === undefined) {
-        setInput("");
-      }
-      enqueueFollowUpMessage(userMsgContent, attachmentsForSend);
-      if (attachmentsForSend.length > 0) setPendingAttachments([]);
-      return;
-    }
-
-    const isInterruptingActiveRun = false;
-    const suppressOptimisticUser = !!sendOptions?.suppressOptimisticUser;
-    const replaceMessageId = sendOptions?.replaceMessageId;
-
-    let asyncRunAccepted = false;
-    let optimisticUserMessageInserted = false;
-
-    // Generate UUIDs before any async interruption wait so the user message can render immediately.
-    let requestId: string;
-    let tempUserMsgId: string;
-    let tempAssistantMsgId: string;
-    try {
-      requestId = generateUUIDv4();
-      tempUserMsgId = replaceMessageId || `temp-user-${generateUUIDv4()}`;
-      tempAssistantMsgId = `assistant-${generateUUIDv4()}`;
-    } catch (err: any) {
-      if (err?.code === "SECURE_RANDOM_UNAVAILABLE") {
-        setError(t("dashboard:chatWorkspace.secureRandomUnavailable"));
-        return;
-      }
-      throw err;
-    }
-
-    if (replaceMessageId && editingRetryMessageIdRef.current === replaceMessageId) {
-      editingRetryMessageIdRef.current = null;
-    }
-
-    const userMsg = userMsgContent;
-    const tempUserMsg: ChatMessage = {
-      id: tempUserMsgId,
-      role: "user" as const,
-      content: userMsg,
-      status: "completed",
-      request_id: requestId,
-      conversation_id: selectedConversationIdRef.current,
-      metadata: buildOptimisticAttachmentMetadata(attachmentsForSend)
-    };
-    const interruptNoticeMsg: ChatMessage | null = isInterruptingActiveRun ? {
-      id: `interrupt-notice-${generateUUIDv4()}`,
-      role: "assistant" as const,
-      content: t("dashboard:chatWorkspace.interruptNotice"),
-      status: "completed",
-      conversation_id: selectedConversationIdRef.current
-    } : null;
-
-    const insertOptimisticUserMessage = (conversationId: string | null) => {
-      if (!conversationId || optimisticUserMessageInserted || suppressOptimisticUser) return;
-      const scopedUserMsg = { ...tempUserMsg, conversation_id: conversationId };
-      const scopedInterruptNotice = interruptNoticeMsg ? { ...interruptNoticeMsg, conversation_id: conversationId } : null;
-      setMessages(prev => deduplicateMessages([...prev, scopedUserMsg, ...(scopedInterruptNotice ? [scopedInterruptNotice] : [])], conversationId));
-      optimisticUserMessageInserted = true;
-      shouldScrollToBottomRef.current = true;
-    };
-
-    const replaceExistingUserMessage = (conversationId: string | null) => {
-      if (!replaceMessageId || !conversationId) return;
-      setMessages(prev => deduplicateMessages(prev.map(message => (
-        message.id === replaceMessageId
-          ? { ...message, content: userMsg, status: "completed", conversation_id: conversationId, error_code: undefined, error_message: undefined }
-          : message
-      )), conversationId));
-      optimisticUserMessageInserted = true;
-      shouldScrollToBottomRef.current = true;
-    };
-
-    if (customContent === undefined) {
-      setInput("");
-    }
-
-    if (isInterruptingActiveRun) {
-      insertOptimisticUserMessage(selectedConversationId);
-    }
-
-    if (isInterruptingActiveRun && activeRunId) {
-      try {
-        await api.post(`/api/instances/${selectedId}/runs/${activeRunId}/stop`);
-        await waitForRunRelease(selectedId, activeRunId);
-      } catch (stopErr) {
-        console.warn("[Chat Interrupt] Failed to request stop for active run before sending latest message:", stopErr);
-      }
-      stopActiveRunStreams();
-      resetRunState();
-      activeChatGenerationRef.current += 1;
-      activeChatRequestIdRef.current = null;
-      setSending(false);
-      setToolSteps([]);
-      setMessages(prev => prev.map(message => {
-        if (message.role === "assistant" && message.status === "pending") {
-          return { ...message, status: "completed", content: message.content || t("dashboard:chatWorkspace.previousTaskInterrupted") };
-        }
-        if (message.role === "user" && message.status === "failed" && message.error_code === "TOO_MANY_CONCURRENT_RUNS") {
-          return { ...message, status: "superseded", error_message: t("dashboard:chatWorkspace.messageSuperseded") };
-        }
-        return message;
-      }));
-    }
-
-    // Increment history request ID to immediately invalidate all in-flight history loads
-    messageLoadRequestIdRef.current += 1;
-    setLoadingMessages(false);
-
-    const syncController = chatMode === "agent" ? null : new AbortController();
-    if (syncController) {
-      activeSyncChatRequestRef.current = {
-        controller: syncController,
-        requestId,
-        instanceId: selectedId,
-        conversationId: selectedConversationId
-      };
-    }
-
-    setSending(true);
-    setError(null);
-    shouldScrollToBottomRef.current = true;
-
-    let activeConvId = selectedConversationId;
-    activeChatRequestIdRef.current = requestId;
-
-    const optimisticUserMessageIds = sendOptions?.queuedMessageIds?.length
-      ? sendOptions.queuedMessageIds
-      : [tempUserMsgId];
-
-    // Set initial optimistic context
-    optimisticChatContextRef.current = {
-      instanceId: selectedId,
-      conversationId: activeConvId || "",
-      requestId,
-      userMessageId: optimisticUserMessageIds[0] || tempUserMsgId,
-      userMessageIds: optimisticUserMessageIds,
-      phase: "sending"
-    };
-
-    const initialSelectedId = selectedId;
-    const initialConvId = selectedConversationId;
-    const currentChatGen = activeChatGenerationRef.current;
-    let chatSuccess = false;
-
-    try {
-      // Automatic conversation creation if none exists/is active
-      if (!activeConvId) {
-        const count = conversations.length + 1;
-        const title = buildConversationTitleFromMessage(userMsg);
-        const convRes = await api.post(`/api/instances/${selectedId}/conversations`, { title }, syncController ? { signal: syncController.signal } : undefined);
-        
-        if (!shouldAcceptChatResponse(
-          { selectedId: selectedIdRef.current, activeChatRequestId: activeChatRequestIdRef.current, activeChatGeneration: activeChatGenerationRef.current },
-          { selectedId: initialSelectedId, requestId, activeChatGeneration: currentChatGen }
-        )) {
-          return;
-        }
-
-        if (convRes && convRes.success && convRes.conversation) {
-          activeConvId = convRes.conversation.id;
-          if (activeSyncChatRequestRef.current?.requestId === requestId) {
-            activeSyncChatRequestRef.current.conversationId = activeConvId;
-          }
-          // Update context with the newly created conversationId
-          optimisticChatContextRef.current = {
-            instanceId: selectedId,
-            conversationId: activeConvId,
-            requestId,
-            userMessageId: optimisticUserMessageIds[0] || tempUserMsgId,
-            userMessageIds: optimisticUserMessageIds,
-            phase: "sending"
-          };
-          internallySelectingConversationRef.current = true;
-          setConversations(prev => [convRes.conversation, ...prev]);
-          selectConversationId(activeConvId);
-        } else {
-          throw new Error(t("dashboard:chatWorkspace.autoCreateFailed"));
-        }
-      }
-
-      if (activeConvId) {
-        void maybeRenameDefaultConversation(activeConvId, userMsg);
-      }
-
-      replaceExistingUserMessage(activeConvId);
-      insertOptimisticUserMessage(activeConvId);
-
-      if (chatMode === "agent") {
-        console.debug("[ChatWorkspace] Sending Agent run request.", {
-          chatMode,
-          runsSupported,
-          runsCapabilityState,
-          requestPath: `/api/instances/${selectedId}/runs`
-        });
-
-        const runRes = await createChatRunWithRetry(selectedId, {
-          conversationId: activeConvId,
-          content: userMsg,
-          requestId,
-          reasoningEffort,
-          attachmentIds: attachmentsForSend.map(a => a.id)
-        }, isInterruptingActiveRun);
-
-        if (!shouldAcceptChatResponse(
-          { selectedId: selectedIdRef.current, activeChatRequestId: activeChatRequestIdRef.current, activeChatGeneration: activeChatGenerationRef.current },
-          { selectedId: initialSelectedId, requestId, activeChatGeneration: currentChatGen }
-        )) {
-          return;
-        }
-
-        if (runRes && runRes.success && runRes.runId) {
-          asyncRunAccepted = true;
-          if (!usesAttachmentOverride) setPendingAttachments([]);
-          setActiveRunId(runRes.runId);
-          setActiveRunConversationId(activeConvId);
-          const queuedAt = Date.now();
-          initializeRunExecution({
-            runId: runRes.runId,
-            conversationId: activeConvId,
-            requestId,
-            assistantMessageId: tempAssistantMsgId,
-            status: "queued",
-            initialStep: { id: `queued-${runRes.runId}`, tool: "agent", label: t("dashboard:chatWorkspace.toolStepAgentTaskQueued"), stepType: "tool_call", startedAt: queuedAt }
-          });
-          setRunMetrics({ runId: runRes.runId, status: "queued", startedAt: queuedAt });
-          if (isInterruptingActiveRun) {
-            setMessages(prev => prev.map(message => (
-              message.role === "user" && message.status === "failed" && message.error_code === "TOO_MANY_CONCURRENT_RUNS"
-                ? { ...message, status: "superseded", conversation_id: message.conversation_id || selectedConversationIdRef.current, error_message: t("dashboard:chatWorkspace.messageSuperseded") }
-                : message
-            )));
-          }
-
-          const assistantMsg: ChatMessage = {
-            id: tempAssistantMsgId,
-            role: "assistant" as const,
-            content: "",
-            status: "pending",
-            conversation_id: activeConvId
-          };
-          if (optimisticChatContextRef.current?.requestId === requestId) {
-            optimisticChatContextRef.current = {
-              ...optimisticChatContextRef.current,
-              conversationId: activeConvId,
-              assistantMessageId: tempAssistantMsgId,
-              phase: "settled"
-            };
-          }
-          setMessages(prev => deduplicateMessages([...prev, assistantMsg], activeConvId));
-
-          setTimeout(() => {
-            streamActiveRun(runRes.runId).catch((err) => {
-              console.warn("[streamActiveRun] Unhandled promise rejection caught:", err);
-            });
-          }, 100);
-
-          chatSuccess = true;
-        } else {
-          throw new Error(runRes?.message || t("dashboard:chatWorkspace.noAgentResponse"));
-        }
-      } else if (chatMode === "quick") {
-        const res = await api.post(`/api/instances/${selectedId}/conversations/${activeConvId}/chat`, {
-          content: userMsg,
-          requestId,
-          temperature,
-          reasoningEffort,
-          attachmentIds: attachmentsForSend.map(a => a.id)
-        }, { signal: syncController!.signal });
-
-        if (!shouldAcceptChatResponse(
-          { selectedId: selectedIdRef.current, activeChatRequestId: activeChatRequestIdRef.current, activeChatGeneration: activeChatGenerationRef.current },
-          { selectedId: initialSelectedId, requestId, activeChatGeneration: currentChatGen }
-        )) {
-          return;
-        }
-
-        if (res && res.success) {
-          if (!usesAttachmentOverride) setPendingAttachments([]);
-          const assistantMsg: ChatMessage = {
-            id: res.assistantMessageId || tempAssistantMsgId,
-            role: "assistant" as const,
-            content: res.message,
-            status: "completed",
-            conversation_id: activeConvId,
-            sequence_no: res.assistantSequenceNo ?? undefined,
-            usage_prompt_tokens: res.usagePromptTokens ?? res.usage?.prompt_tokens ?? res.usage?.input_tokens ?? null,
-            usage_completion_tokens: res.usageCompletionTokens ?? res.usage?.completion_tokens ?? res.usage?.output_tokens ?? null,
-            usage_total_tokens: res.usageTotalTokens ?? res.usage?.total_tokens ?? res.usage?.totalTokens ?? null,
-            duration_ms: res.durationMs ?? null,
-            metadata: null
-          };
-          shouldScrollToBottomRef.current = true;
-          setMessages(prev => deduplicateMessages([...prev, assistantMsg], activeConvId));
-          setConversations(prev => {
-            const matched = prev.find(c => c.id === activeConvId);
-            if (matched) {
-              const updated = { ...matched, updated_at: new Date().toISOString() };
-              return [updated, ...prev.filter(c => c.id !== activeConvId)];
-            }
-            return prev;
-          });
-          
-          chatSuccess = true;
-
-          if (optimisticChatContextRef.current?.requestId === requestId) {
-            optimisticChatContextRef.current = {
-              ...optimisticChatContextRef.current,
-              assistantMessageId: res.assistantMessageId || tempAssistantMsgId,
-              phase: "settled"
-            };
-          }
-        } else {
-          throw new Error(res?.message || t("dashboard:chatWorkspace.noAgentResponse"));
-        }
-      } else if (chatMode === "assist") {
-        const res = await api.post(`/api/instances/${selectedId}/conversations/${activeConvId}/assist`, {
-          content: userMsg,
-          requestId,
-          temperature,
-          reasoningEffort,
-          skillId: selectedSkillId,
-          attachmentIds: attachmentsForSend.map(a => a.id)
-        }, { signal: syncController!.signal });
-
-        if (!shouldAcceptChatResponse(
-          { selectedId: selectedIdRef.current, activeChatRequestId: activeChatRequestIdRef.current, activeChatGeneration: activeChatGenerationRef.current },
-          { selectedId: initialSelectedId, requestId, activeChatGeneration: currentChatGen }
-        )) {
-          return;
-        }
-
-        if (res && res.success) {
-          if (!usesAttachmentOverride) setPendingAttachments([]);
-          const assistantMsg: ChatMessage = {
-            id: res.assistantMessageId || tempAssistantMsgId,
-            role: "assistant" as const,
-            content: res.message,
-            status: "completed",
-            conversation_id: activeConvId,
-            sequence_no: res.assistantSequenceNo ?? undefined
-          };
-          shouldScrollToBottomRef.current = true;
-          setMessages(prev => deduplicateMessages([...prev, assistantMsg], activeConvId));
-          setConversations(prev => {
-            const matched = prev.find(c => c.id === activeConvId);
-            if (matched) {
-              const updated = { ...matched, updated_at: new Date().toISOString() };
-              return [updated, ...prev.filter(c => c.id !== activeConvId)];
-            }
-            return prev;
-          });
-          
-          chatSuccess = true;
-
-          if (optimisticChatContextRef.current?.requestId === requestId) {
-            optimisticChatContextRef.current = {
-              ...optimisticChatContextRef.current,
-              assistantMessageId: res.assistantMessageId || tempAssistantMsgId,
-              phase: "settled"
-            };
-          }
-        } else {
-          throw new Error(res?.message || t("dashboard:chatWorkspace.noAgentResponse"));
-        }
-      } else if (runsCapabilityState === "disabled") {
-        throw new Error(t("dashboard:chatWorkspace.asyncRunsDisabled"));
-      } else if (runsCapabilityState === "checking") {
-        throw new Error(t("dashboard:chatWorkspace.asyncRunsChecking"));
-      } else {
-        throw new Error(t("dashboard:chatWorkspace.asyncRunsUnavailable"));
-      }
-    } catch (err: any) {
-      if (!shouldAcceptChatResponse(
-        { selectedId: selectedIdRef.current, activeChatRequestId: activeChatRequestIdRef.current, activeChatGeneration: activeChatGenerationRef.current },
-        { selectedId: initialSelectedId, requestId, activeChatGeneration: currentChatGen }
-      )) {
-        return;
-      }
-      console.error("[Chat Send Error] Full error details:", err, err?.data);
-      const humanizedError = humanizeChatError(err, t("dashboard:chatWorkspace.requestFailedAgentOffline"));
-      const backendErr = err.data?.error || err.code || "";
-      const backendErrCode = String(backendErr).toUpperCase();
-      const isTakeoverRace = isConcurrencyTakeoverError(err);
-      const backendMsg = typeof err.data?.message === "string" ? err.data.message : "";
-
-      let friendlyMsg = humanizedError.message;
-
-      if (chatMode === "agent") {
-        if (backendErrCode === "INSUFFICIENT_CREDITS") {
-          friendlyMsg = humanizedError.message || t("dashboard:chatWorkspace.agentRunInsufficientCredits");
-        } else if (backendErrCode === "CREDIT_LEDGER_NOT_READY") {
-          friendlyMsg = humanizedError.message || t("dashboard:chatWorkspace.agentRunCreditLedgerNotReady");
-        } else if (backendErrCode === "CREDIT_LEDGER_UNAVAILABLE") {
-          friendlyMsg = humanizedError.message || t("dashboard:chatWorkspace.agentRunCreditLedgerUnavailable");
-        } else if (backendErrCode === "FEATURE_DISABLED") {
-          friendlyMsg = humanizedError.message || t("dashboard:chatWorkspace.asyncRunsDisabled");
-        } else if (backendErrCode === "RUNS_NOT_SUPPORTED") {
-          friendlyMsg = humanizedError.message || t("dashboard:chatWorkspace.agentRunNotSupported");
-        } else if (backendErrCode === "UPSTREAM_UNAVAILABLE") {
-          friendlyMsg = humanizedError.message || t("dashboard:chatWorkspace.agentRunUpstreamUnavailable");
-        } else if (backendErrCode === "BEGIN_RUN_FAILED") {
-          friendlyMsg = humanizedError.message || t("dashboard:chatWorkspace.agentRunBeginFailed");
-        } else if (backendErrCode === "INVALID_REQUEST") {
-          friendlyMsg = humanizedError.message || t("dashboard:chatWorkspace.agentRunInvalidRequest");
-        } else if (!backendMsg && backendErrCode) {
-          friendlyMsg = t("dashboard:chatWorkspace.agentRunFailedWithCode", { code: backendErrCode });
-        }
-      }
-      
-      if (backendErr === "chat_api_auth_redirected") {
-        friendlyMsg = t("dashboard:chatWorkspace.errorInternalRoute", { message: backendMsg || t("dashboard:chatWorkspace.statusNotReady") });
-      } else if (backendErr === "CONTAINER_NOT_REDEPLOYED") {
-        friendlyMsg = t("dashboard:chatWorkspace.errorNotRedeployed");
-      } else if (backendErr === "direct_8642_timeout") {
-        friendlyMsg = t("dashboard:chatWorkspace.errorTimeout");
-      } else if (backendErr === "direct_8642_refused") {
-        friendlyMsg = t("dashboard:chatWorkspace.errorRefused");
-      } else if (backendErr === "internal_traefik_route_404") {
-        friendlyMsg = t("dashboard:chatWorkspace.errorTraefik404");
-      } else if (backendErr === "chat_api_not_ready") {
-        friendlyMsg = t("dashboard:chatWorkspace.errorLoading");
-      } else if (backendErr === "CHAT_API_NOT_ENABLED") {
-        friendlyMsg = humanizedError.message || t("dashboard:chatWorkspace.errorNotEnabled");
-      } else if (backendErr === "MODEL_CONFIG_MISSING") {
-        friendlyMsg = humanizedError.message || "该实例缺少快速对话所需的配置。";
-      } else if (backendErr === "CHAT_TURN_METADATA_RPC_MISSING") {
-        friendlyMsg = humanizedError.message || "聊天附件关联所需的数据库函数尚未升级，请先完成数据库迁移后再试。";
-      } else if (backendErr === "CHAT_TURN_RPC_SCHEMA_MISMATCH") {
-        friendlyMsg = humanizedError.message || "多轮对话数据库函数版本与当前代码不一致，请同步数据库迁移后再试。";
-      } else if (backendErr === "DIRECT_MODEL_CHAT_FAILED") {
-        const rawMsg = err.data?.message || err.message || "";
-        const lowerMsg = rawMsg.toLowerCase();
-        let advice = "";
-
-        if (lowerMsg.includes("invalid temperature")) {
-          advice = "请检查模型 Temperature 参数或 BYOK 渠道配置。";
-        } else if (lowerMsg.includes("invalid api key") || lowerMsg.includes("unauthorized") || lowerMsg.includes("401")) {
-          advice = "请检查 API Key 或凭证中心配置。";
-        } else if (lowerMsg.includes("quota") || lowerMsg.includes("insufficient") || lowerMsg.includes("limit")) {
-          advice = "请检查供应商额度状态或 BYOK 配置。";
-        } else if (lowerMsg.includes("model") || lowerMsg.includes("not found")) {
-          advice = "请检查模型名称是否仍被供应商支持。";
-        } else if (lowerMsg.includes("timeout") || lowerMsg.includes("fetch failed")) {
-          advice = "请检查服务器到供应商 API 的网络连通性。";
-        } else {
-          advice = "直接调用大模型 API 失败，请检查服务商额度或代理。";
-        }
-
-        const diagnostics = err.data?.diagnostics;
-        if (diagnostics && diagnostics.provider && diagnostics.model) {
-          friendlyMsg = `${advice} [供应商: ${diagnostics.provider}, 模型: ${diagnostics.model}] (详情: ${rawMsg})`;
-        } else {
-          friendlyMsg = `${advice} (详情: ${rawMsg})`;
-        }
-      } else if (backendErr === "API_KEY_MISSING") {
-        friendlyMsg = humanizedError.message || "由于后端无权直接读取容器内局部 .env，请在麦贝控制台的实例设置或平台凭证中心重新配置该供应商的 API 密钥。";
-      }
-      
-      if (optimisticUserMessageInserted) {
-        const shouldQueueMessage = isTakeoverRace;
-        const shouldMarkSuperseded = isInterruptingActiveRun && isTakeoverRace;
-        setMessages(prev => prev
-          .filter(m => m.id !== tempAssistantMsgId)
-          .map(m => m.id === tempUserMsgId ? {
-            ...m,
-            status: shouldMarkSuperseded ? "superseded" : shouldQueueMessage ? "queued" : "failed",
-            error_code: backendErr || "SEND_FAILED",
-            error_message: shouldMarkSuperseded
-              ? t("dashboard:chatWorkspace.messageSuperseded")
-              : shouldQueueMessage
-                ? t("dashboard:chatWorkspace.messageQueued")
-                : friendlyMsg
-          } : m)
-        );
-      } else if (sendOptions?.queuedMessageIds?.length) {
-        setMessages(prev => prev
-          .filter(m => m.id !== tempAssistantMsgId)
-          .map(m => sendOptions.queuedMessageIds!.includes(m.id) ? {
-            ...m,
-            status: isTakeoverRace ? "queued" : "failed",
-            error_code: backendErr || "SEND_FAILED",
-            error_message: isTakeoverRace ? t("dashboard:chatWorkspace.messageQueued") : friendlyMsg
-          } : m)
-        );
-      } else {
-        setError(friendlyMsg);
-      }
-      if (optimisticChatContextRef.current?.requestId === requestId) {
-        optimisticChatContextRef.current = null;
-      }
-    } finally {
-      if (activeSyncChatRequestRef.current?.requestId === requestId) {
-        activeSyncChatRequestRef.current = null;
-      }
-      const isRequestActive = (
-        selectedIdRef.current === initialSelectedId &&
-        activeChatGenerationRef.current === currentChatGen &&
-        activeChatRequestIdRef.current === requestId
-      );
-
-      if (isRequestActive) {
-        // Invalidate any history load request made during sending
-        messageLoadRequestIdRef.current += 1;
-        if (!asyncRunAccepted) {
-          setSending(false);
-          if (chatSuccess) {
-            refreshAuthoritativeHistory(initialSelectedId, activeConvId);
-          } else {
-            setLoadingMessages(false);
-          }
-        }
-      }
-    }
-  };
-
-  useEffect(() => {
-    if (
-      sending ||
-      activeRunId ||
-      isUploading ||
-      uploadInFlightRef.current ||
-      !selectedId ||
-      !selectedConversationId
-    ) {
-      return;
-    }
-
-    const queuedItems = pendingFollowUpsRef.current.filter(item => (
-      item.instanceId === selectedId &&
-      (!item.conversationId || item.conversationId === selectedConversationId)
-    ));
-    if (queuedItems.length === 0) return;
-
-    const queuedItem = queuedItems[0];
-    const queuedIds = [queuedItem.id];
-
-    // Optimistically update UI status to processing
-    setMessages(prev => prev.map(message => (
-      queuedIds.includes(message.id)
-        ? { ...message, status: "completed", error_code: undefined, error_message: t("dashboard:chatWorkspace.queuedFollowUpProcessing") }
-        : message
-    )));
-
-    const mergedContent = queuedItem.content;
-
-    let sent = false;
-    const timerId = window.setTimeout(() => {
-      if (uploadInFlightRef.current || isUploading) {
-        // Attachment upload started during the 180ms window! Revert UI status to queued.
-        setMessages(prev => prev.map(message => (
-          queuedIds.includes(message.id)
-            ? { ...message, status: "queued", error_code: "QUEUED_FOLLOW_UP", error_message: t("dashboard:chatWorkspace.messageQueued") }
-            : message
-        )));
-        return;
-      }
-
-      // Deferred deletion: remove from queue only when confirmed safe to send
-      sent = true;
-      pendingFollowUpsRef.current = pendingFollowUpsRef.current.filter(item => !queuedIds.includes(item.id));
-
-      void handleSend(undefined, mergedContent, {
-        suppressOptimisticUser: true,
-        queuedMessageIds: queuedIds,
-        attachments: queuedItem.attachments
-      });
-    }, 180);
-
-    return () => {
-      window.clearTimeout(timerId);
-      if (!sent) {
-        setMessages(prev => prev.map(message => (
-          queuedIds.includes(message.id) && message.status === "completed" && message.error_message === t("dashboard:chatWorkspace.queuedFollowUpProcessing")
-            ? { ...message, status: "queued", error_code: "QUEUED_FOLLOW_UP", error_message: t("dashboard:chatWorkspace.messageQueued") }
-            : message
-        )));
-      }
-    };
-  }, [activeRunId, isUploading, queuedFollowUpSignal, selectedConversationId, selectedId, sending]);
 
   const handleSwitchToAssistAndDiagnose = () => {
     setChatMode("assist");
@@ -1668,97 +861,27 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     setShowSettings(true);
   };
 
-  const markStoppedRunMessages = (runId: string, conversationId: string) => {
-    const execution = runExecutionState?.runId === runId ? runExecutionState : {
-      runId,
-      conversationId,
-      status: "running" as const,
-      blocks: [],
-      lastProcessedSeq: 0
-    };
-    setMessages(prev => markRunMessagesStopped(
-      prev,
-      execution,
-      t("dashboard:chatWorkspace.messageStopped", { defaultValue: "已停止，可编辑后重新发送" })
-    ));
-  };
-
-  const scheduleSyncCancellationReconciliation = (instanceId: string, conversationId: string) => {
-    syncCancelReconciliationTimersRef.current.splice(0).forEach(timerId => window.clearTimeout(timerId));
-    syncCancelReconciliationTimersRef.current = [500, 1500, 3000].map(delayMs => window.setTimeout(() => {
-      if (selectedIdRef.current === instanceId && selectedConversationIdRef.current === conversationId) {
-        void refreshAuthoritativeHistoryRef.current(instanceId, conversationId);
-      }
-    }, delayMs));
-  };
-
-  const handleCancelOrStop = async () => {
-    const syncRequest = activeSyncChatRequestRef.current;
-    if (syncRequest) {
-      activeSyncChatRequestRef.current = null;
-      syncRequest.controller.abort();
-      activeChatGenerationRef.current += 1;
-      activeChatRequestIdRef.current = null;
-      setSending(false);
-      setMessages(previous => previous.map(message => (
-        message.role === "user" && message.request_id === syncRequest.requestId
-          ? {
-              ...message,
-              status: "stopped",
-              error_code: "CANCELLED_BY_USER",
-              error_message: t("dashboard:chatWorkspace.messageStopped")
-            }
-          : message
-      )));
-      if (optimisticChatContextRef.current?.requestId === syncRequest.requestId) {
-        optimisticChatContextRef.current = {
-          ...optimisticChatContextRef.current,
-          phase: "settled"
-        };
-      }
-      if (syncRequest.conversationId) {
-        scheduleSyncCancellationReconciliation(syncRequest.instanceId, syncRequest.conversationId);
-      }
-      return;
-    }
-
-    await handleStopActiveRun();
-  };
-
-  const handleStopActiveRun = async () => {
-    const targetRunId = activeRunId;
-    const targetInstanceId = selectedIdRef.current;
-    const targetConversationId = selectedConversationIdRef.current;
-    if (!targetInstanceId || !targetConversationId || !targetRunId) return;
-
-    const outcome = await executeStopLifecycle({
-      requestStop: () => handleStopRun(targetRunId, targetInstanceId),
-      waitForRelease: () => waitForRunRelease(targetInstanceId, targetRunId),
-      isCurrentTarget: () => (
-        selectedIdRef.current === targetInstanceId
-        && selectedConversationIdRef.current === targetConversationId
-        && isCurrentRunContext(targetRunId, targetConversationId)
-      ),
-      onTerminal: (terminalStatus) => {
-        stopActiveRunStreams();
-        finalizeActiveRunUi(targetRunId, terminalStatus);
-        setActiveRunConversationId(null);
-        activeChatGenerationRef.current += 1;
-        activeChatRequestIdRef.current = null;
-        setSending(false);
-        if (terminalStatus === "stopped" || terminalStatus === "cancelled") {
-          markStoppedRunMessages(targetRunId, targetConversationId);
-          scheduleSyncCancellationReconciliation(targetInstanceId, targetConversationId);
-        } else {
-          void refreshAuthoritativeHistoryRef.current(targetInstanceId, targetConversationId);
-        }
-      }
-    });
-
-    if (outcome === "status_unknown" && isCurrentRunContext(targetRunId, targetConversationId)) {
-      markActiveRunStatusUnknown(targetRunId);
-    }
-  };
+  const { handleCancelOrStop } = createChatCancellationController({
+    activeRunId,
+    runExecutionState,
+    activeSyncChatRequestRef,
+    activeChatGenerationRef,
+    activeChatRequestIdRef,
+    optimisticChatContextRef,
+    syncCancelReconciliationTimersRef,
+    selectedIdRef,
+    selectedConversationIdRef,
+    refreshAuthoritativeHistoryRef,
+    setMessages,
+    setSending,
+    setActiveRunConversationId,
+    handleStopRun,
+    waitForRunRelease,
+    isCurrentRunContext,
+    stopActiveRunStreams,
+    finalizeActiveRunUi,
+    t,
+  });
 
   const handleRetry = (msg: ChatMessage) => {
     const retryContent = msg.content?.trim();

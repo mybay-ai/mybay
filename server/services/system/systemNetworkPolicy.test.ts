@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatSystemRequestError, isSafeUrl } from "./systemNetworkPolicy";
+import { formatSystemRequestError, isSafeUrl, safeOutboundFetch } from "./systemNetworkPolicy";
 
 describe("system network policy characterization", () => {
   it("rejects non-http and explicit local targets", async () => {
@@ -11,6 +11,12 @@ describe("system network policy characterization", () => {
   it("preserves the private-network override after protocol validation", async () => {
     await expect(isSafeUrl("http://localhost/test", true)).resolves.toBe(true);
     await expect(isSafeUrl("javascript:alert(1)", true)).resolves.toBe(false);
+  });
+
+  it("rejects unsafe outbound requests before opening a connection", async () => {
+    await expect(safeOutboundFetch("http://127.0.0.1/admin")).rejects.toThrow(/SSRF|restricted|内网/);
+    await expect(safeOutboundFetch("file:///etc/passwd")).rejects.toThrow("Unsupported outbound protocol");
+    await expect(safeOutboundFetch("https://user:password@example.com/")).rejects.toThrow("credentials");
   });
 
   it("preserves bounded error formatting and cause context", () => {

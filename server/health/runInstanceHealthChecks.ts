@@ -39,29 +39,21 @@ import {
 } from "./modelProbe";
 import { probeGatewayReadiness } from "./gatewayReadiness";
 import { resolveFinalHealthStatus, shouldCheckDashboardProxy } from "./finalHealthPolicy";
+import {
+  clearInstanceHealthCheckCache,
+  getActiveInstanceHealthCheck,
+  setActiveInstanceHealthCheck,
+  updateInstanceHealthStatus,
+} from "./healthCheckCoordinator";
 
 const docker = new Docker();
-const activeHealthChecks = new Map<string, Promise<any>>();
-
-export function clearInstanceHealthCheckCache(instanceId: string) {
-  activeHealthChecks.delete(instanceId);
-}
-
-async function safeUpdateInstanceStatus(updateInstanceStatusStmt: any, id: string, status: string) {
-  if (!updateInstanceStatusStmt) return;
-  if (typeof updateInstanceStatusStmt.run === 'function') {
-    await updateInstanceStatusStmt.run({ status, id }).catch(() => {});
-  } else if (typeof updateInstanceStatusStmt === 'function') {
-    await updateInstanceStatusStmt(id, status).catch(() => {});
-  } else {
-    await dbAdapter.updateInstanceStatus(id, status).catch(() => {});
-  }
-}
+export { clearInstanceHealthCheckCache } from "./healthCheckCoordinator";
 
 export async function runInstanceHealthChecks(instanceId: string, gatewayHostPort: number, containerPort: number, subdomain: string, io: SocketIOServer, updateInstanceStatusStmt: any, triggerSource: string = "unknown") {
-  if (activeHealthChecks.has(instanceId)) {
+  const activeHealthCheck = getActiveInstanceHealthCheck(instanceId);
+  if (activeHealthCheck) {
     // If a health check is already running for this instance, return the existing promise
-    return activeHealthChecks.get(instanceId);
+    return activeHealthCheck;
   }
 
   const healthCheckPromise = (async () => {
@@ -339,7 +331,7 @@ ${logsTail || '(暂无日志)'}
         status: "unhealthy",
         message: `部署失败：${ttyError}`
       }).catch(() => {});
-      await safeUpdateInstanceStatus(updateInstanceStatusStmt, instanceId, "unhealthy");
+      await updateInstanceHealthStatus(updateInstanceStatusStmt, instanceId, "unhealthy");
       io.emit(`deploy_status_${instanceId}`, "unhealthy");
       return;
     }
@@ -408,7 +400,7 @@ ${logsTail || '(暂无日志)'}
             timestamp: new Date().toISOString(),
             message: `[内核异常] 🚨 探测到前端依赖缺失: 该基础镜像未包含 frontend 编译产物 (dist) 或路径配置错误。${diagMsg}`,
           });
-          await safeUpdateInstanceStatus(updateInstanceStatusStmt, instanceId, "frontend_missing_build");
+          await updateInstanceHealthStatus(updateInstanceStatusStmt, instanceId, "frontend_missing_build");
           io.emit(`deploy_status_${instanceId}`, "frontend_missing_build");
           return;
         }
@@ -421,7 +413,7 @@ ${logsTail || '(暂无日志)'}
               message: `[内核异常] 🚨 Traefik 路由配置异常: ${labelsVerify.error}。由于反代标签缺失或错误，实例将无法通过域名访问。请检查配置或重新部署。`,
             });
             const statusToSet = labelsVerify.errorCode || "unhealthy";
-            await safeUpdateInstanceStatus(updateInstanceStatusStmt, instanceId, statusToSet);
+            await updateInstanceHealthStatus(updateInstanceStatusStmt, instanceId, statusToSet);
             io.emit(`deploy_status_${instanceId}`, statusToSet);
             return;
           }
@@ -450,7 +442,7 @@ ${logsTail || '(暂无日志)'}
 
     if (refinedStatus !== currentStatus) {
       currentStatus = refinedStatus;
-      await safeUpdateInstanceStatus(updateInstanceStatusStmt, instanceId, refinedStatus).catch(() => {});
+      await updateInstanceHealthStatus(updateInstanceStatusStmt, instanceId, refinedStatus).catch(() => {});
       io.emit(`deploy_status_${instanceId}`, refinedStatus);
       
       const isRealFailureStatus = refinedStatus === "unhealthy" || refinedStatus === "failed" || refinedStatus === "frontend_missing_build";
@@ -508,7 +500,7 @@ ${logsTail || '(暂无日志)'}
         status: "unhealthy",
         message: portError
       }).catch(() => {});
-      await safeUpdateInstanceStatus(updateInstanceStatusStmt, instanceId, "unhealthy");
+      await updateInstanceHealthStatus(updateInstanceStatusStmt, instanceId, "unhealthy");
       io.emit(`deploy_status_${instanceId}`, "unhealthy");
       return;
     }
@@ -528,7 +520,7 @@ ${logsTail || '(暂无日志)'}
       status: "unhealthy",
       message: `部署不健康（已超时）：${portError}`
     }).catch(() => {});
-    await safeUpdateInstanceStatus(updateInstanceStatusStmt, instanceId, "unhealthy");
+    await updateInstanceHealthStatus(updateInstanceStatusStmt, instanceId, "unhealthy");
     io.emit(`deploy_status_${instanceId}`, "unhealthy");
     return;
   }
@@ -629,7 +621,7 @@ ${logsTail || '(暂无日志)'}
             status: "failed",
             message: `部署失败：config.yaml 校验失败 (${errorMsg})`
           }).catch(() => {});
-          await safeUpdateInstanceStatus(updateInstanceStatusStmt, instanceId, "failed");
+           await updateInstanceHealthStatus(updateInstanceStatusStmt, instanceId, "failed");
           io.emit(`deploy_status_${instanceId}`, "failed");
           return;
         }
@@ -816,7 +808,7 @@ ${logsTail || '(暂无日志)'}
         ? `[健康自检] 状态: running -> Dashboard 未启用，跳过 Dashboard 公网路由检查；运行时网关已就绪。${finalChatReady ? "聊天已就绪。" : "聊天仍在初始化或需要配置，不计为部署失败。"}`
         : `[健康自检] 状态: ${finalStatus} -> Dashboard 未启用，但运行时网关尚未就绪。`,
     });
-    await safeUpdateInstanceStatus(updateInstanceStatusStmt, instanceId, finalStatus);
+    await updateInstanceHealthStatus(updateInstanceStatusStmt, instanceId, finalStatus);
     io.emit(`deploy_status_${instanceId}`, finalStatus);
     return;
   }
@@ -892,7 +884,7 @@ ${logsTail || '(暂无日志)'}
       status: finalStatus,
       message: `公网路由通道测试成功 (${publicUrl})；${finalChatReady ? "聊天已就绪" : "聊天仍在初始化或需要配置"}`
     }).catch(() => {});
-    await safeUpdateInstanceStatus(updateInstanceStatusStmt, instanceId, finalStatus);
+    await updateInstanceHealthStatus(updateInstanceStatusStmt, instanceId, finalStatus);
     io.emit(`deploy_status_${instanceId}`, finalStatus);
   } else {
     const finalStatus = resolveFinalHealthStatus({
@@ -931,15 +923,15 @@ ${logsTail || '(暂无日志)'}
         deployment_error: "Dashboard 公网路由未能通过健康检查",
       }).catch(() => {});
     }
-    await safeUpdateInstanceStatus(updateInstanceStatusStmt, instanceId, finalStatus);
+    await updateInstanceHealthStatus(updateInstanceStatusStmt, instanceId, finalStatus);
     io.emit(`deploy_status_${instanceId}`, finalStatus);
   }
   })();
   
-  activeHealthChecks.set(instanceId, healthCheckPromise);
+  setActiveInstanceHealthCheck(instanceId, healthCheckPromise);
   try {
     await healthCheckPromise;
   } finally {
-    activeHealthChecks.delete(instanceId);
+    clearInstanceHealthCheckCache(instanceId);
   }
 }

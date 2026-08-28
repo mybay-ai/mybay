@@ -183,6 +183,59 @@ function cleanYamlObject(obj: any): any {
   return obj;
 }
 
+export function buildHermesOAuthAuthStore(
+  existing: any,
+  providerId: string,
+  oauthAuthPayload: any,
+  fallbackBaseUrl = "",
+) {
+  const authStore = existing && typeof existing === "object"
+    ? existing
+    : { version: 2, providers: {}, credential_pool: {} };
+  authStore.version = Math.max(Number(authStore.version) || 1, 2);
+  authStore.providers = authStore.providers && typeof authStore.providers === "object" ? authStore.providers : {};
+  authStore.credential_pool = authStore.credential_pool && typeof authStore.credential_pool === "object" ? authStore.credential_pool : {};
+  const tokens = oauthAuthPayload?.tokens;
+  if (!tokens?.access_token || !tokens?.refresh_token) {
+    throw new Error("OAUTH_CREDENTIAL_INVALID");
+  }
+  const oauthPayload = {
+    ...oauthAuthPayload,
+    provider: providerId,
+    auth_type: "oauth_external",
+    credential_pool: providerId,
+    tokens,
+  };
+  authStore.providers[providerId] = oauthPayload;
+  const expiresAt = tokens.expires_at || oauthPayload.expires_at;
+  const expiresAtMs = expiresAt ? Date.parse(String(expiresAt)) : undefined;
+  const poolEntries = Array.isArray(authStore.credential_pool[providerId])
+    ? authStore.credential_pool[providerId]
+    : [];
+  const poolId = String(oauthPayload.credential_id || `${providerId}-mybay-local`)
+    .replace(/[^A-Za-z0-9_.:-]/g, "-")
+    .slice(0, 120);
+  const poolEntry = {
+    id: poolId,
+    label: String(oauthPayload.label || providerId),
+    auth_type: "oauth",
+    priority: 0,
+    source: "manual:device_code",
+    access_token: tokens.access_token,
+    refresh_token: tokens.refresh_token,
+    base_url: oauthPayload.base_url || fallbackBaseUrl || undefined,
+    expires_at: expiresAt,
+    expires_at_ms: Number.isFinite(expiresAtMs) ? expiresAtMs : undefined,
+    last_refresh: oauthPayload.last_refresh,
+  };
+  const existingIndex = poolEntries.findIndex((entry: any) => entry?.id === poolId);
+  if (existingIndex >= 0) poolEntries[existingIndex] = { ...poolEntries[existingIndex], ...poolEntry };
+  else poolEntries.push(poolEntry);
+  authStore.credential_pool[providerId] = poolEntries;
+  authStore.active_provider = providerId;
+  return authStore;
+}
+
 function sanitizeErrorMessage(msg: string, config: any): string {
   if (!msg) return "";
   let clean = msg;
@@ -264,7 +317,12 @@ function sanitizeErrorMessage(msg: string, config: any): string {
 
 export function writePhysicalConfigs(instanceId: string, config: any) {
   try {
-    const instanceDir = path.join(process.cwd(), "data", "instances", instanceId);
+    if (!instanceId || instanceId.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(instanceId)) {
+      throw new Error("Invalid instance identifier");
+    }
+    const instancesRoot = path.resolve(process.cwd(), "data", "instances");
+    const instanceDir = path.resolve(instancesRoot, instanceId);
+    if (!instanceDir.startsWith(`${instancesRoot}${path.sep}`)) throw new Error("Instance path escaped the managed data directory");
     if (!fs.existsSync(instanceDir)) {
       fs.mkdirSync(instanceDir, { recursive: true });
     }
@@ -401,6 +459,16 @@ plugins:
 
     // Provider Env
     let rawProviderApiKey = (config.providerApiKey ? decrypt(config.providerApiKey) : '') || (config.apiKey ? decrypt(config.apiKey) : '');
+    const isOAuthProvider = registryItem?.authMode === "oauth-device-code";
+    let oauthAuthPayload: any = null;
+    if (isOAuthProvider && rawProviderApiKey) {
+      try {
+        oauthAuthPayload = JSON.parse(rawProviderApiKey);
+      } catch {
+        throw new Error("OAuth 凭据格式无效，请重新连接模型账号后再部署。");
+      }
+      rawProviderApiKey = "";
+    }
     
     if (isMaskedSecretPlaceholder(rawProviderApiKey)) {
       console.error(`[CRITICAL] 配置中的模型密钥已损坏或被占位符污染 (instance_id: ${instanceId})。检查到脱敏占位符。真密钥已被拦截，将不会写入运行时环境。`);
@@ -461,6 +529,27 @@ plugins:
 
     const envContent = envLines.join("\n").trim();
     fs.writeFileSync(path.join(instanceDir, ".env"), envContent);
+
+    if (isOAuthProvider) {
+      const tokens = oauthAuthPayload?.tokens;
+      if (!tokens?.access_token || !tokens?.refresh_token) {
+        throw new Error("OAuth 凭据缺失或已失效，请重新连接模型账号后再部署。");
+      }
+      const authPath = path.join(instanceDir, "auth.json");
+      let authStore: any = { version: 2, providers: {}, credential_pool: {} };
+      try {
+        if (fs.existsSync(authPath)) {
+          const existing = JSON.parse(fs.readFileSync(authPath, "utf8"));
+          if (existing && typeof existing === "object") authStore = existing;
+        }
+      } catch {
+        authStore = { version: 2, providers: {}, credential_pool: {} };
+      }
+      const providerId = hermesModelConfigResult.hermesProvider;
+      authStore = buildHermesOAuthAuthStore(authStore, providerId, oauthAuthPayload, config.baseUrl || "");
+      fs.writeFileSync(authPath, `${JSON.stringify(authStore, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
+      try { fs.chmodSync(authPath, 0o600); } catch {}
+    }
 
     // Create main_mybay_run.sh to satisfy "no sleep infinity"
     // Since gateway is dynamically registered by "gateway run", we just make main-mybay gracefully exit
@@ -759,4 +848,3 @@ dashboard:
     throw new Error(cleanMsg);
   }
 }
-

@@ -1,9 +1,9 @@
 import { Router, Response } from "express";
 import { AuthenticatedRequest, authenticateToken } from "../../../middlewares/auth";
-import { dbAdapter } from "../../../db";
-import { chatRepo } from "../../../repositories/chatRepo";
 import { getEventsFromCache, requestRunsAPI, runsEventsEmitter } from "../../../services/runsReconciler";
 import { isValidInstanceId, isValidUUID } from "./validators";
+import { resolveInstanceAuthority, resolveInstanceRunAuthority } from "../../../services/instances/resourceAuthorityService";
+import { authorityActorFromRequest, sendAuthorityFailure } from "../../../services/instances/resourceAuthorityHttp";
 
 export function registerRunEventRoutes(router: Router) {
 
@@ -33,18 +33,11 @@ export function registerRunEventRoutes(router: Router) {
     }
 
     try {
-      const instance = await dbAdapter.getInstanceById(id);
-      if (!instance) {
-        return res.status(404).json({ success: false, error: "INSTANCE_NOT_FOUND", message: "未找到目标实例。" });
-      }
-      if (instance.user_id !== req.user.id && instance.owner_id !== req.user.id) {
-        return res.status(403).json({ success: false, error: "FORBIDDEN", message: "您没有访问该实例的权限。" });
-      }
-
-      const run = await chatRepo.getChatRun(runId);
-      if (!run || run.instance_id !== id || run.user_id !== req.user.id) {
-        return res.status(404).json({ success: false, error: "RUN_NOT_FOUND", message: "未找到目标任务或无权访问。" });
-      }
+      const instanceAuthority = await resolveInstanceAuthority({ actor: authorityActorFromRequest(req), instanceId: id });
+      if (instanceAuthority.ok === false) return sendAuthorityFailure(res, instanceAuthority, "无法访问目标实例。");
+      const runAuthority = await resolveInstanceRunAuthority({ instance: instanceAuthority, runId });
+      if (runAuthority.ok === false) return sendAuthorityFailure(res, runAuthority, "未找到目标任务或无权访问。");
+      const run = runAuthority.run;
       if (!run.upstream_run_id) {
         return res.status(409).json({ success: false, error: "RUN_NOT_DISPATCHED", message: "任务尚未分配到 Agent，请稍后再试。" });
       }
@@ -58,7 +51,7 @@ export function registerRunEventRoutes(router: Router) {
           resolve_all: req.body?.resolveAll === true || req.body?.all === true
         },
         timeoutMs: 10000
-      });
+      }, run);
 
       if (!approvalResult.ok) {
         return res.status(approvalResult.statusCode || 502).json({
@@ -135,22 +128,17 @@ export function registerRunEventRoutes(router: Router) {
     };
 
     try {
-      const instance = await dbAdapter.getInstanceById(id);
-      if (!instance) {
+      const instanceAuthority = await resolveInstanceAuthority({ actor: authorityActorFromRequest(req), instanceId: id });
+      if (instanceAuthority.ok === false) {
         cleanup();
-        return res.status(404).json({ success: false, error: "INSTANCE_NOT_FOUND", message: "未找到目标实例。" });
+        return sendAuthorityFailure(res, instanceAuthority, "无法访问目标实例。");
       }
-
-      if (instance.user_id !== req.user.id && instance.owner_id !== req.user.id) {
+      const runAuthority = await resolveInstanceRunAuthority({ instance: instanceAuthority, runId });
+      if (runAuthority.ok === false) {
         cleanup();
-        return res.status(403).json({ success: false, error: "FORBIDDEN", message: "您没有访问该实例的权限。" });
+        return sendAuthorityFailure(res, runAuthority, "未找到目标任务或无权访问。");
       }
-
-      const run = await chatRepo.getChatRun(runId);
-      if (!run || run.instance_id !== id || run.user_id !== req.user.id) {
-        cleanup();
-        return res.status(404).json({ success: false, error: "RUN_NOT_FOUND", message: "未找到目标任务或无权访问。" });
-      }
+      const run = runAuthority.run;
 
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache, no-transform');

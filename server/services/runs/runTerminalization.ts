@@ -39,6 +39,7 @@ export interface FinishRunParams {
   durationMs: number | null;
   reconcilerId?: string;
   expectedUpstreamRunId?: string;
+  completionAudit?: Record<string, unknown>;
 }
 
 export interface RunTerminalizationInput {
@@ -49,6 +50,7 @@ export interface RunTerminalizationInput {
   usage?: RunTerminalUsage | null;
   durationMs?: number | null;
   expectedUpstreamRunId?: string;
+  completionAudit?: Record<string, unknown>;
 }
 
 export interface RunTerminalizationDependencies {
@@ -97,6 +99,16 @@ export function sanitizeRunErrorCode(rawError: unknown): string {
     "INVALID_SESSION_ID",
     "SESSION_EXPIRED",
     "UNKNOWN_SESSION",
+    "INSTANCE_NOT_FOUND",
+    "INSTANCE_OWNERSHIP_INCONSISTENT",
+    "CONVERSATION_NOT_FOUND",
+    "RUN_NOT_FOUND",
+    "FILE_NOT_FOUND",
+    "UNSUPPORTED_RUNTIME_BINDING",
+    "PI_RUNTIME_PREVIEW_ONLY",
+    "RUNTIME_CONVERSATION_MODE_UNSUPPORTED",
+    "RUNTIME_RUN_CANCELLATION_UNSUPPORTED",
+    "RUNTIME_TERMINAL_OBSERVATION_UNSUPPORTED",
   ];
 
   if (whitelist.includes(upper)) return upper;
@@ -183,6 +195,7 @@ export async function terminalizeRun(
     durationMs: input.durationMs ?? null,
     reconcilerId: input.expectedUpstreamRunId ? undefined : dependencies.ownerId,
     expectedUpstreamRunId: input.expectedUpstreamRunId,
+    completionAudit: input.completionAudit,
   });
 
   if (result.status === "already_terminal") {

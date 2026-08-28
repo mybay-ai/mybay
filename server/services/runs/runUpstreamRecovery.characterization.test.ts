@@ -6,6 +6,12 @@ vi.mock("../../utils/instanceInternalApiKey", () => ({
 vi.mock("../../utils/traefikInternalRequest", () => ({
   requestTraefikInternal: vi.fn(),
 }));
+vi.mock("../instances/resourceAuthorityService", () => ({
+  resolveRunDispatchAuthority: vi.fn(async (run: any) => ({
+    ok: true, actor: { kind: "system", id: "test" }, ownerId: run.user_id,
+    instance: { id: run.instance_id }, conversation: { id: run.conversation_id }, run,
+  })),
+}));
 
 import { dbAdapter } from "../../db";
 import { chatRepo } from "../../repositories/chatRepo";
@@ -25,6 +31,9 @@ function stoppingRun(overrides: Record<string, unknown> = {}) {
     user_id: "user-1",
     last_event_seq: 0,
     partial_output: "",
+    runtime_type: "hermes",
+    runtime_provider_key: "hermes-core",
+    runtime_contract_version: 1,
     ...overrides,
   };
 }

@@ -27,7 +27,6 @@ import { sanitizeErrorMessage } from "../../utils/sanitizer";
 import { buildFileContentDisposition } from "../../utils/fileResponseHeaders";
 import { DEFAULT_USER_DISK_LIMIT_MB } from "../../constants/resourceLimits";
 import {
-  createHtmlArtifactPreviewToken,
   HTML_ARTIFACT_PREVIEW_CSP,
   HTML_ARTIFACT_PREVIEW_MAX_BYTES,
   isAllowedHtmlPreviewAsset,
@@ -35,9 +34,12 @@ import {
   inspectHtmlArtifactPreviewProject,
   normalizeHtmlPreviewProjectRoot,
   renderHtmlArtifactPreviewDiagnostic,
-  verifyHtmlArtifactPreviewToken,
 } from "../../utils/htmlArtifactPreview";
-import { JWT_SECRET } from "../../utils/authSecrets";
+import {
+  createHtmlPreviewSession,
+  getAuthorizedHtmlPreviewSession,
+  serializeHtmlPreviewCredentialCookie,
+} from "../../services/instances/htmlPreviewSessions";
 import { renderLocalOfficePreview } from "../../utils/officeArtifactPreview";
 import { streamLocalVideo } from "../../utils/mediaStream";
 import { createLocalGeneratedArtifactSnapshot } from "../../utils/localGeneratedArtifactLifecycle";
@@ -249,7 +251,7 @@ export function createFilesRoutes(deps: RouterDependencies) {
     "/:id/files/download",
     "/:id/files/media-preview",
   ], instanceFileReadLimiter);
-  router.use("/:id/files/html-preview-assets/:token/*", htmlPreviewAssetLimiter);
+  router.use("/:id/files/html-preview-session/:publicId/*", htmlPreviewAssetLimiter);
 
   const inspectHtmlPreview = async (req: AuthenticatedRequest, requestedPath: string, entryRealPath: string) => {
     const project = normalizeHtmlPreviewProjectRoot(requestedPath);
@@ -535,28 +537,34 @@ export function createFilesRoutes(deps: RouterDependencies) {
         res.setHeader("X-MyBay-Preview-Status", "incomplete");
         return res.send(renderHtmlArtifactPreviewDiagnostic(inspection));
       }
-      const token = createHtmlArtifactPreviewToken({
+      const created = createHtmlPreviewSession({
         instanceId: req.params.id,
         ownerId: String(req.user.id),
         viewerRole: String(req.user.role || "user"),
         projectRoot: project.projectRoot,
         assetAliases: inspection.aliases,
-        secret: JWT_SECRET,
       });
       const encodedEntryPath = project.entryPath.split("/").map(encodeURIComponent).join("/");
-      return res.redirect(302, `/api/instances/${encodeURIComponent(req.params.id)}/files/html-preview-assets/${token}/${encodedEntryPath}`);
+      res.setHeader("Set-Cookie", serializeHtmlPreviewCredentialCookie(
+        created.session,
+        created.credentialSecret,
+        req.secure || String(req.get("x-forwarded-proto") || "").toLowerCase() === "https",
+      ));
+      res.setHeader("Cache-Control", "private, no-store, max-age=0");
+      return res.redirect(303, `/api/instances/${encodeURIComponent(req.params.id)}/files/html-preview-session/${created.session.publicId}/${encodedEntryPath}`);
     } catch (e: any) {
       return res.status(500).json({ error: "HTML 预览失败: " + sanitizeErrorMessage(e.message), code: "HTML_PREVIEW_FAILED" });
     }
   });
 
-  // This capability route is protected by the path-scoped htmlPreviewAssetLimiter.
+  // The authenticated entry exchanges the user session for a path-scoped,
+  // HttpOnly Preview credential. The redirected URL contains only a public ID.
   // lgtm[js/missing-rate-limiting]
-  router.get("/:id/files/html-preview-assets/:token/*", async (req: AuthenticatedRequest, res: Response) => {
+  router.get("/:id/files/html-preview-session/:publicId/*", async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const token = verifyHtmlArtifactPreviewToken(req.params.token, JWT_SECRET);
-      if (!token || token.instanceId !== req.params.id) {
-        return res.status(403).json({ error: "HTML 预览链接无效或已过期", code: "HTML_PREVIEW_TOKEN_INVALID" });
+      const session = getAuthorizedHtmlPreviewSession(req.params.publicId, req.headers.cookie);
+      if (!session || session.instanceId !== req.params.id) {
+        return res.status(410).json({ error: "HTML 预览链接无效或已过期", code: "HTML_PREVIEW_UNAVAILABLE" });
       }
 
       const assetPath = String(req.params[0] || "").replace(/^\/+/, "");
@@ -570,11 +578,11 @@ export function createFilesRoutes(deps: RouterDependencies) {
 
       const capabilityRequest = {
         ...req,
-        user: { id: token.ownerId, role: token.viewerRole },
+        user: { id: session.ownerId, role: session.viewerRole },
       } as AuthenticatedRequest;
-      const projectPath = token.projectRoot === "." ? "/" : token.projectRoot;
-      const resolvedAssetPath = token.assetAliases?.[assetPath] || assetPath;
-      const requestedAssetPath = path.posix.join(token.projectRoot, resolvedAssetPath);
+      const projectPath = session.projectRoot === "." ? "/" : session.projectRoot;
+      const resolvedAssetPath = session.assetAliases?.[assetPath] || assetPath;
+      const requestedAssetPath = path.posix.join(session.projectRoot, resolvedAssetPath);
       const projectValidation = await validateFileAccess(capabilityRequest, req.params.id, projectPath);
       if ("error" in projectValidation) {
         return res.status(projectValidation.status).json({ error: projectValidation.error, code: "HTML_PREVIEW_PROJECT_UNAVAILABLE" });

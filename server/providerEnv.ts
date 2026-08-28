@@ -354,7 +354,7 @@ export function buildHermesModelConfig(input: HermesModelConfigInput): HermesMod
       envVars.OPENAI_BASE_URL = effectiveBaseUrl;
     }
   }
-  if (apiKey) {
+  if (apiKey && apiKeyEnvName) {
     envVars[apiKeyEnvName] = apiKey;
     if (regKey === "moonshot" || pLower === "moonshot" || pLower === "kimi-coding-cn" || pLower === "kimi-cn" || pLower === "moonshot-cn") {
       envVars.KIMI_CN_API_KEY = apiKey;

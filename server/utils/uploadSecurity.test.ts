@@ -1,11 +1,17 @@
 import AdmZip from "adm-zip";
 import { describe, expect, it } from "vitest";
-import { hasZipMagic, validateUploadedFileBuffer } from "./uploadSecurity";
+import { hasZipMagic, resolveContentValidatedExtensions, validateUploadedFileBuffer } from "./uploadSecurity";
 
 const allowed = new Set([".pdf", ".docx", ".xlsx", ".txt", ".json", ".png"]);
 const validate = (buffer: Buffer, originalName: string, declaredMime: string) => validateUploadedFileBuffer({ buffer, originalName, declaredMime, allowedExtensions: allowed });
 
 describe("upload security", () => {
+  it("keeps content-validated file types enabled when the configured policy allows all extensions", () => {
+    const contentValidated = new Set([".txt", ".pdf", ".png"]);
+    expect([...resolveContentValidatedExtensions(null, contentValidated)]).toEqual([".txt", ".pdf", ".png"]);
+    expect([...resolveContentValidatedExtensions([".txt"], contentValidated)]).toEqual([".txt"]);
+  });
+
   it("accepts real PDF and rejects extension or MIME forgery", () => {
     expect(validate(Buffer.from("%PDF-1.7\nbody"), "report.pdf", "application/pdf").ok).toBe(true);
     expect(validate(Buffer.from("<script>alert(1)</script>"), "report.pdf", "application/pdf").ok).toBe(false);

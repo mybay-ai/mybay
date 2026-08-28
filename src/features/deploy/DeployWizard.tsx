@@ -37,7 +37,8 @@ export function DeployWizard({
   blueprintId,
   onClearTemplateParams,
   onUpdateTemplateParams,
-  onBackToSelection
+  onBackToSelection,
+  initialData,
 }: { 
   onSuccess: (targetRoute?: string) => void, 
   socket: Socket | null, 
@@ -51,7 +52,8 @@ export function DeployWizard({
   blueprintId?: string,
   onClearTemplateParams?: () => void,
   onUpdateTemplateParams?: (params: { template_type?: string; template_id?: string; blueprint_id?: string }) => void,
-  onBackToSelection?: () => void
+  onBackToSelection?: () => void,
+  initialData?: Partial<SetupFormData>
 }) {
   const { t, i18n } = useTranslation("deploy");
   const quota = useInstanceQuota(currentUser, instances);
@@ -95,7 +97,8 @@ export function DeployWizard({
     modelBillingMode: "byok",
     enableDashboard: true,
     limitsCpu: "1",
-    limitsMem: "1024MB"
+    limitsMem: "1024MB",
+    ...initialData,
   });
 
   const trustPermissionFingerprint = JSON.stringify({

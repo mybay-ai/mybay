@@ -2,7 +2,14 @@ import fs from "fs";
 import path from "path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { closeLocalDatabase, getLocalDatabasePath, mutateStore, readStore } from "./localStore";
+import {
+  closeLocalDatabase,
+  getLocalDatabasePath,
+  mutateStore,
+  mutateStoreCollections,
+  readStore,
+  readStoreCollections,
+} from "./localStore";
 
 const testDir = path.resolve(process.cwd(), "data", "test-sqlite");
 const sqlitePath = path.join(testDir, "mybay-test.sqlite");
@@ -50,6 +57,35 @@ describe("local SQLite store", () => {
     expect(readStore().tasks).toHaveLength(30);
   });
 
+  it("mutates only the selected collections in one transaction", () => {
+    mutateStore((store) => {
+      store.users.push({ id: "user-1", username: "preserved" });
+      store.chatRuns.push({ id: "run-1", status: "queued" });
+    });
+
+    mutateStoreCollections(["chatRuns"] as const, (store) => {
+      store.chatRuns[0].status = "running";
+    });
+
+    expect(readStoreCollections(["chatRuns"] as const).chatRuns[0].status).toBe("running");
+    expect(readStoreCollections(["users"] as const).users).toEqual([
+      { id: "user-1", username: "preserved" },
+    ]);
+  });
+
+  it("rolls back a failed selected-collection transaction", () => {
+    mutateStore((store) => {
+      store.chatRuns.push({ id: "run-rollback", status: "queued" });
+    });
+
+    expect(() => mutateStoreCollections(["chatRuns"] as const, (store) => {
+      store.chatRuns[0].status = "running";
+      throw new Error("stop scoped transaction");
+    })).toThrow("stop scoped transaction");
+
+    expect(readStoreCollections(["chatRuns"] as const).chatRuns[0].status).toBe("queued");
+  });
+
   it("migrates legacy JSON once and keeps a recoverable backup", () => {
     fs.mkdirSync(testDir, { recursive: true });
     fs.writeFileSync(legacyPath, JSON.stringify({
@@ -79,12 +115,19 @@ describe("local SQLite store", () => {
     before.close();
 
     const migrated = readStore().chatRuns[0];
-    expect(migrated).toMatchObject({ id: "run-old", status: "completed", preserved: "yes" });
+    expect(migrated).toMatchObject({
+      id: "run-old",
+      status: "completed",
+      preserved: "yes",
+      runtime_type: "hermes",
+      runtime_provider_key: "hermes-core",
+      runtime_contract_version: 1,
+    });
     expect(Object.prototype.hasOwnProperty.call(migrated, "node_id")).toBe(false);
     closeLocalDatabase();
 
     const verified = new DatabaseSync(sqlitePath);
-    expect((verified.prepare("SELECT value FROM localMetadata WHERE key = ?").get("schema_version") as { value: string }).value).toBe("5");
+    expect((verified.prepare("SELECT value FROM localMetadata WHERE key = ?").get("schema_version") as { value: string }).value).toBe("6");
     expect(JSON.parse((verified.prepare("SELECT data FROM chatRuns WHERE id = ?").get("run-old") as { data: string }).data)).toEqual(migrated);
     verified.close();
 

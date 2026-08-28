@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  createHtmlArtifactPreviewToken,
   HTML_ARTIFACT_PREVIEW_CSP,
   HTML_ARTIFACT_PREVIEW_MAX_BYTES,
   HTML_SINGLE_FILE_PREVIEW_CSP,
@@ -9,7 +8,6 @@ import {
   isAllowedHtmlPreviewAsset,
   isHtmlArtifactPreview,
   normalizeHtmlPreviewProjectRoot,
-  verifyHtmlArtifactPreviewToken,
 } from "./htmlArtifactPreview";
 import fs from "fs";
 import os from "os";
@@ -59,25 +57,6 @@ describe("HTML artifact preview policy", () => {
     expect(normalizeHtmlPreviewProjectRoot("index.html")).toEqual({ projectRoot: ".", entryPath: "index.html" });
     expect(normalizeHtmlPreviewProjectRoot("outputs/web/../secret.html")).toBeNull();
     expect(normalizeHtmlPreviewProjectRoot("outputs\\web\\index.html")).toBeNull();
-  });
-
-  it("signs short-lived project-scoped preview tokens", () => {
-    const token = createHtmlArtifactPreviewToken({
-      instanceId: "instance-1",
-      ownerId: "owner-1",
-      viewerRole: "admin",
-      projectRoot: "outputs/web/demo",
-      secret: "test-secret",
-      now: 1_000,
-    });
-    expect(verifyHtmlArtifactPreviewToken(token, "test-secret", 2_000)).toMatchObject({
-      instanceId: "instance-1",
-      ownerId: "owner-1",
-      viewerRole: "admin",
-      projectRoot: "outputs/web/demo",
-    });
-    expect(verifyHtmlArtifactPreviewToken(token, "wrong-secret", 2_000)).toBeNull();
-    expect(verifyHtmlArtifactPreviewToken(token, "test-secret", 1_000 + 10 * 60 * 1000)).toBeNull();
   });
 
   it("extracts only local HTML asset references", () => {

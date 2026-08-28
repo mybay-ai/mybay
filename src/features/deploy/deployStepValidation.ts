@@ -30,6 +30,7 @@ export function hasModelStepError(data: ModelStepData, testSucceeded: boolean): 
   const config = data.provider ? providerRegistry[data.provider] : undefined;
   if (!config || !config.enabled || !data.model) return true;
   if (data.provider === "custom-openai-compatible" && !data.baseUrl) return true;
+  if (config.authMode === "oauth-device-code" && !data.providerCredentialId) return true;
   if (config.requiresApiKey && !data.providerApiKey && !data.providerCredentialId) return true;
   return requiresPredeployModelTest(data.provider) && !testSucceeded;
 }

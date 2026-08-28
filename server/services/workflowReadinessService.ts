@@ -9,6 +9,10 @@ import { applyTemplateProductionPolicy, evaluateWorkflowReadiness, type Template
 type UnknownRecord = Record<string, unknown>;
 export interface BoundFileEvidence { name: string; mimeType?: string; path?: string; }
 
+function isSafeInstanceId(value: string): boolean {
+  return value.length > 0 && value.length <= 128 && /^[a-zA-Z0-9_-]+$/.test(value);
+}
+
 function asRecord(value: unknown): UnknownRecord {
   return value && typeof value === "object" && !Array.isArray(value) ? value as UnknownRecord : {};
 }
@@ -28,15 +32,16 @@ function firstValue(...values: unknown[]): unknown { return values.find(hasValue
 function isPdf(file: BoundFileEvidence): boolean { return file.mimeType === "application/pdf" || file.name.toLowerCase().endsWith(".pdf") || Boolean(file.path?.toLowerCase().endsWith(".pdf")); }
 
 export function discoverInstancePdfFiles(instanceId: string, instanceValue: unknown): BoundFileEvidence[] {
-  const instance = asRecord(instanceValue);
-  const roots = new Set<string>([path.resolve(process.cwd(), "data", "instances", instanceId, "uploads")]);
-  if (typeof instance.data_volume_path === "string" && instance.data_volume_path.trim()) roots.add(path.resolve(instance.data_volume_path, "uploads"));
+  if (!isSafeInstanceId(instanceId)) return [];
+  const instancesRoot = path.resolve(process.cwd(), "data", "instances");
+  const root = path.resolve(instancesRoot, instanceId, "uploads");
+  if (!root.startsWith(`${instancesRoot}${path.sep}`)) return [];
   const files: BoundFileEvidence[] = [];
-  for (const root of roots) {
-    if (!fs.existsSync(root)) continue;
-    for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
-      if (entry.isFile() && entry.name.toLowerCase().endsWith(".pdf")) files.push({ name: entry.name, mimeType: "application/pdf", path: path.join(root, entry.name) });
-    }
+  if (!fs.existsSync(root)) return files;
+  for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.toLowerCase().endsWith(".pdf")) continue;
+    const filePath = path.resolve(root, entry.name);
+    if (filePath.startsWith(`${root}${path.sep}`)) files.push({ name: entry.name, mimeType: "application/pdf", path: filePath });
   }
   return files;
 }

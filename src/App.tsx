@@ -128,13 +128,18 @@ function AppContent() {
         console.error("Session verification failed:", err);
         if (err.status === 401 || err.status === 403) {
           setCurrentUser(null);
+          setInstances([]);
+          setInstancesLoading(false);
           clearStoredUser();
+          if (isProtectedAppPath(window.location.pathname)) {
+            navigate("/login", { replace: true });
+          }
         }
       })
       .finally(() => {
         setAuthLoading(false);
       });
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     if (!currentUser || currentUser.role !== "admin" || location.pathname === "/setup") return;
@@ -199,6 +204,14 @@ function AppContent() {
     const handleUnauthorized = () => {
       clearStoredUser();
       setCurrentUser(null);
+      setInstances([]);
+      setInstancesLoading(false);
+      setFeatures({
+        status: "unknown",
+        templateCenterEnabled: false,
+        advancedResourceConfigEnabled: false
+      });
+      setShowProfileModal(false);
       if (isProtectedAppPath(window.location.pathname)) {
         navigate("/login", { replace: true });
       }
@@ -208,10 +221,15 @@ function AppContent() {
   }, [navigate]);
 
   useEffect(() => {
-    if (currentUser) {
-      fetchInstances();
-      fetchFeatures();
+    if (!currentUser) {
+      setInstances([]);
+      setInstancesLoading(false);
+      setSocket(null);
+      return;
     }
+
+    fetchInstances();
+    fetchFeatures();
     const newSocket = io(SOCKET_URL, {
       withCredentials: true
     });

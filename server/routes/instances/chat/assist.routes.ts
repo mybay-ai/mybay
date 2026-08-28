@@ -6,6 +6,8 @@ import { buildChatAttachmentMetadata, buildUnsupportedDirectChatMessage, getUnsu
 import { generateChatCompletion } from "../../../utils/llmClient";
 import { containsDsmlToolCallProtocol, buildDsmlToolCallLeakPayload } from "../../../utils/dsmlToolCallGuard";
 import { emitChatConversationUpdated } from "../../../services/chatRealtime";
+import { resolveConversationAuthority, resolveInstanceAuthority } from "../../../services/instances/resourceAuthorityService";
+import { authorityActorFromRequest, sendAuthorityFailure } from "../../../services/instances/resourceAuthorityHttp";
 import { canWriteHttpResponse, createSyncChatRequestLifecycle } from "../../../services/syncChatCancellation";
 import { buildAssistContext, chatLimiter, extractSafeErrorMessage, isChatTurnRpcSchemaError, isValidInstanceId, isValidUUID, getDefaultMaxTokensForReasoning, getReasoningInstruction, normalizeChatTemperature, normalizeReasoningEffort, resolveQuickChatModelConfig } from "./helpers";
 import { CHAT_CONTEXT_MESSAGE_LIMIT, chatUserMessageLimitMessage, isChatUserMessageTooLong, selectRecentMessagesForContext } from "../../../../shared/chatMessageContract";
@@ -120,14 +122,9 @@ export function registerAssistRoutes(router: Router) {
     try {
       // 1. Fetch & Verify Instance (Strict owner lock)
       phase = "load_instance";
-      const instance = await dbAdapter.getInstanceById(id);
-      if (!instance) {
-        return res.status(404).json({ success: false, error: "INSTANCE_NOT_FOUND", message: "未找到目标实例。" });
-      }
-
-      if (instance.user_id !== req.user.id && instance.owner_id !== req.user.id) {
-        return res.status(403).json({ success: false, error: "FORBIDDEN", message: "您没有访问该实例的权限。" });
-      }
+      const instanceAuthority = await resolveInstanceAuthority({ actor: authorityActorFromRequest(req), instanceId: id });
+      if (instanceAuthority.ok === false) return sendAuthorityFailure(res, instanceAuthority, "无法访问目标实例。");
+      const instance = instanceAuthority.instance;
 
       // 2. Status verification
       const allowedStatuses = ["running", "gateway_ready", "partial_running", "dashboard_ready"];
@@ -161,14 +158,9 @@ export function registerAssistRoutes(router: Router) {
 
       // 4. Verify conversation exists and belongs to the user
       phase = "load_conversation";
-      const conversation = await chatRepo.getConversationForOwnerAndInstance(req.user.id, id, conversationId);
-      if (!conversation) {
-        return res.status(404).json({
-          success: false,
-          error: "CONVERSATION_NOT_FOUND",
-          message: "对话会话不存在或无权访问。"
-        });
-      }
+      const conversationAuthority = await resolveConversationAuthority({ instance: instanceAuthority, conversationId });
+      if (conversationAuthority.ok === false) return sendAuthorityFailure(res, conversationAuthority, "对话会话不存在或无权访问。");
+      const conversation = conversationAuthority.conversation;
 
       // 5. Config & Credentials resolution
       let config: any = {};

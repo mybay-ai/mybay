@@ -25,6 +25,15 @@ const MIME_BY_EXTENSION: Record<string, string[]> = {
 const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp"]);
 const TEXT_EXTENSIONS = new Set([".txt", ".md", ".csv", ".json", ".log"]);
 
+export function resolveContentValidatedExtensions(
+  configuredExtensions: readonly string[] | null,
+  contentValidatedExtensions: ReadonlySet<string>,
+): ReadonlySet<string> {
+  return configuredExtensions === null
+    ? new Set(contentValidatedExtensions)
+    : new Set(configuredExtensions);
+}
+
 export function hasZipMagic(buffer: Buffer): boolean {
   return buffer.length >= 4 && buffer[0] === 0x50 && buffer[1] === 0x4b && (
     (buffer[2] === 0x03 && buffer[3] === 0x04) ||

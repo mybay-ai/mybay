@@ -12,7 +12,10 @@ function normalizeText(value?: string | null): string {
 }
 
 function normalizeBaseUrl(value?: string | null): string {
-  return normalizeText(value).replace(/\/+$/, "");
+  const normalized = normalizeText(value);
+  let end = normalized.length;
+  while (end > 0 && normalized.charCodeAt(end - 1) === 47) end -= 1;
+  return normalized.slice(0, end);
 }
 
 const PROVIDER_ALIASES: Record<string, string> = {

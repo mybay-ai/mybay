@@ -21,6 +21,8 @@ import {
   isLocalRuntimeReadyStatus,
   resolveLocalChatLifecycleReadiness,
 } from "../../../shared/chatReadinessContract";
+import { resolveInstanceAuthority } from "../../services/instances/resourceAuthorityService";
+import { authorityActorFromRequest, sendAuthorityFailure } from "../../services/instances/resourceAuthorityHttp";
 export { runsLimiter, runsLimiterStore, cleanupRunsLimiterStore } from "./chat/limiters";
 
 const chatLimiter = rateLimit({
@@ -59,15 +61,10 @@ export function createChatRoutes(deps: RouterDependencies) {
     let messagesCount = 0;
 
     try {
-      const instance = await dbAdapter.getInstanceById(id);
-      if (!instance) {
-        return res.status(404).json({ success: false, error: "INSTANCE_NOT_FOUND", message: "未找到目标实例。" });
-      }
-
+      const instanceAuthority = await resolveInstanceAuthority({ actor: authorityActorFromRequest(req), instanceId: id });
+      if (instanceAuthority.ok === false) return sendAuthorityFailure(res, instanceAuthority, "无法访问目标实例。");
+      const instance = instanceAuthority.instance;
       const isPrivileged = req.user.role === "admin" || req.user.role === "super_admin";
-      if (instance.user_id !== req.user.id && !isPrivileged) {
-        return res.status(403).json({ success: false, error: "FORBIDDEN", message: "您没有访问该实例的权限。" });
-      }
 
       let config: any = {};
       if (instance.config_json) {
@@ -225,15 +222,9 @@ export function createChatRoutes(deps: RouterDependencies) {
   router.get("/:id/chat-readiness", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
     try {
-      const instance = await dbAdapter.getInstanceById(id);
-      if (!instance) {
-        return res.status(404).json({ success: false, error: "INSTANCE_NOT_FOUND", message: "未找到目标实例。" });
-      }
-
-      const isPrivileged = req.user.role === "admin" || req.user.role === "super_admin";
-      if (instance.user_id !== req.user.id && !isPrivileged) {
-        return res.status(403).json({ success: false, error: "FORBIDDEN", message: "您没有访问该实例的权限。" });
-      }
+      const instanceAuthority = await resolveInstanceAuthority({ actor: authorityActorFromRequest(req), instanceId: id });
+      if (instanceAuthority.ok === false) return sendAuthorityFailure(res, instanceAuthority, "无法访问目标实例。");
+      const instance = instanceAuthority.instance;
 
       let config: any = {};
       if (instance.config_json) {

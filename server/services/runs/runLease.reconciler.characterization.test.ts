@@ -28,6 +28,13 @@ vi.mock("../../utils/traefikInternalSse", () => ({
   streamTraefikInternalSse: external.streamTraefikInternalSse
 }));
 
+vi.mock("../instances/resourceAuthorityService", () => ({
+  resolveRunDispatchAuthority: vi.fn(async (run: any) => ({
+    ok: true, actor: { kind: "system", id: "test" }, ownerId: run.user_id,
+    instance: { id: run.instance_id }, conversation: { id: run.conversation_id }, run,
+  })),
+}));
+
 const claimedRun = (status: string, overrides: Record<string, unknown> = {}) => ({
   id: "run-lease-order",
   conversation_id: "conversation-1",
@@ -39,6 +46,9 @@ const claimedRun = (status: string, overrides: Record<string, unknown> = {}) => 
   dispatch_attempts: 0,
   partial_output: "",
   last_event_seq: 0,
+  runtime_type: "hermes",
+  runtime_provider_key: "hermes-core",
+  runtime_contract_version: 1,
   created_at: new Date().toISOString(),
   ...overrides
 });
