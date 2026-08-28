@@ -18,7 +18,17 @@ vi.mock("../../repositories/chatRepo", () => ({
   chatRepo: { bindConversationSessionId: external.bindConversationSessionId }
 }));
 
-import { buildHermesRunPayload, createHermesSessionBinding } from "../runsReconciler";
+import { hermesRuntimeDriver } from "../../runtime/adapters/hermes/HermesRuntimeDriver";
+
+const preparation = hermesRuntimeDriver.preparation.createController({
+  request: (options) => hermesRuntimeDriver.runs.request(options),
+  bindConversationSessionId: (conversationId, sessionId) =>
+    external.bindConversationSessionId(conversationId, sessionId),
+  getConversationForSessionBinding: vi.fn(async () => null),
+  logFallback: vi.fn(),
+  deduplicateHistoryEnabled: () => false,
+  systemPolicy: "default policy",
+});
 
 describe("Hermes session context characterization", () => {
   beforeEach(() => {
@@ -34,7 +44,7 @@ describe("Hermes session context characterization", () => {
       json: { session_id: "native-session" }
     });
 
-    await expect(createHermesSessionBinding("instance-1", "conversation-1", "Title"))
+    await expect(preparation.createSessionBinding("instance-1", "conversation-1", "Title"))
       .resolves.toEqual({ sessionId: "native-session", state: "created" });
     expect(external.bindConversationSessionId).toHaveBeenCalledWith("conversation-1", "native-session");
   });
@@ -42,7 +52,7 @@ describe("Hermes session context characterization", () => {
   it("binds a stable fallback id when session creation is unavailable", async () => {
     external.requestTraefikInternal.mockResolvedValue({ ok: false, statusCode: 404, error: "missing" });
 
-    await expect(createHermesSessionBinding("instance-1", "conversation-1"))
+    await expect(preparation.createSessionBinding("instance-1", "conversation-1"))
       .resolves.toEqual({ sessionId: "mybay_conversation1", state: "fallback" });
     expect(external.bindConversationSessionId).toHaveBeenCalledWith("conversation-1", "mybay_conversation1");
   });
@@ -50,13 +60,13 @@ describe("Hermes session context characterization", () => {
   it("throws the stable create failure with the upstream status", async () => {
     external.requestTraefikInternal.mockResolvedValue({ ok: false, statusCode: 500, error: "timeout" });
 
-    await expect(createHermesSessionBinding("instance-1", "conversation-1"))
+    await expect(preparation.createSessionBinding("instance-1", "conversation-1"))
       .rejects.toMatchObject({ message: "HERMES_SESSION_CREATE_FAILED", statusCode: 500 });
     expect(external.bindConversationSessionId).not.toHaveBeenCalled();
   });
 
   it("uses current input only for an existing session when history deduplication is enabled", () => {
-    expect(buildHermesRunPayload({
+    expect(preparation.buildRunPayload({
       userContent: "question",
       agentAttachmentContext: "attachment context",
       sessionBinding: { sessionId: "native-session", state: "existing" },
@@ -76,7 +86,7 @@ describe("Hermes session context characterization", () => {
   });
 
   it("filters the current message and builds ordered full history for fallback sessions", () => {
-    expect(buildHermesRunPayload({
+    expect(preparation.buildRunPayload({
       userContent: "current question",
       currentUserMessageId: "message-current",
       currentRequestId: "request-current",

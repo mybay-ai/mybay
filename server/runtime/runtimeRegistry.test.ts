@@ -16,6 +16,7 @@ describe("server RuntimeRegistry", () => {
     expect(runtimeRegistry.listProviderKeys()).toEqual(["hermes-core"]);
     expect(runtimeRegistry.get().runs.request).toBeTypeOf("function");
     expect(runtimeRegistry.get().runs.streamEvents).toBeTypeOf("function");
+    expect(runtimeRegistry.get().preparation.createController).toBeTypeOf("function");
     expect(Object.isFrozen(runtimeRegistry.get().capabilities)).toBe(true);
   });
 
@@ -73,15 +74,21 @@ describe("server RuntimeRegistry", () => {
     expect(registry.get("test-runtime")).toBe(testDriver);
   });
 
-  it("routes Reconciler transport and capabilities through the Registry boundary", () => {
+  it("routes Reconciler transport, preparation, and capabilities through the Registry boundary", () => {
     const source = fs.readFileSync(path.join(process.cwd(), "server/services/runsReconciler.ts"), "utf8");
     expect(source).toContain("runtimeRegistry.resolveRunBinding(run)");
     expect(source).toContain("runtimeRegistry.getForBinding");
     expect(source).toContain("driver.runs.request");
     expect(source).toContain("driver.runs.streamEvents");
+    expect(source).toContain("driver.preparation.createController");
+    expect(source).toContain("runPreparation.ensureSessionForConversation(run)");
+    expect(source).toContain("runPreparation.buildRunPayload({");
     expect(source).toContain("runtimeDriver.capabilities");
     expect(source).not.toContain("requestHermesRunsAPI(");
     expect(source).not.toContain("streamHermesRunEventsAPI(");
     expect(source).not.toContain("runtimeRegistry.get(\"hermes\")");
+    expect(source).not.toContain("createRunHermesSessionContextController");
+    expect(source).not.toContain("buildHermesRunPayload(");
+    expect(source).not.toContain("createHermesSessionBinding(");
   });
 });

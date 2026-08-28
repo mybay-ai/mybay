@@ -1,4 +1,5 @@
 import type { RuntimeCapabilityDescriptor } from "./RuntimeCapabilities";
+import type { RuntimeRunPreparationProvider } from "./RuntimeRunPreparation";
 
 export type RuntimeType = string;
 
@@ -40,5 +41,6 @@ export interface RuntimeDriver {
   readonly providerKey: string;
   readonly contractVersion: number;
   readonly capabilities: RuntimeCapabilityDescriptor;
+  readonly preparation: RuntimeRunPreparationProvider;
   readonly runs: RuntimeRunTransport;
 }

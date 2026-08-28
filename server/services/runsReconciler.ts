@@ -57,11 +57,6 @@ import {
   type RunsRequestResult,
 } from "./runs/runHermesTransport";
 import {
-  createRunHermesSessionContextController,
-  type BuildRunPayloadOptions,
-  type HermesSessionBindingResult,
-} from "./runs/runHermesSessionContext";
-import {
   createRunNonStreamingChatExecutor,
   filterCurrentRunMessageFromHistory as filterNonStreamingHistory,
 } from "./runs/runNonStreamingChatExecutor";
@@ -85,7 +80,13 @@ import {
 import { containsDsmlToolCallProtocol } from "../utils/dsmlToolCallGuard";
 import { resolveRunDispatchAuthority } from "./instances/resourceAuthorityService";
 import { runtimeRegistry } from "../runtime/runtimeRegistry";
-import type { PersistedRuntimeBindingSubject, RuntimeDriver } from "../runtime/contracts";
+import type {
+  PersistedRuntimeBindingSubject,
+  RuntimeDriver,
+  RuntimeRunPreparationController,
+  RuntimeSessionBinding,
+} from "../runtime/contracts";
+import { toHermesReasoningModelOptions } from "../runtime/adapters/hermes/HermesRunPreparation";
 
 export { sanitizeStep } from "./runs/runStepSanitizer";
 export {
@@ -94,6 +95,7 @@ export {
   isStaleSessionError,
   shouldFallbackSessionCreate
 } from "./runs/runHermesProtocol";
+export { toHermesReasoningModelOptions } from "../runtime/adapters/hermes/HermesRunPreparation";
 
 export const runsEventsEmitter = new EventEmitter();
 
@@ -115,18 +117,6 @@ export function hasValidRunLease(
 // Memory event cache for SSE streaming
 export type CachedSSEEvent = CachedRunEvent;
 
-
-type AgentReasoningEffort = "fast" | "balanced" | "deep";
-type HermesReasoningEffort = "low" | "medium" | "high";
-
-export function toHermesReasoningModelOptions(value: unknown) {
-  const normalized: AgentReasoningEffort = value === "fast" || value === "deep" ? value : "balanced";
-  const effort: HermesReasoningEffort = normalized === "fast" ? "low" : normalized === "deep" ? "high" : "medium";
-  return {
-    reasoning: { enabled: true, effort },
-    reasoning_effort: effort
-  };
-}
 
 // Memory caches
 const runReconcileScheduler = createRunReconcileScheduler({
@@ -174,9 +164,9 @@ function createNonStreamingChatExecutor(requestRuns: (options: RunsRequestOption
     now: () => Date.now()
   });
 }
-function createHermesSessionContext(requestRuns: (options: RunsRequestOptions) => Promise<RunsRequestResult>) {
-  return createRunHermesSessionContextController({
-    requestRuns,
+function createRuntimeRunPreparation(driver: RuntimeDriver): RuntimeRunPreparationController {
+  return driver.preparation.createController({
+    request: (options) => driver.runs.request(options),
     bindConversationSessionId: (conversationId, sessionId) =>
       chatRepo.bindConversationSessionId(conversationId, sessionId),
     getConversationForSessionBinding: (conversationId) =>
@@ -189,12 +179,10 @@ function createHermesSessionContext(requestRuns: (options: RunsRequestOptions) =
         statusCode,
         "USING_STABLE_SESSION_ID"
       ),
-    toReasoningModelOptions: (value) => toHermesReasoningModelOptions(value),
     deduplicateHistoryEnabled: () => process.env.MYBAY_DEDUPLICATE_CHAT_HISTORY === "true",
     systemPolicy: MANAGED_OPERATION_SYSTEM_POLICY
   });
 }
-const defaultRunHermesSessionContext = createHermesSessionContext((options) => requestRunsAPI(options));
 const runHermesEventInterpreter = createRunHermesEventInterpreter({
   addEvent: (runId, event, data, ownerId) => addEventToCache(runId, event, data, ownerId),
   completeTerminal: (run, event, upstreamRunId) => completeRunFromHermesEvent(run, event, upstreamRunId),
@@ -373,19 +361,6 @@ export async function requestRunsAPI(
     ? runtimeRegistry.getForBinding(runtimeRegistry.resolveRunBinding(bindingSubject))
     : runtimeRegistry.get();
   return requestRuntimeRunsAPI(driver, options);
-}
-
-export async function createHermesSessionBinding(
-  instanceId: string,
-  conversationId: string,
-  title?: string,
-  options: { bindImmediately?: boolean } = {}
-): Promise<HermesSessionBindingResult> {
-  return defaultRunHermesSessionContext.createBinding(instanceId, conversationId, title, options);
-}
-
-export function buildHermesRunPayload(options: BuildRunPayloadOptions) {
-  return defaultRunHermesSessionContext.buildPayload(options);
 }
 
 export function requestRunsReconcile(): boolean {
@@ -580,7 +555,7 @@ export async function processSingleRun(run: any, leaseLostRuns: Set<string>) {
   }
   const requestRunsForRun = (options: RunsRequestOptions) => requestRuntimeRunsAPI(runtimeDriver, options);
   const completeRunViaNonStreamingChat = createNonStreamingChatExecutor(requestRunsForRun);
-  const runHermesSessionContext = createHermesSessionContext(requestRunsForRun);
+  const runPreparation = createRuntimeRunPreparation(runtimeDriver);
 
   // Retrieve or initialize incremental tracker
   const tracker = runHermesEventInterpreter.getOrCreate(run.id, run.partial_output);
@@ -671,24 +646,25 @@ export async function processSingleRun(run: any, leaseLostRuns: Set<string>) {
       });
 
       // E. Build dispatch body with the native Hermes session bound to this MyBay conversation.
-      let sessionBinding: HermesSessionBindingResult;
+      let sessionBinding: RuntimeSessionBinding;
       try {
-        sessionBinding = await runHermesSessionContext.ensureForConversation(run);
+        sessionBinding = await runPreparation.ensureSessionForConversation(run);
       } catch (sessionErr: any) {
         const errorCode = sessionErr?.message === "CONVERSATION_NOT_FOUND" ? "CONVERSATION_NOT_FOUND" : "HERMES_SESSION_CREATE_FAILED";
         logOperation("HERMES_SESSION_BIND_FAILED", run.id, run.instance_id, sessionErr?.statusCode || 500, errorCode);
         await completeRun(run.id, "failed", "", errorCode);
         return;
       }
-      const hermesSessionId = sessionBinding.sessionId;
+      const runtimeSessionId = sessionBinding.sessionId;
 
-      const payload = buildHermesRunPayload({
+      const payload = runPreparation.buildRunPayload({
         userContent: userMsg.content,
         currentUserMessageId: userMsg.id,
         currentRequestId: userMsg.request_id,
         agentAttachmentContext,
         sessionBinding,
-        historyMessages: history
+        historyMessages: history,
+        reasoningEffort: run.reasoning_effort,
       });
 
       emitRunLifecycleStep(
@@ -710,7 +686,7 @@ export async function processSingleRun(run: any, leaseLostRuns: Set<string>) {
         return;
       }
       if (conversationDecision.mode === "batch") {
-        await completeRunViaNonStreamingChat(run, hermesMessages, hermesSessionId, "provider_compatibility", userMsg?.id, userMsg?.request_id);
+        await completeRunViaNonStreamingChat(run, hermesMessages, runtimeSessionId, "provider_compatibility", userMsg?.id, userMsg?.request_id);
         return;
       }
 
@@ -740,14 +716,14 @@ export async function processSingleRun(run: any, leaseLostRuns: Set<string>) {
 
       const startTime = Date.now();
       let dispatchRes = await submitRunWithIdempotentRecovery({
-        submit: () => requestRunsForRun({
+        submit: () => runtimeDriver.runs.request({
           instanceId: run.instance_id,
           method: "POST",
           path: "/v1/runs",
           body: payload,
           headers: { "Idempotency-Key": run.id },
           timeoutMs: 15000,
-          hermesSessionId,
+          sessionId: runtimeSessionId,
         }),
         recover: async () => {
           const lookup = await requestRunsForRun({
@@ -772,23 +748,24 @@ export async function processSingleRun(run: any, leaseLostRuns: Set<string>) {
         logOperation("HERMES_STALE_SESSION_DETECTED_REBINDING", run.id, run.instance_id, dispatchRes.statusCode);
         try {
           const convInfo = await chatRepo.getConversationForSessionBinding(run.conversation_id);
-          const newBinding = await runHermesSessionContext.createBinding(
+          const newBinding = await runPreparation.createSessionBinding(
             run.instance_id,
             run.conversation_id,
             convInfo?.title || "MyBay Agent Conversation",
             { bindImmediately: false }
           );
 
-          const retryPayload = buildHermesRunPayload({
+          const retryPayload = runPreparation.buildRunPayload({
             userContent: userMsg.content,
             currentUserMessageId: userMsg.id,
             currentRequestId: userMsg.request_id,
             agentAttachmentContext,
             sessionBinding: newBinding,
-            historyMessages: filteredHistory
+            historyMessages: filteredHistory,
+            reasoningEffort: run.reasoning_effort,
           });
 
-          dispatchRes = await requestRunsForRun({
+          dispatchRes = await runtimeDriver.runs.request({
             instanceId: run.instance_id,
             method: "POST",
             path: "/v1/runs",
@@ -797,7 +774,7 @@ export async function processSingleRun(run: any, leaseLostRuns: Set<string>) {
               "Idempotency-Key": `${run.id}:session-rebind:1`
             },
             timeoutMs: 15000,
-            hermesSessionId: newBinding.sessionId
+            sessionId: newBinding.sessionId
           });
           if (dispatchRes.ok) {
             await chatRepo.bindConversationSessionId(run.conversation_id, newBinding.sessionId);
@@ -881,7 +858,7 @@ export async function processSingleRun(run: any, leaseLostRuns: Set<string>) {
             role: "user",
             content: agentAttachmentContext ? `${userMsg.content}\n\n${agentAttachmentContext}` : userMsg.content
           });
-          await completeRunViaNonStreamingChat(run, hermesMessages, hermesSessionId, "provider_compatibility", userMsg?.id, userMsg?.request_id);
+          await completeRunViaNonStreamingChat(run, hermesMessages, runtimeSessionId, "provider_compatibility", userMsg?.id, userMsg?.request_id);
           return;
         }
 
@@ -1009,8 +986,8 @@ export async function processSingleRun(run: any, leaseLostRuns: Set<string>) {
               role: "user",
               content: agentAttachmentContext ? `${userMsg.content}\n\n${agentAttachmentContext}` : userMsg.content
             });
-            const hermesSessionBinding = await runHermesSessionContext.ensureForConversation(run);
-            await completeRunViaNonStreamingChat(run, hermesMessages, hermesSessionBinding.sessionId, "streaming_decoder_fallback", userMsg?.id, userMsg?.request_id);
+            const runtimeSessionBinding = await runPreparation.ensureSessionForConversation(run);
+            await completeRunViaNonStreamingChat(run, hermesMessages, runtimeSessionBinding.sessionId, "streaming_decoder_fallback", userMsg?.id, userMsg?.request_id);
             return;
           }
         }

@@ -7,6 +7,7 @@ import type {
   RuntimeDriver,
   RuntimeRequestOptions,
 } from "../../contracts";
+import { hermesRunPreparationProvider } from "./HermesRunPreparation";
 
 export const HERMES_RUNTIME_CAPABILITIES: RuntimeCapabilityDescriptor = Object.freeze({
   conversation: { modes: ["streaming", "batch"] },
@@ -20,6 +21,7 @@ export const hermesRuntimeDriver: RuntimeDriver = Object.freeze({
   providerKey: "hermes-core",
   contractVersion: 1,
   capabilities: HERMES_RUNTIME_CAPABILITIES,
+  preparation: hermesRunPreparationProvider,
   runs: Object.freeze({
     request: (options: RuntimeRequestOptions) => {
       const { sessionId, ...requestOptions } = options;
