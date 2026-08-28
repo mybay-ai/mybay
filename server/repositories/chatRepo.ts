@@ -82,7 +82,10 @@ function normalizeClaimedRun(row: any) {
     last_event_seq: Number(row.last_event_seq || 0),
     stop_attempts: Number(row.stop_attempts || 0),
     stop_requested_at: row.stop_requested_at || null,
-    reasoning_effort: row.reasoning_effort || "balanced"
+    reasoning_effort: row.reasoning_effort || "balanced",
+    runtime_type: row.runtime_type,
+    runtime_provider_key: row.runtime_provider_key,
+    runtime_contract_version: row.runtime_contract_version,
   };
 }
 

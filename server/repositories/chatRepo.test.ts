@@ -151,6 +151,11 @@ describe("chatRepo local status contract", () => {
 
     const claimed = await chatRepo.claimRuns({ reconcilerId: "test-reconciler", leaseSeconds: 60 });
     expect(claimed[0]?.reasoning_effort).toBe("deep");
+    expect(claimed[0]).toMatchObject({
+      runtime_type: "hermes",
+      runtime_provider_key: "hermes-core",
+      runtime_contract_version: 1,
+    });
     expect((await chatRepo.recordDispatchedChatRun({
       runId: "run-1",
       reconcilerId: "test-reconciler",
