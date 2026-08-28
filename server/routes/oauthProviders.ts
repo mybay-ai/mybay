@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { Router } from "express";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { authenticateToken } from "../middlewares/auth";
 import { dbAdapter } from "../db";
 import { encrypt } from "../crypto";
@@ -20,6 +21,14 @@ type LocalOAuthSession = {
 
 const router = Router();
 const sessions = new Map<string, LocalOAuthSession>();
+const oauthLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  keyGenerator: (req: any) => req.user?.id
+    ? `oauth:user:${req.user.id}`
+    : `oauth:ip:${ipKeyGenerator(req.ip)}`,
+  message: { success: false, code: "OAUTH_RATE_LIMITED", error: "OAuth requests are too frequent" },
+});
 
 const CODEX_CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann";
 const CODEX_ISSUER = "https://auth.openai.com";
@@ -95,7 +104,7 @@ async function saveCredential(userId: string, provider: LocalOAuthProvider, payl
   return id;
 }
 
-router.post("/start", authenticateToken, async (req: any, res) => {
+router.post("/start", oauthLimiter, authenticateToken, async (req: any, res) => {
   purgeExpiredSessions();
   const provider = normalizeLocalOAuthProvider(req.body?.provider);
   if (!provider) return res.status(400).json({ success: false, code: "OAUTH_PROVIDER_UNSUPPORTED", error: "Unsupported OAuth provider" });
@@ -167,7 +176,7 @@ router.post("/start", authenticateToken, async (req: any, res) => {
   }
 });
 
-router.post("/poll", authenticateToken, async (req: any, res) => {
+router.post("/poll", oauthLimiter, authenticateToken, async (req: any, res) => {
   const sessionId = String(req.body?.sessionId || "");
   const session = sessions.get(sessionId);
   if (!session || session.userId !== req.user.id || session.expiresAt <= Date.now()) {
@@ -256,7 +265,7 @@ router.post("/poll", authenticateToken, async (req: any, res) => {
   }
 });
 
-router.post("/cancel", authenticateToken, (req: any, res) => {
+router.post("/cancel", oauthLimiter, authenticateToken, (req: any, res) => {
   const sessionId = String(req.body?.sessionId || "");
   const session = sessions.get(sessionId);
   if (session && session.userId === req.user.id) sessions.delete(sessionId);

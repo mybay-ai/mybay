@@ -12,7 +12,6 @@ import crypto from "crypto";
 import {
   normalizeBaseDomain,
   getPublicAppUrl,
-  getInstancePublicProtocol,
   buildInstancePublicUrl,
   buildRedirectTarget,
   getInstanceRootDomain
@@ -39,7 +38,7 @@ import {
 } from "../services/auth/sessionCompleteTicketStore";
 
 
-function sanitizeCompletionRedirect(rawRedirect: string | undefined, expectedHost: string): string {
+function sanitizeCompletionRedirect(rawRedirect: string | undefined, _expectedHost: string): string {
   if (!rawRedirect) return "/";
   const value = rawRedirect.trim();
   if (!value) return "/";
@@ -49,19 +48,9 @@ function sanitizeCompletionRedirect(rawRedirect: string | undefined, expectedHos
     !value.startsWith("/\\") &&
     !value.includes("\\")
   ) {
-    return value;
+    const local = new URL(value, "https://mybay.invalid");
+    return `${local.pathname}${local.search}${local.hash}`;
   }
-  try {
-    const url = new URL(value);
-    const expectedHostNoPort = expectedHost.split(":")[0];
-    const urlHostNoPort = url.host.split(":")[0];
-    if (urlHostNoPort === expectedHostNoPort) {
-      // Normalize protocol
-      const expectedProtocol = getInstancePublicProtocol();
-      url.protocol = expectedProtocol + ":";
-      return url.toString();
-    }
-  } catch {}
   return "/";
 }
 

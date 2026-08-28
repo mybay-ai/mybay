@@ -317,7 +317,12 @@ function sanitizeErrorMessage(msg: string, config: any): string {
 
 export function writePhysicalConfigs(instanceId: string, config: any) {
   try {
-    const instanceDir = path.join(process.cwd(), "data", "instances", instanceId);
+    if (!instanceId || instanceId.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(instanceId)) {
+      throw new Error("Invalid instance identifier");
+    }
+    const instancesRoot = path.resolve(process.cwd(), "data", "instances");
+    const instanceDir = path.resolve(instancesRoot, instanceId);
+    if (!instanceDir.startsWith(`${instancesRoot}${path.sep}`)) throw new Error("Instance path escaped the managed data directory");
     if (!fs.existsSync(instanceDir)) {
       fs.mkdirSync(instanceDir, { recursive: true });
     }

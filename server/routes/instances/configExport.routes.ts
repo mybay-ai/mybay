@@ -306,12 +306,12 @@ export function createConfigExportRoutes(deps: RouterDependencies) {
 
         archive.on('warning', function(err) {
           if (err.code !== 'ENOENT') {
-            console.error(`[Export Archive Warning] Instance ID: ${instance?.id || req.params.id}, Error:`, err);
+            console.error("[Export Archive Warning]", { instanceId: instance?.id || req.params.id, error: err });
           }
         });
 
         archive.on('error', function(err) {
-          console.error(`[Export Archive Error] Instance ID: ${instance?.id || req.params.id}, Error:`, err);
+          console.error("[Export Archive Error]", { instanceId: instance?.id || req.params.id, error: err });
           if (!settled) {
             settled = true;
             reject(err);

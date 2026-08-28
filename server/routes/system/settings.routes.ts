@@ -1,4 +1,5 @@
 import { Router, Response } from "express";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { dbAdapter } from "../../db";
 import { AuthenticatedRequest, authenticateToken } from "../../middlewares/auth";
 import { isAdvancedResourceConfigEnabled } from "../../utils/advancedResourceConfigFeature";
@@ -9,10 +10,19 @@ function isAdmin(req: AuthenticatedRequest) {
   return req.user.role === "admin" || req.user.role === "super_admin";
 }
 
+const settingsLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  keyGenerator: (req: AuthenticatedRequest) => req.user?.id
+    ? `system-settings:user:${req.user.id}`
+    : `system-settings:ip:${ipKeyGenerator(req.ip)}`,
+  message: { error: "系统设置操作过于频繁，请稍后重试" },
+});
+
 export function createSystemSettingsRoutes() {
   const router = Router();
 
-  router.get("/settings", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  router.get("/settings", settingsLimiter, authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     if (!isAdmin(req)) return res.status(403).json({ error: "权限不足，仅管理员可读取系统设置" });
     try {
       const adminDockerSocketEnabled = await dbAdapter.getSystemSettingBoolean("admin_docker_socket_enabled", false);
@@ -25,7 +35,7 @@ export function createSystemSettingsRoutes() {
     }
   });
 
-  router.patch("/settings", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  router.patch("/settings", settingsLimiter, authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     if (!isAdmin(req)) return res.status(403).json({ error: "权限不足，仅管理员可修改系统设置" });
     const { admin_docker_socket_enabled } = req.body;
     if (admin_docker_socket_enabled === undefined) return res.status(400).json({ error: "请提供 admin_docker_socket_enabled 状态" });
@@ -54,14 +64,14 @@ export function createSystemSettingsRoutes() {
     }
   });
 
-  router.get("/local-resource-policy", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  router.get("/local-resource-policy", settingsLimiter, authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     if (!isAdvancedResourceConfigEnabled()) return res.status(404).json({ error: "Advanced resource configuration is disabled" });
     if (!isAdmin(req)) return res.status(403).json({ error: "Admin role required" });
     const { getLocalResourcePolicy } = await import("../../services/localResourcePolicy");
     return res.json(getLocalResourcePolicy());
   });
 
-  router.patch("/local-resource-policy", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  router.patch("/local-resource-policy", settingsLimiter, authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     if (!isAdvancedResourceConfigEnabled()) return res.status(404).json({ error: "Advanced resource configuration is disabled" });
     if (!isAdmin(req)) return res.status(403).json({ error: "Admin role required" });
 

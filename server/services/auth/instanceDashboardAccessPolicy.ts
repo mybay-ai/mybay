@@ -5,9 +5,26 @@ import { getPublicAppUrl } from "../../utils/publicUrl";
 import { safeDecodeCookieValue } from "./hermesCookiePolicy";
 
 export function isReservedAuthPath(pathname: string): boolean {
-  const norm = pathname.toLowerCase().replace(/\/+$/, "");
+  const norm = trimTrailingSlashes(pathname.toLowerCase());
   return norm === "/login" || norm === "/auth/login" || norm === "/auth/password-login"
     || norm.startsWith("/login/") || norm.startsWith("/auth/login/") || norm.startsWith("/auth/password-login/");
+}
+
+function trimTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value.charCodeAt(end - 1) === 47) end -= 1;
+  return value.slice(0, end);
+}
+
+function collapseSlashes(value: string): string {
+  let result = "";
+  let previousSlash = false;
+  for (const character of value) {
+    const slash = character === "/";
+    if (!slash || !previousSlash) result += character;
+    previousSlash = slash;
+  }
+  return result;
 }
 
 const SENSITIVE_DASHBOARD_PATHS = ["/env", "/keys", "/system", "/config", "/logs", "/files"];
@@ -16,7 +33,7 @@ const PLATFORM_MODEL_EXTRA_BLOCKED_PATHS = ["/models", "/channels", "/webhooks",
 function normalizeDashboardPath(pathname: string): string {
   const raw = String(pathname || "/").split("?")[0].split("#")[0].toLowerCase();
   const withSlash = raw.startsWith("/") ? raw : `/${raw}`;
-  return withSlash.replace(/\/+/g, "/").replace(/\/+$/, "") || "/";
+  return trimTrailingSlashes(collapseSlashes(withSlash)) || "/";
 }
 
 function matchesProtectedDashboardPath(pathname: string, protectedPaths: string[]): boolean {

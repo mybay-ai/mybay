@@ -15,15 +15,15 @@ const DEFAULT_SENSITIVE_KEYS = [
  */
 const SECRET_REDACTION_PATTERNS = [
   // Authorization headers
-  /(Authorization:\s*(Bearer|Basic)\s+)[^\s"'\\]+/gi,
+  /(Authorization:\s*(Bearer|Basic)\s+)[^\s"'\\]{1,8192}/gi,
   // sk- keys
-  /(sk-[a-zA-Z0-9]{20,})/g,
+  /(sk-[a-zA-Z0-9]{20,4096})/g,
   // tokens, keys, secrets in env vars or JSON
-  /((OPENAI_API_KEY|API_KEY|SECRET|TOKEN|PASSWORD|CLIENT_SECRET)["']?\s*[:=]\s*["']?)[^\s"'\\]+(["']?)/gi,
+  /((OPENAI_API_KEY|API_KEY|SECRET|TOKEN|PASSWORD|CLIENT_SECRET)["']?\s{0,32}[:=]\s{0,32}["']?)[^\s"'\\]{1,8192}(["']?)/gi,
   // eyJ tokens (JWT)
-  /(eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+)/g,
+  /(eyJ[a-zA-Z0-9_-]{1,4096}\.[a-zA-Z0-9_-]{1,4096}\.[a-zA-Z0-9_-]{1,4096})/g,
   // URL credentials
-  /:\/\/[^:]+:[^@]+@/g,
+  /(:\/\/)[^:@/\s]{1,256}:[^@/\s]{1,4096}@/g,
 ];
 
 /**
@@ -517,4 +517,3 @@ export function sanitizeCredentialsForClient(input: any): any {
   }
   return sanitizeSingle(input);
 }
-

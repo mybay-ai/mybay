@@ -20,7 +20,7 @@ import { DEFAULT_INSTANCE_DISK_MB, DEFAULT_MAX_SINGLE_INSTANCE_DISK_MB, DEFAULT_
 import { isAdvancedResourceConfigEnabled } from "../utils/advancedResourceConfigFeature";
 import { readStore } from "../localStore";
 import { buildDeploymentJourney } from "../services/deploymentJourneyService";
-import { formatSystemRequestError as formatError, isSafeUrl } from "../services/system/systemNetworkPolicy";
+import { formatSystemRequestError as formatError, isSafeUrl, safeOutboundFetch } from "../services/system/systemNetworkPolicy";
 import { createDeploymentModeRoutes } from "./system/deploymentMode.routes";
 import { createSystemSettingsRoutes } from "./system/settings.routes";
 
@@ -37,7 +37,7 @@ const testLimiter = rateLimit({
   message: { error: '检测接口调用频率过高，请稍后重试。' }
 });
 
-router.post("/test-llm", authenticateToken, testLimiter, async (req: AuthenticatedRequest, res: Response) => {
+router.post("/test-llm", testLimiter, authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   let { provider, model, baseUrl, apiKey, credentialId } = req.body;
 
   // Resolve credential from DB if ID is provided
@@ -129,7 +129,8 @@ router.post("/test-llm", authenticateToken, testLimiter, async (req: Authenticat
       opts.headers["Authorization"] = `Bearer ${apiKey}`;
 
       // Detect official OpenAI to prefer max_completion_tokens (required by gpt-4.5/5.4/o1/o3 series)
-      const isOfficialOpenAI = provider === "openai" || url.includes("api.openai.com");
+      let isOfficialOpenAI = provider === "openai";
+      try { isOfficialOpenAI ||= new URL(url).hostname.toLowerCase() === "api.openai.com"; } catch {}
 
       const body: any = {
         model,
@@ -149,7 +150,7 @@ router.post("/test-llm", authenticateToken, testLimiter, async (req: Authenticat
     }
 
     try {
-      response = await fetch(url, opts);
+      response = await safeOutboundFetch(url, opts);
 
       // Auto-retry once if parameter incompatibility is detected (400 Bad Request)
       if (response && response.status === 400) {
@@ -178,7 +179,7 @@ router.post("/test-llm", authenticateToken, testLimiter, async (req: Authenticat
           }
 
           opts.body = JSON.stringify(body);
-          response = await fetch(url, opts);
+          response = await safeOutboundFetch(url, opts);
         }
       }
     } catch (err: any) {
@@ -223,7 +224,7 @@ router.post("/test-llm", authenticateToken, testLimiter, async (req: Authenticat
   }
 });
 
-router.post("/test-channel", authenticateToken, testLimiter, async (req: AuthenticatedRequest, res: Response) => {
+router.post("/test-channel", testLimiter, authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   const { channel } = req.body;
   if (!channel || channel === "none" || channel === "web" || channel === "api") return res.json({ success: true, message: "该渠道不需要第三方凭据测试，将在实例启动后验证 Chat API readiness" });
 
@@ -235,7 +236,7 @@ router.post("/test-channel", authenticateToken, testLimiter, async (req: Authent
     if (channel === "telegram") {
       const { telegramBotToken } = req.body;
       if (!telegramBotToken) return res.json({ success: false, error: "缺少 Bot Token" });
-      const resp = await fetch(`https://api.telegram.org/bot${telegramBotToken}/getMe`, fetchOpts);
+      const resp = await safeOutboundFetch(`https://api.telegram.org/bot${encodeURIComponent(String(telegramBotToken))}/getMe`, fetchOpts);
       const data = await resp.json();
       if (data.ok) return res.json({ success: true, message: `配置有效，Bot名称: ${data.result?.first_name || '未知'}` });
       return res.json({ success: false, error: `Telegram 失败: ${JSON.stringify(data).substring(0, 500)}` });
@@ -332,7 +333,7 @@ router.post("/test-channel", authenticateToken, testLimiter, async (req: Authent
       if (!(await isSafeUrl(webhookUrl))) {
         return res.json({ success: false, error: `SSRF 安全拦截: 目标地址 ${webhookUrl} 指向了内网私有地址范围。` });
       }
-      const resp = await fetch(webhookUrl, {
+      const resp = await safeOutboundFetch(String(webhookUrl), {
          method: "POST", headers: { "Content-Type": "application/json" },
          body: JSON.stringify({ type: "ping", source: "hermes-console" }),
          signal: controller.signal
@@ -348,7 +349,7 @@ router.post("/test-channel", authenticateToken, testLimiter, async (req: Authent
       if (!(await isSafeUrl(url))) {
         return res.json({ success: false, error: "SSRF 安全验证未通过: WhatsApp API 端点不合法" });
       }
-      const resp = await fetch(url, fetchOpts);
+      const resp = await safeOutboundFetch(url, fetchOpts);
       const data = await resp.json();
       if (resp.ok) {
         return res.json({ success: true, message: `WhatsApp 连通成功！Meta Phone ID: ${data.id || whatsappPhoneNumberId}` });
@@ -411,7 +412,7 @@ router.post("/test-channel", authenticateToken, testLimiter, async (req: Authent
       const probeTimeoutId = setTimeout(() => probeController.abort(), 8000);
       let resp: globalThis.Response;
       try {
-        resp = await fetch(baseUrl + "/ilink/bot/getupdates", {
+        resp = await safeOutboundFetch(baseUrl + "/ilink/bot/getupdates", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -465,7 +466,7 @@ router.post("/test-channel", authenticateToken, testLimiter, async (req: Authent
   }
 });
 
-router.post("/test-skill", authenticateToken, testLimiter, async (req: AuthenticatedRequest, res: Response) => {
+router.post("/test-skill", testLimiter, authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   const { skillId } = req.body;
   if (!skillId) return res.json({ success: false, error: "缺少技能信息" });
 
