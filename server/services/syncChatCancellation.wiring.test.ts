@@ -10,7 +10,11 @@ describe("synchronous chat cancellation wiring", () => {
   const quickSource = readSource("server/routes/instances/chat/quick.routes.ts");
   const assistSource = readSource("server/routes/instances/chat/assist.routes.ts");
   const llmSource = readSource("server/utils/llmClient.ts");
-  const workspaceSource = readSource("src/components/ChatWorkspace.tsx");
+  const workspaceSource = [
+    readSource("src/components/ChatWorkspace.tsx"),
+    readSource("src/components/ChatWorkspaceMessageSender.ts"),
+    readSource("src/components/chat-workspace/chatCancellationController.ts"),
+  ].join("\n");
 
   it.each([
     ["quick", quickSource],
