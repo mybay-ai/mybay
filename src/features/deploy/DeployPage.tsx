@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Socket } from "socket.io-client";
 import { useTranslation } from "react-i18next";
 import { DeployWizard } from "./DeployWizard";
+import { QuickDeployPage } from "./QuickDeployPage";
 import { DeployLimitReached } from "./DeployLimitReached";
 import { ErrorBoundary } from "../../components/ErrorBoundary";
 import { 
@@ -14,6 +15,7 @@ import { api } from "../../lib/api";
 import { Card, Button } from "../../components/ui";
 import { resolveBlueprintCardContent, resolveWorkflowCardContent, getRiskLevelTranslationKey } from "../../components/template-center/utils";
 import type { WorkflowTemplate, IndustryBlueprint } from "../../components/template-center/types";
+import type { SetupFormData } from "../../types";
 
 interface QuotaStatus {
   canCreate: boolean;
@@ -62,6 +64,8 @@ export function DeployPage({ currentUser, socket, fetchInstances, instances, tem
   const templatesLoading = workflowsLoading || blueprintsLoading;
   const [activeTab, setActiveTab] = useState<"all" | "blueprints" | "workflows">("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [deploymentMode, setDeploymentMode] = useState<"quick" | "advanced">("quick");
+  const [advancedInitialData, setAdvancedInitialData] = useState<Partial<SetupFormData>>();
 
   const checkQuota = useCallback(async () => {
     if (!currentUser) return;
@@ -258,7 +262,11 @@ export function DeployPage({ currentUser, socket, fetchInstances, instances, tem
           </Card>
 
           {/* Path B: From Scratch */}
-          <Card className="p-6 md:p-8 border-outline/80 hover:border-blue-300 shadow-sm hover:shadow-xl transition-all group flex flex-col justify-between h-full bg-surface rounded-3xl relative overflow-hidden text-left cursor-pointer" onClick={() => setSelectedPath("blank")}>
+          <Card className="p-6 md:p-8 border-outline/80 hover:border-blue-300 shadow-sm hover:shadow-xl transition-all group flex flex-col justify-between h-full bg-surface rounded-3xl relative overflow-hidden text-left cursor-pointer" onClick={() => {
+            setAdvancedInitialData(undefined);
+            setDeploymentMode("quick");
+            setSelectedPath("blank");
+          }}>
             <div className="absolute -top-6 -right-6 p-8 opacity-[0.03] text-content pointer-events-none group-hover:scale-110 transition-transform duration-300">
               <Settings className="w-48 h-48" />
             </div>
@@ -297,6 +305,8 @@ export function DeployPage({ currentUser, socket, fetchInstances, instances, tem
                 variant="outline"
                 onClick={(e: any) => {
                   e.stopPropagation();
+                  setAdvancedInitialData(undefined);
+                  setDeploymentMode("quick");
                   setSelectedPath("blank");
                 }}
                 className="w-full h-11 border-outline hover:border-outline-strong text-content-secondary font-bold text-sm rounded-2xl flex items-center justify-center gap-2"
@@ -533,6 +543,25 @@ export function DeployPage({ currentUser, socket, fetchInstances, instances, tem
   }
 
   // 3. Deployment Wizard (for blank path or active template deployment)
+  if (currentPath === "blank" && deploymentMode === "quick") {
+    return (
+      <ErrorBoundary>
+        <QuickDeployPage
+          currentUser={currentUser}
+          onAdvanced={(initialData) => {
+            setAdvancedInitialData(initialData);
+            setDeploymentMode("advanced");
+          }}
+          onCreated={() => {
+            fetchInstances();
+          }}
+          onOpenChat={(instanceId) => navigate(`/app/chat?instanceId=${encodeURIComponent(instanceId)}`)}
+          onViewInstances={() => navigate("/app/instances")}
+        />
+      </ErrorBoundary>
+    );
+  }
+
   return (
     <ErrorBoundary>
       <DeployWizard 
@@ -555,7 +584,12 @@ export function DeployPage({ currentUser, socket, fetchInstances, instances, tem
           if (params.blueprint_id) newParams.blueprint_id = params.blueprint_id;
           setSearchParams(newParams);
         }}
-        onBackToSelection={templateWorkflowsEnabled && !hasTemplateParams ? () => setSelectedPath(null) : undefined}
+        onBackToSelection={currentPath === "blank"
+          ? () => setDeploymentMode("quick")
+          : templateWorkflowsEnabled && !hasTemplateParams
+            ? () => setSelectedPath(null)
+            : undefined}
+        initialData={currentPath === "blank" ? advancedInitialData : undefined}
         onSuccess={(targetRoute?: string) => {
           fetchInstances();
           if (targetRoute) {

@@ -47,6 +47,7 @@ import {
   shouldAcceptConversationHistory
 } from "../lib/chatWorkspaceState";
 import { createChatWorkspaceMessageSender } from "./ChatWorkspaceMessageSender";
+import { resolveInitialChatInstanceId } from "./chat-workspace/chatInitialInstanceSelection";
 
 export { generateUUIDv4 } from "./chat-workspace/chatWorkspaceSendPolicy";
 
@@ -54,6 +55,10 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
   const { t } = useTranslation(["dashboard", "common"]);
   const navigate = useNavigate();
   const { showConfirm, showToast } = useFeedback();
+  const preferredInstanceId = useMemo(
+    () => typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("instanceId") || "",
+    [],
+  );
   
   // States
   const [instances, setInstances] = useState<AgentInstance[]>([]);
@@ -403,12 +408,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
 
           // Determine the initial selectedId exactly once after readiness state resolves
           if (activeList.length > 0) {
-            const firstReady = activeList.find((inst: any) => readinessMap[inst.id]?.ready);
-            if (firstReady) {
-              selectInstanceId(firstReady.id);
-            } else {
-              selectInstanceId(activeList[0].id);
-            }
+            selectInstanceId(resolveInitialChatInstanceId(activeList, readinessMap, preferredInstanceId));
           }
         }
       } catch (err: any) {

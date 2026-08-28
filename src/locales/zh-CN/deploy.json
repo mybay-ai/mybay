@@ -269,6 +269,100 @@
                            "tab_blueprints":  "行业场景方案 Blueprints",
                            "tab_workflows":  "智能体工作流 Workflows"
                        },
+    "quickDeploy":  {
+                        "badge":  "本地快速部署",
+                        "title":  "几分钟内启动你的 Agent",
+                        "description":  "使用经过验证的安全默认值部署 Hermes Agent。只需选择模型凭证并确认访问保护，其余配置由 MyBay 自动完成。",
+                        "advanced":  "切换到高级配置",
+                        "deploy":  "立即部署 Agent",
+                        "instance":  {
+                                         "title":  "Agent 信息",
+                                         "description":  "为实例设置一个便于识别的名称和用途。",
+                                         "name":  "实例名称",
+                                         "purpose":  "主要用途（可选）",
+                                         "purposePlaceholder":  "例如：整理本地文档并回答问题"
+                                     },
+                        "model":  {
+                                      "title":  "模型连接",
+                                      "description":  "开源版直接使用你自己的模型凭证，不依赖 MyBay 商业平台。",
+                                      "saved":  "已保存凭证",
+                                      "byok":  "临时 API Key",
+                                      "credential":  "选择凭证",
+                                      "apiKey":  "API Key",
+                                      "provider":  "模型提供商",
+                                      "model":  "模型",
+                                      "baseUrl":  "Base URL",
+                                      "test":  "测试模型连接",
+                                      "testPassed":  "模型连接已通过"
+                                  },
+                        "access":  {
+                                       "title":  "Dashboard 访问保护",
+                                       "description":  "该账号和密码用于首次访问 Agent Dashboard，请妥善保存。",
+                                       "username":  "访问账号",
+                                       "password":  "访问密码"
+                                   },
+                        "review":  {
+                                       "title":  "安全默认配置",
+                                       "description":  "快速部署固定使用 Hermes Runtime、Web Chat、自动路径和受保护的 Dashboard。",
+                                       "runtime":  "Hermes Runtime",
+                                       "resources":  "Web Chat · 1 CPU · 1024 MB",
+                                       "confirm":  "我已检查模型与访问配置，并同意使用以上权限创建本地 Agent。"
+                                   },
+                        "created":  {
+                                        "title":  "部署请求已提交",
+                                        "description":  "实例正在后台创建。下一阶段将补充实时部署进度和 Chat 就绪验收。",
+                                        "viewInstances":  "查看实例状态"
+                                    },
+                        "delivery":  {
+                                         "title":  "正在部署本地 Agent",
+                                         "description":  "正在根据后端真实状态创建 Runtime，并等待 Chat API 完成初始化。",
+                                         "readyTitle":  "Agent 已准备就绪",
+                                         "readyDescription":  "Runtime 与 Chat API 均已通过检查，可以开始对话。",
+                                         "failedTitle":  "Agent 部署失败",
+                                         "failedDescription":  "部署任务未能完成。请查看失败阶段并重试，或进入实例管理检查日志。",
+                                         "task":  "部署任务",
+                                         "failedStage":  "部署任务失败",
+                                         "attempt":  "当前尝试 {{current}} / {{max}}",
+                                         "runtimeTitle":  "Runtime 状态",
+                                         "chatTitle":  "Chat 就绪状态",
+                                         "tones":  {
+                                                       "pending":  "正在检查",
+                                                       "ready":  "已经就绪",
+                                                       "attention":  "需要处理配置",
+                                                       "failed":  "检查失败"
+                                                   },
+                                         "pollFailed":  "暂时无法读取部署状态，系统将继续重试。",
+                                         "pollExpired":  "等待就绪时间较长，请进入实例管理查看实时状态和日志。",
+                                         "retryFailed":  "无法重新启动部署任务。",
+                                         "retry":  "重试部署",
+                                         "openChat":  "进入 Chat",
+                                         "viewInstances":  "查看实例管理"
+                                     },
+                        "validation":  {
+                                           "unsupportedSchemaVersion":  "快速部署草稿版本不受支持，请切换到高级配置。",
+                                           "unsupportedRuntime":  "快速部署当前仅支持 Hermes Runtime。",
+                                           "unsupportedEntrypoint":  "快速部署当前仅支持 Web Chat。",
+                                           "nameRequired":  "请填写实例名称。",
+                                           "dashboardUsernameRequired":  "请填写 Dashboard 访问账号。",
+                                           "dashboardPasswordTooShort":  "Dashboard 密码至少需要 8 个字符。",
+                                           "providerRequired":  "请选择模型提供商。",
+                                           "providerUnavailable":  "所选模型提供商当前不可用。",
+                                           "modelRequired":  "请选择或填写模型。",
+                                           "customBaseUrlRequired":  "自定义兼容模型必须填写 Base URL。",
+                                           "savedCredentialRequired":  "请选择一个已保存的模型凭证。",
+                                           "apiKeyRequired":  "请填写模型 API Key。",
+                                           "permissionConfirmationRequired":  "请完成安全与权限确认。",
+                                           "skillRequiresAdvancedConfiguration":  "所选技能需要在高级配置中确认。",
+                                           "modelTestRequired":  "请先完成并通过模型连接测试。"
+                                       },
+                        "errors":  {
+                                       "optionsLoadFailed":  "无法加载模型凭证，请刷新后重试。",
+                                       "preflightFailed":  "无法完成本地环境预检。",
+                                       "preflightBlocked":  "本地环境预检未通过：{{details}}",
+                                       "modelTestFailed":  "模型连接测试失败。",
+                                       "createFailed":  "快速部署请求失败，请检查配置后重试。"
+                                   }
+                    },
     "custom_engine_badge":  "自定义智能体",
     "wizard_header":  {
                           "title":  "部署新的Agent",
