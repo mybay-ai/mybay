@@ -6,8 +6,8 @@ Deploy and operate multiple isolated Hermes Agent instances on infrastructure yo
 
 [Quick Start](#quick-start) · [Product Preview](#product-preview) · [Documentation](#documentation) · [Roadmap](./ROADMAP.md)
 
-[![CI](https://github.com/mybay-ai/mybay-core/actions/workflows/ci.yml/badge.svg)](https://github.com/mybay-ai/mybay-core/actions/workflows/ci.yml)
-[![Security](https://github.com/mybay-ai/mybay-core/actions/workflows/security.yml/badge.svg)](https://github.com/mybay-ai/mybay-core/actions/workflows/security.yml)
+[![CI](https://github.com/mybay-ai/mybay/actions/workflows/ci.yml/badge.svg)](https://github.com/mybay-ai/mybay/actions/workflows/ci.yml)
+[![Security](https://github.com/mybay-ai/mybay/actions/workflows/security.yml/badge.svg)](https://github.com/mybay-ai/mybay/actions/workflows/security.yml)
 [![License: AGPL-3.0-only](https://img.shields.io/badge/license-AGPL--3.0--only-blue.svg)](./LICENSE)
 
 Languages: [English](./README.md) | [简体中文](./README.zh-CN.md)
@@ -41,8 +41,8 @@ Prerequisite: Docker Engine or Docker Desktop with Docker Compose. Host Node.js 
 **macOS or Linux**
 
 ```bash
-git clone https://github.com/mybay-ai/mybay-core.git
-cd mybay-core
+git clone https://github.com/mybay-ai/mybay.git
+cd mybay
 chmod +x quick-start.sh
 ./quick-start.sh
 ```
@@ -50,8 +50,8 @@ chmod +x quick-start.sh
 **Windows PowerShell 5.1 or PowerShell 7**
 
 ```powershell
-git clone https://github.com/mybay-ai/mybay-core.git
-cd mybay-core
+git clone https://github.com/mybay-ai/mybay.git
+cd mybay
 Set-ExecutionPolicy -Scope Process Bypass
 .\quick-start.ps1
 ```
@@ -150,8 +150,8 @@ The script asks for the control-panel domain, Agent root domain, and certificate
 
 1. **Clone the repository and copy environment configuration:**
    ```bash
-   git clone https://github.com/mybay-ai/mybay-core.git
-   cd mybay-core
+   git clone https://github.com/mybay-ai/mybay.git
+   cd mybay
    cp .env.example .env
    ```
 

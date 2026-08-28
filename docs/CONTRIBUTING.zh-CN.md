@@ -35,8 +35,8 @@
 
 1. Fork 并克隆代码仓库：
    ```bash
-   git clone https://github.com/mybay-ai/mybay-core.git
-   cd mybay-core
+   git clone https://github.com/mybay-ai/mybay.git
+   cd mybay
    ```
 
 2. 安装项目依赖：

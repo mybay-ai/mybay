@@ -5,11 +5,11 @@
     "license": "AGPL-3.0-only",
     "repository": {
         "type": "git",
-        "url": "https://github.com/mybay-ai/mybay-core.git"
+        "url": "https://github.com/mybay-ai/mybay.git"
     },
-    "homepage": "https://github.com/mybay-ai/mybay-core#readme",
+    "homepage": "https://github.com/mybay-ai/mybay#readme",
     "bugs": {
-        "url": "https://github.com/mybay-ai/mybay-core/issues"
+        "url": "https://github.com/mybay-ai/mybay/issues"
     },
     "type": "module",
     "engines": {

@@ -17,8 +17,8 @@ Start with Desktop mode unless you already need LAN or public-server access. The
 Install Docker Desktop on Windows or macOS, or Docker Engine with Docker Compose v2 on Linux. Confirm that the Docker engine is running, then clone the repository:
 
 ```bash
-git clone https://github.com/mybay-ai/mybay-core.git
-cd mybay-core
+git clone https://github.com/mybay-ai/mybay.git
+cd mybay
 ```
 
 Host Node.js is not required for the Docker deployment.

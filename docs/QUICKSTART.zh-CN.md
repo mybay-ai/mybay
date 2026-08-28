@@ -17,8 +17,8 @@
 Windows 或 macOS 安装 Docker Desktop；Linux 安装 Docker Engine 和 Docker Compose v2。确认 Docker 引擎已经运行，然后克隆项目：
 
 ```bash
-git clone https://github.com/mybay-ai/mybay-core.git
-cd mybay-core
+git clone https://github.com/mybay-ai/mybay.git
+cd mybay
 ```
 
 使用 Docker 部署时，宿主机不需要安装 Node.js。

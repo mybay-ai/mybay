@@ -6,8 +6,8 @@
 
 [快速开始](#快速开始) · [产品预览](#产品预览) · [文档](#文档) · [路线图](./ROADMAP.md)
 
-[![CI](https://github.com/mybay-ai/mybay-core/actions/workflows/ci.yml/badge.svg)](https://github.com/mybay-ai/mybay-core/actions/workflows/ci.yml)
-[![Security](https://github.com/mybay-ai/mybay-core/actions/workflows/security.yml/badge.svg)](https://github.com/mybay-ai/mybay-core/actions/workflows/security.yml)
+[![CI](https://github.com/mybay-ai/mybay/actions/workflows/ci.yml/badge.svg)](https://github.com/mybay-ai/mybay/actions/workflows/ci.yml)
+[![Security](https://github.com/mybay-ai/mybay/actions/workflows/security.yml/badge.svg)](https://github.com/mybay-ai/mybay/actions/workflows/security.yml)
 [![License: AGPL-3.0-only](https://img.shields.io/badge/license-AGPL--3.0--only-blue.svg)](./LICENSE)
 
 语言：[English](./README.md) | [简体中文](./README.zh-CN.md)
@@ -41,8 +41,8 @@ MyBay 开源版完全独立运行，不依赖托管 SaaS、云端主节点、注
 **macOS 或 Linux**
 
 ```bash
-git clone https://github.com/mybay-ai/mybay-core.git
-cd mybay-core
+git clone https://github.com/mybay-ai/mybay.git
+cd mybay
 chmod +x quick-start.sh
 ./quick-start.sh
 ```
@@ -50,8 +50,8 @@ chmod +x quick-start.sh
 **Windows PowerShell 5.1 或 PowerShell 7**
 
 ```powershell
-git clone https://github.com/mybay-ai/mybay-core.git
-cd mybay-core
+git clone https://github.com/mybay-ai/mybay.git
+cd mybay
 Set-ExecutionPolicy -Scope Process Bypass
 .\quick-start.ps1
 ```
@@ -150,8 +150,8 @@ chmod +x quick-start.sh
 
 1. **克隆项目并复制环境变量文件：**
    ```bash
-   git clone https://github.com/mybay-ai/mybay-core.git
-   cd mybay-core
+   git clone https://github.com/mybay-ai/mybay.git
+   cd mybay
    cp .env.example .env
    ```
 
