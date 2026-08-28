@@ -7,11 +7,11 @@ import {
   resolveTerminalObservationCapability,
   type RuntimeCapabilityDescriptor,
 } from "./runtimeCapabilityConsumers";
-import type { RunsRequestOptions, RunsRequestResult } from "./runHermesTransport";
+import type { RuntimeRequestOptions, RuntimeRequestResult } from "../../runtime/contracts";
 
 export interface RunStopRecoveryDependencies extends RunTerminalConvergenceDependencies {
   ownerId: string;
-  requestRuns(options: RunsRequestOptions): Promise<RunsRequestResult>;
+  requestRuns(options: RuntimeRequestOptions): Promise<RuntimeRequestResult>;
   recordDispatched(params: {
     runId: string;
     reconcilerId: string;

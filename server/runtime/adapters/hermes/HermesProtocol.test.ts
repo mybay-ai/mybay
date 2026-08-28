@@ -4,7 +4,7 @@ import {
   isFallbackHermesSessionId,
   isStaleSessionError,
   shouldFallbackSessionCreate
-} from "./runHermesProtocol";
+} from "./HermesProtocol";
 
 describe("Hermes protocol policy", () => {
   it("extracts normalized codes from nested and serialized upstream errors", () => {

@@ -1,7 +1,7 @@
-import { containsDsmlToolCallProtocol, DSML_TOOL_CALL_ERROR_CODE } from "../../utils/dsmlToolCallGuard";
-import { normalizeDispatchError } from "./runDispatchRecovery";
-import { buildHermesChatMessages, extractAssistantContentFromChatResponse } from "./runHermesProtocol";
-import type { RunsRequestOptions, RunsRequestResult } from "./runHermesTransport";
+import { containsDsmlToolCallProtocol, DSML_TOOL_CALL_ERROR_CODE } from "../../../utils/dsmlToolCallGuard";
+import { normalizeDispatchError } from "../../../services/runs/runDispatchRecovery";
+import { buildHermesChatMessages, extractAssistantContentFromChatResponse } from "./HermesProtocol";
+import type { RuntimeRequestOptions, RuntimeRequestResult } from "../../contracts";
 
 export interface NonStreamingChatMessage {
   id?: string;
@@ -17,7 +17,7 @@ interface NonStreamingRunTarget {
 }
 
 interface RunNonStreamingChatExecutorDependencies {
-  requestRuns(options: RunsRequestOptions): Promise<RunsRequestResult>;
+  requestRuns(options: RuntimeRequestOptions): Promise<RuntimeRequestResult>;
   emitStatus(runId: string, status: Record<string, unknown>): void;
   toReasoningModelOptions(value: unknown): unknown;
   completeRun(
@@ -25,7 +25,7 @@ interface RunNonStreamingChatExecutorDependencies {
     status: "completed" | "failed",
     assistantContent: string,
     errorCode?: string,
-    usage?: unknown,
+    usage?: Record<string, unknown>,
     durationMs?: number,
     completionEvidence?: { requestId: string; responseStatusCode: number },
   ): Promise<unknown>;
@@ -86,7 +86,7 @@ export function createRunNonStreamingChatExecutor(
         stream: false,
         model_options: dependencies.toReasoningModelOptions(run.reasoning_effort)
       },
-      hermesSessionId,
+      sessionId: hermesSessionId,
       timeoutMs: 120000
     });
     const durationMs = dependencies.now() - startTime;

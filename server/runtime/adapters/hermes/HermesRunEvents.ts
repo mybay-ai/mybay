@@ -1,5 +1,5 @@
 import { containsDsmlToolCallProtocol, DSML_TOOL_CALL_ERROR_CODE } from "../../../utils/dsmlToolCallGuard";
-import { isStreamingDecoderCompatError } from "../../../services/runs/runHermesProtocol";
+import { isStreamingDecoderCompatError } from "./HermesProtocol";
 import { truncateSafeText } from "../../../services/runs/runSafeText";
 import { sanitizeStep } from "../../../services/runs/runStepSanitizer";
 import type {

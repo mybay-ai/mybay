@@ -1,7 +1,7 @@
 import {
   requestHermesRunsAPI,
   streamHermesRunEventsAPI,
-} from "../../../services/runs/runHermesTransport";
+} from "./HermesTransport";
 import type {
   RuntimeCapabilityDescriptor,
   RuntimeDriver,
@@ -9,6 +9,7 @@ import type {
 } from "../../contracts";
 import { hermesRunPreparationProvider } from "./HermesRunPreparation";
 import { hermesRunEventProvider } from "./HermesRunEvents";
+import { hermesRunExecutionProvider } from "./HermesRunExecution";
 
 export const HERMES_RUNTIME_CAPABILITIES: RuntimeCapabilityDescriptor = Object.freeze({
   conversation: { modes: ["streaming", "batch"] },
@@ -19,16 +20,15 @@ export const HERMES_RUNTIME_CAPABILITIES: RuntimeCapabilityDescriptor = Object.f
 
 export const hermesRuntimeDriver: RuntimeDriver = Object.freeze({
   runtimeType: "hermes",
+  displayName: "Hermes",
   providerKey: "hermes-core",
   contractVersion: 1,
   capabilities: HERMES_RUNTIME_CAPABILITIES,
   preparation: hermesRunPreparationProvider,
   events: hermesRunEventProvider,
+  execution: hermesRunExecutionProvider,
   runs: Object.freeze({
-    request: (options: RuntimeRequestOptions) => {
-      const { sessionId, ...requestOptions } = options;
-      return requestHermesRunsAPI({ ...requestOptions, hermesSessionId: sessionId });
-    },
+    request: (options: RuntimeRequestOptions) => requestHermesRunsAPI(options),
     streamEvents: streamHermesRunEventsAPI,
   }),
 });

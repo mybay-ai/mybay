@@ -1,4 +1,4 @@
-import type { RunsRequestResult } from "./runHermesTransport";
+import type { RuntimeRequestResult as RunsRequestResult } from "../../runtime/contracts";
 
 export interface IdempotentRunSubmissionOptions {
   submit(): Promise<RunsRequestResult>;

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   createRunNonStreamingChatExecutor,
   filterCurrentRunMessageFromHistory
-} from "./runNonStreamingChatExecutor";
+} from "./HermesBatchExecutor";
 
 function createHarness(result: Record<string, unknown>) {
   const requestRuns = vi.fn(async () => result as never);
@@ -29,7 +29,7 @@ const messages = [
   { role: "user", content: "question" }
 ];
 
-describe("runNonStreamingChatExecutor", () => {
+describe("HermesBatchExecutor", () => {
   it("filters the current run message by both message and request identity", () => {
     expect(filterCurrentRunMessageFromHistory(messages, "current", "request-current"))
       .toEqual([messages[0], messages[3]]);
@@ -70,7 +70,7 @@ describe("runNonStreamingChatExecutor", () => {
         stream: false,
         model_options: { effort: "deep" }
       },
-      hermesSessionId: "session-1",
+      sessionId: "session-1",
       timeoutMs: 120000
     });
     expect(harness.completeRun).toHaveBeenCalledWith(

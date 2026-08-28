@@ -7,14 +7,14 @@ const external = vi.hoisted(() => ({
   streamTraefikInternalSse: vi.fn()
 }));
 
-vi.mock("../../db", () => ({ dbAdapter: { getInstanceById: external.getInstanceById } }));
-vi.mock("../../utils/instanceInternalApiKey", () => ({
+vi.mock("../../../db", () => ({ dbAdapter: { getInstanceById: external.getInstanceById } }));
+vi.mock("../../../utils/instanceInternalApiKey", () => ({
   resolveInstanceInternalApiKey: external.resolveInstanceInternalApiKey
 }));
-vi.mock("../../utils/traefikInternalRequest", () => ({
+vi.mock("../../../utils/traefikInternalRequest", () => ({
   requestTraefikInternal: external.requestTraefikInternal
 }));
-vi.mock("../../utils/traefikInternalSse", () => ({
+vi.mock("../../../utils/traefikInternalSse", () => ({
   streamTraefikInternalSse: external.streamTraefikInternalSse
 }));
 
@@ -22,9 +22,9 @@ import {
   sanitizeIdempotencyKey,
   sanitizeRunsRequestHeaders,
   streamHermesRunEventsAPI
-} from "./runHermesTransport";
+} from "./HermesTransport";
 
-describe("runHermesTransport", () => {
+describe("HermesTransport", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     external.getInstanceById.mockResolvedValue({ id: "instance-1" });

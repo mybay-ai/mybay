@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createRunHermesSessionContextController } from "./runHermesSessionContext";
+import { createRunHermesSessionContextController } from "./HermesSessionContext";
 
 function createHarness(conversation: { session_id?: unknown; title?: string } | null) {
   const requestRuns = vi.fn(async () => ({
@@ -21,7 +21,7 @@ function createHarness(conversation: { session_id?: unknown; title?: string } | 
   return { controller, requestRuns, bindConversationSessionId, logFallback };
 }
 
-describe("runHermesSessionContext", () => {
+describe("HermesSessionContext", () => {
   it("returns a trimmed existing native session without creating another", async () => {
     const { controller, requestRuns } = createHarness({ session_id: "  native-session  " });
 

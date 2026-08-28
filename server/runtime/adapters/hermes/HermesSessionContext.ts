@@ -4,8 +4,8 @@ import {
   isFallbackHermesSessionId,
   isLegacyGeneratedSessionId,
   shouldFallbackSessionCreate
-} from "./runHermesProtocol";
-import type { RunsRequestOptions, RunsRequestResult } from "./runHermesTransport";
+} from "./HermesProtocol";
+import type { RuntimeRequestOptions, RuntimeRequestResult } from "../../contracts";
 
 export type AgentReasoningEffort = "fast" | "balanced" | "deep";
 
@@ -41,7 +41,7 @@ interface RunSessionTarget {
 }
 
 interface RunHermesSessionContextDependencies {
-  requestRuns(options: RunsRequestOptions): Promise<RunsRequestResult>;
+  requestRuns(options: RuntimeRequestOptions): Promise<RuntimeRequestResult>;
   bindConversationSessionId(conversationId: string, sessionId: string): Promise<unknown>;
   getConversationForSessionBinding(conversationId: string): Promise<ConversationSessionBindingRecord | null>;
   logFallback(conversationId: string, instanceId: string, statusCode: number): void;

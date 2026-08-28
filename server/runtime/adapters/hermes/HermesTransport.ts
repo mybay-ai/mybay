@@ -1,24 +1,11 @@
-import { dbAdapter } from "../../db";
-import { resolveInstanceInternalApiKey } from "../../utils/instanceInternalApiKey";
-import { requestTraefikInternal } from "../../utils/traefikInternalRequest";
-import { streamTraefikInternalSse } from "../../utils/traefikInternalSse";
+import { dbAdapter } from "../../../db";
+import { resolveInstanceInternalApiKey } from "../../../utils/instanceInternalApiKey";
+import { requestTraefikInternal } from "../../../utils/traefikInternalRequest";
+import { streamTraefikInternalSse } from "../../../utils/traefikInternalSse";
+import type { RuntimeRequestOptions, RuntimeRequestResult } from "../../contracts";
 
-export interface RunsRequestOptions {
-  instanceId: string;
-  method: string;
-  path: string;
-  body?: any;
-  headers?: Record<string, string>;
-  timeoutMs?: number;
-  hermesSessionId?: string;
-}
-
-export interface RunsRequestResult {
-  ok: boolean;
-  statusCode: number;
-  json?: any;
-  error?: string;
-}
+export type RunsRequestOptions = RuntimeRequestOptions;
+export type RunsRequestResult = RuntimeRequestResult;
 
 function normalizeHeaderValue(value: unknown): string | undefined {
   if (Array.isArray(value)) value = value[0];
@@ -54,7 +41,7 @@ export async function requestHermesRunsAPI(
     body,
     timeoutMs = 15000,
     headers: extraHeaders,
-    hermesSessionId
+    sessionId
   } = options;
 
   try {
@@ -80,7 +67,7 @@ export async function requestHermesRunsAPI(
       body,
       timeoutMs,
       headers: sanitizeRunsRequestHeaders(extraHeaders),
-      hermesSessionId
+      hermesSessionId: sessionId
     });
 
     return {

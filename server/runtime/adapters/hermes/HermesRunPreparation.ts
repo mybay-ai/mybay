@@ -1,7 +1,7 @@
 import {
   createRunHermesSessionContextController,
   type AgentReasoningEffort,
-} from "../../../services/runs/runHermesSessionContext";
+} from "./HermesSessionContext";
 import type {
   RuntimeRunPreparationController,
   RuntimeRunPreparationDependencies,
@@ -24,13 +24,7 @@ export class HermesRunPreparationProvider implements RuntimeRunPreparationProvid
     dependencies: RuntimeRunPreparationDependencies,
   ): RuntimeRunPreparationController {
     const controller = createRunHermesSessionContextController({
-      requestRuns: (options) => {
-        const { hermesSessionId, ...requestOptions } = options;
-        return dependencies.request({
-          ...requestOptions,
-          sessionId: hermesSessionId,
-        });
-      },
+      requestRuns: dependencies.request,
       bindConversationSessionId: dependencies.bindConversationSessionId,
       getConversationForSessionBinding: dependencies.getConversationForSessionBinding,
       logFallback: dependencies.logFallback,

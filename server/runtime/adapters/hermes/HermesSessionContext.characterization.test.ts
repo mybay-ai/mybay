@@ -6,19 +6,19 @@ const external = vi.hoisted(() => ({
   bindConversationSessionId: vi.fn()
 }));
 
-vi.mock("../../db", () => ({ dbAdapter: { getInstanceById: external.getInstanceById } }));
-vi.mock("../../utils/instanceInternalApiKey", () => ({
+vi.mock("../../../db", () => ({ dbAdapter: { getInstanceById: external.getInstanceById } }));
+vi.mock("../../../utils/instanceInternalApiKey", () => ({
   resolveInstanceInternalApiKey: () => ({ ok: true, apiKey: "internal-key" })
 }));
-vi.mock("../../utils/traefikInternalRequest", () => ({
+vi.mock("../../../utils/traefikInternalRequest", () => ({
   requestTraefikInternal: external.requestTraefikInternal
 }));
-vi.mock("../../utils/traefikInternalSse", () => ({ streamTraefikInternalSse: vi.fn() }));
-vi.mock("../../repositories/chatRepo", () => ({
+vi.mock("../../../utils/traefikInternalSse", () => ({ streamTraefikInternalSse: vi.fn() }));
+vi.mock("../../../repositories/chatRepo", () => ({
   chatRepo: { bindConversationSessionId: external.bindConversationSessionId }
 }));
 
-import { hermesRuntimeDriver } from "../../runtime/adapters/hermes/HermesRuntimeDriver";
+import { hermesRuntimeDriver } from "./HermesRuntimeDriver";
 
 const preparation = hermesRuntimeDriver.preparation.createController({
   request: (options) => hermesRuntimeDriver.runs.request(options),

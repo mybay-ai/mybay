@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { chatRepo } from "../repositories/chatRepo";
 import { dbAdapter } from "../db";
-import { completeRunFromRuntimeEvent, processSingleRun, requestRunsReconcile, startRunsReconciler, stopRunsReconciler, toHermesReasoningModelOptions } from "./runsReconciler";
+import { completeRunFromRuntimeEvent, processSingleRun, requestRunsReconcile, startRunsReconciler, stopRunsReconciler } from "./runsReconciler";
 
 describe("runs reconciler timer lifecycle", () => {
   afterEach(() => {
@@ -43,21 +43,6 @@ describe("runs reconciler timer lifecycle", () => {
     await new Promise<void>((resolve) => setImmediate(resolve));
 
     expect(claimRuns).toHaveBeenCalledTimes(2);
-  });
-
-  it("maps UI reasoning choices to Hermes request model options", () => {
-    expect(toHermesReasoningModelOptions("fast")).toEqual({
-      reasoning: { enabled: true, effort: "low" },
-      reasoning_effort: "low"
-    });
-    expect(toHermesReasoningModelOptions("balanced")).toEqual({
-      reasoning: { enabled: true, effort: "medium" },
-      reasoning_effort: "medium"
-    });
-    expect(toHermesReasoningModelOptions("deep")).toEqual({
-      reasoning: { enabled: true, effort: "high" },
-      reasoning_effort: "high"
-    });
   });
 
   it("finishes directly from a normalized Runtime event using upstream identity", async () => {
