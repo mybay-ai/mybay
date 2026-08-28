@@ -1,6 +1,10 @@
-# MyBay Open Source Control Plane
+# MyBay
 
-![MyBay Open Source overview](./docs/images/main.png)
+**Make Agents Truly Run.**
+
+Deploy and operate multiple isolated Hermes Agent instances on infrastructure you control—with lifecycle management, chat, files, tasks, messaging connections, diagnostics, and backup.
+
+[Quick Start](#quick-start) · [Product Preview](#product-preview) · [Documentation](#documentation) · [Roadmap](./ROADMAP.md)
 
 [![CI](https://github.com/mybay-ai/mybay-core/actions/workflows/ci.yml/badge.svg)](https://github.com/mybay-ai/mybay-core/actions/workflows/ci.yml)
 [![Security](https://github.com/mybay-ai/mybay-core/actions/workflows/security.yml/badge.svg)](https://github.com/mybay-ai/mybay-core/actions/workflows/security.yml)
@@ -8,15 +12,53 @@
 
 Languages: [English](./README.md) | [简体中文](./README.zh-CN.md)
 
-A self-hosted control plane for deploying and managing AI agent runtimes with Docker.
-
-MyBay Open Source is the single-admin, local-first control plane for deploying, managing, and chatting with AI Agent instances (such as Hermes Agent).
-
-This edition operates completely standalone with no hosted SaaS dependencies, cloud master nodes, registration flows, or paid quotas.
-
-MyBay Open Source is the self-hosted community edition. The hosted MyBay service at [mybay.ai](https://mybay.ai) is a separate commercial offering and is not required to install or operate this repository.
-
 > **Release status: `v0.1.24`.** Public interfaces, runtime adapters, deployment details, and upgrade behavior may still change during the 0.x series.
+
+| Runtime | Status |
+| --- | --- |
+| **Hermes Agent** | Supported in the current preview |
+| **Pi Agent** | Experimental specification only; deployment is not supported yet |
+
+![MyBay Open Source overview](./docs/images/main-open-source.png)
+
+## Why MyBay?
+
+Running an Agent container is only the first step. MyBay adds the operational layer needed to keep Agent instances available, observable, isolated, and easy to use from one local control plane.
+
+- **Deploy and operate Agents**: Run preflight checks, configure model credentials, deploy instances, inspect health and logs, restart, and update from one console.
+- **Chat with a real workspace**: Follow execution progress and inspect generated files, changes, previews, and downloads beside the conversation.
+- **Run multiple isolated instances**: Keep independent Agent workspaces and runtime state on one machine or private server.
+- **Connect messaging channels**: Attach supported channels such as Feishu, Telegram, Discord, and Slack to individual instances.
+- **Stay local and BYOK**: Keep platform state, credentials, conversations, and files on infrastructure you control.
+- **Operate with confidence**: Use built-in diagnostics, consistent SQLite backups, HTTPS server mode, CI, security checks, and release artifacts.
+
+MyBay Open Source runs standalone with no hosted SaaS dependency, cloud master node, registration flow, or paid quota. Docker is the current runtime substrate; SQLite stores the control-plane state locally.
+
+## Quick Start
+
+Prerequisite: Docker Engine or Docker Desktop with Docker Compose. Host Node.js is not required.
+
+**macOS or Linux**
+
+```bash
+git clone https://github.com/mybay-ai/mybay-core.git
+cd mybay-core
+chmod +x quick-start.sh
+./quick-start.sh
+```
+
+**Windows PowerShell 5.1 or PowerShell 7**
+
+```powershell
+git clone https://github.com/mybay-ai/mybay-core.git
+cd mybay-core
+Set-ExecutionPolicy -Scope Process Bypass
+.\quick-start.ps1
+```
+
+Open [http://localhost:3000](http://localhost:3000), sign in with the admin credentials stored in your local `.env` file, add a model provider, and deploy your first Hermes Agent instance. Never share or commit `.env`.
+
+Need Docker installed automatically on Windows, LAN access, public HTTPS, manual Compose, or a development setup? See [Deployment options](#deployment-options) or the complete **[Deploy Your First Agent in 10 Minutes](./docs/QUICKSTART.md)** guide.
 
 ## Product Preview
 
@@ -42,22 +84,13 @@ Chat with an Agent while viewing execution progress, generated files, file-chang
 
 MyBay is an independent open-source project. It is not an official Nous Research product and is not sponsored, endorsed, or maintained by Nous Research. Hermes Agent is a separate project maintained by Nous Research and distributed under the MIT License. MyBay interoperates with Hermes Agent through its public runtime and container interfaces.
 
-See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for licensing and attribution details.
-
-## Features
-
-- **Single Admin Control Plane**: Dedicated local control panel for managing containerized AI agents.
-- **On-machine SQLite**: Platform state is transactionally persisted in `data/mybay.sqlite`.
-- **BYOK Model Configuration**: Bring Your Own Keys with OpenAI-compatible providers (OpenAI, Anthropic, DeepSeek, Ollama, etc.).
-- **Agent Lifecycle Management**: One-click spawn, restart, hot update, status inspection, and log monitoring for local Docker containers.
-- **Interactive Chat Workspace**: Full conversation interface with isolated run lifecycles, collapsible tool progress, step timing, Markdown, generated-file previews, safe downloads, and background completion notifications.
-- **Docker Compose & Self-Hosting**: Ready-to-use `docker-compose.yml` for effortless container deployment.
+See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for licensing and attribution details. The hosted MyBay service at [mybay.ai](https://mybay.ai) is a separate commercial offering and is not required to install or operate this repository.
 
 ---
 
-## Deployment & Quick Start
+## Deployment options
 
-> New to MyBay? Follow the complete **[Deploy Your First Agent in 10 Minutes](./docs/QUICKSTART.md)** guide from Docker startup to the first local conversation.
+> New to MyBay? Start with the copy-and-paste [Quick Start](#quick-start) above. This section covers additional deployment modes.
 
 ### Method 1: Local Desktop Quick Start
 

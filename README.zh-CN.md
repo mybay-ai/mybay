@@ -1,6 +1,10 @@
-# 麦贝开源版（MyBay Open Source）
+# 麦贝 MyBay
 
-![麦贝开源版概览](./docs/images/main-zh.jpg)
+**让 Agent 真正跑起来。**
+
+在你自己的电脑或服务器上部署并运行多个相互隔离的 Hermes Agent 实例，统一管理生命周期、对话、文件、任务、消息渠道、诊断与备份。
+
+[快速开始](#快速开始) · [产品预览](#产品预览) · [文档](#文档) · [路线图](./ROADMAP.md)
 
 [![CI](https://github.com/mybay-ai/mybay-core/actions/workflows/ci.yml/badge.svg)](https://github.com/mybay-ai/mybay-core/actions/workflows/ci.yml)
 [![Security](https://github.com/mybay-ai/mybay-core/actions/workflows/security.yml/badge.svg)](https://github.com/mybay-ai/mybay-core/actions/workflows/security.yml)
@@ -8,15 +12,53 @@
 
 语言：[English](./README.md) | [简体中文](./README.zh-CN.md)
 
-一个用于通过 Docker 部署和管理 AI Agent Runtime 的本地自托管控制平台。
-
-麦贝开源版是单管理员、本地优先的 AI Agent（如 Hermes Agent）容器管理与交互平台。
-
-该版本完全独立运行，无任何托管云服务、云端主节点、注册流程或付费套餐依赖。
-
-MyBay Open Source 是可自行部署的社区开源版本；[mybay.ai](https://mybay.ai) 提供的托管服务属于独立的商业服务，安装和运行本仓库不需要注册或依赖该服务。
-
 > **发布状态：`v0.1.24`。** 在 0.x 阶段，公共接口、Runtime Adapter、部署细节与升级行为仍可能调整。
+
+| Runtime | 支持状态 |
+| --- | --- |
+| **Hermes Agent** | 当前预览版正式支持 |
+| **Pi Agent** | 仅提供实验性规范，暂不支持部署 |
+
+![麦贝开源版概览](./docs/images/main-zh-open-source.png)
+
+## 为什么选择 MyBay？
+
+启动一个 Agent 容器只是第一步。MyBay 补齐长期运行所需的管理层，让 Agent 实例可以在同一个本地控制台中被部署、观察、隔离和使用。
+
+- **部署并管理 Agent**：完成环境预检、模型凭据配置、实例部署、健康与日志检查、重启和更新。
+- **对话与真实工作区联动**：在对话旁查看执行进度、生成文件、文件变更、预览和下载。
+- **运行多个隔离实例**：在同一台电脑或私有服务器上保留彼此独立的工作区与运行状态。
+- **连接消息渠道**：将飞书、Telegram、Discord、Slack 等支持的渠道连接到指定实例。
+- **本地优先与 BYOK**：平台状态、凭据、对话和文件都保存在你控制的基础设施中。
+- **面向长期运维**：内置诊断、一致性 SQLite 备份、HTTPS 服务器模式、CI、安全检查和发布产物。
+
+MyBay 开源版完全独立运行，不依赖托管 SaaS、云端主节点、注册流程或付费额度。Docker 是当前 Runtime 的运行基础，SQLite 在本机保存控制面状态。
+
+## 快速开始
+
+前置条件：Docker Engine 或 Docker Desktop，并启用 Docker Compose。宿主机不需要安装 Node.js。
+
+**macOS 或 Linux**
+
+```bash
+git clone https://github.com/mybay-ai/mybay-core.git
+cd mybay-core
+chmod +x quick-start.sh
+./quick-start.sh
+```
+
+**Windows PowerShell 5.1 或 PowerShell 7**
+
+```powershell
+git clone https://github.com/mybay-ai/mybay-core.git
+cd mybay-core
+Set-ExecutionPolicy -Scope Process Bypass
+.\quick-start.ps1
+```
+
+打开 [http://localhost:3000](http://localhost:3000)，使用本机 `.env` 中保存的管理员账号登录，添加模型供应商，然后部署第一个 Hermes Agent 实例。不要分享或提交 `.env`。
+
+如果需要在 Windows 自动安装 Docker、局域网访问、公网 HTTPS、手动 Compose 或开发模式，请继续查看[其他部署方式](#其他部署方式)，或阅读完整的 **[10 分钟部署第一个 Agent](./docs/QUICKSTART.zh-CN.md)** 教程。
 
 ## 产品预览
 
@@ -42,22 +84,13 @@ MyBay Open Source 是可自行部署的社区开源版本；[mybay.ai](https://m
 
 MyBay 是独立维护的开源项目，并非 Nous Research 官方产品，也不代表 Nous Research 对本项目的赞助、认可或维护。Hermes Agent 是由 Nous Research 维护、采用 MIT License 发布的独立项目。MyBay 仅通过其公开的 Runtime 与容器接口进行兼容集成。
 
-许可证与署名详情见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
-
-## 核心特性
-
-- **单管理员控制台**：专为本地与私有服务器打造的 Agent 容器控制面板。
-- **本机 SQLite**：平台状态通过事务持久化在 `data/mybay.sqlite`。
-- **BYOK 自备密钥**：灵活配置 OpenAI、Anthropic、DeepSeek、Ollama 等 OpenAI 兼容大模型供应商。
-- **Agent 全生命周期管理**：支持 Docker 容器的一键部署、重启、热更新、状态检测和实时日志查看。
-- **交互式对话工作台**：完整的 Agent 对话界面，支持运行生命周期隔离、可折叠工具步骤、任务与步骤耗时、Markdown、生成文件预览、安全下载和后台完成通知。
-- **Docker Compose 一键部署**：开箱即用的 `docker-compose.yml`，一键启动完整服务。
+许可证与署名详情见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。[mybay.ai](https://mybay.ai) 提供的托管服务属于独立商业服务，安装和运行本仓库不需要注册或依赖该服务。
 
 ---
 
-## 快速开始与部署指引
+## 其他部署方式
 
-> 第一次使用麦贝？请按照完整的 **[10 分钟部署第一个 Agent](./docs/QUICKSTART.zh-CN.md)** 教程，从启动 Docker 一直完成第一次本地对话。
+> 第一次使用麦贝？请优先使用上面的可复制[快速开始](#快速开始)。本节介绍其他部署模式。
 
 ### 方式一：本机桌面一键部署
 
