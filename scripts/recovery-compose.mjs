@@ -22,7 +22,9 @@ export function composeManifest(info,project,controllerName) {
     environment:Object.fromEntries((c.Env || []).map(e=>{const i=e.indexOf('=');return [e.slice(0,i),e.slice(i+1)];})),
     labels:labels(c.Labels),command:c.Cmd || [],entrypoint:c.Entrypoint || [],working_dir:c.WorkingDir || '',user:c.User || '',
     tty:!!c.Tty,stdin_open:!!c.OpenStdin,
-    volumes:info.Mounts.map(m=>`${m.Source.replaceAll('\\','/')}:${m.Destination}:${m.RW?'rw':'ro'}`),
+    // Docker inspect may reorder mounts between requests. Destination order is
+    // immaterial for this supported profile, but must not invalidate approval.
+    volumes:info.Mounts.slice().sort((a,b)=>a.Destination.localeCompare(b.Destination)).map(m=>`${m.Source.replaceAll('\\','/')}:${m.Destination}:${m.RW?'rw':'ro'}`),
     networks:Object.fromEntries(Object.entries(networks).map(([k,n])=>[k,{aliases:n.aliases}])),
   };
   if(c.StopSignal)service.stop_signal=c.StopSignal;

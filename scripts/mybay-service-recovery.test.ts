@@ -86,6 +86,20 @@ async function adoptionFixture() {
 }
 
 describe('durable Compose recovery adoption',()=>{
+  it('keeps reviewed adoption confirmation stable when Docker reorders inspected mounts',async()=>{
+    const f=await fixture(),source=f.snapshots.get(f.controlId);
+    source.Mounts.push({Type:'bind',Source:'/var/run/docker.sock',Destination:'/var/run/docker.sock',RW:true});
+    source.HostConfig.Binds.push('/var/run/docker.sock:/var/run/docker.sock:rw');
+    const prepared=await f.prepare(),opts=f.stateOptions(prepared.confirmation);
+    await activateRecovery(f.docker,f.helper,opts);
+    for(const c of prepared.containers)f.snapshots.get(c.id).State.Running=false;
+    const reviewed=await previewAdoption(f.docker,f.helper,opts);
+    f.snapshots.get(prepared.containers.at(-1)!.id).Mounts.reverse();
+    const repeated=await previewAdoption(f.docker,f.helper,opts);
+    expect(repeated.manifestHash).toBe(reviewed.manifestHash);
+    expect(repeated.adoptionConfirmation).toBe(reviewed.adoptionConfirmation);
+    expect((await prepareAdoption(f.docker,f.helper,{...opts,'adopt-confirm':reviewed.adoptionConfirmation})).phase).toBe('adoption-prepared');
+  });
   it('exports only after a reviewed digest, preserves secrets literally and leaves all writers stopped',async()=>{
     const f=await adoptionFixture(),before=f.calls.length;
     expect(JSON.stringify(f.adoptionPlan)).not.toContain(f.key.toString('hex'));
