@@ -10,6 +10,9 @@ export function composeIdentity(info) {
   host.Binds=(info.Mounts || []).map(m=>[m.Type,m.Source.replaceAll('\\','/'),m.Destination,m.RW]).sort((a,b)=>a[2].localeCompare(b[2]));
   delete host.NetworkMode;host.OomKillDisable=host.OomKillDisable === true;
   host.ExtraHosts=host.ExtraHosts || [];
+  // Docker API and Compose use null / {} for the same unpublished-port state.
+  // Preserve nonempty bindings and PublishAllPorts for the safety comparison.
+  host.PortBindings=host.PortBindings ?? {};
   host.RestartPolicy={Name:'unless-stopped',MaximumRetryCount:0};
   // Compose adds its own discoverability aliases. Network names/IDs are
   // independently pinned by the recovery journal; aliases are checked there.

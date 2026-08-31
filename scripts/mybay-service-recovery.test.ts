@@ -6,7 +6,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createBackup, MAX_SUPPORTED_SCHEMA_VERSION } from './mybay-ops.mjs';
 import { activateRecovery, pathMapper, planRecovery, prepareRecovery, publicPlan, rollbackRecovery, previewAdoption, prepareAdoption, adoptRecovery, verifyAdoption, revertAdoption } from './mybay-service-recovery.mjs';
-import { composeManifest } from './recovery-compose.mjs';
+import { composeIdentity, composeManifest } from './recovery-compose.mjs';
 
 const roots:string[]=[];
 afterEach(()=>{for(const root of roots.splice(0))fs.rmSync(root,{recursive:true,force:true});});
@@ -86,6 +86,18 @@ async function adoptionFixture() {
 }
 
 describe('durable Compose recovery adoption',()=>{
+  it('equates absent port bindings but preserves every real port and publication setting',async()=>{
+    const f=await fixture(),original=clone(f.snapshots.get(f.controlId));
+    original.HostConfig.PortBindings=null;
+    const recreated=clone(original);recreated.HostConfig.PortBindings={};
+    expect(composeIdentity(recreated)).toEqual(composeIdentity(original));
+    for(const hostIp of ['127.0.0.1','0.0.0.0']) {
+      recreated.HostConfig.PortBindings={'3000/tcp':[{HostIp:hostIp,HostPort:'3347'}]};
+      expect(composeIdentity(recreated)).not.toEqual(composeIdentity(original));
+    }
+    recreated.HostConfig.PortBindings={};recreated.HostConfig.PublishAllPorts=true;
+    expect(composeIdentity(recreated)).not.toEqual(composeIdentity(original));
+  });
   it('keeps reviewed adoption confirmation stable when Docker reorders inspected mounts',async()=>{
     const f=await fixture(),source=f.snapshots.get(f.controlId);
     source.Mounts.push({Type:'bind',Source:'/var/run/docker.sock',Destination:'/var/run/docker.sock',RW:true});
