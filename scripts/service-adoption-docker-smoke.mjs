@@ -28,17 +28,23 @@ async function inspectIfPresent(id){try{return await docker.getContainer(id).ins
 async function verify(id){await ready(id);return probe(id,`(async()=>{const assert=require('node:assert/strict');const base='http://127.0.0.1:3000';const r=await fetch(base+'/api/auth/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({username:'adoption-admin',password:process.env.LOCAL_ADMIN_PASSWORD})});assert.equal(r.status,200);const cookie=r.headers.get('set-cookie').split(';')[0];const file=await fetch(base+'/api/instances/${instance}/files/download?path=report.html',{headers:{Cookie:cookie}});assert.equal(file.status,200);assert.equal(await file.text(),${JSON.stringify(marker)});const {DatabaseSync}=require('node:sqlite');const db=new DatabaseSync('/app/data/mybay.sqlite',{readOnly:true});assert.ok(db.prepare('SELECT data FROM chatMessages').all().some(x=>JSON.parse(x.data).content==='Synthetic retained history'));db.close();console.log(JSON.stringify({login:true,history:true,download:true}));})().catch(()=>process.exit(1));`);}
 let network,sourceController,sourceAgent,composeArgs,prepared,expectedController,adoptionSummary,transitionOptions,stage='setup';
 try{
-  fs.mkdirSync(path.join(root,'source/data'),{recursive:true});
+  // The synthetic Agent is intentionally stopped during seeding. Linux Docker
+  // need not materialize its bind directory until start, so create it ourselves.
+  fs.mkdirSync(path.join(root,'source/data/instances',instance),{recursive:true});
   network=await docker.createNetwork({Name:networkName,Driver:'bridge',Labels:{[label]:cohort}});
   sourceAgent=await docker.createContainer({name:agent,Image:image,Labels:{[label]:cohort},Cmd:['node','-e',"require('node:http').createServer((q,r)=>r.end('synthetic')).listen(8642,'0.0.0.0')"],HostConfig:{Binds:[`${hostRoot}/source/data/instances/${instance}:/opt/data:rw`],NetworkMode:networkName,RestartPolicy:{Name:'unless-stopped'}},NetworkingConfig:{EndpointsConfig:{[networkName]:{Aliases:[agent]}}}});owned.add(sourceAgent.id);
   const env={NODE_ENV:'production',PORT:'3000',DEPLOYMENT_MODE:'desktop',PROXY_MODE:'local',LOCAL_ADMIN_USERNAME:'adoption-admin',LOCAL_ADMIN_PASSWORD:password,ENCRYPTION_KEY:key,JWT_SECRET:crypto.randomBytes(32).toString('hex'),MYBAY_INTERNAL_ROUTING_SECRET:crypto.randomBytes(32).toString('hex'),MYBAY_CONTROL_PANEL_CONTAINER:controller,MYBAY_DOCKER_GC_ENABLED:'false',ENABLE_LOCAL_WORKER:'false',PUBLIC_APP_URL:'http://127.0.0.1:3000',SYNTHETIC_LITERAL:'literal $var ${DO_NOT_EXPAND} $$ "quotes"'};
   sourceController=await docker.createContainer({name:controller,Image:image,Labels:{[label]:cohort},Env:Object.entries(env).map(([k,v])=>k+'='+v),HostConfig:{Binds:[`${hostRoot}/source/data:/app/data:rw`,'/var/run/docker.sock:/var/run/docker.sock:rw'],NetworkMode:networkName,RestartPolicy:{Name:'unless-stopped'},Dns:['1.1.1.1'],Memory:536870912,SecurityOpt:['no-new-privileges:true']},NetworkingConfig:{EndpointsConfig:{[networkName]:{Aliases:[controller]}}}});owned.add(sourceController.id);
-  await sourceController.start();await ready(sourceController.id);await stop(sourceController.id);
+  stage='source-start';await sourceController.start();await ready(sourceController.id);await stop(sourceController.id);
   const seed=`const fs=require('node:fs'),crypto=require('node:crypto'),{DatabaseSync}=require('node:sqlite');const d=new DatabaseSync('/recovery/source/data/mybay.sqlite');const put=(t,r)=>d.prepare('INSERT INTO '+t+'(id,data) VALUES (?,?)').run(r.id,JSON.stringify(r));const iv=crypto.randomBytes(12),cipher=crypto.createCipheriv('aes-256-gcm',Buffer.from(process.env.FIXTURE_KEY,'hex'),iv),ct=Buffer.concat([cipher.update('synthetic-only'),cipher.final()]);put('credentials',{id:'fixture',key:[iv.toString('hex'),cipher.getAuthTag().toString('hex'),ct.toString('hex')].join(':')});put('instances',{id:'${instance}',name:'Synthetic Compose fixture',container_id:'${sourceAgent.id}',status:'running',user_id:'local-admin',config_json:JSON.stringify({runtime_type:'hermes',channel:'web',provider:'deepseek',model:'synthetic',providerCredentialId:'fixture'})});put('conversations',{id:'conversation',instance_id:'${instance}',user_id:'local-admin',title:'Retained history'});put('chatMessages',{id:'message',conversation_id:'conversation',instance_id:'${instance}',user_id:'local-admin',role:'assistant',content:'Synthetic retained history',sequence_no:1});d.close();fs.writeFileSync('/recovery/source/data/instances/${instance}/report.html',${JSON.stringify(marker)});console.log('{}');`;
-  helper('-e',[seed],false,{FIXTURE_KEY:key});
+  stage='seed-fixture';helper('-e',[seed],false,{FIXTURE_KEY:key});
+  stage='backup-fixture';
   helper('scripts/mybay-ops.mjs',['backup','--database','/recovery/source/data/mybay.sqlite','--output','/recovery/backup','--json']);
+  stage='recovery-plan';
   const opts={controller,backup:'/recovery/backup',output:'/recovery/recovered'},plan=cli('plan',opts);
+  stage='recovery-prepare';
   prepared=cli('prepare',{...opts,confirm:plan.confirmation});prepared.containers.forEach(c=>owned.add(c.id));
+  stage='recovery-activate';
   const transition={state:prepared.stateFile,confirm:plan.confirmation};transitionOptions=transition;cli('activate',transition);
   await verify(prepared.containers.at(-1).id);
   for(const c of [...prepared.containers].reverse())await stop(c.id);
@@ -70,6 +76,8 @@ try{
   // Raw Compose errors/config can include environment values. Keep only a safe
   // error class here; diagnostic field paths can be inspected locally if needed.
   console.error(JSON.stringify({ok:false,stage,error:e.code || e.name,status:e.status || e.statusCode || null,notice:'Fixture retained for diagnosis until scoped cleanup; no raw secret-bearing command output printed.'}));
+  const subprocessCode=String(e.stderr || '').match(/\b(?:ENOENT|EACCES|EPERM|ECONNREFUSED|SQLITE_[A-Z_]+)\b/)?.[0];
+  if(subprocessCode)console.error(JSON.stringify({subprocessCode}));
   // The recovery CLI sanitizes Docker exceptions itself. At this exact stage
   // its final stderr line is a static validation message, not Compose output.
   if(stage==='adopt' && e.stderr)console.error(String(e.stderr).trim().split('\n').at(-1));
