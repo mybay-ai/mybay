@@ -1,3 +1,6 @@
+import { randomUUID } from "node:crypto";
+import packageInfo from "../../../package.json";
+import { buildLocalDiagnosticExport } from "../../../shared/localDiagnosticExport";
 import { Router, Response } from "express";
 import { dbAdapter } from "../../db";
 import { AuthenticatedRequest, authenticateToken } from "../../middlewares/auth";
@@ -66,7 +69,9 @@ export function createEventsRoutes(deps: { docker: Docker }) {
         disk = { path: targetPath, totalBytes: Number(stats.blocks) * Number(stats.bsize), freeBytes: Number(stats.bavail) * Number(stats.bsize) };
       } catch {}
 
-      return res.json({ success: true, report: buildInstanceDiagnosticReport({ instance, context, inspect, inspectError, disk }) });
+      const report = buildInstanceDiagnosticReport({ instance, context, inspect, inspectError, disk });
+      res.setHeader("Cache-Control", "no-store");
+      return res.json({ success: true, report, shareableReport: buildLocalDiagnosticExport(report, packageInfo.version, randomUUID()) });
     } catch (error: any) {
       console.error("[Diagnostics API] Report error:", error);
       return res.status(500).json({ success: false, error: "INSTANCE_DIAGNOSTICS_FAILED" });

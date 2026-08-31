@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import os from "node:os";
 import { randomUUID } from "crypto";
 import { DatabaseSync } from "node:sqlite";
 import schemaVersion from "../shared/schema-version.json";
@@ -74,18 +75,37 @@ const defaultData = (): LocalStoreData => ({
 let activeDb: DatabaseSync | null = null;
 let activeDbPath = "";
 const CURRENT_SCHEMA_VERSION = schemaVersion.current;
+let testStoreDirectory: string | undefined;
+
+function defaultStoreDirectory() {
+  // Unmocked repository calls in unit tests must never open the running app's
+  // Windows/Docker shared SQLite file (their locking domains are different).
+  if (process.env.VITEST === "true" || process.env.NODE_ENV === "test") {
+    testStoreDirectory ||= fs.mkdtempSync(path.join(os.tmpdir(), "mybay-test-store-"));
+    return testStoreDirectory;
+  }
+  return path.resolve(process.cwd(), "data");
+}
+
+function guardTestDatabasePath(databasePath: string) {
+  if ((process.env.VITEST === "true" || process.env.NODE_ENV === "test")
+    && path.resolve(databasePath).toLowerCase() === path.resolve(process.cwd(), "data", "mybay.sqlite").toLowerCase()) {
+    throw new Error("Tests must use an isolated database, not data/mybay.sqlite");
+  }
+  return databasePath;
+}
 
 export function getLocalDatabasePath() {
-  if (process.env.MYBAY_SQLITE_PATH) return path.resolve(process.cwd(), process.env.MYBAY_SQLITE_PATH);
+  if (process.env.MYBAY_SQLITE_PATH) return guardTestDatabasePath(path.resolve(process.cwd(), process.env.MYBAY_SQLITE_PATH));
   if (process.env.LOCAL_STORE_PATH) {
     const legacyConfigured = path.resolve(process.cwd(), process.env.LOCAL_STORE_PATH);
-    return legacyConfigured.replace(/\.json$/i, "") + ".sqlite";
+    return guardTestDatabasePath(legacyConfigured.replace(/\.json$/i, "") + ".sqlite");
   }
-  return path.resolve(process.cwd(), "data", "mybay.sqlite");
+  return path.join(defaultStoreDirectory(), "mybay.sqlite");
 }
 
 function legacyStorePath() {
-  return path.resolve(process.cwd(), process.env.LOCAL_STORE_PATH || path.join("data", "local-store.json"));
+  return path.resolve(process.cwd(), process.env.LOCAL_STORE_PATH || path.join(defaultStoreDirectory(), "local-store.json"));
 }
 
 function quoteIdentifier(value: string) {
@@ -365,6 +385,15 @@ function openDatabase(): DatabaseSync {
   const existed = fs.existsSync(sqlitePath);
   const db = new DatabaseSync(sqlitePath);
   try {
+    // Reject newer databases before any DDL, WAL setup or migration can mutate
+    // them. Roll back with the preserved image/data pair, never by downgrading.
+    if (existed && db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'localMetadata'").get()) {
+      const metadata = db.prepare("SELECT value FROM localMetadata WHERE key = 'schema_version'").get();
+      const existingVersion = Number(metadata?.value);
+      if (existingVersion > CURRENT_SCHEMA_VERSION) {
+        throw new Error(`Database schema ${existingVersion} is newer than supported schema ${CURRENT_SCHEMA_VERSION}. Use a compatible version or restore the matching older backup; do not downgrade this database in place.`);
+      }
+    }
     initializeSchema(db);
     const legacyPath = legacyStorePath();
     if (!existed && fs.existsSync(legacyPath)) migrateLegacyStore(db, legacyPath, sqlitePath);
@@ -383,6 +412,10 @@ function openDatabase(): DatabaseSync {
     }
     throw error;
   }
+}
+
+export function initializeLocalDatabase(): void {
+  openDatabase();
 }
 
 export function readStore(): LocalStoreData {

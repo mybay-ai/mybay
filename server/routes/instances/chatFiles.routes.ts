@@ -10,7 +10,7 @@ import { randomUUID } from "node:crypto";
 import { resolveContentValidatedExtensions, validateUploadedFilePath } from "../../utils/uploadSecurity";
 import { getChatAttachmentConfig } from "../../config/chatAttachmentConfig";
 import { DEFAULT_CHAT_ATTACHMENT_CONFIG } from "../../../shared/chatAttachmentContract";
-import { deleteChatAttachmentFile, inspectChatAttachmentFile, purgeDeletedChatAttachments } from "../../services/chatAttachmentStorage";
+import { deleteChatAttachmentFile, inspectChatAttachmentFile, inspectConversationAttachmentDirectory, purgeDeletedChatAttachments } from "../../services/chatAttachmentStorage";
 import { checkInstanceStorageQuota, formatDiskLimitLabel, resolveInstanceDiskLimitMb } from "../../services/instances/instanceStorageQuotaService";
 import {
   HTML_ARTIFACT_PREVIEW_MAX_BYTES,
@@ -49,9 +49,11 @@ const chatStorage = multer.diskStorage({
     if (!/^[A-Za-z0-9_-]{1,128}$/.test(id || "") || !/^[A-Za-z0-9_-]{1,128}$/.test(conversationId || "")) {
       return cb(new Error("Invalid instance or conversation identifier."), "");
     }
-    const dir = path.join(process.cwd(), "data", "instances", id || "unknown", "chat_uploads", conversationId || "unknown");
-    fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
+    try {
+      cb(null, inspectConversationAttachmentDirectory(id, conversationId, undefined, true));
+    } catch {
+      cb(new Error("附件目录未通过安全校验，请检查实例存储。"), "");
+    }
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
@@ -88,6 +90,21 @@ function createChatUploadMiddleware() {
 
 function getChatFileUrl(instanceId: string, conversationId: string, fileId: string, disposition = "attachment") {
   return `/api/instances/${encodeURIComponent(instanceId)}/conversations/${encodeURIComponent(conversationId)}/files/${encodeURIComponent(fileId)}/download?disposition=${encodeURIComponent(disposition)}`;
+}
+
+function uploadedFileResponse(file: import("../../repositories/filesRepo").FileRecord) {
+  return {
+    id: file.id, originalName: normalizeMultipartFilename(file.original_name || file.filename),
+    mimeType: file.mime_type, size: file.size, createdAt: file.created_at,
+    downloadUrl: getChatFileUrl(file.instance_id!, file.conversation_id!, file.id),
+    previewUrl: getChatFileUrl(file.instance_id!, file.conversation_id!, file.id, "inline"),
+  };
+}
+
+async function requireReusableUpload(file: import("../../repositories/filesRepo").FileRecord) {
+  if (file.deleted_at) throw new Error("ATTACHMENT_UNAVAILABLE");
+  const inspected = await inspectChatAttachmentFile({ instanceId: file.instance_id!, conversationId: file.conversation_id!, storagePath: file.storage_path });
+  if (!inspected.exists || inspected.stat.size !== file.size || path.basename(file.storage_path) !== file.filename) throw new Error("ATTACHMENT_UNAVAILABLE");
 }
 
 async function resolveChatFileForAccess(req: AuthenticatedRequest, res: Response) {
@@ -129,16 +146,18 @@ async function resolveChatFileForAccess(req: AuthenticatedRequest, res: Response
   }
 
   try {
-    const realBaseDir = fs.realpathSync(baseDir);
-    const realStoragePath = fs.realpathSync(storagePath);
-    const isInside = realStoragePath.startsWith(realBaseDir + path.sep);
-    if (!isInside || fs.lstatSync(storagePath).isSymbolicLink()) {
+    const inspected = await inspectChatAttachmentFile({ instanceId: id, conversationId, storagePath });
+    if (!inspected.exists) {
+      res.status(404).json({ success: false, error: "FILE_MISSING", message: "文件记录存在，但物理文件不存在。" });
+      return null;
+    }
+    if (path.basename(storagePath) !== data.filename || inspected.stat.size !== data.size) {
       res.status(403).json({ success: false, error: "INVALID_FILE_PATH", message: "文件路径未通过安全校验。" });
       return null;
     }
-    return { file: data, storagePath: realStoragePath, rootDir: realBaseDir };
+    return { file: data, storagePath: inspected.storagePath, rootDir: path.dirname(inspected.storagePath) };
   } catch {
-    res.status(404).json({ success: false, error: "FILE_MISSING", message: "文件记录存在，但物理文件不存在。" });
+    res.status(403).json({ success: false, code: "INVALID_FILE_PATH", error: "INVALID_FILE_PATH", message: "文件路径未通过安全校验。" });
     return null;
   }
 
@@ -163,12 +182,26 @@ router.post("/:id/conversations/:conversationId/files", authenticateToken, async
   const user = req.user!;
   let instance: any = null;
   let instanceRootDir = "";
+  const uploadId = req.get("X-Upload-Id");
+  if (uploadId && !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(uploadId)) {
+    return res.status(400).json({ code: "INVALID_UPLOAD_ID", error: "INVALID_UPLOAD_ID" });
+  }
 
   try {
     const instanceAuthority = await resolveInstanceAuthority({ actor: authorityActorFromRequest(req), instanceId: id });
     if (instanceAuthority.ok === false) return sendAuthorityFailure(res, instanceAuthority, "无法访问目标实例。");
     const conversationAuthority = await resolveConversationAuthority({ instance: instanceAuthority, conversationId });
     if (conversationAuthority.ok === false) return sendAuthorityFailure(res, conversationAuthority, "会话不存在或无权访问。");
+    // First committed file wins for this owner/instance/conversation/key.
+    // Check before quota: a lost response must remain recoverable at full capacity.
+    if (uploadId) {
+      const previous = await filesRepo.findUpload(user.id, id, conversationId, uploadId);
+      if (previous) {
+        try { await requireReusableUpload(previous); }
+        catch { return res.status(409).json({ code: "ATTACHMENT_UNAVAILABLE", error: "ATTACHMENT_UNAVAILABLE" }); }
+        return res.status(200).json({ success: true, files: [uploadedFileResponse(previous)] });
+      }
+    }
     instance = instanceAuthority.instance;
     instanceRootDir = instance.data_volume_path || path.resolve(process.cwd(), "data", "instances", id);
     const quota = await checkInstanceStorageQuota(instance, instanceRootDir);
@@ -197,6 +230,10 @@ router.post("/:id/conversations/:conversationId/files", authenticateToken, async
     }
 
     const uploadedFiles = req.files as Express.Multer.File[];
+    if (uploadId && uploadedFiles.length !== 1) {
+      for (const file of uploadedFiles) if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+      return res.status(400).json({ code: "UPLOAD_REQUIRES_SINGLE_FILE", error: "UPLOAD_REQUIRES_SINGLE_FILE" });
+    }
     const configuredExtensions = chatAttachmentConfig.allowedExtensions;
     const validatedExtensions = resolveContentValidatedExtensions(configuredExtensions, contentValidatedExtensions);
     const validatedUploads = uploadedFiles.map((file) => {
@@ -261,8 +298,15 @@ router.post("/:id/conversations/:conversationId/files", authenticateToken, async
           deleted_at: null
         };
 
-        const data = await filesRepo.create(insertData as any);
-        createdRecordIds.push(data.id);
+        const committed = uploadId
+          ? await filesRepo.createUploadOnce({ ...insertData, upload_request_id: uploadId })
+          : { file: await filesRepo.create(insertData), created: true };
+        const data = committed.file;
+        if (committed.created) createdRecordIds.push(data.id);
+        else {
+          await fs.promises.unlink(file.path);
+          await requireReusableUpload(data);
+        }
 
         records.push({
           id: data.id,

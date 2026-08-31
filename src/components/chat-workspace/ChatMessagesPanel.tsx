@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
-import { AlertCircle, LoaderCircle } from "lucide-react";
-import { useEffect, type RefObject } from "react";
+import { AlertCircle, ArrowDown, LoaderCircle } from "lucide-react";
+import { useEffect, useRef, type RefObject } from "react";
+import { centerChatMessage } from "./chatAutoFollow";
 import { findRetrySourceMessage } from "./run/retrySelectors";
 import type { AgentInstance, User as UserType } from "../../types";
 import type { ChatMessage } from "../../lib/chatWorkspaceState";
@@ -15,6 +16,7 @@ import { deriveRunAssistantText, findRunAssistantMessageIndex, shouldShowLegacyR
 import { selectInlineApproval } from "./run/approvalSelectors";
 import { getRunStatusI18nKey, resolveRunDisplayStatus } from "./run/runStatusSemantics";
 import type { GeneratedArtifact } from "./generatedArtifacts";
+import type { InstanceChatReadinessProbe } from "../../hooks/useLocalInstanceReadiness";
 
 type ReadinessState = {
   ready: boolean;
@@ -29,6 +31,7 @@ type ChatMessagesPanelProps = {
   isChatReady: boolean;
   selectedInstance?: AgentInstance;
   selectedReadiness?: ReadinessState;
+  onReadinessChecked?: (probe: InstanceChatReadinessProbe) => void;
   instances: AgentInstance[];
   loadingInstances: boolean;
   loadingMessages: boolean;
@@ -59,6 +62,10 @@ type ChatMessagesPanelProps = {
   generatedArtifacts?: GeneratedArtifact[];
   onMessageFeedbackChange?: (messageId: string, feedback: "like" | "dislike" | null) => void;
   highlightedMessageId?: string | null;
+  highlightedMessageRevision?: number;
+  showJumpToLatest?: boolean;
+  onJumpToLatest?: () => void;
+  onRevealMessage?: (message: HTMLElement) => void;
 };
 
 export function ChatMessagesPanel({
@@ -68,6 +75,7 @@ export function ChatMessagesPanel({
   isChatReady,
   selectedInstance,
   selectedReadiness,
+  onReadinessChecked,
   instances,
   loadingInstances,
   loadingMessages,
@@ -79,7 +87,7 @@ export function ChatMessagesPanel({
   sending,
   activeRunId,
   toolSteps,
-  runExecutionState,
+  runExecutionState: incomingExecution,
   runMetrics,
   approvalRequests = [],
   canRespondToApproval = false,
@@ -89,6 +97,10 @@ export function ChatMessagesPanel({
   onUsePrompt,
   onLoadMoreMessages,
   highlightedMessageId,
+  highlightedMessageRevision,
+  showJumpToLatest = false,
+  onJumpToLatest,
+  onRevealMessage,
   onRetry,
   onEditMessage,
   onSwitchToAssistAndDiagnose,
@@ -100,6 +112,7 @@ export function ChatMessagesPanel({
   onMessageFeedbackChange
 }: ChatMessagesPanelProps) {
   const { t } = useTranslation(["dashboard", "common"]);
+  const runExecutionState = incomingExecution?.conversationId === selectedConversationId ? incomingExecution : null;
   const agentDisplayName = selectedInstance?.name?.trim() || t("dashboard:chatWorkspace.agentFallbackName");
   const fallbackModelLabel = selectedInstance?.model_name?.trim() || selectedInstance?.configSummary?.model?.trim() || "";
   const runDisplayStatus = resolveRunDisplayStatus({
@@ -132,23 +145,34 @@ export function ChatMessagesPanel({
   const inlineApproval = runExecutionState ? selectInlineApproval(approvalRequests) : null;
   const runAssistantHasContent = runAssistantIndex >= 0 && Boolean(messages[runAssistantIndex]?.content.trim());
   const shouldShowLegacyLoading = shouldShowLegacyRunLoading(sending, runExecutionState) && !runAssistantHasContent;
+  const lastRevealed = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!highlightedMessageId) return;
+    if (!highlightedMessageId) { lastRevealed.current = null; return; }
+    const revealKey = JSON.stringify([selectedId, selectedConversationId, highlightedMessageId, highlightedMessageRevision]);
+    if (lastRevealed.current === revealKey) return;
     const container = scrollContainerRef.current;
     if (!container) return;
     const escapedId = typeof CSS !== "undefined" && typeof CSS.escape === "function" ? CSS.escape(highlightedMessageId) : highlightedMessageId.replace(/["\\]/g, "\\$&");
     const target = container.querySelector<HTMLElement>(`[data-chat-message-id="${escapedId}"]`);
-    if (target) target.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [highlightedMessageId, messages, scrollContainerRef]);
+    if (target) {
+      if (onRevealMessage) onRevealMessage(target);
+      else centerChatMessage(container, target);
+      lastRevealed.current = revealKey;
+    }
+  }, [highlightedMessageId, highlightedMessageRevision, selectedId, selectedConversationId, messages, scrollContainerRef, onRevealMessage]);
 
   return (
-    <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.06),_transparent_34%),linear-gradient(180deg,_rgba(248,250,252,0.92),_#ffffff_42%)] text-content p-3 sm:p-5 space-y-4 sm:space-y-5 dark:bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.12),_transparent_34%),linear-gradient(180deg,_rgba(15,23,42,0.98),_#020617_55%)]">
+    <div className="relative flex-1 min-h-0">
+    <div ref={scrollContainerRef} role="region" aria-label={t("dashboard:chatWorkspace.messageHistoryRegion")} tabIndex={0} className="h-full min-h-0 overflow-y-auto overscroll-contain [overflow-anchor:none] focus-visible:outline-indigo-500 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.06),_transparent_34%),linear-gradient(180deg,_rgba(248,250,252,0.92),_#ffffff_42%)] text-content dark:bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.12),_transparent_34%),linear-gradient(180deg,_rgba(15,23,42,0.98),_#020617_55%)]">
+    <div className="p-3 sm:p-5 space-y-4 sm:space-y-5">
       <ChatReadinessBanner
         selectedId={selectedId}
         isChatReady={isChatReady}
         selectedInstance={selectedInstance}
         selectedReadiness={selectedReadiness}
+        onReadinessChecked={onReadinessChecked}
+        onOpenDiagnostics={onGoToInstanceManage}
       />
 
       {instances.length === 0 && !loadingInstances ? (
@@ -254,9 +278,17 @@ export function ChatMessagesPanel({
             </div>
           )}
 
-          <div ref={messagesEndRef} />
         </div>
       )}
+      <div ref={messagesEndRef} />
+    </div>
+    </div>
+    {showJumpToLatest && onJumpToLatest && (
+      <button type="button" onClick={onJumpToLatest} aria-label={t("dashboard:chatWorkspace.jumpToLatest")}
+        className="absolute bottom-3 left-1/2 z-10 inline-flex -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full border border-outline bg-surface px-3 py-2 text-xs font-medium text-content shadow-lg hover:bg-surface-muted focus-visible:outline-indigo-500">
+        <ArrowDown className="h-4 w-4" />{t("dashboard:chatWorkspace.jumpToLatest")}
+      </button>
+    )}
     </div>
   );
 }

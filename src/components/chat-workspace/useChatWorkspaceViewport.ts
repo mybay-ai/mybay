@@ -4,8 +4,6 @@ import { computeMobileWorkspaceFrame, type MobileWorkspaceFrame } from "./mobile
 
 type ViewportOptions = {
   workspaceRootRef: RefObject<HTMLDivElement | null>;
-  scrollContainerRef: RefObject<HTMLDivElement | null>;
-  shouldScrollToBottomRef: RefObject<boolean>;
   mobileOverlay: "history" | "workspace" | null;
   closeMobileOverlay: () => void;
 };
@@ -31,10 +29,6 @@ export function useChatWorkspaceViewport(options: ViewportOptions): MobileWorksp
           viewportOffsetTop: visualViewport?.offsetTop ?? 0,
           headerOffset: 48,
         }));
-        if (options.shouldScrollToBottomRef.current) {
-          const container = options.scrollContainerRef.current;
-          if (container) container.scrollTo({ top: container.scrollHeight, behavior: "auto" });
-        }
       });
     };
     updateFrame();
@@ -49,7 +43,7 @@ export function useChatWorkspaceViewport(options: ViewportOptions): MobileWorksp
       window.visualViewport?.removeEventListener("resize", updateFrame);
       window.visualViewport?.removeEventListener("scroll", updateFrame);
     };
-  }, [options.scrollContainerRef, options.shouldScrollToBottomRef, options.workspaceRootRef]);
+  }, [options.workspaceRootRef]);
 
   useEffect(() => {
     if (!options.mobileOverlay) return;

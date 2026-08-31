@@ -14,6 +14,7 @@ async function renderBanner(channelLabel: string, readinessMessage: string, opti
       en: {
         dashboard: {
           readiness_runtime_ready_chat_initializing_title: "Instance running, chat initializing",
+          readiness_runtime_ready_chat_initializing_description: "Check chat configuration",
           chatWorkspace: {
             externalChannelTitle: "External channel",
             externalChannelDesc: "Channel: <strong>{{channel}}</strong>",

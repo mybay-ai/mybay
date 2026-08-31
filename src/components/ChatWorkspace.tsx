@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { createPortal } from "react-dom";
 import type { Socket } from "socket.io-client";
 import { useTranslation } from "react-i18next";
@@ -11,7 +11,11 @@ import { useNavigate } from "react-router-dom";
 import { useFeedback } from "./FeedbackProvider";
 import { ChatConversationSidebar, type ConversationSearchResult } from "./chat-workspace/ChatConversationSidebar";
 import { ChatInputBar, type ChatReasoningEffort, type PendingAttachment } from "./chat-workspace/ChatInputBar";
+import { useChatComposerDraft } from "./chat-workspace/useChatComposerDraft";
+import { useChatAutoFollow } from "./chat-workspace/useChatAutoFollow";
+import { completeLatestHistoryWindow, getHistorySearchQuery, needsLatestHistoryWindow, requestLatestHistoryWindow, type ChatHistoryNavigation } from "./chat-workspace/chatHistoryNavigation";
 import { ChatMessagesPanel } from "./chat-workspace/ChatMessagesPanel";
+import { ChatQuestionSetup } from "./chat-workspace/ChatQuestionSetup";
 import { ChatSettingsPanel } from "./chat-workspace/ChatSettingsPanel";
 import { useChatRuns } from "./chat-workspace/useChatRuns";
 import { ChatWorkspaceHeader } from "./chat-workspace/ChatWorkspaceHeader";
@@ -22,7 +26,7 @@ import { recoverActiveRunMessages } from "./chat-workspace/run/runRecovery";
 import { getRetryAttachments } from "./chat-workspace/run/retryAttachments";
 import { resolveSelectedWorkspaceRunContext } from "./chat-workspace/run/workspaceRunContext";
 import { useGeneratedArtifacts } from "./chat-workspace/useGeneratedArtifacts";
-import { isGeneratedArtifactPreviewable } from "./chat-workspace/generatedArtifacts";
+import { getGeneratedArtifactActionPath, isGeneratedArtifactPreviewable } from "./chat-workspace/generatedArtifacts";
 import { clearGeneratedPreviewSelection, loadGeneratedPreviewSelection } from "./chat-workspace/previewSelectionStorage";
 import { CHAT_WORKSPACE_TABLET_BREAKPOINT, shouldUseOverlayWorkspace } from "./chat-workspace/chatWorkspaceResponsiveLayout";
 import { useChatWorkspaceViewport } from "./chat-workspace/useChatWorkspaceViewport";
@@ -48,6 +52,8 @@ import {
 } from "../lib/chatWorkspaceState";
 import { createChatWorkspaceMessageSender } from "./ChatWorkspaceMessageSender";
 import { resolveInitialChatInstanceId } from "./chat-workspace/chatInitialInstanceSelection";
+import { createChatSelectionPersistence } from "./chat-workspace/chatSelectionPersistence";
+import { createChatModePreference, type PreferredChatMode } from "./chat-workspace/chatModePreference";
 
 export { generateUUIDv4 } from "./chat-workspace/chatWorkspaceSendPolicy";
 
@@ -55,6 +61,12 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
   const { t } = useTranslation(["dashboard", "common"]);
   const navigate = useNavigate();
   const { showConfirm, showToast } = useFeedback();
+  const selectionPersistence = useMemo(() => createChatSelectionPersistence(
+    () => typeof window === "undefined" ? null : window.localStorage, currentUser?.id,
+  ), [currentUser?.id]);
+  const modePreference = useMemo(() => createChatModePreference(
+    () => typeof window === "undefined" ? null : window.localStorage, currentUser?.id,
+  ), [currentUser?.id]);
   const preferredInstanceId = useMemo(
     () => typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("instanceId") || "",
     [],
@@ -66,7 +78,8 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
   const [selectedId, setSelectedId] = useState<string>("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
-  const [input, setInput] = useState("");
+  const composer = useChatComposerDraft();
+  const { input, replaceInput: setInput } = composer;
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [chatReadiness, setChatReadiness] = useState<Record<string, ChatReadinessState>>({});
@@ -74,7 +87,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
   
   // Conversation Selection State
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
-  const [searchNavigation, setSearchNavigation] = useState<{ conversationId: string; messageId: string; sequenceNo: number; nonce: number } | null>(null);
+  const [searchNavigation, setSearchNavigation] = useState<ChatHistoryNavigation | null>(null);
   const [activeRunConversationId, setActiveRunConversationId] = useState<string | null>(null);
 
   // Message Pagination State
@@ -98,6 +111,8 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const messageLoadRequestIdRef = useRef<number>(0);
+  const historyAbortRef = useRef<AbortController | null>(null);
+  const selectionRevisionRef = useRef(0);
   const activeChatRequestIdRef = useRef<string | null>(null);
   const shouldScrollToBottomRef = useRef<boolean>(true);
   
@@ -115,8 +130,6 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
   const refreshAuthoritativeHistoryRef = useRef<(instanceId: string, convId: string) => Promise<void>>(async () => {});
   const mobileWorkspaceFrame = useChatWorkspaceViewport({
     workspaceRootRef,
-    scrollContainerRef,
-    shouldScrollToBottomRef,
     mobileOverlay,
     closeMobileOverlay: () => setMobileOverlay(null),
   });
@@ -132,6 +145,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     conversationFilePreview,
     clearConversationFilePreview,
     isUploading,
+    attachmentUploads,
     isDraggingOver,
     uploadInFlightRef,
     refreshConversationFiles,
@@ -176,13 +190,39 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     revealWorkspaceOnNarrowViewport();
   };
   const selectInstanceId = (id: string) => {
+    if (selectedIdRef.current === id) return;
+    historyAbortRef.current?.abort();
+    instanceGenerationRef.current += 1;
+    messageLoadRequestIdRef.current += 1;
+    selectionRevisionRef.current += 1;
     selectedIdRef.current = id;
+    // Commit an instance/conversation pair atomically, never new instance + old conversation.
+    selectedConversationIdRef.current = null;
     setSelectedId(id);
+    // Restore synchronously with the Agent selection, before its requests resolve.
+    setChatMode(modePreference.modeFor(id));
+    setSelectedConversationId(null);
+    setSearchNavigation(null);
+    setMessages([]);
+    setNextCursorSeq(null);
+    selectionPersistence.rememberInstance(id);
   };
 
   const selectConversationId = (id: string | null) => {
+    if (selectedConversationIdRef.current !== id) {
+      historyAbortRef.current?.abort();
+      selectionRevisionRef.current += 1;
+      messageLoadRequestIdRef.current += 1;
+      if (!internallySelectingConversationRef.current) {
+        setMessages([]);
+        setNextCursorSeq(null);
+        setLoadingMoreMessages(false);
+        setError(null);
+      }
+    }
     selectedConversationIdRef.current = id;
     setSelectedConversationId(id);
+    selectionPersistence.rememberConversation(selectedIdRef.current, id);
   };
 
   const {
@@ -199,12 +239,16 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     resetConversationsForInstance,
     loadConversationsForSelectedInstance,
     handleCreateConversation,
+    creatingConversation,
+    conversationCreationInFlightRef,
     handleCreateProject,
     handleRenameProject,
     handleDeleteProject,
     handleMoveConversationToProject,
     handleDeleteConversation,
     startRename,
+    handlePlaceConversation,
+    organizingConversations,
     handleMoveConversation,
     handleMoveProject,
     handleTogglePinConversation,
@@ -216,6 +260,9 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     selectedId,
     selectedIdRef,
     selectedConversationId,
+    selectedConversationIdRef,
+    selectionRevisionRef,
+    getRememberedConversationId: selectionPersistence.conversationFor,
     selectConversationId,
     instanceGenerationRef,
     setMessages,
@@ -270,6 +317,8 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     enqueueFollowUpMessage,
     queuedFollowUpSenderRef,
   } = useQueuedChatFollowUps({
+    creatingConversation,
+    conversationCreationInFlightRef,
     selectedId,
     selectedConversationId,
     selectedIdRef,
@@ -297,7 +346,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     if (!selectedPath) return;
     const artifact = generatedArtifacts.find(item => item.path === selectedPath);
     if (artifact && isGeneratedArtifactPreviewable(artifact) && !conversationFilePreview) {
-      void handleOpenInstanceFilePath(artifact.path);
+      void handleOpenInstanceFilePath(getGeneratedArtifactActionPath(artifact));
       return;
     }
     if (artifact?.status === "missing") {
@@ -331,7 +380,8 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     setSending(false);
     resetRunState();
     setActiveRunConversationId(null);
-    selectConversationId(null);
+    // The selection setter already cleared the old pair. Do not erase the saved
+    // conversation while its authorized replacement list is still loading.
   }, [selectedId]);
 
   // Reset states immediately on selectedConversationId change
@@ -360,23 +410,39 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     resetRunState();
   }, [selectedConversationId]);
 
-  // Scroll only the message container. Avoid scrollIntoView here because it can move the whole page.
-  useEffect(() => {
-    if (shouldScrollToBottomRef.current) {
-      const container = scrollContainerRef.current;
-      if (container) {
-        container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
-      }
-      shouldScrollToBottomRef.current = false;
-    }
-  }, [messages, sending]);
+  const selectedHistoryNavigation = searchNavigation?.conversationId === selectedConversationId ? searchNavigation : null;
+  const selectedSearch = selectedHistoryNavigation?.window === "search" ? selectedHistoryNavigation : null;
+  const chatScroll = useChatAutoFollow({
+    scrollContainerRef,
+    bottomAnchorRef: messagesEndRef,
+    forceScrollRef: shouldScrollToBottomRef,
+    contextKey: JSON.stringify([selectedId, selectedConversationId, selectedHistoryNavigation?.nonce]),
+    startFollowing: !selectedSearch,
+    contentRevision: messages,
+    layoutRevision: sending,
+  });
+
+  const handleJumpToLatest = () => {
+    if (needsLatestHistoryWindow(selectedHistoryNavigation)) {
+      // Invalidate older pagination/search responses before the next effect runs.
+      messageLoadRequestIdRef.current += 1;
+      setLoadingMoreMessages(false);
+      setLoadingMessages(true);
+      setSearchNavigation(previous => requestLatestHistoryWindow(previous, selectedConversationId));
+    } else chatScroll.jumpToLatest();
+  };
 
   // Load instances
   useEffect(() => {
+    const controller = new AbortController();
+    const currentUserScope = currentUser?.id;
+    if (!currentUserScope) return;
+    selectInstanceId("");
     async function loadInstances() {
       try {
         setLoadingInstances(true);
-        const data = await api.get("/api/instances");
+        const data = await api.get("/api/instances", { signal: controller.signal });
+        if (controller.signal.aborted) return;
         if (data && Array.isArray(data)) {
           // Filter to only running/ready instances
           const allowedStatuses = ["running", "gateway_ready", "partial_running", "dashboard_ready"];
@@ -391,14 +457,15 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
           // Parallel lightweight chat readiness probes
           const readinessPromises = activeList.map(async (inst: any) => {
             try {
-              const probe = await api.get(`/api/instances/${inst.id}/chat-readiness`);
-              return { id: inst.id, ...normalizeChatReadinessProbe(probe) };
+              const probe = await api.get(`/api/instances/${inst.id}/chat-readiness`, { signal: controller.signal });
+              return { id: inst.id, ...normalizeChatReadinessProbe({ ...probe, checkedAt: new Date().toISOString(), probeStatus: "checked" }) };
             } catch (err) {
-              return { id: inst.id, ...unavailableChatReadiness("PROBE_FAILED", t("dashboard:chatWorkspace.probeFailed")) };
+              return { id: inst.id, ...unavailableChatReadiness("PROBE_FAILED", t("dashboard:chatWorkspace.probeFailed")), checkedAt: new Date().toISOString(), probeStatus: "failed" };
             }
           });
 
           const results = await Promise.all(readinessPromises);
+          if (controller.signal.aborted) return;
           const readinessMap = results.reduce((acc: any, cur: any) => {
             acc[cur.id] = cur;
             return acc;
@@ -408,18 +475,20 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
 
           // Determine the initial selectedId exactly once after readiness state resolves
           if (activeList.length > 0) {
-            selectInstanceId(resolveInitialChatInstanceId(activeList, readinessMap, preferredInstanceId));
+            selectInstanceId(resolveInitialChatInstanceId(activeList, readinessMap, preferredInstanceId, selectionPersistence.read().instanceId));
           }
         }
       } catch (err: any) {
+        if (controller.signal.aborted) return;
         console.error("Failed to fetch instances for chat workspace:", err);
         setError(t("dashboard:chatWorkspace.loadInstancesError"));
       } finally {
-        setLoadingInstances(false);
+        if (!controller.signal.aborted) setLoadingInstances(false);
       }
     }
     loadInstances();
-  }, []);
+    return () => controller.abort();
+  }, [currentUser?.id]);
 
 
   // Poll/Refresh readiness of selected instance and load its conversations when selectedId changes
@@ -428,34 +497,38 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     
     const initialSelectedId = selectedId;
     const currentInstanceGen = instanceGenerationRef.current;
+    const controller = new AbortController();
     
     async function checkCurrentReadinessAndLoadConversations() {
       try {
         // Probe readiness
-        const probe = await api.get(`/api/instances/${selectedId}/chat-readiness`);
+        const probe = await api.get(`/api/instances/${selectedId}/chat-readiness`, { signal: controller.signal });
+        if (controller.signal.aborted) return;
         if (!shouldAcceptConversationHistory(
           { selectedId: selectedIdRef.current, instanceGeneration: instanceGenerationRef.current },
           { selectedId: initialSelectedId, instanceGeneration: currentInstanceGen }
         )) return;
         setChatReadiness(prev => ({
           ...prev,
-          [selectedId]: normalizeChatReadinessProbe(probe)
+          [selectedId]: normalizeChatReadinessProbe({ ...probe, checkedAt: new Date().toISOString(), probeStatus: "checked" })
         }));
       } catch (err) {
+        if (controller.signal.aborted) return;
         if (!shouldAcceptConversationHistory(
           { selectedId: selectedIdRef.current, instanceGeneration: instanceGenerationRef.current },
           { selectedId: initialSelectedId, instanceGeneration: currentInstanceGen }
         )) return;
         setChatReadiness(prev => ({
           ...prev,
-          [selectedId]: unavailableChatReadiness("PROBE_FAILED", t("dashboard:chatWorkspace.probeFailed"))
+          [selectedId]: { ...unavailableChatReadiness("PROBE_FAILED", t("dashboard:chatWorkspace.probeFailed")), checkedAt: new Date().toISOString(), probeStatus: "failed" }
         }));
       }
 
-      await loadConversationsForSelectedInstance(initialSelectedId, currentInstanceGen);
+      await loadConversationsForSelectedInstance(initialSelectedId, currentInstanceGen, controller.signal);
     }
     
     checkCurrentReadinessAndLoadConversations();
+    return () => controller.abort();
   }, [selectedId]);
 
   // Load messages whenever active conversation changes
@@ -471,18 +544,19 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     const initialConvId = selectedConversationId;
     const currentMessageGen = messageGenerationRef.current;
     const historyRequestId = ++messageLoadRequestIdRef.current;
+    const controller = new AbortController();
+    historyAbortRef.current = controller;
+    let resumeTimer: number | undefined;
     const searchTarget = searchNavigation?.conversationId === initialConvId ? searchNavigation : null;
-    shouldScrollToBottomRef.current = !searchTarget;
 
     async function loadConvMessages() {
       try {
         setLoadingMessages(true);
         setError(null);
         setNextCursorSeq(null);
-        const targetQuery = searchTarget && Number.isFinite(searchTarget.sequenceNo)
-          ? `&beforeSeq=${encodeURIComponent(String(searchTarget.sequenceNo + 1))}`
-          : "";
-        const res = await api.get(`/api/instances/${selectedId}/conversations/${selectedConversationId}/messages?limit=50${targetQuery}`);
+        const targetQuery = getHistorySearchQuery(searchTarget);
+        const res = await api.get(`/api/instances/${selectedId}/conversations/${selectedConversationId}/messages?limit=50${targetQuery}`, { signal: controller.signal });
+        if (controller.signal.aborted) return;
         if (!shouldAcceptMessageHistory(
           { selectedId: selectedIdRef.current, selectedConversationId: selectedConversationIdRef.current, messageGeneration: messageGenerationRef.current, historyRequestId: messageLoadRequestIdRef.current },
           { selectedId: initialSelectedId, selectedConversationId: initialConvId, messageGeneration: currentMessageGen, historyRequestId }
@@ -528,10 +602,12 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
               assistantMessageId: recovered.assistantMessageId,
               status: recovered.status,
               recoveryTextBaseline: recovered.partialOutput,
-              resumeAfterEventId: res.activeRun.lastEventSeq
+              resumeAfterEventId: 0
             });
-            // Resume after the last persisted event; partial output already restores prior text.
-            setTimeout(() => {
+            // A fresh view has no tool blocks. Replay the available stream; the text
+            // baseline reconciliation avoids duplicating already displayed output.
+            resumeTimer = window.setTimeout(() => {
+              if (controller.signal.aborted) return;
               streamActiveRun(res.activeRun.id, initialSelectedId, initialConvId);
             }, 100);
           } else {
@@ -542,14 +618,23 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
 
           setMessages(prev => reconcileConversationMessages(mapped, prev, optimisticChatContextRef.current, selectedConversationIdRef.current));
           setNextCursorSeq(res.nextCursorSeq);
+          setSearchNavigation(previous => completeLatestHistoryWindow(previous, searchTarget));
         }
       } catch (err: any) {
-        console.error("Failed to load messages:", err);
+        if (controller.signal.aborted) return;
         if (shouldAcceptMessageHistory(
           { selectedId: selectedIdRef.current, selectedConversationId: selectedConversationIdRef.current, messageGeneration: messageGenerationRef.current, historyRequestId: messageLoadRequestIdRef.current },
           { selectedId: initialSelectedId, selectedConversationId: initialConvId, messageGeneration: currentMessageGen, historyRequestId }
         )) {
-          setError(t("dashboard:chatWorkspace.loadMessagesFailed"));
+          if ([403, 404, 410].includes(err?.status)) {
+            setSearchNavigation(null);
+            selectionPersistence.rememberConversation(initialSelectedId, null);
+            selectConversationId(null);
+            void loadConversationsForSelectedInstance(initialSelectedId, instanceGenerationRef.current);
+          } else {
+            console.error("Failed to load messages:", err);
+            setError(t("dashboard:chatWorkspace.loadMessagesFailed"));
+          }
         }
       } finally {
         if (shouldAcceptMessageHistory(
@@ -562,9 +647,18 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     }
 
     loadConvMessages();
+    return () => {
+      controller.abort();
+      if (resumeTimer !== undefined) window.clearTimeout(resumeTimer);
+      if (historyAbortRef.current === controller) historyAbortRef.current = null;
+    };
   }, [selectedId, selectedConversationId, searchNavigation?.nonce]);
 
   const selectedReadiness = chatReadiness[selectedId];
+  const handleReadinessChecked = useCallback((probe: Parameters<typeof normalizeChatReadinessProbe>[0]) => {
+    if (selectedIdRef.current !== selectedId) return;
+    setChatReadiness(previous => ({ ...previous, [selectedId]: normalizeChatReadinessProbe(probe) }));
+  }, [selectedId]);
   const isChatReady = selectedReadiness ? selectedReadiness.ready : false; // Do not assume ready until verified
   const hasAnyReady = Object.values(chatReadiness).some(r => r.ready);
 
@@ -616,16 +710,13 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     if (!selectedId || !selectedConversationId || nextCursorSeq === null || loadingMoreMessages) {
       return;
     }
-    const container = scrollContainerRef.current;
-    const oldScrollHeight = container ? container.scrollHeight : 0;
-    const oldScrollTop = container ? container.scrollTop : 0;
     
     const initialSelectedId = selectedId;
     const initialConvId = selectedConversationId;
     const currentMessageGen = messageGenerationRef.current;
     const historyRequestId = ++messageLoadRequestIdRef.current;
     
-    shouldScrollToBottomRef.current = false;
+    chatScroll.pause();
 
     try {
       setLoadingMoreMessages(true);
@@ -657,27 +748,18 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
           user_feedback: m.user_feedback || undefined
         }));
         
+        // Capture at response time, not request time: the reader may have scrolled
+        // or received more streaming content while the history request was pending.
+        chatScroll.prepareForPrepend();
         setMessages(prev => deduplicateMessages([...previousMessages, ...prev], selectedConversationIdRef.current));
         setNextCursorSeq(res.nextCursorSeq);
-
-        setTimeout(() => {
-          if (
-            container &&
-            shouldAcceptMessageHistory(
-              { selectedId: selectedIdRef.current, selectedConversationId: selectedConversationIdRef.current, messageGeneration: messageGenerationRef.current, historyRequestId: messageLoadRequestIdRef.current },
-              { selectedId: initialSelectedId, selectedConversationId: initialConvId, messageGeneration: currentMessageGen, historyRequestId }
-            )
-          ) {
-            container.scrollTop = container.scrollHeight - oldScrollHeight + oldScrollTop;
-          }
-        }, 0);
       }
     } catch (err) {
-      console.error("Failed to load more messages:", err);
       if (shouldAcceptMessageHistory(
         { selectedId: selectedIdRef.current, selectedConversationId: selectedConversationIdRef.current, messageGeneration: messageGenerationRef.current, historyRequestId: messageLoadRequestIdRef.current },
         { selectedId: initialSelectedId, selectedConversationId: initialConvId, messageGeneration: currentMessageGen, historyRequestId }
       )) {
+        console.error("Failed to load more messages:", err);
         setError(t("dashboard:chatWorkspace.loadMessagesFailed"));
       }
     } finally {
@@ -747,13 +829,13 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
         setNextCursorSeq(res.nextCursorSeq);
       }
     } catch (err) {
-      console.error("Authoritative history refresh failed:", err);
       if (
         selectedIdRef.current === instanceId &&
         selectedConversationIdRef.current === convId &&
         messageGenerationRef.current === currentMessageGen &&
         messageLoadRequestIdRef.current === historyRequestId
       ) {
+        console.error("Authoritative history refresh failed:", err);
         showToast(t("dashboard:chatWorkspace.loadMessagesFailed"), "error");
       }
     }
@@ -798,12 +880,14 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
   }, [socket, currentUser?.id, refreshConversationFiles]);
 
   const handleSend = createChatWorkspaceMessageSender({
+    conversationCreationInFlightRef,
     uploadInFlightRef,
     isUploading,
     showToast,
     t,
     pendingAttachments,
     input,
+    pendingLongTexts: composer.blocks,
     editingRetryMessageIdRef,
     selectedId,
     setError,
@@ -907,6 +991,13 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
       replaceMessageId: msg.id,
       attachments: retryAttachments.attachments
     });
+  };
+
+  const handleChatModeChange = (mode: PreferredChatMode) => {
+    if (!selectedId || selectedIdRef.current !== selectedId) return;
+    if (mode === "agent" && !runsSupported) return;
+    setChatMode(mode);
+    modePreference.remember(selectedId, mode);
   };
 
   const handleEditMessage = (msg: ChatMessage) => {
@@ -1027,6 +1118,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
         
         {/* Collapsible Left Sidebar (Conversation History Sidebar) */}
         <ChatConversationSidebar
+          creatingConversation={creatingConversation}
           mobileSidebarOpen={mobileSidebarOpen}
           sidebarOpen={sidebarOpen}
           selectedId={selectedId}
@@ -1059,7 +1151,8 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
                 conversationId: result.conversation_id,
                 messageId: result.message_id,
                 sequenceNo: Number(result.sequence_no),
-                nonce: Date.now()
+                nonce: Date.now(),
+                window: "search"
               });
             } else {
               setSearchNavigation(null);
@@ -1071,6 +1164,8 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
           setRenamingId={setRenamingId}
           onRenameSubmit={handleRenameSubmit}
           onStartRename={startRename}
+          onPlaceConversation={handlePlaceConversation}
+          organizingConversations={organizingConversations}
           onMoveConversation={handleMoveConversation}
           onMoveConversationToProject={handleMoveConversationToProject}
           onTogglePinConversation={handleTogglePinConversation}
@@ -1161,10 +1256,15 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
           <ChatMessagesPanel
             scrollContainerRef={scrollContainerRef}
             messagesEndRef={messagesEndRef}
+            showJumpToLatest={(needsLatestHistoryWindow(selectedHistoryNavigation) || !chatScroll.isFollowing) && messages.length > 0 && !loadingMessages}
+            onJumpToLatest={handleJumpToLatest}
+            onRevealMessage={chatScroll.revealMessage}
+            highlightedMessageRevision={selectedSearch?.nonce}
             selectedId={selectedId}
             isChatReady={isChatReady}
             selectedInstance={selectedInstance}
             selectedReadiness={selectedReadiness}
+            onReadinessChecked={handleReadinessChecked}
             instances={instances}
             loadingInstances={loadingInstances}
             loadingMessages={loadingMessages}
@@ -1198,12 +1298,14 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
                 message.id === messageId ? { ...message, user_feedback: feedback } : message
               )));
             }}
-            highlightedMessageId={searchNavigation?.conversationId === selectedConversationId ? searchNavigation.messageId : null}
+            highlightedMessageId={selectedSearch?.messageId ?? null}
           />
 
           {/* Message input area */}
+          {selectedId && <ChatQuestionSetup key={selectedId} instanceId={selectedId} busy={selectedConversationIsRunning} />}
           {selectedId && (
             <ChatInputBar
+              creatingConversation={creatingConversation}
               input={input}
               sending={selectedConversationIsRunning}
               activeRunId={selectedActiveRunId}
@@ -1214,13 +1316,15 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
               selectedInstanceName={selectedInstance?.name}
               runMetrics={selectedRunMetrics}
               chatMode={chatMode}
-              onChatModeChange={setChatMode}
+              onChatModeChange={handleChatModeChange}
               reasoningEffort={reasoningEffort}
               onReasoningEffortChange={setReasoningEffort}
               agentAvailable={runsSupported}
               agentCapabilityState={runsCapabilityState}
-              onInputChange={setInput}
+              onInputChange={composer.setInput}
+              longTextComposer={composer}
               pendingAttachments={pendingAttachments}
+              attachmentUploads={attachmentUploads}
               isUploading={isUploading}
               attachmentConfig={attachmentConfig}
               mobileKeyboardOpen={mobileWorkspaceFrame?.keyboardOpen || false}
@@ -1307,9 +1411,6 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     </div>
   );
 }
-
-
-
 
 
 

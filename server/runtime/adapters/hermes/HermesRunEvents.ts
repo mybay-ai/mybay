@@ -1,3 +1,5 @@
+import { usageWithReportedModel } from "../../../../shared/localRunUsage";
+import { completedFileChange, safeFileOperationMetadata } from "../../../services/runs/runFileEvidence";
 import { containsDsmlToolCallProtocol, DSML_TOOL_CALL_ERROR_CODE } from "../../../utils/dsmlToolCallGuard";
 import { isStreamingDecoderCompatError } from "./HermesProtocol";
 import { truncateSafeText } from "../../../services/runs/runSafeText";
@@ -33,6 +35,8 @@ export class HermesRunEventProvider implements RuntimeRunEventProvider {
           lastPartialOutput: typeof initialPartialOutput === "string" ? initialPartialOutput : "",
           sentSteps: new Map(),
           activeToolIds: new Map(),
+          activeToolFileMetadata: new Map(),
+          completedFileSteps: new Map(),
         };
         trackers.set(runId, tracker);
       }
@@ -46,9 +50,13 @@ export class HermesRunEventProvider implements RuntimeRunEventProvider {
       ownerId?: string,
     ): void {
       const sanitized = sanitizeStep(step);
-      const cacheKey = `${sanitized.status}:${sanitized.safe_summary}`;
+      const cacheKey = JSON.stringify([sanitized.status, sanitized.safe_summary, sanitized.metadata]);
       if (tracker.sentSteps.get(sanitized.id) === cacheKey) return;
       tracker.sentSteps.set(sanitized.id, cacheKey);
+      tracker.completedFileSteps ||= new Map();
+      const change = completedFileChange(sanitized);
+      if (change && (tracker.completedFileSteps!.size < 100 || tracker.completedFileSteps!.has(sanitized.id))) tracker.completedFileSteps!.set(sanitized.id, change);
+      else if (!change) tracker.completedFileSteps?.delete(sanitized.id);
       dependencies.addEvent(runId, "step", JSON.stringify(sanitized), ownerId);
     }
 
@@ -80,7 +88,7 @@ export class HermesRunEventProvider implements RuntimeRunEventProvider {
       const event = rawEvent as Record<string, any>;
       const eventType = String(event.event || event.type || "");
       const tracker = trackers.get(run.id);
-      const durationMs = Number.isFinite(Number(event.duration_ms)) ? Number(event.duration_ms) : null;
+      const durationMs = typeof event.duration_ms === "number" && Number.isSafeInteger(event.duration_ms) && event.duration_ms >= 0 ? event.duration_ms : null;
 
       if (TERMINAL_COMPLETED_EVENTS.has(eventType)) {
         const assistantContent = typeof event.output === "string"
@@ -91,7 +99,7 @@ export class HermesRunEventProvider implements RuntimeRunEventProvider {
         return dependencies.completeTerminal(run, {
           status: "completed",
           assistantContent,
-          usage: event.usage,
+          usage: usageWithReportedModel(event.usage, event.model) as Record<string, unknown> | undefined,
           durationMs,
         }, upstreamRunId);
       }
@@ -105,7 +113,7 @@ export class HermesRunEventProvider implements RuntimeRunEventProvider {
         return dependencies.completeTerminal(run, {
           status: "failed",
           errorCode: String(upstreamError),
-          usage: event.usage,
+          usage: usageWithReportedModel(event.usage, event.model) as Record<string, unknown> | undefined,
           durationMs,
         }, upstreamRunId);
       }
@@ -114,7 +122,7 @@ export class HermesRunEventProvider implements RuntimeRunEventProvider {
         return dependencies.completeTerminal(run, {
           status: "cancelled",
           errorCode: "CANCELLED_UPSTREAM",
-          usage: event.usage,
+          usage: usageWithReportedModel(event.usage, event.model) as Record<string, unknown> | undefined,
           durationMs,
         }, upstreamRunId);
       }
@@ -194,6 +202,13 @@ export class HermesRunEventProvider implements RuntimeRunEventProvider {
         const tool = String(event.tool || event.name || event.tool_name || "other");
         const id = `step-${dependencies.randomUUID()}`;
         const queue = tracker.activeToolIds.get(tool) || [];
+        // Native events have no call id: concurrent same-tool completions cannot
+        // be safely paired by FIFO. Drop their path evidence conservatively.
+        if (queue.length) {
+          for (const activeId of queue) tracker.activeToolFileMetadata?.delete(activeId);
+        } else {
+          tracker.activeToolFileMetadata?.set(id, safeFileOperationMetadata(event));
+        }
         queue.push(id);
         tracker.activeToolIds.set(tool, queue);
         emitStep(run.id, tracker, {
@@ -203,6 +218,7 @@ export class HermesRunEventProvider implements RuntimeRunEventProvider {
           status: "running",
           title: event.title,
           startedAt: event.started_at || event.timestamp,
+          metadata: tracker.activeToolFileMetadata?.get(id),
           query: event.query,
           count: event.count,
           source: event.source || event.provider,
@@ -215,11 +231,14 @@ export class HermesRunEventProvider implements RuntimeRunEventProvider {
         const queue = tracker.activeToolIds.get(tool) || [];
         const id = queue.shift() || `step-${dependencies.randomUUID()}`;
         tracker.activeToolIds.set(tool, queue);
+        const metadata = { ...tracker.activeToolFileMetadata?.get(id), ...safeFileOperationMetadata(event) };
+        tracker.activeToolFileMetadata?.delete(id);
         emitStep(run.id, tracker, {
           id,
           name: tool,
           tool,
-          status: event.error === true ? "failed" : "completed",
+          metadata: { ...metadata, file_evidence_confirmed: Boolean(metadata?.file_path) },
+          status: event.error || event.is_error || ["failed", "error", "cancelled"].includes(event.status) ? "failed" : "completed",
           title: event.title,
           completedAt: event.completed_at || event.timestamp,
           count: event.count || event.result_count || event.results_count,

@@ -6,10 +6,10 @@ import { execFileSync } from "node:child_process";
 
 const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const EXCLUDED_ROOT_DIRECTORIES = new Set([
-  ".git", ".idea", ".vscode", "build", "coverage", "data", "dist", "logs", "node_modules", "release", "runtime", "secrets", "tmp", "uploads"
+  ".git", ".idea", ".vscode", ".codex-worktrees", "backups", "build", "coverage", "data", "dist", "logs", "node_modules", "release", "runtime", "secrets", "tmp", "uploads"
 ]);
 const EXCLUDED_SUFFIXES = [
-  ".bak", ".crt", ".db", ".dump", ".jks", ".key", ".keystore", ".log", ".migration-complete", ".p12", ".pem", ".pfx",
+  ".bak", ".cer", ".crt", ".db", ".dump", ".jks", ".key", ".keystore", ".log", ".migration-complete", ".p12", ".pem", ".pfx",
   ".sqlite", ".sqlite3", ".sqlite-shm", ".sqlite-wal"
 ];
 

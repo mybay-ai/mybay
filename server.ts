@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import { createQuestionBridgeRouter } from "./server/routes/questionBridge.routes";
 import dns from "dns";
 
 // Force Node.js fetch/dns to prefer IPv4 over IPv6 to fix unroutable IPv6 causing fetch failures in Docker
@@ -43,7 +44,7 @@ import { startSchedulerRunner, stopSchedulerRunner } from "./server/schedulerRun
 import { startReconciler, stopReconciler } from "./server/reconciler";
 import { startStorageQuotaEnforcer, stopStorageQuotaEnforcer } from "./server/storageQuotaEnforcer";
 import { startRunsReconciler, stopRunsReconciler } from "./server/services/runsReconciler";
-import { closeLocalDatabase, getLocalDatabasePath } from "./server/localStore";
+import { closeLocalDatabase, getLocalDatabasePath, initializeLocalDatabase } from "./server/localStore";
 import { createApplicationHealth } from "./server/appVersion";
 import { isTemplateWorkflowsEnabled } from "./server/utils/templateWorkflowsFeature";
 import { isAdvancedResourceConfigEnabled } from "./server/utils/advancedResourceConfigFeature";
@@ -93,6 +94,8 @@ http:
 
 async function startServer() {
   validateProductionSecurityConfig();
+  // Fail before binding HTTP or starting workers when data is incompatible.
+  initializeLocalDatabase();
 
   if (process.env.DEPLOY_WORKER_MODE === "true") {
     throw new Error("Remote worker mode is not included in the local open-source edition.");
@@ -217,6 +220,7 @@ async function startServer() {
     return res.sendFile(securityTxtPath);
   });
 
+  app.use("/internal/questions", createQuestionBridgeRouter());
   app.use(express.json({ limit: STANDARD_API_JSON_BODY_LIMIT }));
   app.use("/uploads", express.static(path.join(process.cwd(), "data", "uploads"), {
     dotfiles: "deny",

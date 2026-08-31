@@ -6,6 +6,7 @@ export type LocalInstanceReadinessPhase =
   | "ready"
   | "deployment_failed"
   | "chat_auth_or_route_failed"
+  | "readiness_check_failed"
   | "stopped"
   | "unknown";
 
@@ -14,6 +15,7 @@ export type LocalInstanceReadinessInput = {
   physicalStatus?: unknown;
   deploymentError?: unknown;
   modelConfigStatus?: unknown;
+  modelRuntimeStatus?: unknown;
   gatewayStatus?: unknown;
   configuredChannels?: unknown;
   connectedChannels?: unknown;
@@ -24,6 +26,8 @@ export type LocalInstanceReadinessInput = {
     reason?: unknown;
     error?: unknown;
     message?: unknown;
+    checkedAt?: string;
+    probeStatus?: "checked" | "failed";
   } | null;
 };
 
@@ -88,9 +92,9 @@ export function deriveLocalInstanceReadiness(input: LocalInstanceReadinessInput)
   const runtimeReady = input.chat?.runtimeReady === true
     || RUNTIME_READY_STATUSES.has(status)
     || physicalStatus === "running";
-  const chatReady = input.chat?.ready === true && input.chat?.sendable !== false;
+  const chatReady = input.chat?.ready === true && input.chat?.sendable !== false && input.chat?.probeStatus !== "failed";
 
-  if (status === "stopped" || status === "archived") {
+  if (["stopped", "archived", "deleting", "deleted"].includes(status)) {
     return { phase: "stopped", runtimeReady: false, chatReady: false, reason: "INSTANCE_STOPPED", message: null };
   }
 
@@ -98,7 +102,7 @@ export function deriveLocalInstanceReadiness(input: LocalInstanceReadinessInput)
     return { phase: "deploying", runtimeReady: false, chatReady: false, reason: null, message: null };
   }
 
-  if (!runtimeReady && (status === "failed" || status === "unhealthy" || normalize(input.deploymentError))) {
+  if (!runtimeReady && (["failed", "unhealthy", "frontend_missing_build"].includes(status) || normalize(input.deploymentError))) {
     return {
       phase: "deployment_failed",
       runtimeReady: false,
@@ -114,6 +118,10 @@ export function deriveLocalInstanceReadiness(input: LocalInstanceReadinessInput)
 
   if (chatReady) {
     return { phase: "ready", runtimeReady: true, chatReady: true, reason: null, message: chatMessage };
+  }
+
+  if (input.chat?.probeStatus === "failed" || chatReason === "PROBE_FAILED") {
+    return { phase: "readiness_check_failed", runtimeReady, chatReady: false, reason: chatReason || "PROBE_FAILED", message: chatMessage };
   }
 
   if (chatReason && CHAT_AUTH_OR_ROUTE_ERRORS.has(chatReason)) {
@@ -150,4 +158,33 @@ export function deriveLocalInstanceReadiness(input: LocalInstanceReadinessInput)
     reason: chatReason,
     message: chatMessage,
   };
+}
+
+/** A stopped lifecycle wins over a stale container-running observation. GET only. */
+export function canProbeLocalInstanceReadiness(input: LocalInstanceReadinessInput): boolean {
+  const status = normalize(input.status).toLowerCase();
+  if (["stopped", "archived", "deleting", "deleted"].includes(status)) return false;
+  return normalize(input.physicalStatus).toLowerCase() === "running"
+    || RUNTIME_READY_STATUSES.has(status) || ["failed", "unhealthy"].includes(status);
+}
+
+export type LocalReadinessCheckStatus = "ready" | "pending" | "failed" | "unknown" | "configured" | "not_configured" | "partial" | "historical_success" | "stopped";
+export type LocalReadinessCheck = { key: "runtime" | "chat" | "model_config" | "model_response" | "channels"; status: LocalReadinessCheckStatus };
+
+/** These dimensions describe their own evidence; API health is not a model call. */
+export function deriveLocalReadinessChecks(input: LocalInstanceReadinessInput): LocalReadinessCheck[] {
+  const readiness = deriveLocalInstanceReadiness(input);
+  const modelConfig = normalize(input.modelConfigStatus).toLowerCase();
+  const modelRuntime = normalize(input.modelRuntimeStatus).toLowerCase();
+  const configured = input.configuredChannels == null ? null : Number(input.configuredChannels);
+  const connected = input.connectedChannels == null ? null : Number(input.connectedChannels);
+  const stopped = readiness.phase === "stopped";
+  const chatFailure = ["readiness_check_failed", "chat_auth_or_route_failed", "runtime_ready_chat_configuration_required"].includes(readiness.phase);
+  return [
+    { key: "runtime", status: stopped ? "stopped" : readiness.runtimeReady ? "ready" : readiness.phase === "deployment_failed" ? "failed" : readiness.phase === "unknown" ? "unknown" : "pending" },
+    { key: "chat", status: stopped ? "stopped" : readiness.chatReady ? "ready" : !input.chat ? "unknown" : chatFailure ? "failed" : "pending" },
+    { key: "model_config", status: ["failed", "mismatched"].includes(modelConfig) ? "failed" : ["verified", "verified_by_runtime_session"].includes(modelConfig) ? "ready" : ["written", "injected", "verification_auth_required"].includes(modelConfig) ? "configured" : modelConfig === "pending" ? "pending" : "unknown" },
+    { key: "model_response", status: modelRuntime === "callable" ? "historical_success" : modelRuntime === "failed" ? "failed" : "unknown" },
+    { key: "channels", status: stopped ? "stopped" : configured === null || !Number.isFinite(configured) || configured < 0 ? "unknown" : configured === 0 ? "not_configured" : connected === null || !Number.isFinite(connected) || connected < 0 ? "unknown" : connected >= configured ? "ready" : connected > 0 ? "partial" : normalize(input.gatewayStatus) === "channel_adapter_failed" ? "failed" : "pending" },
+  ];
 }

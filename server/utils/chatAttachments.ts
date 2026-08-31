@@ -1,5 +1,5 @@
-import fs from "fs";
 import path from "path";
+import { inspectChatAttachmentFile, readChatAttachmentText } from "../services/chatAttachmentStorage";
 import { getChatAttachmentConfig } from "../config/chatAttachmentConfig";
 import { normalizeMultipartFilename } from "./multipartFilename";
 import {
@@ -115,7 +115,17 @@ export async function loadAndValidateChatAttachments(params: {
   if (resolved.ok === false) {
     throw { status: resolved.status, error: resolved.code, message: "One or more attachments do not exist." };
   }
-  return resolved.files as ChatAttachmentRecord[];
+  const files = resolved.files as ChatAttachmentRecord[];
+  for (const file of files) {
+    try {
+      if (!file.storage_path || !file.filename || path.basename(file.storage_path) !== file.filename) throw new Error("Invalid file identity.");
+      const inspected = await inspectChatAttachmentFile({ instanceId, conversationId, storagePath: file.storage_path });
+      if (!inspected.exists || (file.size != null && inspected.stat.size !== file.size)) throw new Error("Missing or changed file.");
+    } catch {
+      throw { status: 409, error: "ATTACHMENT_UNAVAILABLE", message: "附件已丢失、发生变化或路径无效，请移除后重新上传。" };
+    }
+  }
+  return files;
 }
 
 export async function readAttachmentContent(file: any): Promise<{ content: string | null; error: string | null }> {
@@ -133,14 +143,13 @@ export async function readAttachmentContent(file: any): Promise<{ content: strin
   }
 
   try {
-    const rawContent = await fs.promises.readFile(file.storage_path, "utf8");
-    if (rawContent === "") {
-      return { content: "", error: null };
-    }
-    if (rawContent.length > 12000) {
-      return { content: `${rawContent.substring(0, 12000)}\n\n[内容已截断]`, error: null };
-    }
-    return { content: rawContent, error: null };
+    const result = await readChatAttachmentText({
+      instanceId: file.instance_id,
+      conversationId: file.conversation_id,
+      storagePath: file.storage_path,
+      expectedSize: file.size,
+    });
+    return { content: result.content + (result.truncated ? "\n\n[内容已截断]" : ""), error: null };
   } catch {
     return { content: null, error: "ATTACHMENT_READ_FAILED" };
   }
@@ -156,6 +165,11 @@ export async function processAttachmentsForPrompt(validatedFiles: any[]): Promis
   for (const file of validatedFiles) {
     const displayName = getAttachmentDisplayName(file);
     attachmentContext += `=== 附件: ${displayName} ===\n`;
+
+    if (totalContentLength >= maxTotalLength) {
+      attachmentContext += `[超出总字符数限制，内容被忽略]\n\n`;
+      continue;
+    }
 
     const { content, error } = await readAttachmentContent(file);
 

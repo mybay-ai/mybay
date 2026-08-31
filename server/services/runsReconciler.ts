@@ -1,3 +1,6 @@
+import { mergeLocalFileChanges } from "../../shared/localRunFileEvidence";
+import { createLocalTimelineCollector } from "../../shared/localRunTimeline";
+import { createRunFileSnapshots } from "./runs/runFileSnapshots";
 import { chatRepo } from "../repositories/chatRepo";
 import { emitChatConversationUpdated } from "./chatRealtime";
 import { dbAdapter } from "../db";
@@ -10,7 +13,7 @@ import { EventEmitter } from "events";
 
 import { buildAgentAttachmentContextForPrompt, loadAndValidateChatAttachments } from "../utils/chatAttachments";
 import { MANAGED_OPERATION_SYSTEM_POLICY } from "../utils/managedOperationGuard";
-import { normalizeUsage } from "./usageNormalizer";
+import { createLocalRunUsage } from "../../shared/localRunUsage";
 
 
 import {
@@ -182,13 +185,18 @@ function getRuntimeRunEventController(driver: RuntimeDriver): RuntimeRunEventCon
   return controller;
 }
 const runSseStreamController = createRunSseStreamController();
+const runTimelineCollector = createLocalTimelineCollector();
+const runFileSnapshots = createRunFileSnapshots(event => console.info(JSON.stringify({ operation: "run_file_snapshot", ...event })));
 const runEventCacheController = createRunEventCacheController({
   persistSequence: (runId, sequence, ownerId) =>
     chatRepo.updateChatRun(runId, { last_event_seq: sequence }, ownerId),
   emit: (runId, event) => {
+    runTimelineCollector.add(runId, event);
     runsEventsEmitter.emit(`event:${runId}`, event);
   },
   onClear: (runId) => {
+    runTimelineCollector.clear(runId);
+    runFileSnapshots.clear(runId);
     runSseStreamController.clear(runId);
     for (const controller of runtimeRunEventControllers.values()) controller.clear(runId);
   },
@@ -386,47 +394,9 @@ async function observeRunTerminalUsage(
   effectiveStatus: RunTerminalStatus,
   usage: RunTerminalUsage,
 ): Promise<void> {
-  const latestRun = await chatRepo.getChatRun(runId).catch(() => null);
-  let provider: string | null = null;
-  let model: string | null = null;
-  let sessionId: string | null = null;
-
-  if (latestRun?.conversation_id) {
-    const conv = await chatRepo.getConversationForSessionBinding(latestRun.conversation_id).catch(() => null);
-    if (conv?.session_id) {
-      sessionId = conv.session_id;
-    }
-  }
-
-  if (latestRun?.instance_id) {
-    const inst = await dbAdapter.getInstanceById(latestRun.instance_id).catch(() => null);
-    if (inst) {
-      let cfg: any = {};
-      if (typeof inst.config_json === "string") {
-        try { cfg = JSON.parse(inst.config_json); } catch {}
-      } else if (inst.config_json && typeof inst.config_json === "object") {
-        cfg = inst.config_json;
-      }
-      provider = cfg.provider || cfg.model_provider || inst.model_provider || null;
-      model = cfg.model || cfg.current_model || cfg.MODEL || inst.model_name || null;
-    }
-  }
-
-  const normalizedObserved = normalizeUsage(usage);
   console.log(JSON.stringify({
-    operation: "agent_run_usage_observed",
-    runId,
-    upstreamRunId: latestRun?.upstream_run_id || null,
-    instanceId: latestRun?.instance_id || null,
-    conversationId: latestRun?.conversation_id || null,
-    sessionId: sessionId || latestRun?.session_id || null,
-    provider,
-    model,
-    finalStatus: effectiveStatus,
-    usageSchema: normalizedObserved.usageSchema,
-    rawUsageKeys: normalizedObserved.rawUsageKeys,
-    anomalies: normalizedObserved.anomalies,
-    usage: normalizedObserved,
+    operation: "agent_run_usage_observed", runId, finalStatus: effectiveStatus,
+    usage: createLocalRunUsage(usage),
   }));
 }
 
@@ -444,8 +414,8 @@ export async function completeRun(
   } = {},
 ): Promise<boolean> {
   let completionAudit: Record<string, unknown> | undefined;
+  const run = authorization.runSnapshot || await chatRepo.getChatRun(runId).catch(() => null);
   if (finalStatus === "completed" && !containsDsmlToolCallProtocol(assistantContent)) {
-    const run = authorization.runSnapshot || await chatRepo.getChatRun(runId).catch(() => null);
     const isAlreadyTerminal = ["completed", "failed", "cancelled", "expired"].includes(String(run?.status || ""));
     const claim = isAlreadyTerminal ? null : authorization.response
       ? {
@@ -482,6 +452,10 @@ export async function completeRun(
     }
   }
 
+  const fileChanges = mergeLocalFileChanges(
+    [...runtimeRunEventControllers.values()].flatMap(controller => [...(controller.get(runId)?.completedFileSteps?.values() || [])]),
+  );
+  const fileDiffs = await runFileSnapshots.after(runId, String(run?.conversation_id || ""), fileChanges);
   return terminalizeRun({
     runId,
     finalStatus,
@@ -489,8 +463,12 @@ export async function completeRun(
     errorCode,
     usage,
     durationMs,
+    durationSource: authorization.response ? "local_elapsed" : "runtime",
     expectedUpstreamRunId: authorization.expectedUpstreamRunId,
     completionAudit,
+    timeline: runTimelineCollector.snapshot(runId, String(run?.conversation_id || ""), finalStatus),
+    fileEvidence: { version: 1, runId, changes: fileChanges },
+    fileDiffs,
   }, {
     ownerId: RECONCILER_ID,
     finishRun: (params) => chatRepo.finishChatRun(params),
@@ -716,6 +694,10 @@ export async function processSingleRun(
         return;
       }
 
+      // Snapshot only before the first native dispatch. Recovery must never invent a new preimage.
+      await runFileSnapshots.before(run.id, run.instance_id, nextAttempts === 1);
+      const afterSnapshotRun = await chatRepo.getChatRun(run.id);
+      if (!afterSnapshotRun || afterSnapshotRun.status !== "queued" || !hasValidRunLease(afterSnapshotRun)) return;
       const startTime = Date.now();
       let dispatchRes = await submitRunWithIdempotentRecovery({
         submit: () => runtimeDriver.runs.request({
@@ -1064,13 +1046,5 @@ export async function processSingleRun(
     });
   }
 }
-
-
-
-
-
-
-
-
 
 

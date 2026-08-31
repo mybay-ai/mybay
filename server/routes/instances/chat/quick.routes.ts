@@ -1,3 +1,4 @@
+import { createLocalRunUsage } from "../../../../shared/localRunUsage";
 import { Router, Response } from "express";
 import { AuthenticatedRequest, authenticateToken } from "../../../middlewares/auth";
 import { dbAdapter } from "../../../db";
@@ -386,19 +387,20 @@ export function registerQuickRoutes(router: Router) {
           throw new Error("CHAT_TURN_DSML_LEAK_COMMIT_FAILED");
         }
 
-        const promptTokens = upstreamResponse.usage?.prompt_tokens || null;
-        const compTokens = upstreamResponse.usage?.completion_tokens || null;
-        const totTokens = upstreamResponse.usage?.total_tokens || null;
-        const durMs = upstreamResponse.durationMs || (Date.now() - startTime);
+        const durMs = upstreamResponse.durationMs ?? (Date.now() - startTime);
+        const usageEvidence = createLocalRunUsage(upstreamResponse.usage, {
+          source: "provider_response", durationMs: durMs, durationSource: "local_elapsed",
+        });
 
         const finishResult = await chatRepo.finishChatTurn({
           conversationId,
           userMessageId,
           status: 'completed',
           assistantContent: upstreamResponse.message,
-          usagePromptTokens: promptTokens,
-          usageCompletionTokens: compTokens,
-          usageTotalTokens: totTokens,
+          usageEvidence,
+          usagePromptTokens: usageEvidence.inputTokens,
+          usageCompletionTokens: usageEvidence.outputTokens,
+          usageTotalTokens: usageEvidence.totalTokens,
           durationMs: durMs,
           newSessionId: validatedSessionId
         });

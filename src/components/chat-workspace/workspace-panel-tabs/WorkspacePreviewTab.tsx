@@ -7,7 +7,7 @@ import type { TFunction } from "i18next";
 import type { ConversationFilePreview } from "../useChatWorkspaceFiles";
 import type { PendingAttachment } from "../ChatInputBar";
 import { buildSandboxedHtmlPreviewDocument, HTML_PREVIEW_IFRAME_SANDBOX, isSvgPreviewFile } from "../previewSecurity";
-import { isGeneratedArtifactPreviewable, type GeneratedArtifact } from "../generatedArtifacts";
+import { getGeneratedArtifactActionPath, isGeneratedArtifactPreviewable, type GeneratedArtifact } from "../generatedArtifacts";
 
 type WorkspacePreviewTabProps = {
   t: TFunction;
@@ -304,7 +304,7 @@ export function WorkspacePreviewTab({
                     {useDirectDownloadAction && (
                       <div className="mt-4 flex justify-center gap-2">
                         {conversationFilePreview.source === "instance" && conversationFilePreview.instancePath && onPreviewGeneratedArtifact && (
-                          <button type="button" onClick={() => onPreviewGeneratedArtifact(conversationFilePreview.instancePath!)} className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-surface px-3 py-1.5 text-[12px] font-semibold text-indigo-600 hover:bg-indigo-50 dark:border-indigo-400/30 dark:text-indigo-300 dark:hover:bg-indigo-500/10">
+                          <button type="button" onClick={() => onPreviewGeneratedArtifact(getGeneratedArtifactActionPath({ path: conversationFilePreview.instancePath! }))} className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-surface px-3 py-1.5 text-[12px] font-semibold text-indigo-600 hover:bg-indigo-50 dark:border-indigo-400/30 dark:text-indigo-300 dark:hover:bg-indigo-500/10">
                             <RefreshCw className="h-3.5 w-3.5" />
                             {t("dashboard:chatWorkspace.workspaceVideoRetry")}
                           </button>
@@ -393,7 +393,7 @@ export function WorkspacePreviewTab({
                       key={artifact.path}
                       type="button"
                       disabled={!isGeneratedArtifactPreviewable(artifact)}
-                      onClick={() => onPreviewGeneratedArtifact?.(artifact.path)}
+                      onClick={() => onPreviewGeneratedArtifact?.(getGeneratedArtifactActionPath(artifact))}
                       className="flex w-full items-center gap-3 rounded-lg border border-outline bg-surface-muted p-2 text-left transition-colors hover:border-indigo-200 hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:border-indigo-400/30 dark:hover:bg-indigo-500/10"
                     >
                       <FileText className="h-4 w-4 shrink-0 text-emerald-500" />

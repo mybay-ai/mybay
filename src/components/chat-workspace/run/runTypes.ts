@@ -46,6 +46,8 @@ export interface ToolRunBlock {
   label?: string;
   stepType?: "web_search" | "file_read" | "tool_call" | "model_reasoning" | "final";
   status: "running" | "completed" | "failed";
+  /** The run ended without a terminal event for this tool. Not mutation proof. */
+  completionInferred?: boolean;
   startedAt?: number;
   completedAt?: number;
   durationMs?: number;
@@ -74,6 +76,7 @@ export interface StatusRunBlock {
 export type RunBlock = TextRunBlock | ToolRunBlock | ApprovalRunBlock | StatusRunBlock;
 
 export interface RunExecutionState {
+  timelinePartial?: boolean;
   runId: string;
   conversationId?: string;
   requestId?: string;

@@ -16,7 +16,9 @@ afterEach(() => {
 function createDatabase() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "mybay-ops-"));
   temporaryPaths.push(root);
-  const file = path.join(root, "mybay.sqlite");
+  const data = path.join(root, "data");
+  fs.mkdirSync(data);
+  const file = path.join(data, "mybay.sqlite");
   const db = new DatabaseSync(file);
   db.exec("PRAGMA journal_mode=WAL; CREATE TABLE localMetadata(key TEXT PRIMARY KEY, value TEXT); CREATE TABLE sample(value TEXT); INSERT INTO sample VALUES ('durable');");
   db.prepare("INSERT INTO localMetadata VALUES ('schema_version', ?)").run(String(schemaVersion.current));
@@ -160,7 +162,7 @@ describe("self-host backup operations", () => {
 
   it.skipIf(process.platform === "win32")("restricts backup directories and sensitive files to the owner", async () => {
     const source = createDatabase();
-    const instances = path.join(source.root, "instances", "instance-1");
+    const instances = path.join(path.dirname(source.file), "instances", "instance-1");
     fs.mkdirSync(instances, { recursive: true });
     fs.writeFileSync(path.join(instances, "metadata.json"), "{}");
     const output = path.join(source.root, "backup");

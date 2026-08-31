@@ -1,0 +1,5 @@
+name: oss-local-questions
+version: 1.0.0
+description: Ask structured questions through the local MyBay controller.
+provides_tools:
+  - ask_user

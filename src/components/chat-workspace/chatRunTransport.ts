@@ -24,10 +24,14 @@ export async function createChatRunWithRetry(
     attachmentIds?: string[];
   },
   shouldRetryConcurrency: boolean,
+  isContextCurrent: () => boolean = () => true,
 ) {
   let concurrencyRetries = 0;
   let transientRetries = 0;
   while (true) {
+    if (!isContextCurrent()) {
+      throw new DOMException("Chat request context changed", "AbortError");
+    }
     try {
       return await api.post(`/api/instances/${instanceId}/runs`, payload);
     } catch (error: any) {

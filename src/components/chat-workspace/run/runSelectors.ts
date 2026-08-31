@@ -8,13 +8,17 @@ export function deriveRunAssistantText(state: RunExecutionState): string {
 
 export function findExplicitRunAssistantMessageIndex(messages: ChatMessage[], state: RunExecutionState): number {
   if (state.assistantMessageId) {
-    const byId = messages.findIndex(message => message.role === "assistant" && message.id === state.assistantMessageId);
+    const byId = messages.findIndex(message => message.role === "assistant" && message.id === state.assistantMessageId &&
+      (!state.conversationId || message.conversation_id === state.conversationId));
     if (byId >= 0) return byId;
   }
-  const byRunId = messages.findIndex(message => message.role === "assistant" && message.metadata?.runId === state.runId);
+  const byRunId = messages.findIndex(message => message.role === "assistant" &&
+    (!state.conversationId || message.conversation_id === state.conversationId) &&
+    (message.metadata?.runId === state.runId || message.metadata?.run_id === state.runId));
   if (byRunId >= 0) return byRunId;
   if (state.requestId) {
-    return messages.findIndex(message => message.role === "assistant" && (
+    return messages.findIndex(message => message.role === "assistant" &&
+      (!state.conversationId || message.conversation_id === state.conversationId) && (
       message.request_id === state.requestId || message.metadata?.requestId === state.requestId
     ));
   }

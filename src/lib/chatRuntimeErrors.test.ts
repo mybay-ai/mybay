@@ -14,6 +14,28 @@ describe("chatRuntimeErrors", () => {
     expect(humanizeChatError(new Error("Failed to fetch")).message).toContain("网络连接失败");
   });
 
+  it.each([
+    { code: "UPSTREAM_FAILED", message: "UPSTREAM_FAILED" },
+    { data: { error: "UPSTREAM_FAILED" } },
+    { data: { error_code: "UPSTREAM_FAILED", message: "UPSTREAM_FAILED" } },
+  ])("explains an upstream execution failure without showing only its code", (error) => {
+    const result = humanizeChatError(error);
+    expect(result).toMatchObject({ code: "UPSTREAM_FAILED", known: true });
+    expect(result.message).toContain("Agent 执行失败");
+    expect(result.message).toContain("重试");
+    expect(result.message).not.toBe("UPSTREAM_FAILED");
+  });
+
+  it("keeps upstream diagnostics separate from the actionable failure message", () => {
+    const result = humanizeChatError({
+      code: "UPSTREAM_FAILED",
+      message: "The requested test model does not exist.",
+    });
+    expect(result.message).toContain("模型配置");
+    expect(result.technicalMessage).toBe("The requested test model does not exist.");
+    expect(result.code).toBe("UPSTREAM_FAILED");
+  });
+
   it("preserves structured backend messages instead of replacing them with Bad Request", () => {
     const result = humanizeChatError({
       status: 400,

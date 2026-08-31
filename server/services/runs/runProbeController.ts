@@ -1,9 +1,10 @@
+import { usageWithReportedModel } from "../../../shared/localRunUsage";
 export type TerminalProbeOutcome =
   | {
       status: "completed";
       assistantContent: string;
       usage: Record<string, unknown>;
-      durationMs: number;
+      durationMs: number | null;
     }
   | {
       status: "failed";
@@ -38,7 +39,7 @@ export function hasRunExceededRuntime(createdAt: unknown, maxRuntimeMs: number, 
 
 export function resolveTerminalProbeOutcome(
   payload: unknown,
-  fallbackDurationMs: number,
+  _fallbackDurationMs: number,
 ): TerminalProbeOutcome | null {
   if (!isRecord(payload)) return null;
   const status = payload.status;
@@ -53,13 +54,11 @@ export function resolveTerminalProbeOutcome(
     const assistantContent = primaryContent ||
       (typeof payload.message === "string" ? payload.message : "") ||
       (typeof payload.content === "string" ? payload.content : "");
-    const durationMs = typeof payload.duration_ms === "number" && payload.duration_ms
-      ? payload.duration_ms
-      : fallbackDurationMs;
+    const durationMs = typeof payload.duration_ms === "number" && Number.isSafeInteger(payload.duration_ms) && payload.duration_ms >= 0 ? payload.duration_ms : null;
     return {
       status,
       assistantContent,
-      usage: isRecord(payload.usage) ? payload.usage : {},
+      usage: usageWithReportedModel(isRecord(payload.usage) ? payload.usage : {}, payload.model) as Record<string, unknown>,
       durationMs,
     };
   }

@@ -1,3 +1,4 @@
+import { usageWithReportedModel } from "../../shared/localRunUsage";
 import { providerRegistry } from "../../shared/providerRegistry";
 import { decrypt } from "../crypto";
 import { checkSSRFSafe } from "./ssrfValidator";
@@ -32,6 +33,17 @@ export interface GenerateChatCompletionOptions {
 export interface ChatCompletionResult {
   content: string;
   usage?: any;
+}
+
+function visibleChatCompletion(content: unknown, usage: any, model?: unknown): ChatCompletionResult {
+  // A successful HTTP response is not a successful chat turn without visible text.
+  // Never substitute reasoning text or silently retry a potentially billed request.
+  if (typeof content !== "string" || !content.trim()) {
+    const error = new Error("模型未返回可显示的回复，请重试或更换模型；如需生成文件，请使用 Agent 模式。");
+    (error as Error & { code: string }).code = "LLM_EMPTY_RESPONSE";
+    throw error;
+  }
+  return { content, usage: usageWithReportedModel(usage || null, model) };
 }
 
 /**
@@ -177,7 +189,7 @@ export async function readOAuthResponsesStream(response: Response): Promise<Chat
     if (done) break;
   }
   if (buffer.trim()) consumeEvent(buffer);
-  return { content, usage: usage || null };
+  return visibleChatCompletion(content, usage);
 }
 
 async function assertSafeLLMRequestUrl(url: string): Promise<void> {
@@ -331,30 +343,18 @@ export async function generateChatCompletion(
 
     if (strategy === "anthropic-messages") {
       if (resJson.content && Array.isArray(resJson.content)) {
-        return {
-          content: resJson.content.map((pt: any) => pt.text || "").join("\n"),
-          usage: resJson.usage || null
-        };
+        return visibleChatCompletion(resJson.content.map((pt: any) => pt.text || "").join("\n"), resJson.usage, resJson.model);
       }
       throw new Error("Anthropic 接口响应结构解析失败");
     } else if (strategy === "gemini-generate-content") {
       const parts = resJson.candidates?.[0]?.content?.parts;
       if (Array.isArray(parts)) {
-        return {
-          content: parts.map((pt: any) => pt.text || "").join(""),
-          usage: resJson.usageMetadata || null
-        };
+        return visibleChatCompletion(parts.map((pt: any) => pt.text || "").join(""), resJson.usageMetadata, resJson.modelVersion);
       }
       throw new Error("Gemini 接口响应结构解析失败");
     } else {
       const choiceText = resJson.choices?.[0]?.message?.content;
-      if (typeof choiceText === "string") {
-        return {
-          content: choiceText,
-          usage: resJson.usage || null
-        };
-      }
-      throw new Error("OpenAI 规格接口未返回有效的 choices[0].message.content 文本内容");
+      return visibleChatCompletion(choiceText, resJson.usage);
     }
   } catch (err: any) {
     if (err.name === "AbortError") {

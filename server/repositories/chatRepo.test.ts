@@ -3,8 +3,61 @@ import path from "path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { closeLocalDatabase, mutateStore, readStore } from "../localStore";
 import { chatRepo, encodeConversationCursor } from "./chatRepo";
+import { createLocalRunTimeline } from "../../shared/localRunTimeline";
+import { createLocalRunUsage } from "../../shared/localRunUsage";
 
 describe("chatRepo local status contract", () => {
+  it("persists usage across reopen, with no accumulation, cross-conversation leakage or late overwrite", async () => {
+    const c = await chatRepo.createConversation("u", "i", "Usage");
+    const other = await chatRepo.createConversation("u", "i", "Other");
+    await chatRepo.beginChatRun({ conversationId: c.id, userId: "u", instanceId: "i", content: "test", requestId: "usage-req", runId: "usage-run" });
+    const usageEvidence = createLocalRunUsage({ total_tokens: 100, cache_read_tokens: 0, scope: "session" });
+    expect((await chatRepo.finishChatRun({ runId: "usage-run", status: "completed", reconcilerId: "wrong", usageEvidence })).status).toBe("lease_lost");
+    expect((await chatRepo.getChatRun("usage-run")).usage_evidence).toBeUndefined();
+    await chatRepo.finishChatRun({ runId: "usage-run", status: "completed", usageEvidence });
+    await chatRepo.finishChatRun({ runId: "usage-run", status: "completed", usageEvidence: createLocalRunUsage({ total_tokens: 999 }) });
+    closeLocalDatabase();
+    expect((await chatRepo.getChatRun("usage-run")).usage_evidence).toEqual(usageEvidence);
+    const messages = await chatRepo.listMessages(c.id, 100);
+    expect(messages.filter(m => m.role === "assistant")).toHaveLength(1);
+    expect(messages.find(m => m.role === "assistant")?.metadata?.usage_evidence).toEqual(usageEvidence);
+    expect(await chatRepo.listMessages(other.id, 100)).toEqual([]);
+  });
+  it("saves Quick response evidence once without changing legacy records", async () => {
+    const c = await chatRepo.createConversation("u", "i", "Quick usage");
+    const turn = await chatRepo.beginChatTurn({ conversationId: c.id, userId: "u", instanceId: "i", content: "test", requestId: "quick-usage" });
+    const usageEvidence = createLocalRunUsage({ total_tokens: 0, model: "reported-model" }, { source: "provider_response" });
+    const input = { conversationId: c.id, userMessageId: turn.message_id!, status: "completed" as const, assistantContent: "done", usageEvidence };
+    await chatRepo.finishChatTurn(input);
+    expect((await chatRepo.finishChatTurn(input)).status).toBe("TURN_NOT_PENDING");
+    closeLocalDatabase();
+    expect((await chatRepo.listMessages(c.id, 100)).find(m => m.role === "assistant")?.metadata?.usage_evidence).toEqual(usageEvidence);
+  });
+  it("persists file snapshots with terminal state, keeps content out of messages, and rejects late replacement", async () => {
+    const c = await chatRepo.createConversation("u", "i", "Diff");
+    await chatRepo.beginChatRun({ conversationId: c.id, userId: "u", instanceId: "i", content: "test", requestId: "diff-req", runId: "diff-run" });
+    const fileDiffs = { version: 1 as const, runId: "diff-run", conversationId: c.id, capturedBefore: new Date().toISOString(), capturedAfter: new Date().toISOString(), files: [{ path: "a.txt", before: "PREIMAGE", after: "POSTIMAGE" }] };
+    expect((await chatRepo.finishChatRun({ runId: "diff-run", status: "completed", reconcilerId: "wrong-lease", fileDiffs })).status).toBe("lease_lost");
+    expect((await chatRepo.getChatRun("diff-run")).file_diffs).toBeUndefined();
+    await chatRepo.finishChatRun({ runId: "diff-run", status: "completed", fileDiffs });
+    closeLocalDatabase();
+    expect((await chatRepo.getChatRun("diff-run")).file_diffs).toEqual(fileDiffs);
+    expect(JSON.stringify(readStore().chatMessages)).not.toContain("PREIMAGE");
+    await chatRepo.finishChatRun({ runId: "diff-run", status: "completed", fileDiffs: { ...fileDiffs, files: [] } });
+    expect((await chatRepo.getChatRun("diff-run")).file_diffs).toEqual(fileDiffs);
+  });
+  it("persists a terminal timeline atomically and does not overwrite it on a late completion", async () => {
+    const c = await chatRepo.createConversation("u", "i", "Timeline");
+    await chatRepo.beginChatRun({ conversationId: c.id, userId: "u", instanceId: "i", content: "test", requestId: "timeline-req", runId: "timeline-run" });
+    const timeline = createLocalRunTimeline({ runId: "timeline-run", conversationId: c.id, status: "completed", events: [{ id: 1, event: "text", data: "Final" }] });
+    await chatRepo.finishChatRun({ runId: "timeline-run", status: "cancelled", assistantContent: "Final", timeline });
+    closeLocalDatabase();
+    const message = readStore().chatMessages.find(m => m.role === "assistant");
+    expect(message?.metadata.run_timeline).toEqual({ ...timeline, status: "cancelled" });
+    await chatRepo.finishChatRun({ runId: "timeline-run", status: "completed", timeline: { ...timeline, events: [] } });
+    expect(readStore().chatMessages.filter(m => m.role === "assistant")).toHaveLength(1);
+    expect(readStore().chatMessages.find(m => m.role === "assistant")?.metadata.run_timeline.status).toBe("cancelled");
+  });
   const relativeStorePath = "data/test-chat-repo-store.json";
   const storePath = path.resolve(process.cwd(), relativeStorePath.replace(/\.json$/i, "") + ".sqlite");
 
@@ -65,6 +118,20 @@ describe("chatRepo local status contract", () => {
       requestId: "request-1",
     });
     expect(duplicate.status).toBe("DUPLICATE_REQUEST_ID");
+  });
+
+  it("returns failed_logged after persisting a failed synchronous turn", async () => {
+    const conversation = await chatRepo.createConversation("user-1", "instance-1", "Failure");
+    const started = await chatRepo.beginChatTurn({ conversationId: conversation.id, userId: "user-1", instanceId: "instance-1", content: "hello", requestId: "failure-1" });
+    const result = await chatRepo.finishChatTurn({ conversationId: conversation.id, userMessageId: started.message_id!, status: "failed", errorCode: "DIRECT_MODEL_CHAT_FAILED" });
+    expect(result.status).toBe("failed_logged");
+    expect(readStore().chatMessages.filter(message => message.conversation_id === conversation.id)).toEqual([
+      expect.objectContaining({ role: "user", status: "failed", error_code: "DIRECT_MODEL_CHAT_FAILED" }),
+      expect.objectContaining({ role: "assistant", status: "failed", error_code: "DIRECT_MODEL_CHAT_FAILED" }),
+    ]);
+    const duplicate = await chatRepo.finishChatTurn({ conversationId: conversation.id, userMessageId: started.message_id!, status: "failed", errorCode: "OTHER" });
+    expect(duplicate.status).toBe("TURN_NOT_PENDING");
+    expect(readStore().chatMessages.filter(message => message.conversation_id === conversation.id)).toHaveLength(2);
   });
 
   it("expires a stale pending turn before accepting the next request", async () => {
@@ -173,6 +240,43 @@ describe("chatRepo local status contract", () => {
     const finished = await chatRepo.finishChatRun({ runId: "run-1", status: "completed", assistantContent: "done", expectedUpstreamRunId: "upstream-1" });
     expect(finished.status).toBe("success");
     expect((await chatRepo.finishChatRun({ runId: "run-1", status: "completed" })).status).toBe("already_terminal");
+  });
+
+  it.each(["cancelled", "failed", "expired"] as const)(
+    "does not replay the user instruction of a %s run as completed context",
+    async (status) => {
+      const conversation = await chatRepo.createConversation("user-1", "instance-1", "Context");
+      const successful = await chatRepo.beginChatTurn({ conversationId: conversation.id, userId: "user-1", instanceId: "instance-1", content: "Remember FILE-MARKER", requestId: "success" });
+      await chatRepo.finishChatTurn({ conversationId: conversation.id, userMessageId: successful.message_id!, status: "completed", assistantContent: "FILE-MARKER remembered" });
+      const stopped = await chatRepo.beginChatRun({ conversationId: conversation.id, userId: "user-1", instanceId: "instance-1", content: "Wait then reply WAIT-DONE", requestId: "stopped", runId: "stopped" });
+      await chatRepo.finishChatRun({ runId: "stopped", status, assistantContent: "Partial stopped output", errorCode: "STOPPED" });
+
+      // Existing databases intentionally retain a completed user row for failed runs.
+      expect((await chatRepo.getMessage(stopped.user_message_id!))?.status).toBe("completed");
+      const context = await chatRepo.getLatestCompletedMessagesForContext(conversation.id, 2);
+      expect(context.map(message => message.content)).toEqual(["Remember FILE-MARKER", "FILE-MARKER remembered"]);
+      expect(context.some(message => message.request_id === "stopped")).toBe(false);
+      // Context filtering must not delete or rewrite the visible transcript.
+      expect(await chatRepo.listMessages(conversation.id)).toHaveLength(4);
+
+      await chatRepo.beginChatRun({ conversationId: conversation.id, userId: "user-1", instanceId: "instance-1", content: "Read the file marker", requestId: "follow-up", runId: "follow-up" });
+      await chatRepo.finishChatRun({ runId: "follow-up", status: "completed", assistantContent: "FILE-MARKER" });
+      expect((await chatRepo.getLatestCompletedMessagesForContext(conversation.id, 2)).map(message => message.content)).toEqual(["Read the file marker", "FILE-MARKER"]);
+    },
+  );
+
+  it("scopes failed-turn context filtering to the conversation and preserves unpaired legacy history", async () => {
+    const conversation = await chatRepo.createConversation("user-1", "instance-1", "Context");
+    const foreign = await chatRepo.createConversation("user-2", "instance-2", "Foreign");
+    const successful = await chatRepo.beginChatTurn({ conversationId: conversation.id, userId: "user-1", instanceId: "instance-1", content: "Keep this", requestId: "shared-request" });
+    await chatRepo.finishChatTurn({ conversationId: conversation.id, userMessageId: successful.message_id!, status: "completed", assistantContent: "Kept" });
+    const failed = await chatRepo.beginChatTurn({ conversationId: foreign.id, userId: "user-2", instanceId: "instance-2", content: "Foreign failure", requestId: "shared-request" });
+    await chatRepo.finishChatTurn({ conversationId: foreign.id, userMessageId: failed.message_id!, status: "failed" });
+    mutateStore(data => {
+      data.chatMessages.push({ ...data.chatMessages[0], id: "legacy", request_id: undefined, sequence_no: 3, content: "Legacy context" });
+      data.chatMessages.push({ ...data.chatMessages[0], id: "legacy-failure", request_id: undefined, sequence_no: 4, role: "assistant", status: "failed", content: "" });
+    });
+    expect((await chatRepo.getLatestCompletedMessagesForContext(conversation.id)).map(message => message.content)).toEqual(["Keep this", "Kept", "Legacy context"]);
   });
 
   it("rejects mutation of a persisted Run Binding", async () => {
@@ -310,4 +414,60 @@ describe("chatRepo local status contract", () => {
     const next = await chatRepo.listConversations("user-1", "instance-1", 10, `2026-01-02T00:00:00.000Z|${second.id}`);
     expect(next.map(item => item.id)).toEqual([first.id]);
   });
+  it("persists bounded run-bound file evidence through a SQLite reopen", async () => {
+    const conversation = await chatRepo.createConversation("user", "agent", "Evidence");
+    await chatRepo.beginChatRun({ conversationId: conversation.id, userId: "user", instanceId: "agent", content: "edit", requestId: "proof-request", runId: "proof-run" });
+    await chatRepo.finishChatRun({ runId: "proof-run", status: "completed", assistantContent: "done", fileEvidence: {
+      version: 1, runId: "proof-run", changes: [{ path: "report.html", kind: "modified" }, { path: "/opt/data/.env", kind: "modified" }],
+    } });
+    closeLocalDatabase();
+    const evidence = { version: 1, runId: "proof-run", changes: [{ path: "report.html", kind: "modified" }] };
+    expect(readStore().chatMessages.find(message => message.role === "assistant")?.metadata.file_evidence).toEqual(evidence);
+    expect((await chatRepo.getChatRun("proof-run")).file_evidence).toEqual(evidence);
+    await chatRepo.finishChatRun({ runId: "proof-run", status: "completed", fileEvidence: { version: 1, runId: "other", changes: [{ path: "wrong.html", kind: "added" }] } });
+    expect((await chatRepo.getChatRun("proof-run")).file_evidence).toEqual(evidence);
+  });
+
+  it("places relative to the complete persisted history and survives reopening", async () => {
+    const rows = [];
+    for (let i = 0; i < 25; i++) rows.push(await chatRepo.createConversation("u", "i", `Chat ${i}`));
+    await chatRepo.reorderConversations("u", "i", rows.map(c => c.id));
+    await chatRepo.placeConversation("u", "i", { conversationId: rows[0].id, targetId: rows[1].id, section: { kind: "recent" }, position: "after" });
+    closeLocalDatabase();
+    expect((await chatRepo.listConversations("u", "i", 100)).map(c => c.id)).toEqual([rows[1].id, rows[0].id, ...rows.slice(2).map(c => c.id)]);
+    await chatRepo.placeConversation("u", "i", { conversationId: rows[0].id, targetId: null, section: { kind: "recent" }, position: "after" });
+    expect((await chatRepo.listConversations("u", "i", 100)).at(-1)?.id).toBe(rows[0].id);
+  });
+
+  it("atomically moves into projects, pins while retaining membership, and returns to recent", async () => {
+    const project = await chatRepo.createProject("u", "i", "Project");
+    const source = await chatRepo.createConversation("u", "i", "Source");
+    const move = (section: any) => chatRepo.placeConversation("u", "i", { conversationId: source.id, targetId: null, section, position: "after" });
+    await move({ kind: "project", projectId: project.id });
+    expect(await chatRepo.getConversation("u", source.id)).toMatchObject({ project_id: project.id, pinned_at: null });
+    await move({ kind: "pinned" });
+    expect(await chatRepo.getConversation("u", source.id)).toMatchObject({ project_id: project.id, pinned_at: expect.any(String) });
+    await move({ kind: "recent" });
+    expect(await chatRepo.getConversation("u", source.id)).toMatchObject({ project_id: null, pinned_at: null, title: "Source" });
+  });
+
+  it("rejects cross-instance, cross-owner, archived project and stale-target drops without partial writes", async () => {
+    const source = await chatRepo.createConversation("u", "i", "Source");
+    const foreign = await chatRepo.createConversation("u", "other", "Foreign");
+    const alien = await chatRepo.createConversation("other-user", "i", "Alien");
+    const project = await chatRepo.createProject("u", "other", "Foreign project");
+    const archived = await chatRepo.createProject("u", "i", "Archived");
+    await chatRepo.archiveProject("u", "i", archived.id);
+    const pinned = await chatRepo.createConversation("u", "i", "Pinned");
+    await chatRepo.updateConversationOrganization("u", pinned.id, { pinnedAt: new Date().toISOString() });
+    const before = structuredClone(readStore());
+    for (const patch of [
+      { conversationId: foreign.id }, { conversationId: alien.id }, { targetId: foreign.id }, { targetId: pinned.id },
+      { section: { kind: "project", projectId: project.id } }, { section: { kind: "project", projectId: archived.id } },
+    ]) {
+      await expect(chatRepo.placeConversation("u", "i", { conversationId: source.id, targetId: null, section: { kind: "recent" }, position: "after", ...patch } as any)).rejects.toThrow("CONVERSATION_ORDER_INVALID");
+      expect(readStore()).toEqual(before);
+    }
+  });
+
 });

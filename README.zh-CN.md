@@ -12,7 +12,7 @@
 
 语言：[English](./README.md) | [简体中文](./README.zh-CN.md)
 
-> **发布状态：`v0.1.24`。** 在 0.x 阶段，公共接口、Runtime Adapter、部署细节与升级行为仍可能调整。
+> **发布状态：`v0.1.25`。** 在 0.x 阶段，公共接口、Runtime Adapter、部署细节与升级行为仍可能调整。
 
 | Runtime | 支持状态 |
 | --- | --- |
@@ -57,6 +57,8 @@ Set-ExecutionPolicy -Scope Process Bypass
 ```
 
 打开 [http://localhost:3000](http://localhost:3000)，使用本机 `.env` 中保存的管理员账号登录，添加模型供应商，然后部署第一个 Hermes Agent 实例。不要分享或提交 `.env`。
+
+第一次尝试生成文件时，请在对话输入框旁切换为“Agent模式”。默认的“快速模式”只回复文字，不执行工具或保存文件。
 
 如果需要在 Windows 自动安装 Docker、局域网访问、公网 HTTPS、手动 Compose 或开发模式，请继续查看[其他部署方式](#其他部署方式)，或阅读完整的 **[10 分钟部署第一个 Agent](./docs/QUICKSTART.zh-CN.md)** 教程。
 

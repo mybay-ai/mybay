@@ -1,6 +1,7 @@
 import path from "path";
 import fs from "fs";
 import yaml from "js-yaml";
+import { preserveLocalQuestionPlugin } from "./services/runs/questionBridgeInstaller";
 import { providerRegistry } from "../shared/providerRegistry";
 import { resolveProviderRegistryKey } from "../shared/providerRegistryUtils";
 import { buildProviderRuntimeEnv, buildHermesModelConfig } from "./providerEnv";
@@ -796,6 +797,7 @@ dashboard:
         ...(hermesModelConfigResult.configYaml.providers || {})
       };
       const cleanedObj = cleanYamlObject(parsedObj) as any;
+      preserveLocalQuestionPlugin(instanceId, cleanedObj);
 
       if (config.nativeDashboardBasicAuthEnabled === true) {
         const dbAuth = cleanedObj.dashboard?.basic_auth;

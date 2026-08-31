@@ -123,7 +123,7 @@ export function defineRuntimeDriverContract(
       const second = driver.events.createController(createEventDependencies());
       const tracker = first.getOrCreate("run-contract", 42);
 
-      expect(tracker).toEqual({
+      expect(tracker).toMatchObject({
         lastPartialOutput: "",
         sentSteps: new Map(),
         activeToolIds: new Map(),

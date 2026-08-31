@@ -15,7 +15,7 @@ import {
   getIdempotencyRecord,
   getPortReservation,
   listDeploymentTasksCore,
-  mutateStore, nowIso, paginate, readStore,
+  mutateStore, mutateStoreCollections, nowIso, paginate, readStore, readStoreCollections,
   releasePortReservation,
   reservePortForInstance,
   renewDeploymentLease,
@@ -65,11 +65,11 @@ export function retainNewestInstanceRows(collection: any[], instanceId: string, 
 export const dbAdapter = {
   async getUserByUsername(username: string) {
     const normalized = normalizeUsername(username);
-    return readStore().users.find((u) => u.username_normalized === normalized || normalizeUsername(u.username) === normalized) || null;
+    return readStoreCollections(["users"]).users.find((u) => u.username_normalized === normalized || normalizeUsername(u.username) === normalized) || null;
   },
 
   async getUserById(id: string) {
-    return readStore().users.find((u) => u.id === id) || null;
+    return readStoreCollections(["users"]).users.find((u) => u.id === id) || null;
   },
 
 
@@ -127,7 +127,7 @@ export const dbAdapter = {
   fromInstanceDbRow(row: any) { return row; },
 
   async getAllInstances() {
-    return readStore().instances.filter((i) => !i.archived_at);
+    return readStoreCollections(["instances"]).instances.filter((i) => !i.archived_at);
   },
 
   async getInstances(userId: string, role: string) {
@@ -136,11 +136,11 @@ export const dbAdapter = {
   },
 
   async getInstanceById(id: string) {
-    return readStore().instances.find((i) => i.id === id) || null;
+    return readStoreCollections(["instances"]).instances.find((i) => i.id === id) || null;
   },
 
   async getInstanceByPath(instancePath: string) {
-    return readStore().instances.find((i) => i.path === instancePath || i.instance_path === instancePath) || null;
+    return readStoreCollections(["instances"]).instances.find((i) => i.path === instancePath || i.instance_path === instancePath) || null;
   },
 
   async createInstance(instance: any) {
@@ -158,7 +158,9 @@ export const dbAdapter = {
   async updateInstanceStatus(id: string, status: string) { return this.updateInstanceRecord(id, { status }); },
 
   async updateInstanceRecord(id: string, updates: any) {
-    return mutateStore((data) => {
+    // Reconciliation runs for every instance, including idle ones. Do not
+    // rewrite chat history and all other collections for each heartbeat.
+    return mutateStoreCollections(["instances"], (data) => {
       const inst = data.instances.find((i) => i.id === id);
       if (inst) Object.assign(inst, updates, { updated_at: nowIso() });
       return inst || null;
@@ -247,6 +249,16 @@ export const dbAdapter = {
   async deleteCredential(id: string, userId: string) { return mutateStore((data) => { data.credentials = data.credentials.filter((c) => !(c.id === id && (c.user_id === userId || c.owner_id === userId))); return { changes: 1 }; }); },
 
   async createFileRecord(file: any) { return mutateStore((data) => upsertById(data.files, { deleted_at: null, ...file })); },
+  async findChatUpload(ownerId: string, instanceId: string, conversationId: string, uploadId: string) {
+    return readStoreCollections(["files"]).files.find((f) => f.owner_id === ownerId && f.instance_id === instanceId && f.conversation_id === conversationId && f.upload_request_id === uploadId) || null;
+  },
+  async createChatUploadOnce(file: any) {
+    return mutateStoreCollections(["files"], (data) => {
+      const existing = data.files.find((f) => f.owner_id === file.owner_id && f.instance_id === file.instance_id && f.conversation_id === file.conversation_id && f.upload_request_id === file.upload_request_id);
+      if (existing) return { file: existing, created: false };
+      return { file: upsertById(data.files, { deleted_at: null, ...file }), created: true };
+    });
+  },
   async getFileRecordById(id: string) { return readStore().files.find((f) => f.id === id) || null; },
   async updateFileRecord(id: string, updates: any) { return mutateStore((data) => { const file = data.files.find((f) => f.id === id); if (file) Object.assign(file, updates, { updated_at: nowIso() }); return file || null; }); },
   async deleteFileRecord(id: string) { return mutateStore((data) => { data.files = data.files.filter((f) => f.id !== id); }); },

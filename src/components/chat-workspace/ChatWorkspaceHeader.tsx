@@ -120,7 +120,7 @@ export function ChatWorkspaceHeader({
               {groupedInstances.unready.length > 0 && (
                 <optgroup label={t("dashboard:chatWorkspace.externalChannelInstances")}>
                   {groupedInstances.unready.map((inst) => (
-                    <option key={inst.id} value={inst.id} disabled={groupedInstances.ready.length > 0}>{getInstanceDropdownLabel(inst)}</option>
+                    <option key={inst.id} value={inst.id}>{getInstanceDropdownLabel(inst)}</option>
                   ))}
                 </optgroup>
               )}

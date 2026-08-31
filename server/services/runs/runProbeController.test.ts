@@ -39,7 +39,7 @@ describe("run probe controller decisions", () => {
       status: "completed",
       assistantContent: "fallback",
       usage: {},
-      durationMs: 10,
+      durationMs: null,
     });
   });
 

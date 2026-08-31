@@ -107,10 +107,12 @@ If the instance is running but chat is still initializing, allow the startup che
 
 ## 8. Start a conversation
 
-Open the instance chat workspace and send a small test request, for example:
+Open the instance chat workspace and select your instance. Before requesting a file, open the **Quick mode** selector beside the message input and switch to **Agent mode**. Quick mode only replies with model-generated text; it does not run tools or save files. Agent mode runs the task through Hermes.
+
+Send a small test request, for example:
 
 ```text
-Create a simple self-contained HTML status page and explain which file you generated.
+Create and save mybay-first-task.html in the current workspace. Make it a self-contained HTML status page with no external resources, include MYBAY-FIRST-TASK-OK in the body, and return a link to the file. Do not change other files.
 ```
 
 During the run you can inspect streaming output, execution steps, elapsed time, generated-file cards, file changes, and the Result workspace. Select the generated file to preview or download it. Preview support depends on the file type and, for video, the browser-supported codec.

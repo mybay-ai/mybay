@@ -1,3 +1,10 @@
+import { placeConversation, type ConversationPlacement } from "../../shared/localConversationPlacement";
+import { readLocalRunUsage, type LocalRunUsage } from "../../shared/localRunUsage";
+import { settleRunQuestions } from "../../shared/localRunQuestions";
+import { readLocalFileEvidence, type LocalFileEvidence } from "../../shared/localRunFileEvidence";
+import { readLocalRunTimeline, type LocalRunTimeline } from "../../shared/localRunTimeline";
+import type { LocalRunFileDiffs } from "../../shared/localRunFileDiff";
+import { pruneRunFileDiffs, validateRunFileDiffs } from "../services/runs/runFileSnapshots";
 import { randomUUID } from "crypto";
 import {
   mutateStore,
@@ -295,6 +302,23 @@ export const chatRepo = {
       .map(({ score: _score, ...result }) => result);
   },
 
+  async placeConversation(userId: string, instanceId: string, placement: ConversationPlacement): Promise<Conversation[]> {
+    return mutateStoreCollections(["conversations", "chatProjects"] as const, data => {
+      const scoped = data.conversations.filter(c => c.user_id === userId && c.instance_id === instanceId).sort(compareConversationOrder);
+      const projectIds = data.chatProjects.filter(p => p.user_id === userId && p.instance_id === instanceId && !p.is_archived).map(p => p.id);
+      const now = nowIso();
+      const ordered = placeConversation(scoped, projectIds, placement, now);
+      const byId = new Map(ordered.map(c => [c.id, c]));
+      for (const row of scoped) {
+        const next = byId.get(row.id)!;
+        if (row.sort_order !== next.sort_order || row.project_id !== next.project_id || row.pinned_at !== next.pinned_at) {
+          Object.assign(row, { sort_order: next.sort_order, project_id: next.project_id, pinned_at: next.pinned_at, updated_at: now });
+        }
+      }
+      return scoped.sort(compareConversationOrder);
+    });
+  },
+
   async reorderConversations(userId: string, instanceId: string, orderedIds: string[]): Promise<Conversation[]> {
     return mutateStore((data) => {
       assertUniqueIds(orderedIds, "CONVERSATION_ORDER_INVALID");
@@ -384,8 +408,16 @@ export const chatRepo = {
     limit = CHAT_CONTEXT_MESSAGE_LIMIT,
     maxChars = CHAT_CONTEXT_CHAR_BUDGET
   ): Promise<ChatMessage[]> {
-    const rows = readStoreCollections(["chatMessages"] as const).chatMessages
-      .filter((m) => m.conversation_id === conversationId && m.status === "completed")
+    const messages = readStoreCollections(["chatMessages"] as const).chatMessages
+      .filter((m) => m.conversation_id === conversationId);
+    // Failed/cancelled async runs retain a completed user row for the UI. Do not
+    // replay that orphaned instruction when the failed assistant row is omitted.
+    // Filter before limiting so failed turns cannot crowd out useful context.
+    const failedRequestIds = new Set(messages
+      .filter((m) => m.role === "assistant" && m.status === "failed" && m.request_id)
+      .map((m) => m.request_id));
+    const rows = messages
+      .filter((m) => m.status === "completed" && !failedRequestIds.has(m.request_id))
       .sort((a, b) => Number(b.sequence_no || 0) - Number(a.sequence_no || 0))
       .slice(0, limit)
       .reverse();
@@ -434,7 +466,7 @@ export const chatRepo = {
     });
   },
 
-  async finishChatTurn(params: { conversationId: string; userMessageId: string; status: 'completed' | 'failed'; assistantContent?: string; errorCode?: string; usagePromptTokens?: number; usageCompletionTokens?: number; usageTotalTokens?: number; durationMs?: number; newSessionId?: string; }): Promise<{ status: string; assistant_message_id: string | null; assistant_sequence_no: number | null }> {
+  async finishChatTurn(params: { conversationId: string; userMessageId: string; status: 'completed' | 'failed'; assistantContent?: string; errorCode?: string; usagePromptTokens?: number; usageCompletionTokens?: number; usageTotalTokens?: number; durationMs?: number; newSessionId?: string; usageEvidence?: LocalRunUsage; }): Promise<{ status: string; assistant_message_id: string | null; assistant_sequence_no: number | null }> {
     return mutateStore((data) => {
       const userMsg = data.chatMessages.find((m: any) => m.id === params.userMessageId && m.conversation_id === params.conversationId);
       if (!userMsg || userMsg.status !== "pending") return { status: "TURN_NOT_PENDING", assistant_message_id: null, assistant_sequence_no: null };
@@ -443,9 +475,11 @@ export const chatRepo = {
       userMsg.error_code = params.errorCode ?? null;
       userMsg.updated_at = now;
       const assistant = { id: randomUUID(), conversation_id: params.conversationId, instance_id: userMsg.instance_id, role: "assistant", content: params.assistantContent ?? "", status: params.status, sequence_no: nextSequence(data.chatMessages, params.conversationId), request_id: userMsg.request_id, error_code: params.errorCode ?? null, usage_prompt_tokens: params.usagePromptTokens ?? null, usage_completion_tokens: params.usageCompletionTokens ?? null, usage_total_tokens: params.usageTotalTokens ?? null, duration_ms: params.durationMs ?? null, metadata: {}, created_at: now, updated_at: now };
+      const usageEvidence = readLocalRunUsage(params.usageEvidence);
+      if (usageEvidence) Object.assign(assistant.metadata, { usage_evidence: usageEvidence });
       data.chatMessages.push(assistant);
       touchConversation(data, params.conversationId, params.newSessionId ? { session_id: params.newSessionId, last_message_at: now } : { last_message_at: now });
-      return { status: "success", assistant_message_id: assistant.id, assistant_sequence_no: assistant.sequence_no };
+      return { status: params.status === "failed" ? "failed_logged" : "success", assistant_message_id: assistant.id, assistant_sequence_no: assistant.sequence_no };
     });
   },
 
@@ -523,6 +557,7 @@ export const chatRepo = {
       if (!run) return { status: "run_not_found", run_status: null };
       if (["completed", "failed", "cancelled", "expired"].includes(run.status)) return { status: "already_terminal", run_status: run.status };
       Object.assign(run, { status: "stopping", stop_attempts: Number(run.stop_attempts || 0) + 1, stop_requested_at: nowIso(), updated_at: nowIso() });
+      if (run.local_questions) run.local_questions = settleRunQuestions(run);
       return { status: "stop_requested", run_status: "stopping" };
     });
   },
@@ -560,7 +595,7 @@ export const chatRepo = {
     });
   },
 
-  async finishChatRun(params: { runId: string; status: 'completed' | 'failed' | 'cancelled' | 'expired'; assistantContent?: string; errorCode?: string; usagePromptTokens?: number | null; usageCompletionTokens?: number | null; usageTotalTokens?: number | null; durationMs?: number | null; reconcilerId?: string; expectedUpstreamRunId?: string; completionAudit?: Record<string, unknown>; }): Promise<{ status: string; assistant_message_id: string | null; assistant_sequence_no: number | null }> {
+  async finishChatRun(params: { runId: string; status: 'completed' | 'failed' | 'cancelled' | 'expired'; assistantContent?: string; errorCode?: string; usagePromptTokens?: number | null; usageCompletionTokens?: number | null; usageTotalTokens?: number | null; durationMs?: number | null; reconcilerId?: string; expectedUpstreamRunId?: string; completionAudit?: Record<string, unknown>; fileEvidence?: LocalFileEvidence; timeline?: LocalRunTimeline; fileDiffs?: LocalRunFileDiffs; usageEvidence?: LocalRunUsage; }): Promise<{ status: string; assistant_message_id: string | null; assistant_sequence_no: number | null }> {
     return mutateStoreCollections(["conversations", "chatMessages", "chatRuns"] as const, (data) => {
       const run = data.chatRuns.find((r: any) => r.id === params.runId);
       if (!run) return { status: "run_not_found", assistant_message_id: null, assistant_sequence_no: null };
@@ -568,12 +603,23 @@ export const chatRepo = {
       if (params.reconcilerId && (run.reconciled_by !== params.reconcilerId || !run.lease_expires_at || new Date(run.lease_expires_at).getTime() <= Date.now())) return { status: "lease_lost", assistant_message_id: null, assistant_sequence_no: null };
       if (params.expectedUpstreamRunId && (run.upstream_run_id !== params.expectedUpstreamRunId || !["running", "stopping"].includes(run.status))) return { status: "upstream_run_mismatch", assistant_message_id: null, assistant_sequence_no: null };
       const now = nowIso();
+      const fileChanges = readLocalFileEvidence(params.fileEvidence, run.id);
+      const fileEvidence = { version: 1 as const, runId: run.id, changes: fileChanges };
+      const timeline = readLocalRunTimeline(params.timeline, run.id, run.conversation_id);
+      const fileDiffs = validateRunFileDiffs(params.fileDiffs, run.id, run.conversation_id);
       const assistantStatus = params.status === "completed" ? "completed" : "failed";
-      const assistant = { id: randomUUID(), conversation_id: run.conversation_id, instance_id: run.instance_id, role: "assistant", content: params.assistantContent ?? "", status: assistantStatus, sequence_no: nextSequence(data.chatMessages, run.conversation_id), request_id: run.request_id, error_code: params.errorCode ?? null, usage_prompt_tokens: params.usagePromptTokens ?? null, usage_completion_tokens: params.usageCompletionTokens ?? null, usage_total_tokens: params.usageTotalTokens ?? null, duration_ms: params.durationMs ?? null, metadata: { run_id: run.id, ...(params.completionAudit ? { completion_verification: params.completionAudit } : {}) }, created_at: now, updated_at: now };
+      const assistant = { id: randomUUID(), conversation_id: run.conversation_id, instance_id: run.instance_id, role: "assistant", content: params.assistantContent ?? "", status: assistantStatus, sequence_no: nextSequence(data.chatMessages, run.conversation_id), request_id: run.request_id, error_code: params.errorCode ?? null, usage_prompt_tokens: params.usagePromptTokens ?? null, usage_completion_tokens: params.usageCompletionTokens ?? null, usage_total_tokens: params.usageTotalTokens ?? null, duration_ms: params.durationMs ?? null, metadata: { run_id: run.id, ...(fileChanges.length ? { file_evidence: fileEvidence } : {}), ...(params.completionAudit ? { completion_verification: params.completionAudit } : {}) }, created_at: now, updated_at: now };
+      const usageEvidence = readLocalRunUsage(params.usageEvidence);
+      if (usageEvidence) Object.assign(assistant.metadata, { usage_evidence: usageEvidence });
       data.chatMessages.push(assistant);
+      if (timeline) Object.assign(assistant.metadata, { run_timeline: { ...timeline, status: params.status } });
       const userMessage = data.chatMessages.find((m: any) => m.id === run.user_message_id);
       if (userMessage) Object.assign(userMessage, { status: "completed", updated_at: now });
-      Object.assign(run, { status: params.status, error_code: params.errorCode ?? null, completed_at: now, updated_at: now, duration_ms: params.durationMs ?? null, usage_prompt_tokens: params.usagePromptTokens ?? null, usage_completion_tokens: params.usageCompletionTokens ?? null, usage_total_tokens: params.usageTotalTokens ?? null, reconciled_by: null, lease_expires_at: null, partial_output: params.assistantContent ?? run.partial_output ?? null });
+      Object.assign(run, { file_evidence: fileEvidence, status: params.status, error_code: params.errorCode ?? null, completed_at: now, updated_at: now, duration_ms: params.durationMs ?? null, usage_prompt_tokens: params.usagePromptTokens ?? null, usage_completion_tokens: params.usageCompletionTokens ?? null, usage_total_tokens: params.usageTotalTokens ?? null, reconciled_by: null, lease_expires_at: null, partial_output: params.assistantContent ?? run.partial_output ?? null });
+      if (usageEvidence) Object.assign(run, { usage_evidence: usageEvidence });
+      if (run.local_questions) run.local_questions = settleRunQuestions(run);
+      if (fileDiffs?.files.length) Object.assign(run, { file_diffs: fileDiffs });
+      pruneRunFileDiffs(data.chatRuns);
       touchConversation(data, run.conversation_id, { last_message_at: now });
       return { status: "success", assistant_message_id: assistant.id, assistant_sequence_no: assistant.sequence_no };
     });

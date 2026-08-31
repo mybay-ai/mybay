@@ -19,6 +19,9 @@ import {
 } from "../../../services/instances/resourceAuthorityService";
 import { authorityActorFromRequest, sendAuthorityFailure } from "../../../services/instances/resourceAuthorityHttp";
 import { runtimeRegistry } from "../../../runtime/runtimeRegistry";
+import { safeLocalEvidencePath } from "../../../../shared/localRunFileEvidence";
+import { getStoredFileDiff } from "../../../services/runs/runFileSnapshots";
+import { isQuestionBridgeInstalling } from "../../../services/runs/questionBridgeInstaller";
 
 export function requireInteractiveRunsEnabled(_req: AuthenticatedRequest, res: Response, next: NextFunction) {
   if (!isInteractiveRunsEnabled()) {
@@ -33,6 +36,25 @@ export function requireInteractiveRunsEnabled(_req: AuthenticatedRequest, res: R
 }
 
 export function registerRunRoutes(router: Router) {
+  router.get("/:id/runs/:runId/file-diff", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    res.setHeader("Cache-Control", "no-store");
+    const { id, runId } = req.params;
+    const requestedPath = safeLocalEvidencePath(req.query.path);
+    const conversationId = req.query.conversationId;
+    if (!isValidInstanceId(id) || !isValidUUID(runId) || typeof conversationId !== "string" || !isValidUUID(conversationId) || !requestedPath) {
+      return res.status(400).json({ success: false, error: "INVALID_REQUEST" });
+    }
+    try {
+      const instanceAuthority = await resolveInstanceAuthority({ actor: authorityActorFromRequest(req), instanceId: id });
+      if (instanceAuthority.ok === false) return sendAuthorityFailure(res, instanceAuthority, "无法访问目标实例。");
+      const runAuthority = await resolveInstanceRunAuthority({ instance: instanceAuthority, runId });
+      if (runAuthority.ok === false) return sendAuthorityFailure(res, runAuthority, "未找到目标任务或无权访问。");
+      if (runAuthority.run.conversation_id !== conversationId) return res.status(404).json({ success: false, error: "RUN_NOT_FOUND" });
+      return res.json({ success: true, ...getStoredFileDiff(runAuthority.run, requestedPath) });
+    } catch {
+      return res.status(500).json({ success: false, error: "INTERNAL_ERROR" });
+    }
+  });
 
 
   // ======================================================================
@@ -83,6 +105,7 @@ export function registerRunRoutes(router: Router) {
 
     const { id } = req.params;
     const { conversationId, content, requestId, reasoningEffort, attachmentIds } = req.body;
+    if (isQuestionBridgeInstalling(id)) return res.status(409).json({ success: false, error: "INSTANCE_BUSY" });
     const normalizedReasoningEffort = normalizeReasoningEffort(reasoningEffort);
 
     if (!isValidInstanceId(id)) {
@@ -169,6 +192,9 @@ export function registerRunRoutes(router: Router) {
 
       const runId = crypto.randomUUID();
 
+      // Authorization/attachment checks above await I/O. Recheck at the commit
+      // boundary so an install started during those awaits cannot restart a new Run.
+      if (isQuestionBridgeInstalling(id)) return res.status(409).json({ success: false, error: "INSTANCE_BUSY" });
       const beginResult = await chatRepo.beginChatRun({
         conversationId,
         userId: req.user.id,

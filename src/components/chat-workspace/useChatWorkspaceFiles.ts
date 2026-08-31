@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { uploadChatFile } from "../../lib/chatFileUpload";
+import { createAttachmentUploadQueue, type AttachmentUploadItem } from "./attachmentUploadQueue";
 import { createPreviewRequestGuard, isPreviewAbortError, type PreviewRequestToken } from "./previewRequestGuard";
 import {
-  buildSandboxedHtmlPreviewShell,
   isHtmlPreviewFile,
-  isSvgPreviewFile,
   LOCAL_TEXT_PREVIEW_MAX_BYTES,
 } from "./previewSecurity";
 import { type PendingAttachment } from "./ChatInputBar";
@@ -77,12 +77,16 @@ export function useChatWorkspaceFiles({
   const [conversationFilesContextKey, setConversationFilesContextKey] = useState("");
   const [conversationFilePreview, setConversationFilePreview] = useState<ConversationFilePreview | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadItems, setUploadItems] = useState<AttachmentUploadItem[]>([]);
+  const uploadQueueRef = useRef<ReturnType<typeof createAttachmentUploadQueue> | null>(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const selectedIdRef = useRef(selectedId);
   const selectedConversationIdRef = useRef<string | null>(selectedConversationId);
   const conversationFilePreviewUrlRef = useRef<string | null>(null);
   const dragCounterRef = useRef(0);
   const uploadInFlightRef = useRef(false);
+  const filesRequestRef = useRef<{ controller: AbortController; revision: number } | null>(null);
+  const filesRevisionRef = useRef(0);
   const previewRequestGuardRef = useRef(createPreviewRequestGuard());
 
   useEffect(() => {
@@ -92,6 +96,26 @@ export function useChatWorkspaceFiles({
   useEffect(() => {
     selectedConversationIdRef.current = selectedConversationId;
   }, [selectedConversationId]);
+
+  useEffect(() => {
+    setUploadItems([]); setIsUploading(false); uploadInFlightRef.current = false;
+    const queue = createAttachmentUploadQueue({
+      upload: (file, options) => uploadChatFile(selectedId, selectedConversationId!, file, options),
+      onChange: items => {
+        setUploadItems(items);
+        const busy = items.some(item => ["queued", "uploading", "confirming"].includes(item.status));
+        uploadInFlightRef.current = busy; setIsUploading(busy);
+      },
+      onUploaded: file => {
+        if (selectedIdRef.current !== selectedId || selectedConversationIdRef.current !== selectedConversationId) return;
+        setPendingAttachments(prev => dedupeConversationFiles([...prev, file]));
+        setConversationFiles(prev => dedupeConversationFiles([file, ...prev]));
+        setConversationFilesContextKey(buildWorkspaceFileContextKey(selectedId, selectedConversationId));
+      },
+    });
+    uploadQueueRef.current = queue;
+    return () => { queue.dispose(); if (uploadQueueRef.current === queue) uploadQueueRef.current = null; };
+  }, [selectedId, selectedConversationId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -151,6 +175,12 @@ export function useChatWorkspaceFiles({
   }, [resetConversationFilePreview]);
 
   const refreshConversationFiles = useCallback(async (instanceId: string, conversationId: string | null) => {
+    // Only the current pair may cancel/start its list request.
+    if (selectedIdRef.current !== instanceId || selectedConversationIdRef.current !== conversationId) return;
+    filesRequestRef.current?.controller.abort();
+    const controller = new AbortController();
+    const revision = ++filesRevisionRef.current;
+    filesRequestRef.current = { controller, revision };
     if (!instanceId || !conversationId) {
       setConversationFiles([]);
       setConversationFilesContextKey("");
@@ -158,8 +188,9 @@ export function useChatWorkspaceFiles({
     }
 
     try {
-      const res = await api.listChatFiles(instanceId, conversationId);
+      const res = await api.listChatFiles(instanceId, conversationId, { signal: controller.signal });
       if (
+        !controller.signal.aborted && filesRevisionRef.current === revision &&
         selectedIdRef.current === instanceId &&
         selectedConversationIdRef.current === conversationId
       ) {
@@ -167,11 +198,12 @@ export function useChatWorkspaceFiles({
         setConversationFilesContextKey(buildWorkspaceFileContextKey(instanceId, conversationId));
       }
     } catch (err) {
-      console.warn("Failed to refresh conversation files:", err);
       if (
+        !controller.signal.aborted && filesRevisionRef.current === revision &&
         selectedIdRef.current === instanceId &&
         selectedConversationIdRef.current === conversationId
       ) {
+        if (![403, 404, 410].includes((err as { status?: number })?.status ?? 0)) console.warn("Failed to refresh conversation files:", err);
         setConversationFiles([]);
         setConversationFilesContextKey(buildWorkspaceFileContextKey(instanceId, conversationId));
       }
@@ -188,6 +220,7 @@ export function useChatWorkspaceFiles({
     setConversationFiles([]);
     setConversationFilesContextKey("");
     void refreshConversationFiles(selectedId, selectedConversationId);
+    return () => { filesRequestRef.current?.controller.abort(); filesRevisionRef.current += 1; };
   }, [selectedId, selectedConversationId, resetConversationFilePreview, refreshConversationFiles]);
 
   useEffect(() => {
@@ -259,7 +292,7 @@ export function useChatWorkspaceFiles({
     const rawFiles = Array.from(inputFiles);
     if (rawFiles.length === 0) return;
 
-    const remainingSlots = remainingChatAttachmentSlots(pendingAttachments.length, attachmentConfig.maxFiles);
+    const remainingSlots = remainingChatAttachmentSlots(pendingAttachments.length + (uploadQueueRef.current?.size() ?? 0), attachmentConfig.maxFiles);
     if (remainingSlots !== null && remainingSlots <= 0) {
       showToast(t("dashboard:chatWorkspace.attachmentLimitReachedDesc"), "warning");
       return;
@@ -298,31 +331,7 @@ export function useChatWorkspaceFiles({
       );
     }
 
-    const uploadInstanceId = selectedId;
-    const uploadConvId = selectedConversationId;
-
-    uploadInFlightRef.current = true;
-    setIsUploading(true);
-
-    try {
-      const res = await api.uploadChatFiles(uploadInstanceId, uploadConvId, filesToUpload);
-      if (res && res.success && Array.isArray(res.files)) {
-        if (selectedIdRef.current === uploadInstanceId && selectedConversationIdRef.current === uploadConvId) {
-          setPendingAttachments(prev => {
-            const next = dedupeConversationFiles([...prev, ...res.files]);
-            return attachmentConfig.maxFiles === null ? next : next.slice(0, attachmentConfig.maxFiles);
-          });
-          setConversationFiles(prev => dedupeConversationFiles([...res.files, ...prev]));
-          setConversationFilesContextKey(buildWorkspaceFileContextKey(uploadInstanceId, uploadConvId));
-        }
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      showToast(msg || t("dashboard:chatWorkspace.uploadFailed"), "error");
-    } finally {
-      uploadInFlightRef.current = false;
-      setIsUploading(false);
-    }
+    uploadQueueRef.current?.add(filesToUpload);
   };
 
   const isFileDrag = (e: React.DragEvent<HTMLElement>): boolean => {
@@ -683,49 +692,16 @@ export function useChatWorkspaceFiles({
     }
   };
 
-  const handleOpenConversationFile = async (file: PendingAttachment) => {
+  const handleOpenConversationFile = (file: PendingAttachment) => {
     if (!selectedId || !selectedConversationId) return;
-    try {
-      if (isHtmlPreviewFile(file.originalName, file.mimeType)) {
-        const previewUrl = `/api/instances/${encodeURIComponent(selectedId)}/conversations/${encodeURIComponent(selectedConversationId)}/files/${encodeURIComponent(file.id)}/html-preview`;
-        window.open(previewUrl, "_blank", "noopener,noreferrer");
-        return;
-      }
-      const response = await api.downloadChatFile(selectedId, selectedConversationId, file.id, "inline");
-      const declaredMimeType = response.headers.get("content-type") || file.mimeType || "";
-      const declaredKind = getWorkspacePreviewKind(file.originalName, declaredMimeType);
-      const declaredSize = Number(response.headers.get("content-length") || file.size || 0);
-      if (isMemoryBoundTextPreview(declaredKind) && declaredSize > LOCAL_TEXT_PREVIEW_MAX_BYTES) {
-        showToast(getPreviewTooLargeMessage(), "warning");
-        return;
-      }
-      const blob = await response.blob();
-      const kind = getPreviewKind(file, blob);
-      if (isMemoryBoundTextPreview(kind) && blob.size > LOCAL_TEXT_PREVIEW_MAX_BYTES) {
-        showToast(getPreviewTooLargeMessage(), "warning");
-        return;
-      }
-      let sourceUrl: string | null = null;
-      let openBlob = blob;
-      if (isHtmlPreviewFile(file.originalName, blob.type || file.mimeType)) {
-        const source = await blob.text();
-        openBlob = new Blob([buildSandboxedHtmlPreviewShell(source, file.originalName)], { type: "text/html;charset=utf-8" });
-      } else if (isSvgPreviewFile(file.originalName, blob.type || file.mimeType)) {
-        sourceUrl = window.URL.createObjectURL(blob);
-        const imageMarkup = `<img src="${sourceUrl}" alt="" style="display:block;max-width:100%;max-height:100%;margin:auto">`;
-        openBlob = new Blob([buildSandboxedHtmlPreviewShell(imageMarkup, file.originalName)], { type: "text/html;charset=utf-8" });
-      }
-      const url = window.URL.createObjectURL(openBlob);
-      window.open(url, "_blank", "noopener,noreferrer");
-      window.setTimeout(() => {
-        window.URL.revokeObjectURL(url);
-        if (sourceUrl) window.URL.revokeObjectURL(sourceUrl);
-      }, 60_000);
-    } catch (err: any) {
-      showToast(err?.message || t("dashboard:chatWorkspace.fileOpenFailed"), "error");
-    }
+    // Navigate during the click gesture. Cookie authentication, file guards and
+    // CSP stay on the server; no blob allocation or delayed popup is needed.
+    const route = `/api/instances/${encodeURIComponent(selectedId)}/conversations/${encodeURIComponent(selectedConversationId)}/files/${encodeURIComponent(file.id)}`;
+    const url = isHtmlPreviewFile(file.originalName, file.mimeType)
+      ? `${route}/html-preview`
+      : `${route}/download?disposition=inline`;
+    window.open(url, "_blank", "noopener,noreferrer");
   };
-
   const getPreviewKind = (file: PendingAttachment, blob: Blob): ConversationFilePreview["kind"] => {
     return getWorkspacePreviewKind(file.originalName, blob.type || file.mimeType || "");
   };
@@ -894,6 +870,12 @@ export function useChatWorkspaceFiles({
     conversationFilePreview: scopedConversationFilePreview,
     clearConversationFilePreview,
     isUploading,
+    attachmentUploads: {
+      items: uploadItems,
+      onCancel: (id: string) => uploadQueueRef.current?.cancel(id),
+      onRetry: (id: string) => { if (isChatReady) uploadQueueRef.current?.retry(id); },
+      onDismiss: (id: string) => uploadQueueRef.current?.dismiss(id),
+    },
     isDraggingOver,
     uploadInFlightRef,
     refreshConversationFiles,

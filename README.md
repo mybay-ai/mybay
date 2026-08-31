@@ -12,7 +12,7 @@ Deploy and operate multiple isolated Hermes Agent instances on infrastructure yo
 
 Languages: [English](./README.md) | [简体中文](./README.zh-CN.md)
 
-> **Release status: `v0.1.24`.** Public interfaces, runtime adapters, deployment details, and upgrade behavior may still change during the 0.x series.
+> **Release status: `v0.1.25`.** Public interfaces, runtime adapters, deployment details, and upgrade behavior may still change during the 0.x series.
 
 | Runtime | Status |
 | --- | --- |
@@ -57,6 +57,8 @@ Set-ExecutionPolicy -Scope Process Bypass
 ```
 
 Open [http://localhost:3000](http://localhost:3000), sign in with the admin credentials stored in your local `.env` file, add a model provider, and deploy your first Hermes Agent instance. Never share or commit `.env`.
+
+For a first task that creates a file, select **Agent mode** beside the chat input. The default **Quick mode** replies with text only and does not execute tools or save files.
 
 Need Docker installed automatically on Windows, LAN access, public HTTPS, manual Compose, or a development setup? See [Deployment options](#deployment-options) or the complete **[Deploy Your First Agent in 10 Minutes](./docs/QUICKSTART.md)** guide.
 

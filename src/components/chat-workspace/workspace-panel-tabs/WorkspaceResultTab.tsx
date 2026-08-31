@@ -4,7 +4,7 @@ import type { ChatMessage } from "../../../lib/chatWorkspaceState";
 import type { ChatApprovalChoice, ChatApprovalRequest, ChatRunMetrics } from "../useChatRuns";
 import type { PendingAttachment } from "../ChatInputBar";
 import type { RunDisplayStatus } from "../run/runStatusSemantics";
-import { isGeneratedArtifactPreviewable, type GeneratedArtifact } from "../generatedArtifacts";
+import { getGeneratedArtifactActionPath, isGeneratedArtifactPreviewable, type GeneratedArtifact } from "../generatedArtifacts";
 
 type WorkspaceResultTabProps = {
   t: TFunction;
@@ -201,8 +201,8 @@ export function WorkspaceResultTab({
                               <p className="truncate text-[13px] font-medium text-content-secondary">{artifact.name}</p>
                               <p className="truncate text-[11px] text-slate-400">{t(`dashboard:chatWorkspace.workspaceGeneratedArtifactStatus_${artifact.status}`)}</p>
                             </div>
-                            {onPreviewGeneratedArtifact && <button type="button" disabled={!ready} onClick={() => onPreviewGeneratedArtifact(artifact.path)} className="rounded-full p-1 text-slate-400 hover:bg-surface hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-35" title={t("dashboard:chatWorkspace.workspacePreviewFile")}><ExternalLink className="h-3.5 w-3.5" /></button>}
-                            {onDownloadGeneratedArtifact && <button type="button" disabled={!ready} onClick={() => onDownloadGeneratedArtifact(artifact.path)} className="rounded-full p-1 text-slate-400 hover:bg-surface hover:text-emerald-600 disabled:cursor-not-allowed disabled:opacity-35" title={t("dashboard:chatWorkspace.runResultSummaryDownloadFile")}><Download className="h-3.5 w-3.5" /></button>}
+                            {onPreviewGeneratedArtifact && <button type="button" disabled={!ready} onClick={() => onPreviewGeneratedArtifact(getGeneratedArtifactActionPath(artifact))} className="rounded-full p-1 text-slate-400 hover:bg-surface hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-35" title={t("dashboard:chatWorkspace.workspacePreviewFile")}><ExternalLink className="h-3.5 w-3.5" /></button>}
+                            {onDownloadGeneratedArtifact && <button type="button" disabled={!ready} onClick={() => onDownloadGeneratedArtifact(getGeneratedArtifactActionPath(artifact))} className="rounded-full p-1 text-slate-400 hover:bg-surface hover:text-emerald-600 disabled:cursor-not-allowed disabled:opacity-35" title={t("dashboard:chatWorkspace.runResultSummaryDownloadFile")}><Download className="h-3.5 w-3.5" /></button>}
                           </div>
                         );
                       })}

@@ -1,4 +1,8 @@
+import type { LocalFileChange } from "../../../shared/localRunFileEvidence";
+
 export interface RuntimeRunEventTracker {
+  activeToolFileMetadata?: Map<string, Record<string, string>>;
+  completedFileSteps?: Map<string, LocalFileChange>;
   lastPartialOutput: string;
   sentSteps: Map<string, string>;
   activeToolIds: Map<string, string[]>;

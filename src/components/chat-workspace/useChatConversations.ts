@@ -1,3 +1,5 @@
+import type { ConversationPlacement } from "../../../shared/localConversationPlacement";
+import { createConversationTitle } from "./conversationTitleText";
 import { useRef, useState } from "react";
 import type { Dispatch, MouseEvent, MutableRefObject, SetStateAction, UIEvent } from "react";
 import type { TFunction } from "i18next";
@@ -5,7 +7,8 @@ import { api } from "../../lib/api";
 import type { ChatMessage } from "../../lib/chatWorkspaceState";
 import { shouldAcceptConversationHistory } from "../../lib/chatWorkspaceState";
 import type { PendingAttachment } from "./ChatInputBar";
-import { mergePersistedOrder, moveConversationWithinSection, moveOrderedRecord, sortConversationRecords, sortProjectRecords } from "./localConversationOrdering";
+import { mergePersistedOrder, moveOrderedRecord, sortConversationRecords, sortProjectRecords } from "./localConversationOrdering";
+import { resolveRememberedConversation } from "./chatSelectionPersistence";
 
 type ConversationRecord = any;
 type ChatProjectRecord = any;
@@ -22,6 +25,9 @@ type UseChatConversationsOptions = {
   selectedId: string;
   selectedIdRef: MutableRefObject<string>;
   selectedConversationId: string | null;
+  selectedConversationIdRef: MutableRefObject<string | null>;
+  selectionRevisionRef: MutableRefObject<number>;
+  getRememberedConversationId: (instanceId: string) => string | null;
   selectConversationId: (id: string | null) => void;
   instanceGenerationRef: MutableRefObject<number>;
   setMessages: Dispatch<SetStateAction<ChatMessage[]>>;
@@ -36,7 +42,9 @@ type UseChatConversationsOptions = {
 export function useChatConversations({
   selectedId,
   selectedIdRef,
-  selectedConversationId,
+  selectedConversationIdRef,
+  selectionRevisionRef,
+  getRememberedConversationId,
   selectConversationId,
   instanceGenerationRef,
   setMessages,
@@ -54,15 +62,30 @@ export function useChatConversations({
   const [loadingMoreConversations, setLoadingMoreConversations] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
-  const conversationOrderMutationRef = useRef(0);
+  const organizationRef = useRef<object | null>(null);
+  const organizationRevisionRef = useRef(0);
+  const [organizingConversations, setOrganizingConversations] = useState(false);
   const projectOrderMutationRef = useRef(0);
-  const conversationProjectMutationRef = useRef(0);
+  const listRequestRef = useRef(0);
+  const creationRequestRef = useRef(0);
+  const conversationCreationInFlightRef = useRef(false);
+  const [creatingConversation, setCreatingConversation] = useState(false);
+  const conversationsRef = useRef(conversations);
+  conversationsRef.current = conversations;
 
   const setConversations: Dispatch<SetStateAction<ConversationRecord[]>> = (value) => {
     setConversationsRaw(prev => sortConversationRecords(typeof value === "function" ? (value as (previous: ConversationRecord[]) => ConversationRecord[])(prev) : value));
   };
 
   const resetConversationsForInstance = () => {
+    organizationRef.current = null;
+    organizationRevisionRef.current += 1;
+    setOrganizingConversations(false);
+    creationRequestRef.current += 1;
+    conversationCreationInFlightRef.current = false;
+    setCreatingConversation(false);
+    listRequestRef.current += 1;
+    setLoadingConversations(false);
     setConversations([]);
     setConversationProjects([]);
     setConversationsCursor(null);
@@ -76,51 +99,63 @@ export function useChatConversations({
     }
   };
 
-  const loadConversationsForSelectedInstance = async (initialSelectedId: string, currentInstanceGen: number) => {
+  const loadConversationsForSelectedInstance = async (initialSelectedId: string, currentInstanceGen: number, signal?: AbortSignal) => {
+    const requestId = ++listRequestRef.current;
+    const selectionRevision = selectionRevisionRef.current;
+    const isCurrent = () => !signal?.aborted && listRequestRef.current === requestId && shouldAcceptConversationHistory(
+      { selectedId: selectedIdRef.current, instanceGeneration: instanceGenerationRef.current },
+      { selectedId: initialSelectedId, instanceGeneration: currentInstanceGen },
+    );
+    if (!isCurrent()) return;
     try {
       setLoadingConversations(true);
       const [projectsRes, res] = await Promise.all([
-        api.get('/api/instances/' + selectedId + '/conversation-projects').catch(() => null),
-        api.get('/api/instances/' + selectedId + '/conversations?limit=20')
+        api.get('/api/instances/' + initialSelectedId + '/conversation-projects', { signal }).catch(() => null),
+        api.get('/api/instances/' + initialSelectedId + '/conversations?limit=20', { signal })
       ]);
-      if (!shouldAcceptConversationHistory(
-        { selectedId: selectedIdRef.current, instanceGeneration: instanceGenerationRef.current },
-        { selectedId: initialSelectedId, instanceGeneration: currentInstanceGen }
-      )) return;
+      if (!isCurrent() || selectionRevisionRef.current !== selectionRevision) return;
       if (projectsRes && projectsRes.success && Array.isArray(projectsRes.projects)) {
         setConversationProjects(sortProjectRecords(projectsRes.projects));
       }
       if (res && res.success && Array.isArray(res.conversations)) {
-        const sortedConversations = sortConversationRecords(res.conversations);
+        const restored = await resolveRememberedConversation(sortConversationRecords(res.conversations), getRememberedConversationId(initialSelectedId), async id => {
+          const detail = await api.get(`/api/instances/${encodeURIComponent(initialSelectedId)}/conversations/${encodeURIComponent(id)}`, { signal });
+          return detail?.success ? detail.conversation : null;
+        });
+        if (!isCurrent() || selectionRevisionRef.current !== selectionRevision) return;
+        const sortedConversations = sortConversationRecords(restored.list);
         setConversationsRaw(sortedConversations);
         setConversationsCursor(res.nextCursor);
 
-        if (sortedConversations.length > 0) {
-          const firstConv = sortedConversations[0];
-          selectConversationId(firstConv.id);
-        } else {
-          selectConversationId(null);
+        selectConversationId(restored.selectedId);
+        if (!restored.selectedId) {
           setMessages([]);
         }
       }
     } catch (err) {
+      if (!isCurrent() || selectionRevisionRef.current !== selectionRevision) return;
       console.error("Failed to load conversations:", err);
+      setError(t("dashboard:chatWorkspace.loadMessagesFailed"));
     } finally {
-      if (shouldAcceptConversationHistory(
-        { selectedId: selectedIdRef.current, instanceGeneration: instanceGenerationRef.current },
-        { selectedId: initialSelectedId, instanceGeneration: currentInstanceGen }
-      )) {
+      if (isCurrent()) {
         setLoadingConversations(false);
       }
     }
   };
 
-  const handleCreateConversation = async () => {
-    if (!selectedId) return;
+  const handleCreateConversation = async (projectId: string | null = null) => {
+    if (!selectedId || conversationCreationInFlightRef.current || organizationRef.current) return;
+    const requestId = ++creationRequestRef.current;
+    conversationCreationInFlightRef.current = true;
+    setCreatingConversation(true);
+    const generation = instanceGenerationRef.current;
+    const revision = selectionRevisionRef.current;
+    const isCurrent = () => creationRequestRef.current === requestId && selectedIdRef.current === selectedId && instanceGenerationRef.current === generation && selectionRevisionRef.current === revision;
     try {
       const count = conversations.length + 1;
       const title = t("dashboard:chatWorkspace.newChatName", { count });
-      const res = await api.post(`/api/instances/${selectedId}/conversations`, { title });
+      const res = await api.post(`/api/instances/${selectedId}/conversations`, { title, ...(projectId ? { projectId } : {}) });
+      if (!isCurrent()) return;
       if (res && res.success && res.conversation) {
         setPendingAttachments([]);
         setConversationFiles([]);
@@ -129,10 +164,18 @@ export function useChatConversations({
         setMessages([]);
         setNextCursorSeq(null);
         setError(null);
+      } else {
+        setError(t("dashboard:chatWorkspace.createConversationFailed"));
       }
     } catch (err: any) {
+      if (!isCurrent()) return;
       console.error("Failed to create conversation:", err);
       setError(t("dashboard:chatWorkspace.createConversationFailed"));
+    } finally {
+      if (creationRequestRef.current === requestId) {
+        conversationCreationInFlightRef.current = false;
+        setCreatingConversation(false);
+      }
     }
   };
 
@@ -193,27 +236,15 @@ export function useChatConversations({
   };
 
   const handleMoveConversationToProject = async (convId: string, projectId: string | null) => {
-    if (!selectedId) return;
-    const previousProjectId = conversations.find(conversation => conversation.id === convId)?.project_id || null;
-    const mutationId = ++conversationProjectMutationRef.current;
-    setConversationsRaw(prev => sortConversationRecords(prev.map(conversation => conversation.id === convId ? { ...conversation, project_id: projectId } : conversation)));
-    try {
-      const res = await api.patch('/api/instances/' + selectedId + '/conversations/' + convId, { projectId });
-      if (res && res.success && res.conversation) {
-        setConversations(prev => prev.map(c => c.id === convId ? res.conversation : c));
-      }
-    } catch (err) {
-      console.error("Failed to move conversation to project:", err);
-      if (conversationProjectMutationRef.current === mutationId) {
-        setConversationsRaw(current => sortConversationRecords(current.map(conversation => conversation.id === convId ? { ...conversation, project_id: previousProjectId } : conversation)));
-      }
-      setError(t("dashboard:chatWorkspace.moveToProjectFailed"));
-    }
+    await handlePlaceConversation({ conversationId: convId, targetId: null, position: "after",
+      section: projectId ? { kind: "project", projectId } : { kind: "recent" } });
   };
 
   const handleDeleteConversation = async (convId: string, e: MouseEvent) => {
     e.stopPropagation();
     if (!selectedId) return;
+    const generation = instanceGenerationRef.current;
+    const isCurrent = () => selectedIdRef.current === selectedId && instanceGenerationRef.current === generation;
 
     const confirmed = await showConfirm({
       title: t("dashboard:chatWorkspace.deleteChat"),
@@ -222,14 +253,15 @@ export function useChatConversations({
       confirmText: t("dashboard:chatWorkspace.confirm"),
       cancelText: t("dashboard:chatWorkspace.cancel")
     });
-    if (!confirmed) return;
+    if (!confirmed || !isCurrent()) return;
 
     try {
       const res = await api.delete(`/api/instances/${selectedId}/conversations/${convId}`);
+      if (!isCurrent()) return;
       if (res && res.success) {
-        const updatedList = conversations.filter(c => c.id !== convId);
+        const updatedList = conversationsRef.current.filter(c => c.id !== convId);
         setConversations(updatedList);
-        if (selectedConversationId === convId) {
+        if (selectedConversationIdRef.current === convId) {
           if (updatedList.length > 0) {
             selectConversationId(updatedList[0].id);
           } else {
@@ -241,6 +273,7 @@ export function useChatConversations({
         }
       }
     } catch (err) {
+      if (!isCurrent()) return;
       console.error("Failed to delete conversation:", err);
       setError(t("dashboard:chatWorkspace.deleteConversationFailed"));
     }
@@ -252,26 +285,44 @@ export function useChatConversations({
     setRenameValue(title);
   };
 
+  const handlePlaceConversation = async (placement: ConversationPlacement) => {
+    if (!selectedId || organizationRef.current || conversationCreationInFlightRef.current || !conversationsRef.current.some(c => c.id === placement.conversationId)) return;
+    const request = {};
+    organizationRef.current = request;
+    const generation = instanceGenerationRef.current;
+    const isCurrent = () => organizationRef.current === request && selectedIdRef.current === selectedId && instanceGenerationRef.current === generation;
+    organizationRevisionRef.current += 1;
+    listRequestRef.current += 1;
+    setLoadingConversations(false);
+    setLoadingMoreConversations(false);
+    setOrganizingConversations(true);
+    try {
+      const res = await api.put(`/api/instances/${selectedId}/conversations/placement`, placement);
+      if (!isCurrent()) return;
+      if (!res?.success || !Array.isArray(res.conversations)) throw new Error("Invalid placement response");
+      // The server returns the entire authorized order, including previously unloaded rows.
+      // Discard the old cursor: ranks used by that cursor changed in this transaction.
+      setConversations(res.conversations);
+      setConversationsCursor(null);
+    } catch (err) {
+      if (!isCurrent()) return;
+      console.error("Failed to place conversation:", err);
+      setError(t("dashboard:chatWorkspace.reorderConversationFailed"));
+    } finally {
+      if (isCurrent()) { organizationRef.current = null; setOrganizingConversations(false); }
+    }
+  };
+
   const handleMoveConversation = async (convId: string, direction: "up" | "down", e: MouseEvent) => {
     e.stopPropagation();
-    if (!selectedId) return;
-    const snapshot = conversations;
-    const next = moveConversationWithinSection(snapshot, convId, direction);
-    if (!next) return;
-    const mutationId = ++conversationOrderMutationRef.current;
-    setConversationsRaw(next);
-    try {
-      const res = await api.put('/api/instances/' + selectedId + '/conversations/order', { orderedIds: next.map(conversation => conversation.id) });
-      if (res?.success && Array.isArray(res.conversations) && conversationOrderMutationRef.current === mutationId) {
-        setConversationsRaw(current => mergePersistedOrder(current, res.conversations, sortConversationRecords));
-      }
-    } catch (err) {
-      console.error("Failed to persist conversation order:", err);
-      if (conversationOrderMutationRef.current === mutationId) {
-        setConversationsRaw(current => mergePersistedOrder(current, snapshot, sortConversationRecords));
-      }
-      setError(t("dashboard:chatWorkspace.reorderConversationFailed"));
-    }
+    const source = conversationsRef.current.find(c => c.id === convId);
+    if (!source) return;
+    const siblings = conversationsRef.current.filter(c => Boolean(c.pinned_at) === Boolean(source.pinned_at) && (source.pinned_at || (c.project_id || null) === (source.project_id || null)));
+    const index = siblings.findIndex(c => c.id === convId);
+    const target = siblings[index + (direction === "up" ? -1 : 1)];
+    if (!target) return;
+    await handlePlaceConversation({ conversationId: convId, targetId: target.id, position: direction === "up" ? "before" : "after",
+      section: source.pinned_at ? { kind: "pinned" } : source.project_id ? { kind: "project", projectId: source.project_id } : { kind: "recent" } });
   };
 
   const handleMoveProject = async (projectId: string, direction: "up" | "down", e: MouseEvent) => {
@@ -296,34 +347,17 @@ export function useChatConversations({
     }
   };
 
-  const handleTogglePinConversation = (convId: string, e: MouseEvent) => {
+  const handleTogglePinConversation = async (convId: string, e: MouseEvent) => {
     e.stopPropagation();
-    const previousPinnedAt = conversations.find(conversation => conversation.id === convId)?.pinned_at || null;
-    const shouldPin = !Boolean(previousPinnedAt);
-    setConversationsRaw(prev => sortConversationRecords(prev.map(conversation => conversation.id === convId ? {
-      ...conversation,
-      pinned_at: shouldPin ? new Date().toISOString() : null,
-    } : conversation)));
-
-    if (selectedId) {
-      void api.patch('/api/instances/' + selectedId + '/conversations/' + convId, { pinned: shouldPin })
-        .then((res) => {
-          if (res && res.success && res.conversation) {
-            setConversations(prev => prev.map(c => c.id === convId ? res.conversation : c));
-          }
-        })
-        .catch((err) => {
-          console.warn("Failed to persist conversation pin state:", err);
-          setConversationsRaw(current => sortConversationRecords(current.map(conversation => conversation.id === convId ? { ...conversation, pinned_at: previousPinnedAt } : conversation)));
-          setError(t("dashboard:chatWorkspace.pinConversationFailed"));
-        });
-    }
+    const source = conversationsRef.current.find(c => c.id === convId);
+    if (!source) return;
+    await handlePlaceConversation({ conversationId: convId, targetId: null, position: "after",
+      section: !source.pinned_at ? { kind: "pinned" } : source.project_id && conversationProjects.some(p => p.id === source.project_id)
+        ? { kind: "project", projectId: source.project_id } : { kind: "recent" } });
   };
 
   const buildConversationTitleFromMessage = (content: string) => {
-    const compact = content.replace(/\s+/g, " ").trim();
-    if (!compact) return t("dashboard:chatWorkspace.newChat");
-    return compact.length > 24 ? `${compact.slice(0, 24)}...` : compact;
+    return createConversationTitle(content, t("dashboard:chatWorkspace.newChat"));
   };
 
   const isDefaultConversationTitle = (title?: string | null) => {
@@ -380,15 +414,17 @@ export function useChatConversations({
     const currentInstanceGen = instanceGenerationRef.current;
     const initialSelectedId = selectedId;
 
+    const organizationRevision = organizationRevisionRef.current;
     try {
       setLoadingMoreConversations(true);
       const res = await api.get(`/api/instances/${instanceId}/conversations?limit=20&cursor=${conversationsCursor}`);
-      if (selectedIdRef.current !== initialSelectedId || instanceGenerationRef.current !== currentInstanceGen) return;
+      if (organizationRevisionRef.current !== organizationRevision || selectedIdRef.current !== initialSelectedId || instanceGenerationRef.current !== currentInstanceGen) return;
       if (res && res.success && Array.isArray(res.conversations)) {
         setConversations(prev => [...prev, ...res.conversations]);
         setConversationsCursor(res.nextCursor);
       }
     } catch (err) {
+      if (organizationRevisionRef.current !== organizationRevision || selectedIdRef.current !== initialSelectedId || instanceGenerationRef.current !== currentInstanceGen) return;
       console.error("Failed to load more conversations:", err);
     } finally {
       if (selectedIdRef.current === initialSelectedId && instanceGenerationRef.current === currentInstanceGen) {
@@ -399,12 +435,14 @@ export function useChatConversations({
 
   const handleConversationsScroll = (e: UIEvent<HTMLDivElement>) => {
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-    if (scrollHeight - scrollTop - clientHeight < 30 && conversationsCursor && !loadingMoreConversations && selectedId) {
+    if (!organizationRef.current && scrollHeight - scrollTop - clientHeight < 30 && conversationsCursor && !loadingMoreConversations && selectedId) {
       void loadMoreConversations(selectedId);
     }
   };
 
   return {
+    creatingConversation,
+    conversationCreationInFlightRef,
     conversations,
     conversationProjects,
     setConversations,
@@ -425,6 +463,8 @@ export function useChatConversations({
     handleMoveConversationToProject,
     handleDeleteConversation,
     startRename,
+    handlePlaceConversation,
+    organizingConversations,
     handleMoveConversation,
     handleMoveProject,
     handleTogglePinConversation,

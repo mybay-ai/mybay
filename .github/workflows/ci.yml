@@ -133,8 +133,34 @@ jobs:
       - name: Build Docker Image
         run: docker build --pull --build-arg VITE_PUBLIC_APP_URL=https://rc.example.test --tag mybay-local:test .
 
+      - name: Isolated Recovery and Failed-Startup Fallback
+        timeout-minutes: 3
+        run: |
+          docker run --rm --network none --env MYBAY_RECOVERY_SMOKE=1 \
+            --mount "type=bind,source=$PWD/scripts/recovery-runtime-smoke.mjs,target=/app/scripts/recovery-runtime-smoke.mjs,readonly" \
+            mybay-local:test node scripts/recovery-runtime-smoke.mjs
+
       - name: Build Lifecycle Fixture Runtime
         run: docker build --tag mybay-local-runtime-fixture:e2e test/fixtures/runtime
+
+      - name: Offline Service Recovery CLI and Retained-Container Rollback
+        timeout-minutes: 4
+        run: |
+          mkdir -p "$RUNNER_TEMP/mybay-service-recovery"
+          docker run --rm --network none --env MYBAY_SERVICE_RECOVERY_SMOKE=1 \
+            --mount "type=bind,source=$RUNNER_TEMP/mybay-service-recovery,target=/recovery" \
+            --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
+            --mount "type=bind,source=$PWD/scripts/service-recovery-docker-smoke.mjs,target=/app/scripts/service-recovery-docker-smoke.mjs,readonly" \
+            mybay-local:test node scripts/service-recovery-docker-smoke.mjs
+
+      - name: Durable Recovery Compose Adoption and Recreate
+        timeout-minutes: 6
+        run: |
+          mkdir -p "$RUNNER_TEMP/mybay-service-adoption"
+          sudo -n env MYBAY_ADOPTION_SMOKE=1 \
+            MYBAY_ADOPTION_SMOKE_ROOT="$RUNNER_TEMP/mybay-service-adoption" \
+            MYBAY_ADOPTION_SMOKE_IMAGE=mybay-local:test \
+            "$(command -v node)" scripts/service-adoption-docker-smoke.mjs
 
       - name: Real Docker Lifecycle and Port Conflict E2E
         env:

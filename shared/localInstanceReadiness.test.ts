@@ -1,7 +1,38 @@
 import { describe, expect, it } from "vitest";
-import { deriveLocalInstanceReadiness } from "./localInstanceReadiness";
+import { canProbeLocalInstanceReadiness, deriveLocalInstanceReadiness, deriveLocalReadinessChecks } from "./localInstanceReadiness";
 
 describe("local instance readiness", () => {
+  it.each(["stopped", "archived", "deleting", "deleted"])("never probes or marks a %s instance ready from stale observations", status => {
+    const input = { status, physicalStatus: "running", chat: { ready: true, runtimeReady: true } };
+    expect(canProbeLocalInstanceReadiness(input)).toBe(false);
+    expect(deriveLocalInstanceReadiness(input)).toMatchObject({ phase: "stopped", runtimeReady: false, chatReady: false });
+    expect(deriveLocalReadinessChecks(input).filter(check => ["runtime", "chat", "channels"].includes(check.key)).every(check => check.status === "stopped")).toBe(true);
+  });
+
+  it("separates a failed probe from a running runtime and an unattempted check", () => {
+    expect(deriveLocalInstanceReadiness({ status: "running", chat: { ready: false, reason: "PROBE_FAILED" } }).phase).toBe("readiness_check_failed");
+    expect(deriveLocalReadinessChecks({ status: "running" }).find(check => check.key === "chat")?.status).toBe("unknown");
+    expect(deriveLocalReadinessChecks({ status: "running", chat: { probeStatus: "failed", reason: "HTTP_500" } }).find(check => check.key === "chat")?.status).toBe("failed");
+  });
+
+  it("does not infer model execution or channel delivery from a healthy chat API", () => {
+    expect(deriveLocalReadinessChecks({ status: "running", chat: { ready: true }, modelConfigStatus: "written" })).toEqual([
+      { key: "runtime", status: "ready" }, { key: "chat", status: "ready" },
+      { key: "model_config", status: "configured" }, { key: "model_response", status: "unknown" }, { key: "channels", status: "unknown" },
+    ]);
+  });
+
+  it("labels existing model success as historical evidence and keeps missing counts unknown", () => {
+    expect(deriveLocalReadinessChecks({ modelRuntimeStatus: "callable", configuredChannels: 2 }).find(check => check.key === "model_response")?.status).toBe("historical_success");
+    expect(deriveLocalReadinessChecks({ configuredChannels: 2 }).find(check => check.key === "channels")?.status).toBe("unknown");
+    expect(deriveLocalReadinessChecks({ configuredChannels: 2, connectedChannels: 1 }).find(check => check.key === "channels")?.status).toBe("partial");
+    expect(deriveLocalReadinessChecks({ configuredChannels: 0 }).find(check => check.key === "channels")?.status).toBe("not_configured");
+  });
+
+  it("does not treat sendability or failed-check payloads as API readiness", () => {
+    expect(deriveLocalInstanceReadiness({ status: "running", chat: { ready: false, sendable: true } }).chatReady).toBe(false);
+    expect(deriveLocalInstanceReadiness({ status: "running", chat: { ready: true, probeStatus: "failed" } }).chatReady).toBe(false);
+  });
   it("keeps deployment lifecycle separate from chat readiness", () => {
     expect(deriveLocalInstanceReadiness({ status: "deploying" }).phase).toBe("deploying");
     expect(deriveLocalInstanceReadiness({

@@ -16,6 +16,7 @@ import { applyRunExecutionToMessages, applyRunTextSnapshot } from "./run/runExec
 import { mergeApprovalEvent, settleApprovalRequests } from "./run/approvalSelectors";
 import { reconcileRunMetricStatus } from "./run/runStatusSemantics";
 import { normalizeStopRunStatus, type StopRunResult } from "./run/runStopLifecycle";
+import { checkingRunCapabilities, scopedRunCapabilities, startRunCapabilityProbe, type RunCapabilitySnapshot } from "./runCapabilityProbe";
 import {
   canApplyTerminalWatchdogResponse,
   isFinalStepTerminalHint,
@@ -26,16 +27,7 @@ import {
   shouldRunTerminalWatchdog,
 } from "./run/runTerminalWatchdog";
 
-export type RunsCapabilityState = "checking" | "supported" | "explicitly_unsupported" | "unavailable" | "disabled";
-
-type RunsCapabilityDetails = {
-  features: Record<string, boolean>;
-  toolProgressEvents: boolean;
-  runEventsSse: boolean;
-  runStop: boolean;
-  approvalEvents: boolean;
-  runApprovalResponse: boolean;
-};
+export type { RunsCapabilityState } from "./runCapabilityProbe";
 
 export type ChatApprovalChoice = "once" | "session" | "always" | "deny";
 
@@ -67,14 +59,6 @@ export interface ChatApprovalRequest {
   timestamp?: number;
 }
 
-const defaultRunCapabilities: RunsCapabilityDetails = {
-  features: {},
-  toolProgressEvents: false,
-  runEventsSse: false,
-  runStop: false,
-  approvalEvents: false,
-  runApprovalResponse: false
-};
 type UseChatRunsParams = {
   selectedId: string;
   selectedIdRef: React.MutableRefObject<string>;
@@ -98,11 +82,11 @@ export function useChatRuns({
   t,
   notificationUserId = ""
 }: UseChatRunsParams) {
-  const [runsCapabilityState, setRunsCapabilityState] = useState<RunsCapabilityState>("checking");
+  const [capabilitySnapshot, setCapabilitySnapshot] = useState<RunCapabilitySnapshot>(() => checkingRunCapabilities(""));
+  const { state: runsCapabilityState, details: runCapabilities } = scopedRunCapabilities(capabilitySnapshot, selectedId);
   const runsSupported = runsCapabilityState === "supported";
   const [activeRunId, setActiveRunIdState] = useState<string | null>(null);
   const [toolStepsState, setToolStepsState] = useState<ChatToolStep[]>([]);
-  const [runCapabilities, setRunCapabilities] = useState<RunsCapabilityDetails>(defaultRunCapabilities);
   const [approvalRequests, setApprovalRequests] = useState<ChatApprovalRequest[]>([]);
   const [runMetricsState, setRunMetricsState] = useState<ChatRunMetrics | null>(null);
   const [runExecutionState, setRunExecutionState] = useState<RunExecutionState | null>(null);
@@ -301,69 +285,13 @@ export function useChatRuns({
   }, [stopActiveRunStreams]);
 
   useEffect(() => {
-    if (!selectedId) {
-      setRunsCapabilityState("checking");
-      setRunCapabilities(defaultRunCapabilities);
-      return;
-    }
-
-    let cancelled = false;
-    setRunsCapabilityState("checking");
-    setRunCapabilities(defaultRunCapabilities);
-
-    async function checkRunsCapability() {
-      try {
-        const res = await api.get(`/api/instances/${selectedId}/runs-capabilities`);
-        if (cancelled) return;
-        if (!res?.success) {
-          setRunsCapabilityState("unavailable");
-          setRunCapabilities(defaultRunCapabilities);
-          return;
-        }
-
-        setRunCapabilities({
-          features: res.features && typeof res.features === "object" ? res.features : {},
-          toolProgressEvents: res.toolProgressEvents === true,
-          runEventsSse: res.runEventsSse === true || res.features?.run_events_sse === true,
-          runStop: res.runStop === true || res.features?.run_stop === true,
-          approvalEvents: res.approvalEvents === true || res.features?.approval_events === true,
-          runApprovalResponse: res.runApprovalResponse === true || res.features?.run_approval_response === true
-        });
-
-        if (res.reason === "INTERACTIVE_RUNS_DISABLED" || res.creationEnabled === false) {
-          setRunsCapabilityState("disabled");
-          return;
-        }
-
-        if (res.reason === "UPSTREAM_RUNS_UNSUPPORTED") {
-          setRunsCapabilityState("explicitly_unsupported");
-          return;
-        }
-
-        if (res.reason === "CAPABILITY_PROBE_FAILED") {
-          setRunsCapabilityState("unavailable");
-          return;
-        }
-
-        if (res.state === "supported") {
-          setRunsCapabilityState("supported");
-        } else if (res.state === "explicitly_unsupported") {
-          setRunsCapabilityState("explicitly_unsupported");
-        } else {
-          setRunsCapabilityState("unavailable");
-        }
-      } catch {
-        if (!cancelled) {
-          setRunsCapabilityState("unavailable");
-          setRunCapabilities(defaultRunCapabilities);
-        }
-      }
-    }
-
-    checkRunsCapability();
-    return () => {
-      cancelled = true;
-    };
+    const probe = startRunCapabilityProbe({
+      instanceId: selectedId,
+      load: (instanceId, signal) => api.get(`/api/instances/${instanceId}/runs-capabilities`, { signal }),
+      apply: setCapabilitySnapshot,
+      isCurrent: () => selectedIdRef.current === selectedId,
+    });
+    return probe.cancel;
   }, [selectedId]);
 
 
@@ -500,14 +428,20 @@ export function useChatRuns({
     });
     lastEventIdRef.current = frameResult.cursor.lastCommittedEventId;
     if (!frameResult.consumed) return false;
-    const nextExecution = frameResult.state;
+    const nextExecution = currentExecution.lastProcessedSeq < 0 && eventId > 1
+      ? { ...frameResult.state, timelinePartial: true }
+      : frameResult.state;
     runExecutionRef.current = nextExecution;
     if (event !== "text") setRunExecutionState(nextExecution);
 
     try {
       if (event === "text") {
         pendingTextConversationIdRef.current = boundConversationId;
-        pendingTextRef.current = mergeRecoveredStreamingContent(recoveryTextBaselineRef.current, deriveAssistantText(nextExecution.blocks));
+        // A cache gap has no reliable text alignment. Preserve the known snapshot
+        // until authoritative history arrives instead of concatenating an overlapping suffix.
+        pendingTextRef.current = nextExecution.timelinePartial && recoveryTextBaselineRef.current
+          ? recoveryTextBaselineRef.current
+          : mergeRecoveredStreamingContent(recoveryTextBaselineRef.current, deriveAssistantText(nextExecution.blocks));
         scheduleTextFlush();
         return true;
       } else if (event === "step") {

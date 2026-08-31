@@ -3,6 +3,7 @@ import { AlertCircle, CheckCircle2, Loader2, MessageSquare, RefreshCw, Server, S
 import { useTranslation } from "react-i18next";
 import { Button, Card } from "../../components/ui";
 import { api } from "../../lib/api";
+import { InstanceReadinessNotice } from "../../components/instance-runtime/InstanceReadinessNotice";
 import { deriveQuickDeployReadiness, type QuickReadinessStage } from "./quickDeployReadiness";
 import { quickDeployProgressPercent, shouldContinueQuickDeployPolling, shouldProbeQuickDeployChat } from "./quickDeployDeliveryState";
 
@@ -71,9 +72,9 @@ export function QuickDeployDelivery({ created, onInstanceUpdated, onOpenChat, on
           onInstanceUpdated(nextInstance);
           if (shouldProbeQuickDeployChat(nextDeployment, nextInstance)) {
             try {
-              nextChatReadiness = await api.get(`/api/instances/${encodeURIComponent(instanceId)}/chat-readiness`);
+              nextChatReadiness = { ...await api.get(`/api/instances/${encodeURIComponent(instanceId)}/chat-readiness`), checkedAt: new Date().toISOString(), probeStatus: "checked" };
             } catch (error: any) {
-              nextChatReadiness = { ready: false, reason: error?.code || "PROBE_FAILED", message: error?.message };
+              nextChatReadiness = { ready: false, reason: error?.code || "PROBE_FAILED", message: error?.message, checkedAt: new Date().toISOString(), probeStatus: "failed" };
             }
             if (stopped) return;
             setChatReadiness(nextChatReadiness);
@@ -150,6 +151,8 @@ export function QuickDeployDelivery({ created, onInstanceUpdated, onOpenChat, on
       </div>
 
       {(pollError || pollExpired) && <div className="mt-5 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-800/70 dark:bg-amber-950/30 dark:text-amber-200"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /><span>{pollExpired ? t("quickDeploy.delivery.pollExpired") : pollError}</span></div>}
+
+      <div className="mt-5"><InstanceReadinessNotice instance={{ ...instance, id: instanceId, status: instance?.status || deployment?.instanceStatus || "deploying" }} chatReadiness={chatReadiness} onProbe={setChatReadiness} onOpenDiagnostics={onViewInstances} /></div>
 
       <div className="mt-7 flex flex-wrap justify-center gap-3">
         {deployment?.status === "failed" && <Button type="button" onClick={retry} disabled={retrying}>{retrying ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}{t("quickDeploy.delivery.retry")}</Button>}

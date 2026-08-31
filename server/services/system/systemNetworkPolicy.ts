@@ -69,7 +69,12 @@ export async function safeOutboundFetch(urlStr: string, init: RequestInit = {}):
       method: init.method || "GET",
       path: `${parsed.pathname}${parsed.search}`,
       headers: Object.fromEntries(headers.entries()),
-      lookup: (_hostname, _options, callback: any) => callback(null, pinned.address, pinned.family),
+      lookup: (_hostname, options, callback: any) => {
+        // Node's family autoselection requests all addresses. Keep the approved
+        // IP pinned while returning the callback shape the transport requested.
+        if (options.all) callback(null, [{ address: pinned.address, family: pinned.family }]);
+        else callback(null, pinned.address, pinned.family);
+      },
       ...(parsed.protocol === "https:" ? { servername: parsed.hostname } : {}),
     }, (response) => {
       const chunks: Buffer[] = [];

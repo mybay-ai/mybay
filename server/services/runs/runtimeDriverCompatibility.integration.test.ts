@@ -143,6 +143,15 @@ describe("second Runtime reconciler compatibility", () => {
     expect(hermesTransport.stream).not.toHaveBeenCalled();
   });
 
+  it("does not submit if the task stops during pre-dispatch snapshot capture", async () => {
+    const run = runtimeRun("fake-dispatch-run", "queued");
+    prepareRepository(run);
+    vi.mocked(chatRepo.getChatRun).mockResolvedValueOnce(run as never).mockResolvedValue({ ...run, status: "stopping" } as never);
+    await processSingleRun(run, new Set(), { runtimeRegistry: registryFor(fixture) });
+    expect(fixture.state.requests.some(request => request.method === "POST" && request.path === "/v1/runs")).toBe(false);
+    expect(chatRepo.recordDispatchedChatRun).not.toHaveBeenCalled();
+  });
+
   it("restores a running Run with a fresh Registry and completes through the same binding", async () => {
     const run = runtimeRun("fake-restored-run", "running");
     const finish = prepareRepository(run);

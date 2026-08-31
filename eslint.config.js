@@ -7,6 +7,8 @@ export default [
   {
     ignores: [
       ".codex-worktrees/**",
+      "tmp/**",
+      "backups/**",
       "coverage/**",
       "data/**",
       "dist/**",

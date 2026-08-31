@@ -12,6 +12,17 @@ function initial(text = "") {
 }
 
 describe("consumeRunSseFrame", () => {
+  it("restores tool blocks on fresh-view replay and resumes only after consumed events", () => {
+    const started = consumeRunSseFrame(initial(), { currentEventId: 0, lastCommittedEventId: 0 }, {
+      eventId: 1, event: "step", data: '{"id":"tool","tool_name":"file","status":"running"}', runId: "run-1", conversationId: "conv-1",
+    });
+    expect(started.state.blocks).toMatchObject([{ type: "tool", toolCallId: "tool", status: "running" }]);
+    const reconnected = consumeRunSseFrame(started.state, started.cursor, {
+      eventId: 1, event: "step", data: '{"id":"tool","tool_name":"file","status":"running"}', runId: "run-1", conversationId: "conv-1",
+    });
+    expect(reconnected.state.blocks).toHaveLength(1);
+    expect(reconnected.cursor.lastCommittedEventId).toBe(1);
+  });
   it("resumes after reconnect without duplicating the last committed frame", () => {
     const first = consumeRunSseFrame(initial(), { currentEventId: 0, lastCommittedEventId: 0 }, {
       eventId: 1,

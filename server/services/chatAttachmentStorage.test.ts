@@ -1,16 +1,20 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   deleteChatAttachmentFile,
   deleteConversationAttachmentDirectory,
   purgeDeletedChatAttachments,
   purgeOrphanChatAttachments,
+  inspectChatAttachmentFile,
+  inspectConversationAttachmentDirectory,
+  readChatAttachmentText,
 } from "./chatAttachmentStorage";
 
 const roots: string[] = [];
 afterEach(async () => {
+  vi.restoreAllMocks();
   await Promise.all(roots.splice(0).map((root) => fs.promises.rm(root, { recursive: true, force: true })));
 });
 
@@ -23,6 +27,61 @@ async function fixture() {
 }
 
 describe("chat attachment storage cleanup", () => {
+  it("rejects a conversation junction for upload, read and cleanup without touching its target", async () => {
+    const { root, dir } = await fixture();
+    const outside = path.join(root, "outside");
+    await fs.promises.mkdir(outside);
+    await fs.promises.writeFile(path.join(outside, "keep.txt"), "keep");
+    await fs.promises.rmdir(dir);
+    await fs.promises.symlink(outside, dir, "junction");
+    expect(() => inspectConversationAttachmentDirectory("instance-1", "conversation-1", root, true)).toThrow("Invalid attachment directory");
+    await expect(inspectChatAttachmentFile({ instanceId: "instance-1", conversationId: "conversation-1", storagePath: path.join(dir, "keep.txt"), dataRoot: root })).rejects.toThrow("Invalid attachment directory");
+    await expect(deleteConversationAttachmentDirectory("instance-1", "conversation-1", root)).rejects.toThrow("Invalid attachment directory");
+    expect(await fs.promises.readFile(path.join(outside, "keep.txt"), "utf8")).toBe("keep");
+    await fs.promises.unlink(dir);
+  });
+
+  it("rejects a hard link to bytes outside the conversation", async () => {
+    const { root, dir } = await fixture();
+    const outside = path.join(root, "secret.txt");
+    await fs.promises.writeFile(outside, "secret");
+    const linked = path.join(dir, "linked.txt");
+    await fs.promises.link(outside, linked);
+    await expect(readChatAttachmentText({ instanceId: "instance-1", conversationId: "conversation-1", storagePath: linked, dataRoot: root })).rejects.toThrow("regular file");
+    expect(await fs.promises.readFile(outside, "utf8")).toBe("secret");
+  });
+
+  it("bounds actual bytes read from a large text file and preserves UTF-8", async () => {
+    const { root, dir } = await fixture();
+    const file = path.join(dir, "large.txt");
+    await fs.promises.writeFile(file, "中文😀".repeat(100000));
+    const originalOpen = fs.promises.open.bind(fs.promises);
+    let bytesRead = 0;
+    vi.spyOn(fs.promises, "open").mockImplementation(async (...args) => {
+      const handle = await originalOpen(...args);
+      const originalRead = handle.read.bind(handle);
+      vi.spyOn(handle, "read").mockImplementation(async (...readArgs: any[]) => {
+        const result = await (originalRead as any)(...readArgs);
+        bytesRead += result.bytesRead;
+        return result;
+      });
+      return handle;
+    });
+    const result = await readChatAttachmentText({ instanceId: "instance-1", conversationId: "conversation-1", storagePath: file, dataRoot: root });
+    expect(result).toEqual({ content: "中文😀".repeat(3000), truncated: true });
+    expect(bytesRead).toBeLessThanOrEqual(48004);
+  });
+
+  it("rejects changed size, keeps small text intact and never splits a surrogate pair", async () => {
+    const { root, dir } = await fixture();
+    const file = path.join(dir, "text.txt");
+    await fs.promises.writeFile(file, "ab😀");
+    const input = { instanceId: "instance-1", conversationId: "conversation-1", storagePath: file, dataRoot: root };
+    expect(await readChatAttachmentText(input)).toEqual({ content: "ab😀", truncated: false });
+    expect(await readChatAttachmentText(input, 3)).toEqual({ content: "ab", truncated: true });
+    await expect(readChatAttachmentText({ ...input, expectedSize: 1 })).rejects.toThrow("changed");
+  });
+
   it("deletes a physical attachment and removes its empty conversation directory", async () => {
     const { root, dir } = await fixture();
     const file = path.join(dir, "file.txt");

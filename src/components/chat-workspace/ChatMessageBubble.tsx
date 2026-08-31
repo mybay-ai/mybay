@@ -1,3 +1,5 @@
+import { ChatUsageDetails } from "./ChatUsageDetails";
+import { readLocalRunUsage, usageNumber } from "../../../shared/localRunUsage";
 import { Children, isValidElement, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { Brain, Check, Clock3, Copy, ExternalLink, FileText, Gauge, Sparkles, ThumbsDown, ThumbsUp } from "lucide-react";
@@ -12,7 +14,9 @@ import { api } from "../../lib/api";
 import type { ChatApprovalChoice, ChatApprovalRequest, ChatRunMetrics } from "./useChatRuns";
 import type { RunExecutionState } from "./run/runTypes";
 import { InlineRunTimeline } from "./run/InlineRunTimeline";
+import { projectRunTimeline, selectMessageTimeline } from "./run/runTimelinePresentation";
 import { InlineApprovalCard } from "./run/InlineApprovalCard";
+import { ChatRunQuestions } from "./ChatRunQuestions";
 import { GENERATED_FILE_PATH_PATTERN } from "./generatedFilePath";
 import type { GeneratedArtifact } from "./generatedArtifacts";
 import { ChatGeneratedArtifactCards, selectMessageGeneratedArtifacts } from "./ChatGeneratedArtifactCards";
@@ -131,17 +135,12 @@ function readStringField(source: unknown, keys: string[]) {
 
 
 function getAssistantTokenUsage(message: ChatMessage) {
-  if (typeof message.usage_total_tokens === "number" && Number.isFinite(message.usage_total_tokens)) {
-    return message.usage_total_tokens;
-  }
-  const promptTokens = typeof message.usage_prompt_tokens === "number" && Number.isFinite(message.usage_prompt_tokens) ? message.usage_prompt_tokens : 0;
-  const completionTokens = typeof message.usage_completion_tokens === "number" && Number.isFinite(message.usage_completion_tokens) ? message.usage_completion_tokens : 0;
-  const summed = promptTokens + completionTokens;
-  return summed > 0 ? summed : null;
+  const evidence = readLocalRunUsage(message.metadata?.usage_evidence);
+  return evidence ? evidence.totalTokens : usageNumber(message.usage_total_tokens);
 }
 
 function formatTokenUsage(value: number | null | undefined) {
-  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return "";
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return "";
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(value);
 }
 
@@ -153,11 +152,8 @@ function formatMessageDuration(value: number | null | undefined) {
   return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
 }
 
-function getAssistantModelLabel(message: ChatMessage, fallbackModelLabel?: string) {
-  const metadata = message.metadata && typeof message.metadata === "object" ? message.metadata : null;
-  const directModel = readStringField(message, ["model", "model_name", "modelName", "model_id", "modelId"]);
-  const metadataModel = readStringField(metadata, ["model", "model_name", "modelName", "model_id", "modelId", "platformModelName", "platform_model_name"]);
-  return directModel || metadataModel || fallbackModelLabel?.trim() || "Auto";
+function getAssistantModelLabel(message: ChatMessage, unknown: string) {
+  return readLocalRunUsage(message.metadata?.usage_evidence)?.model ?? unknown;
 }
 
 async function copyTextToClipboard(value: string) {
@@ -488,10 +484,9 @@ export function ChatMessageBubble({
   onOpenInstanceFilePath,
   onDownloadInstanceFilePath,
   generatedArtifacts = [],
-  fallbackModelLabel,
   instanceId,
   onMessageFeedbackChange,
-  runExecutionState,
+  runExecutionState: liveRunExecutionState,
   runMetrics,
   approvalRequest,
   canRespondToApproval = false,
@@ -503,6 +498,8 @@ export function ChatMessageBubble({
   const [feedback, setFeedback] = useState<"up" | "down" | null>(initialFeedback);
   const [feedbackSaving, setFeedbackSaving] = useState(false);
   const isUser = message.role === "user";
+  const runExecutionState = useMemo(() => selectMessageTimeline(message, selectedConversationId, liveRunExecutionState),
+    [message, selectedConversationId, liveRunExecutionState]);
   const retryTarget = isUser ? message : retrySourceMessage;
   const canSaveFeedback = !isUser && !!instanceId && !!selectedConversationId && UUID_PATTERN.test(message.id || "");
   const displayContent = sanitizeChatDisplayContent(
@@ -510,7 +507,9 @@ export function ChatMessageBubble({
     t("chatWorkspace.toolCallProtocolHidden")
   );
   const messageAttachments = useMemo(() => getMessageAttachments(message, conversationFiles), [message, conversationFiles]);
-  const messageRunId = runExecutionState?.runId || readStringField(message.metadata, ["runId", "run_id"]);
+  const presentation = useMemo(() => runExecutionState ? projectRunTimeline(runExecutionState, displayContent) : null,
+    [runExecutionState, displayContent]);
+  const messageRunId = readStringField(message.metadata, ["runId", "run_id"]) || runExecutionState?.runId;
   const messageGeneratedArtifacts = useMemo(
     () => selectMessageGeneratedArtifacts(generatedArtifacts, message.id, messageRunId),
     [generatedArtifacts, message.id, messageRunId]
@@ -520,7 +519,7 @@ export function ChatMessageBubble({
     setFeedback(message.user_feedback === "like" ? "up" : message.user_feedback === "dislike" ? "down" : null);
   }, [message.id, message.user_feedback]);
 
-  const assistantModelLabel = useMemo(() => getAssistantModelLabel(message, fallbackModelLabel), [message, fallbackModelLabel]);
+  const assistantModelLabel = useMemo(() => getAssistantModelLabel(message, t("chatWorkspace.usage.unknownModel")), [message, t]);
   const failureInfo = useMemo(() => humanizeChatError(
     { code: message.error_code, message: message.error_message },
     t("chatWorkspace.messageFailed")
@@ -579,10 +578,17 @@ export function ChatMessageBubble({
           : "bg-surface/95 border border-outline/80 text-content rounded-tl-md whitespace-pre-wrap leading-relaxed"
       } ${message.status === "failed" ? "border-red-350 bg-red-50/20" : ""} ${message.status === "stopped" ? "border-amber-300 bg-amber-50/20" : ""} ${message.status === "queued" ? "border-amber-200 bg-amber-50/20" : ""} ${message.status === "superseded" ? "opacity-65" : ""}`}>
         {!isUser && runExecutionState && (
-          <InlineRunTimeline execution={runExecutionState} metrics={runMetrics} hideApprovalBlocks={Boolean(approvalRequest)} />
+          <InlineRunTimeline execution={{ ...runExecutionState, blocks: presentation?.blocks || runExecutionState.blocks }}
+            metrics={runMetrics || { durationMs: message.duration_ms }} hideApprovalBlocks={Boolean(approvalRequest)} textUnaligned={presentation?.textUnaligned}
+            renderText={(content) => <MarkdownChatContent content={sanitizeChatDisplayContent(content, t("chatWorkspace.toolCallProtocolHidden"))}
+              conversationFiles={conversationFiles} onOpenConversationFile={onOpenConversationFile} onOpenInstanceFilePath={onOpenInstanceFilePath} />} />
         )}
         {!isUser && approvalRequest && (
           <InlineApprovalCard approval={approvalRequest} canRespond={canRespondToApproval} onRespond={onRespondToApproval} />
+        )}
+        {!isUser && instanceId && selectedConversationId && messageRunId && (
+          <ChatRunQuestions key={`${instanceId}:${selectedConversationId}:${messageRunId}`} instanceId={instanceId} conversationId={selectedConversationId} runId={messageRunId}
+            knownClosed={message.status === "stopped" || ["stopping", "cancelled", "completed", "failed", "expired"].includes(runExecutionState?.status || "")} />
         )}
         {isUser ? (
           <LinkedChatContent
@@ -594,7 +600,7 @@ export function ChatMessageBubble({
           />
         ) : (
           <MarkdownChatContent
-            content={displayContent}
+            content={presentation?.finalContent ?? displayContent}
             conversationFiles={conversationFiles}
             onOpenConversationFile={onOpenConversationFile}
             onOpenInstanceFilePath={onOpenInstanceFilePath}
@@ -602,7 +608,8 @@ export function ChatMessageBubble({
         )}
         {isUser && <ChatMessageAttachments attachments={messageAttachments} onOpen={onOpenConversationFile} />}
         {!isUser && <ChatGeneratedArtifactCards artifacts={messageGeneratedArtifacts} onPreview={onOpenInstanceFilePath} onDownload={onDownloadInstanceFilePath} />}
-        {!isUser && <ChatRunFileChanges execution={runExecutionState} artifacts={messageGeneratedArtifacts} onOpen={onOpenInstanceFilePath} />}
+        {!isUser && <ChatRunFileChanges instanceId={instanceId} conversationId={selectedConversationId} runId={messageRunId} evidence={message.metadata?.file_evidence} execution={runExecutionState} artifacts={messageGeneratedArtifacts} onOpen={onOpenInstanceFilePath} />}
+        {!isUser && !["pending", "streaming"].includes(message.status) && <ChatUsageDetails message={message} />}
         {!isUser && displayContent.trim() && (
           <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-outline pt-2 text-content-muted">
             <button
@@ -656,7 +663,5 @@ export function ChatMessageBubble({
     </div>
   );
 }
-
-
 
 

@@ -224,6 +224,28 @@ export function registerConversationRoutes(router: Router) {
     }
   });
 
+  router.put("/:id/conversations/placement", authenticateToken, conversationWriteLimiter, async (req: AuthenticatedRequest, res: Response) => {
+    const { id } = req.params;
+    const move = req.body;
+    if (!isValidInstanceId(id) || !move || !isValidUUID(move.conversationId)
+      || (move.targetId !== null && !isValidUUID(move.targetId))
+      || !["before", "after"].includes(move.position)
+      || !move.section || !["pinned", "recent", "project"].includes(move.section.kind)
+      || (move.section.kind === "project" && !isValidUUID(move.section.projectId))) {
+      return res.status(400).json({ success: false, error: "INVALID_CONVERSATION_ORDER" });
+    }
+    try {
+      const access = await assertInstanceAccess(id, req.user.id);
+      if (!access.ok) return res.status(access.status).json({ success: false, error: access.error });
+      const conversations = await chatRepo.placeConversation(req.user.id, id, move);
+      return res.json({ success: true, conversations });
+    } catch (err: any) {
+      if (err?.message === "CONVERSATION_ORDER_INVALID") return res.status(400).json({ success: false, error: "INVALID_CONVERSATION_ORDER" });
+      console.error("[Place Conversation Error]", err);
+      return res.status(500).json({ success: false, error: "INTERNAL_ERROR" });
+    }
+  });
+
   router.put("/:id/conversations/order", authenticateToken, conversationWriteLimiter, async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
     const orderedIds = req.body?.orderedIds;

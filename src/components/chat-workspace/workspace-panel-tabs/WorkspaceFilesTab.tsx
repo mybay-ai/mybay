@@ -3,7 +3,7 @@ import { AlertCircle, Check, Clock3, Copy, Download, ExternalLink, FileText, Git
 import type { TFunction } from "i18next";
 import type { PendingAttachment } from "../ChatInputBar";
 import { api } from "../../../lib/api";
-import { isGeneratedArtifactPreviewable, type GeneratedArtifact } from "../generatedArtifacts";
+import { getGeneratedArtifactActionPath, isGeneratedArtifactPreviewable, type GeneratedArtifact } from "../generatedArtifacts";
 
 type WorkspaceFileUsage = {
   totalBytes?: number;
@@ -171,8 +171,8 @@ export function WorkspaceFilesTab({
                             </p>
                           </div>
                           <div className="flex shrink-0 items-center gap-1">
-                            {onPreviewGeneratedArtifact && <button type="button" disabled={!ready} onClick={() => onPreviewGeneratedArtifact(artifact.path)} className="rounded-full p-1 text-slate-400 hover:bg-outline hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-35" title={t("dashboard:chatWorkspace.workspacePreviewFile")}><Image className="h-3.5 w-3.5" /></button>}
-                            {onDownloadGeneratedArtifact && <button type="button" disabled={!ready} onClick={() => onDownloadGeneratedArtifact(artifact.path)} className="rounded-full p-1 text-slate-400 hover:bg-outline hover:text-emerald-600 disabled:cursor-not-allowed disabled:opacity-35" title={t("dashboard:chatWorkspace.runResultSummaryDownloadFile")}><Download className="h-3.5 w-3.5" /></button>}
+                            {onPreviewGeneratedArtifact && <button type="button" disabled={!ready} onClick={() => onPreviewGeneratedArtifact(getGeneratedArtifactActionPath(artifact))} className="rounded-full p-1 text-slate-400 hover:bg-outline hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-35" title={t("dashboard:chatWorkspace.workspacePreviewFile")}><Image className="h-3.5 w-3.5" /></button>}
+                            {onDownloadGeneratedArtifact && <button type="button" disabled={!ready} onClick={() => onDownloadGeneratedArtifact(getGeneratedArtifactActionPath(artifact))} className="rounded-full p-1 text-slate-400 hover:bg-outline hover:text-emerald-600 disabled:cursor-not-allowed disabled:opacity-35" title={t("dashboard:chatWorkspace.runResultSummaryDownloadFile")}><Download className="h-3.5 w-3.5" /></button>}
                           </div>
                         </div>
                       );

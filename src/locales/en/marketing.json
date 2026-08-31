@@ -1031,7 +1031,6 @@
     ],
     "appStrings": {
       "backHome": "Back to Home",
-
       "popularTags": "Common topics:",
       "filterCategory": "Filter by category",
       "reset": "Reset",
@@ -1061,59 +1060,36 @@
     "timelineTip": "Stable Release",
     "releases": [
       {
-        "version": "v0.1.24",
-        "date": "2026.08.29",
+        "version": "v0.1.25",
+        "date": "2026.08.31",
         "badge": "STABLE",
-        "summary": "MyBay Open Source v0.1.24 completes local quick deployment, OAuth model authorization, Runtime resource boundaries, and the interactive Agent run path.",
+        "summary": "MyBay Open Source v0.1.25 improves local Agent conversations, file workflows, and maintenance tooling.",
         "sections": [
           {
-            "title": "Resource authorization and file safety",
-            "type": "fix",
-            "items": [
-              "Validates ownership across users, instances, conversations, Runs, and attachments through one authority layer.",
-              "Shares resource authorization between Chat routes and the background Reconciler to prevent cross-instance and cross-conversation access.",
-              "Completes attachment upload, download, deletion, deleted-state, and background file reconciliation lifecycles.",
-              "Preserves strict boundaries for file paths, previews, and managed local operations."
-            ]
-          },
-          {
-            "title": "Runtime architecture and interactive performance",
+            "title": "Conversation history and composer",
             "type": "feature",
             "items": [
-              "Extracts Runtime Drivers, run preparation, event providers, and the Hermes execution adapter.",
-              "Hardens Run binding, background recovery, preview isolation, and second-driver lifecycle contract coverage.",
-              "Dispatches interactive Agent Runs immediately after creation to remove background-poll startup latency.",
-              "Keeps database history authoritative by default with an explicit opt-in for verified native Runtime session continuity."
+              "Organize pinned, project, and recent conversations with persistent ordering, drag handles, and menu fallbacks.",
+              "Keep history titles on one line with ellipsis; mouse hover reveals and scrolls overflowing text.",
+              "Preserve conversation selection, chat mode, drafts, and long-text input across navigation."
             ]
           },
           {
-            "title": "Quick deployment and OAuth model connections",
+            "title": "Agent execution and file handling",
             "type": "feature",
             "items": [
-              "Adds a local quick-deployment flow with safe defaults for Agent details, models, access protection, and delivery.",
-              "Removes commercial instance-quota checks from the open-source edition and standardizes local BYOK credentials.",
-              "Supports pre-deployment device authorization for OpenAI Codex (ChatGPT OAuth) and xAI Grok OAuth.",
-              "Encrypts OAuth credentials locally, writes Hermes auth.json during deployment, and supports control-plane Responses calls."
+              "Improve cancellation, retry, follow-up ordering, empty-response handling, and stale request isolation.",
+              "Show execution steps, structured local questions, usage evidence, and bounded file-change diffs.",
+              "Add attachment upload progress, cancellation, retry, duplicate-upload protection, and clipboard support."
             ]
           },
           {
-            "title": "Deployment and chat experience",
-            "type": "fix",
-            "items": [
-              "Shares model authorization and fail-closed validation between quick and advanced deployment.",
-              "Improves hover, icon, and text contrast for deployment progress cards in dark appearance.",
-              "Improves Agent execution state, step feedback, and Runtime startup observability.",
-              "Preserves Desktop, LAN, and Server preflight checks and local Docker operation."
-            ]
-          },
-          {
-            "title": "Documentation and repository",
+            "title": "Local storage and operations",
             "type": "feature",
             "items": [
-              "Adds automated coverage for OAuth routes, config writing, model calls, and quick-deployment validation.",
-              "Assigns stable error codes to new OAuth APIs and passes the API error-contract gate.",
-              "Refreshes bilingual product screenshots, release notes, and clean source-archive verification.",
-              "Introduces no hosted SaaS, managed model, plan, billing, multi-tenant, or cloud scheduling capability."
+              "Scope SQLite reads and writes to the required collections to reduce unrelated rewrites.",
+              "Improve deployment readiness messages and provide sanitized diagnostic exports.",
+              "Add isolated restore, same-image service recovery, and controlled Compose adoption tools. Cross-version rollback and target-environment certification remain separate validation tasks."
             ]
           }
         ]

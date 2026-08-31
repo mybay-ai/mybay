@@ -552,7 +552,7 @@ function AppContent() {
               instances={instances}
               templateCenterEnabled={features.status === "loaded" ? features.templateCenterEnabled : false}
             >
-              <ChatWorkspace currentUser={currentUser} socket={socket} />
+              <ChatWorkspace key={currentUser?.id || "anonymous"} currentUser={currentUser} socket={socket} />
             </DashboardLayout>
           ) : <Navigate to="/login" />
         } />

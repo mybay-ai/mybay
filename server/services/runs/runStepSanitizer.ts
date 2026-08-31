@@ -1,3 +1,5 @@
+import { safeFileOperationMetadata } from "./runFileEvidence";
+import { safeLocalEvidencePath } from "../../../shared/localRunFileEvidence";
 import * as crypto from "crypto";
 import { truncateSafeText } from "./runSafeText";
 
@@ -153,7 +155,10 @@ function buildSafeStepMetadata(step: any, category: SafeToolCategory): Record<st
     step.metadata?.path,
     pickNestedSafeValue(step, "input.file_path", "input.path", "args.path", "arguments.path", "params.path", "output.path", "result.path")
   ), 180);
-  if (filePath && !filePath.includes("..")) metadata.file_path = filePath;
+  const safePath = safeLocalEvidencePath(filePath);
+  if (safePath) metadata.file_path = safePath;
+  Object.assign(metadata, safeFileOperationMetadata(step));
+  if (typeof step.metadata?.file_evidence_confirmed === "boolean") metadata.file_evidence_confirmed = step.metadata.file_evidence_confirmed;
 
   return metadata;
 }

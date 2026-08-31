@@ -96,8 +96,8 @@ export const api = {
       body: formData
     });
   },
-  listChatFiles: async (instanceId: string, conversationId: string) => {
-    return apiFetch(`/api/instances/${instanceId}/conversations/${conversationId}/files`);
+  listChatFiles: async (instanceId: string, conversationId: string, options?: RequestInit) => {
+    return apiFetch(`/api/instances/${instanceId}/conversations/${conversationId}/files`, options);
   },
   deleteChatFile: async (instanceId: string, conversationId: string, fileId: string) => {
     return apiFetch(`/api/instances/${instanceId}/conversations/${conversationId}/files/${fileId}`, {

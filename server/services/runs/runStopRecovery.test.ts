@@ -51,7 +51,7 @@ describe("stopping run recovery", () => {
     const target = run();
     await recoverStoppingRun(target, dependencies);
     expect(dependencies.completeRun).toHaveBeenCalledWith(
-      "run-1", "completed", "finished", undefined, {}, 0,
+      "run-1", "completed", "finished", undefined, {}, null,
       { expectedUpstreamRunId: "upstream-1", runSnapshot: target },
     );
     expect(dependencies.updateRun).not.toHaveBeenCalled();

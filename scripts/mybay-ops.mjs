@@ -14,6 +14,7 @@ const BACKUP_FORMAT_VERSION = 1;
 export const MAX_SUPPORTED_SCHEMA_VERSION = schemaVersion.current;
 const OWNER_DIRECTORY_MODE = 0o700;
 const OWNER_FILE_MODE = 0o600;
+const EXCLUDED_INSTANCE_DIRECTORIES = new Set(["logs", "cache", ".cache", "__pycache__", ".venv", "venv", "node_modules"]);
 
 function parseArgs(argv) {
   const args = { command: argv[0] || "doctor", json: false, database: "", output: "", backup: "" };
@@ -118,31 +119,67 @@ function restrictBackupPermissions(target, mode) {
   fs.chmodSync(target, mode);
 }
 
-function restrictBackupTree(target) {
-  if (process.platform === "win32") return;
-  const stat = fs.lstatSync(target);
-  if (stat.isDirectory()) {
-    restrictBackupPermissions(target, OWNER_DIRECTORY_MODE);
-    for (const entry of fs.readdirSync(target)) restrictBackupTree(path.join(target, entry));
-    return;
+function copyOptionalDataDirectory(name, destination, sourceDataRoot, skippedPaths) {
+  const source = path.join(sourceDataRoot, name);
+  if (!fs.existsSync(source) && !fs.lstatSync(source, { throwIfNoEntry: false })) return;
+  function copy(relative) {
+    const current = path.join(sourceDataRoot, relative);
+    const basename = path.basename(relative);
+    const stat = fs.lstatSync(current);
+    // Exclude before traversing: runtime virtualenvs may contain dangling or
+    // platform-specific links. User uploads and instance .env files are retained.
+    if (name === "instances" && relative !== name && EXCLUDED_INSTANCE_DIRECTORIES.has(basename) && (stat.isDirectory() || stat.isSymbolicLink())) {
+      skippedPaths.push(`data/${relative.replaceAll("\\", "/")}`);
+      return;
+    }
+    if (stat.isSymbolicLink()) throw new Error(`Unsupported symbolic link in backup: ${relative}. Use a regular file or an excluded runtime directory.`);
+    const target = path.join(destination, "data", relative);
+    if (stat.isDirectory()) {
+      fs.mkdirSync(target, { mode: OWNER_DIRECTORY_MODE });
+      restrictBackupPermissions(target, OWNER_DIRECTORY_MODE);
+      for (const entry of fs.readdirSync(current).sort()) copy(path.join(relative, entry));
+    } else if (stat.isFile()) {
+      fs.copyFileSync(current, target, fs.constants.COPYFILE_EXCL);
+      restrictBackupPermissions(target, OWNER_FILE_MODE);
+    } else {
+      throw new Error(`Backup contains an unsupported filesystem entry: ${relative}`);
+    }
   }
-  if (!stat.isFile()) throw new Error(`Backup contains an unsupported filesystem entry: ${target}`);
-  restrictBackupPermissions(target, OWNER_FILE_MODE);
+  copy(name);
 }
 
-function copyOptionalDataDirectory(name, destination, sourceDataRoot) {
-  const source = path.join(sourceDataRoot, name);
-  if (!fs.existsSync(source)) return;
-  const target = path.join(destination, "data", name);
-  fs.cpSync(source, target, { recursive: true, errorOnExist: true });
-  restrictBackupTree(target);
+function isWithin(root, target) {
+  const relative = path.relative(root, target);
+  return relative === "" || (!relative.startsWith(`..${path.sep}`) && relative !== ".." && !path.isAbsolute(relative));
+}
+
+function newDestination(value, forbiddenRoot, sourceLabel) {
+  const destination = path.resolve(ROOT, value);
+  if (fs.lstatSync(destination, { throwIfNoEntry: false })) throw new Error(`Destination already exists: ${destination}`);
+  let ancestor = path.dirname(destination);
+  while (!fs.existsSync(ancestor)) ancestor = path.dirname(ancestor);
+  const resolved = path.resolve(fs.realpathSync(ancestor), path.relative(ancestor, destination));
+  if (isWithin(fs.realpathSync(forbiddenRoot), resolved)) throw new Error(`Destination must be outside the ${sourceLabel} directory.`);
+  return destination;
+}
+
+function sealSnapshot(snapshot) {
+  // Convert only the new snapshot, never the live source. A standalone DELETE
+  // journal avoids integrity checks creating mutable WAL/SHM backup artifacts.
+  const database = new DatabaseSync(snapshot);
+  try {
+    database.exec("PRAGMA wal_checkpoint(TRUNCATE); PRAGMA journal_mode=DELETE;");
+  } finally {
+    database.close();
+  }
 }
 
 export async function createBackup(options = {}) {
   const dbFile = databasePath(options.database);
+  const sourceCheck = checkSqlite(dbFile);
+  if (sourceCheck.schemaVersion > MAX_SUPPORTED_SCHEMA_VERSION) throw new Error("Source schema is newer than supported schema.");
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const destination = path.resolve(ROOT, options.output || path.join("backups", `mybay-backup-${stamp}`));
-  if (fs.existsSync(destination)) throw new Error(`Backup destination already exists: ${destination}`);
+  const destination = newDestination(options.output || path.join("backups", `mybay-backup-${stamp}`), path.dirname(dbFile), "source data");
   fs.mkdirSync(destination, { recursive: true, mode: OWNER_DIRECTORY_MODE });
   restrictBackupPermissions(destination, OWNER_DIRECTORY_MODE);
   const dataDirectory = path.join(destination, "data");
@@ -150,16 +187,18 @@ export async function createBackup(options = {}) {
   restrictBackupPermissions(dataDirectory, OWNER_DIRECTORY_MODE);
 
   const snapshot = path.join(destination, "data", "mybay.sqlite");
-  const source = new DatabaseSync(dbFile);
+  const source = new DatabaseSync(dbFile, { readOnly: true });
   try {
     await sqliteBackup(source, snapshot);
   } finally {
     source.close();
   }
+  sealSnapshot(snapshot);
   const sqlite = checkSqlite(snapshot);
-  copyOptionalDataDirectory("instances", destination, path.dirname(dbFile));
+  const skippedPaths = [];
+  copyOptionalDataDirectory("instances", destination, path.dirname(dbFile), skippedPaths);
   restrictBackupPermissions(snapshot, OWNER_FILE_MODE);
-  copyOptionalDataDirectory("uploads", destination, path.dirname(dbFile));
+  copyOptionalDataDirectory("uploads", destination, path.dirname(dbFile), skippedPaths);
 
   const files = listFiles(destination).map((relativePath) => ({
     path: relativePath,
@@ -171,7 +210,9 @@ export async function createBackup(options = {}) {
     mybayVersion: JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8")).version,
     schemaVersion: sqlite.schemaVersion,
     includes: ["data/mybay.sqlite", "data/instances (when present)", "data/uploads (when present)"],
-    excludes: ["logs", "cache", "runtime images", ".env"],
+    excludes: ["instance directories named logs, cache, .cache, __pycache__, .venv, venv, node_modules", "runtime images", "control-plane .env (preserve separately)"],
+    skippedPaths,
+    consistency: "SQLite snapshot; stop all control-plane and Agent writers for a coherent workspace backup",
     files,
   };
   const manifestPath = path.join(destination, "manifest.json");
@@ -180,8 +221,15 @@ export async function createBackup(options = {}) {
   return { destination, manifest };
 }
 
-export function verifyBackup(options = {}) {
-  const backupRoot = path.resolve(ROOT, options.backup || options.output || "");
+function assertNoSymbolicLinks(root, relative) {
+  let current = root;
+  for (const part of relative.split("/")) {
+    current = path.join(current, part);
+    if (fs.lstatSync(current, { throwIfNoEntry: false })?.isSymbolicLink()) {
+      throw new Error(`Unsupported symbolic link in backup: ${relative}`);
+    }
+  }
+}
 
 function validateManifest(manifest, backupRoot) {
   if (!manifest || typeof manifest !== "object" || Array.isArray(manifest)) throw new Error("Backup manifest must be an object.");
@@ -219,6 +267,9 @@ function validateManifest(manifest, backupRoot) {
       normalizedPath === ".." ||
       normalizedPath.startsWith("../") ||
       normalizedPath.startsWith("/") ||
+      !normalizedPath.startsWith("data/") ||
+      /[:\0]/.test(normalizedPath) ||
+      normalizedPath.split("/").some((part) => /[. ]$/.test(part) || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(part)) ||
       normalizedPath !== canonicalInput ||
       target === backupRoot ||
       !target.startsWith(backupRoot + path.sep)
@@ -228,17 +279,58 @@ function validateManifest(manifest, backupRoot) {
     if (typeof entry.sha256 !== "string" || !/^[a-f0-9]{64}$/i.test(entry.sha256)) {
       throw new Error(`Backup manifest contains an invalid checksum: ${entry.path}`);
     }
+    assertNoSymbolicLinks(backupRoot, normalizedPath);
     if (!fs.existsSync(target) || !fs.lstatSync(target).isFile()) throw new Error(`Backup file is missing: ${entry.path}`);
     if (sha256(target) !== entry.sha256.toLowerCase()) throw new Error(`Backup checksum mismatch: ${entry.path}`);
   }
 }
+
+function readVerifiedBackup(options = {}) {
+  const backupRoot = path.resolve(ROOT, options.backup || options.output || "");
   if (!options.backup && !options.output) throw new Error("--backup is required.");
+  assertNoSymbolicLinks(backupRoot, "manifest.json");
   const manifestPath = path.join(backupRoot, "manifest.json");
   const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
   validateManifest(manifest, backupRoot);
   const sqlite = checkSqlite(path.join(backupRoot, "data", "mybay.sqlite"));
   if (sqlite.schemaVersion !== manifest.schemaVersion) throw new Error("Backup schema version does not match its manifest.");
+  return { backupRoot, manifest, sqlite };
+}
+
+export function verifyBackup(options = {}) {
+  const { manifest, sqlite } = readVerifiedBackup(options);
   return { ok: true, schemaVersion: sqlite.schemaVersion, files: manifest.files.length };
+}
+
+export function restoreBackup(options = {}) {
+  if (!options.backup) throw new Error("--backup is required.");
+  if (!options.output) throw new Error("--output is required; restore only supports a new directory.");
+  const { backupRoot, manifest, sqlite: verifiedSqlite } = readVerifiedBackup({ backup: options.backup });
+  const verified = { ok: true, schemaVersion: verifiedSqlite.schemaVersion, files: manifest.files.length };
+  const destination = newDestination(options.output, backupRoot, "backup");
+  fs.mkdirSync(path.dirname(destination), { recursive: true });
+  const staging = fs.mkdtempSync(path.join(path.dirname(destination), ".mybay-restore-"));
+  restrictBackupPermissions(staging, OWNER_DIRECTORY_MODE);
+  try {
+    for (const entry of manifest.files) {
+      const relative = entry.path.replaceAll("\\", "/");
+      assertNoSymbolicLinks(backupRoot, relative);
+      const target = path.join(staging, ...relative.split("/"));
+      fs.mkdirSync(path.dirname(target), { recursive: true, mode: OWNER_DIRECTORY_MODE });
+      fs.copyFileSync(path.join(backupRoot, ...relative.split("/")), target, fs.constants.COPYFILE_EXCL);
+      restrictBackupPermissions(target, OWNER_FILE_MODE);
+      if (sha256(target) !== entry.sha256.toLowerCase()) throw new Error(`Backup changed during restore: ${relative}`);
+    }
+    const sqlite = checkSqlite(path.join(staging, "data", "mybay.sqlite"));
+    if (sqlite.schemaVersion !== verified.schemaVersion) throw new Error("Restored schema does not match backup.");
+    if (fs.lstatSync(destination, { throwIfNoEntry: false })) throw new Error(`Destination already exists: ${destination}`);
+    fs.renameSync(staging, destination);
+    return { ...verified, destination, dataDirectory: path.join(destination, "data") };
+  } catch (error) {
+    // Retain the uniquely named staging directory for diagnosis; never delete or
+    // overwrite an existing target as part of a failed restore.
+    throw new Error(`Restore failed; incomplete staging directory retained at ${staging}`, { cause: error });
+  }
 }
 
 function printDoctor(result, asJson) {
@@ -258,8 +350,11 @@ async function main() {
   } else if (args.command === "verify-backup") {
     const result = verifyBackup(args);
     console.log(args.json ? JSON.stringify(result, null, 2) : `Backup verified: schema ${result.schemaVersion}; ${result.files} files`);
+  } else if (args.command === "restore") {
+    const result = restoreBackup(args);
+    console.log(args.json ? JSON.stringify(result, null, 2) : `Backup restored into new directory: ${result.destination}. Preserve the original ENCRYPTION_KEY separately; service cutover is manual.`);
   } else {
-    throw new Error("Usage: npm run doctor -- [--json] | npm run backup -- [--output DIR] | npm run backup:verify -- --backup DIR");
+    throw new Error("Usage: npm run doctor -- [--json] | npm run backup -- [--output DIR] | npm run backup:verify -- --backup DIR | npm run backup:restore -- --backup DIR --output NEW_DIR");
   }
 }
 

@@ -7,7 +7,7 @@ const TARGET_EXTS = new Set([
   ".html", ".css", ".yml", ".yaml"
 ]);
 const EXCLUDED_DIRECTORIES = new Set([
-  "node_modules", "dist", "coverage", "release", "data", ".git"
+  "node_modules", "dist", "coverage", "release", "data", ".git", "tmp", "backups"
 ]);
 
 const MOJIBAKE_REGEXES = [

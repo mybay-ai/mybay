@@ -1,5 +1,6 @@
 /.git
 /.github
+/.codex-worktrees
 .gitignore
 
 /node_modules
@@ -12,6 +13,9 @@
 /uploads
 /logs
 /tmp
+/backups
+/runtime
+/secrets
 
 .env
 .env.*
@@ -28,11 +32,14 @@
 *.pem
 *.key
 *.crt
+*.cer
 *.p12
 *.pfx
 *.jks
 *.keystore
 .npmrc
+id_rsa
+id_ed25519
 
 .vscode
 .idea

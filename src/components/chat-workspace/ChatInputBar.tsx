@@ -5,6 +5,11 @@ import { Activity, Brain, ChevronDown, CornerDownLeft, FileText, Gauge, HelpCirc
 import type { ChatRunMetrics, RunsCapabilityState } from "./useChatRuns";
 import { DIRECT_CHAT_ATTACHMENT_EXTENSIONS, type ChatAttachmentConfig, isChatAttachmentLimitReached } from "../../../shared/chatAttachmentContract";
 import { CHAT_WORKSPACE_TABLET_BREAKPOINT } from "./chatWorkspaceResponsiveLayout";
+import { ChatLongTextCards, handleLongTextPaste, type LongTextComposerActions } from "./ChatLongTextCards";
+import { LONG_TEXT_TYPED_SUGGESTION_THRESHOLD, serializeLongTextDraft, type PendingLongTextBlock } from "./composerLongText";
+import { MAX_CHAT_USER_MESSAGE_CHARS, countChatMessageCharacters } from "../../../shared/chatMessageContract";
+import { ChatAttachmentUploads, type AttachmentUploadsProps } from "./ChatAttachmentUploads";
+import { handleClipboardAttachments } from "./clipboardAttachments";
 export type PendingAttachment = {
   id: string;
   originalName: string;
@@ -16,10 +21,13 @@ export type PendingAttachment = {
 export type ChatReasoningEffort = "fast" | "balanced" | "deep";
 
 type ChatInputBarProps = {
+  attachmentUploads?: AttachmentUploadsProps;
+  longTextComposer?: LongTextComposerActions & { blocks: PendingLongTextBlock[] };
   pendingAttachments?: PendingAttachment[];
   onUpload?: (files: FileList | File[]) => void;
   onRemoveAttachment?: (id: string) => void;
   isUploading?: boolean;
+  creatingConversation?: boolean;
   attachmentConfig: ChatAttachmentConfig;
   input: string;
   sending: boolean;
@@ -49,7 +57,9 @@ export function shouldIgnoreComposerKeyDown(event: KeyboardEvent<HTMLTextAreaEle
 }
 
 export function ChatInputBar({
+  attachmentUploads,
   input,
+  longTextComposer,
   sending,
   activeRunId,
   stopPending = false,
@@ -74,6 +84,7 @@ export function ChatInputBar({
   onUpload,
   onRemoveAttachment,
   isUploading,
+  creatingConversation = false,
   attachmentConfig
 }: ChatInputBarProps) {
   const { t } = useTranslation(["dashboard", "common"]);
@@ -82,6 +93,9 @@ export function ChatInputBar({
   const [reasoningMenuOpen, setReasoningMenuOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const composerText = serializeLongTextDraft(longTextComposer?.blocks || [], input);
+  const composerCharacters = countChatMessageCharacters(composerText.trim());
+  const messageTooLong = composerCharacters > MAX_CHAT_USER_MESSAGE_CHARS;
 
 
   useEffect(() => {
@@ -116,7 +130,7 @@ export function ChatInputBar({
     if (shouldIgnoreComposerKeyDown(e)) {
       return;
     }
-    if (e.key === "Enter" && !e.shiftKey && isUploading) {
+    if (e.key === "Enter" && !e.shiftKey && (!isChatReady || isUploading || creatingConversation || messageTooLong)) {
       e.preventDefault();
       return;
     }
@@ -197,7 +211,8 @@ export function ChatInputBar({
   return (
     <div className={"shrink-0 border-t border-outline/80 bg-surface/90 px-3 backdrop-blur sm:px-4 sm:pb-3 sm:pt-3 " + (mobileKeyboardOpen ? "pb-2 pt-1.5" : "pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2.5")}>
 
-      {(pendingAttachments.length > 0 || isUploading) && (
+      {attachmentUploads && <ChatAttachmentUploads {...attachmentUploads} />}
+      {(pendingAttachments.length > 0 || (isUploading && !attachmentUploads)) && (
         <div className="flex flex-wrap gap-2 mb-2 px-1 max-w-5xl mx-auto">
           {pendingAttachments.map((att) => (
             <div key={att.id} className="flex items-center gap-1.5 bg-surface-muted text-content-secondary px-2 py-1 rounded-lg text-[13px] border border-outline">
@@ -208,19 +223,27 @@ export function ChatInputBar({
               </button>
             </div>
           ))}
-          {isUploading && (
+          {isUploading && !attachmentUploads && (
             <div className="flex items-center gap-1.5 bg-surface-muted text-slate-500 px-2 py-1 rounded-md text-[13px] border border-outline animate-pulse">
               {t("dashboard:chatWorkspace.attachmentUploading")}
             </div>
           )}
         </div>
       )}
-      <form onSubmit={onSubmit} className="w-full max-w-5xl mx-auto">
+      <form onSubmit={onSubmit} onPasteCapture={event => { handleClipboardAttachments(event, onUpload); }} className="w-full max-w-5xl mx-auto">
         <div className="relative rounded-2xl border border-outline bg-surface shadow-sm shadow-slate-200/60 transition-all focus-within:border-indigo-500 focus-within:shadow-md focus-within:shadow-indigo-100/60 focus-within:ring-2 focus-within:ring-indigo-500/10 dark:shadow-slate-950/40 dark:focus-within:border-indigo-400 dark:focus-within:shadow-slate-950/60 dark:focus-within:ring-indigo-400/15">
+          {longTextComposer && <ChatLongTextCards blocks={longTextComposer.blocks} actions={longTextComposer} disabled={!isChatReady} onKeyDown={handleKeyDownInternal} />}
+          {longTextComposer && countChatMessageCharacters(input) >= LONG_TEXT_TYPED_SUGGESTION_THRESHOLD && (
+            <button type="button" disabled={!isChatReady} className="mx-3 mt-2 rounded px-2 py-1 text-xs text-indigo-600 hover:bg-indigo-50 dark:text-indigo-300 dark:hover:bg-indigo-500/10"
+              onClick={() => { longTextComposer.insert(input, 0, input.length); textareaRef.current?.focus(); }}>
+              {t("dashboard:chatWorkspace.longTextCollapse")}
+            </button>
+          )}
           <textarea
             ref={textareaRef}
             value={input}
             onChange={(event) => onInputChange(event.target.value)}
+            onPaste={longTextComposer ? event => { handleLongTextPaste(event, longTextComposer.insert); } : undefined}
             onKeyDown={handleKeyDownInternal}
             onFocus={onInputFocus}
             placeholder={placeholder}
@@ -391,15 +414,18 @@ export function ChatInputBar({
             </span>
             <button
               type="submit"
-              disabled={!input.trim() || !isChatReady || isUploading || agentModeBlocked}
+              disabled={!composerText.trim() || messageTooLong || !isChatReady || isUploading || creatingConversation || agentModeBlocked}
               className="h-8 w-8 bg-indigo-600 hover:bg-indigo-700 disabled:bg-outline disabled:text-content-muted text-white rounded-lg transition-all inline-flex items-center justify-center shadow-sm shadow-indigo-200/70 dark:bg-indigo-600 dark:hover:bg-indigo-500 dark:shadow-none"
-              title={agentModeBlocked ? agentUnavailableMessage : sending ? t("dashboard:chatWorkspace.interruptAndSendTitle") : t("dashboard:chatWorkspace.sendBtnTitle")}
-              aria-label={agentModeBlocked ? agentUnavailableMessage : sending ? t("dashboard:chatWorkspace.interruptAndSendTitle") : t("dashboard:chatWorkspace.sendBtnTitle")}
+              title={creatingConversation ? t("dashboard:chatWorkspace.creatingConversation") : agentModeBlocked ? agentUnavailableMessage : sending ? t("dashboard:chatWorkspace.interruptAndSendTitle") : t("dashboard:chatWorkspace.sendBtnTitle")}
+              aria-label={creatingConversation ? t("dashboard:chatWorkspace.creatingConversation") : agentModeBlocked ? agentUnavailableMessage : sending ? t("dashboard:chatWorkspace.interruptAndSendTitle") : t("dashboard:chatWorkspace.sendBtnTitle")}
             >
               <Send className="w-4 h-4" />
             </button>
           </div>
         </div>
+        {creatingConversation && <p role="status" className="mt-2 px-2 text-xs text-content-muted">{t("dashboard:chatWorkspace.creatingConversation")}</p>}
+        {messageTooLong && <p role="alert" className="mt-2 px-2 text-xs text-red-600 dark:text-red-400">{t("dashboard:chatWorkspace.messageTooLong", { max: MAX_CHAT_USER_MESSAGE_CHARS.toLocaleString() })}</p>}
+        {agentModeBlocked && <p role="status" className="mt-2 px-2 text-xs text-amber-700 dark:text-amber-300">{agentUnavailableMessage}</p>}
         <div className={`mt-1.5 items-center gap-3 px-2 text-[11px] text-content-muted ${mobileKeyboardOpen ? "hidden" : "hidden md:flex"}`}>
           <div
             className="inline-flex min-w-0 items-center gap-1.5"

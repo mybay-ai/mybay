@@ -72,6 +72,8 @@ Before opening a Pull Request, run the complete local verification suite:
 npm run check
 ```
 
+Automated checks do not replace a fresh-install browser test. For onboarding or release changes, verify both clone and Release ZIP installation in isolated environments, including a file-producing task, preview/download, stop/follow-up, and restart persistence. Record passed checks separately from unverified items; see the [release validation scope](./docs/release-validation.md).
+
 ---
 
 ## Submitting Pull Requests (PR)

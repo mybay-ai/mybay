@@ -12,6 +12,7 @@ import { chatRepo } from "../../repositories/chatRepo";
 import { hasConfiguredInternalApiKey, resolveInstanceInternalApiKey } from "../../utils/instanceInternalApiKey";
 import { registerConversationRoutes } from "./chat/conversation.routes";
 import { registerRunRoutes } from "./chat/runs.routes";
+import { registerRunQuestionRoutes } from "./chat/runQuestions.routes";
 import { registerRunEventRoutes } from "./chat/runEvents.routes";
 import { registerQuickRoutes } from "./chat/quick.routes";
 import { registerAssistRoutes } from "./chat/assist.routes";
@@ -44,6 +45,7 @@ function getSingleHeader(val: string | string[] | undefined): string | null {
 // Memory store for runs rate limiting
 export function createChatRoutes(deps: RouterDependencies) {
   const router = Router();
+  registerRunQuestionRoutes(router);
 
   registerConversationRoutes(router);
   registerFeedbackRoutes(router);

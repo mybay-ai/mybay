@@ -1,7 +1,35 @@
 import { describe, expect, it } from "vitest";
-import { extractGeneratedArtifacts, isGeneratedArtifactPreviewable, mergeGeneratedArtifactVerification } from "./generatedArtifacts";
+import { extractGeneratedArtifacts, getGeneratedArtifactActionPath, isGeneratedArtifactPreviewable, mergeGeneratedArtifactVerification } from "./generatedArtifacts";
+import { normalizeGeneratedInstanceFilePath } from "./generatedFilePath";
+import { selectMessageGeneratedArtifacts } from "./ChatGeneratedArtifactCards";
 
 describe("generated artifacts", () => {
+  it("retains each message/run reference when a later reply mentions the same file", () => {
+    const messages = [
+      { id: "m1", role: "assistant" as const, content: "/opt/data/report.html", metadata: { run_id: "r1" }, request_id: "q1" },
+      { id: "m2", role: "assistant" as const, content: "Read /opt/data/report.html", metadata: { run_id: "r2" }, request_id: "q2" },
+    ];
+    const artifacts = extractGeneratedArtifacts(messages, null);
+    expect(artifacts).toHaveLength(1);
+    expect(selectMessageGeneratedArtifacts(artifacts, "m1", "r1")[0]).toMatchObject({ messageId: "m1", runId: "r1", requestId: "q1" });
+    expect(selectMessageGeneratedArtifacts(artifacts, "m2", "r2")[0]).toMatchObject({ messageId: "m2", runId: "r2", requestId: "q2" });
+    expect(selectMessageGeneratedArtifacts(artifacts, "m3", "r3")).toEqual([]);
+    expect(extractGeneratedArtifacts(JSON.parse(JSON.stringify(messages)), null)).toEqual(artifacts);
+    expect(mergeGeneratedArtifactVerification(artifacts[0], { references: [], status: "ready" }).references).toEqual(artifacts[0].references);
+  });
+  it.each(["report.html", "custom-folder/report.html", "outputs/report.html"])("round-trips a generated path through preview and download: %s", (path) => {
+    const [artifact] = extractGeneratedArtifacts([{
+      id: "assistant-root", role: "assistant", status: "completed", content: `/opt/data/${path}`,
+    }], null);
+    expect(artifact.path).toBe(path);
+    expect(getGeneratedArtifactActionPath(artifact)).toBe(`/opt/data/${path}`);
+    expect(normalizeGeneratedInstanceFilePath(getGeneratedArtifactActionPath(artifact))).toBe(path);
+  });
+
+  it.each(["../secret.html", "outputs/../secret.html", "C:/temp/report.html", "/etc/report.html", "\\\\host\\share\\report.html"])("rejects unsafe or noncanonical artifact identity: %s", (path) => {
+    expect(getGeneratedArtifactActionPath({ path })).toBe("");
+  });
+
   it("extracts safe container artifacts and binds them to the assistant run", () => {
     const artifacts = extractGeneratedArtifacts([{
       id: "assistant-1",

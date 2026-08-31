@@ -120,6 +120,7 @@ function reduceToolEvent(state: RunExecutionState, event: NormalizedRunEvent<Too
       label: payload.label || current.label,
       stepType: payload.stepType || current.stepType,
       status: nextStatus,
+      completionInferred: requestedStatus === "running" ? current.completionInferred : false,
       startedAt,
       completedAt,
       durationMs: startedAt !== undefined && completedAt !== undefined ? Math.max(0, completedAt - startedAt) : current.durationMs,
@@ -180,7 +181,7 @@ function reduceStatus(state: RunExecutionState, event: NormalizedRunEvent<Status
   const blocks = isTerminalExecutionStatus(status)
     ? state.blocks.map(block => {
       if (block.type === "tool" && block.status === "running") {
-        return { ...block, status: status === "completed" ? "completed" as const : "failed" as const, completedAt: block.completedAt || finishedAt };
+        return { ...block, status: status === "completed" ? "completed" as const : "failed" as const, completionInferred: true, completedAt: block.completedAt || finishedAt };
       }
       if (block.type === "approval" && block.status === "pending") return { ...block, status: "expired" as const };
       return block;

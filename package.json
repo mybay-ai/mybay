@@ -1,6 +1,6 @@
 {
     "name": "mybay-local",
-    "version": "0.1.24",
+    "version": "0.1.25",
     "description": "A local-first, self-hosted control plane for managing Hermes Agent instances.",
     "license": "AGPL-3.0-only",
     "repository": {
@@ -17,7 +17,7 @@
     },
     "scripts": {
         "dev": "npm run docs:build && tsx server.ts",
-        "build": "npm run docs:build && vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
+        "build": "npm run docs:build && vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs && esbuild server/services/runs/runFileSnapshotWorker.ts --bundle --platform=node --format=cjs --packages=external --outfile=dist/run-file-snapshot-worker.cjs",
         "docs:check": "tsx scripts/docs-build.ts",
         "docs:build": "tsx scripts/docs-build.ts --write",
         "docs:test": "vitest run src/lib/docs",
@@ -41,7 +41,9 @@
         "typecheck:strict-boundary": "tsc -p tsconfig.strict-boundary.json --noEmit",
         "doctor": "node scripts/mybay-ops.mjs doctor",
         "backup": "node scripts/mybay-ops.mjs backup",
-        "backup:verify": "node scripts/mybay-ops.mjs verify-backup"
+        "backup:verify": "node scripts/mybay-ops.mjs verify-backup",
+        "backup:restore": "node scripts/mybay-ops.mjs restore",
+        "recovery:service": "node scripts/mybay-service-recovery.mjs"
     },
     "dependencies": {
         "@e965/xlsx": "^0.20.3",

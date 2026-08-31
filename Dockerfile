@@ -34,6 +34,11 @@ COPY --from=production-dependencies /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/Dockerfile.feishu ./Dockerfile.feishu
+COPY --from=build /app/scripts/mybay-ops.mjs ./scripts/mybay-ops.mjs
+COPY --from=build /app/scripts/mybay-service-recovery.mjs ./scripts/mybay-service-recovery.mjs
+COPY --from=build /app/scripts/recovery-compose.mjs ./scripts/recovery-compose.mjs
+COPY --from=build /app/shared/schema-version.json ./shared/schema-version.json
+COPY --from=build /app/server/runtimePlugins/oss-local-questions ./server/runtimePlugins/oss-local-questions
 
 RUN apk upgrade --no-cache libcrypto3 libssl3 \
     && apk add --no-cache curl \

@@ -40,6 +40,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   INTERNAL_ROUTE_NOT_FOUND: "实例内部对话路由尚未建立，请检查部署状态。",
   INTERNAL_ROUTE_AUTH_FAILED: "实例内部路由鉴权失败，请检查本地路由配置。",
   UPSTREAM_UNAVAILABLE: "Agent 服务暂时不可用，请检查实例运行状态。",
+  UPSTREAM_FAILED: "Agent 执行失败，请检查模型配置、额度和实例日志后重试。",
   DISPATCH_UPSTREAM_UNAVAILABLE: "Agent 服务暂时不可用，请稍后重试。",
   RUN_NOT_FOUND: "任务不存在，可能已经过期或实例已重启。",
   UPSTREAM_RUN_NOT_FOUND: "Agent 任务状态已丢失，部分输出已保留，请重试。",

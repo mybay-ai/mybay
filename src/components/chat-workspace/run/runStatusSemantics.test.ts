@@ -23,7 +23,7 @@ describe("run status semantics", () => {
 
   it("derives tool display status from the same run status", () => {
     expect(resolveToolDisplayStatus("running", "waiting_for_approval")).toBe("waiting_for_approval");
-    expect(resolveToolDisplayStatus("failed", "stopped")).toBe("stopped");
+    expect(resolveToolDisplayStatus("failed", "stopped")).toBe("failed");
     expect(getRunStatusI18nKey("queued")).toBe("runStatusQueued");
   });
 });

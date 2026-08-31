@@ -1,4 +1,5 @@
 import type { QuickDeployReadiness } from "./quickDeployReadiness";
+import { canProbeLocalInstanceReadiness } from "../../../shared/localInstanceReadiness";
 
 export const QUICK_DEPLOY_POLL_TIMEOUT_MS = 5 * 60 * 1000;
 
@@ -6,7 +7,7 @@ export function shouldProbeQuickDeployChat(deployment: any, instance: any) {
   const deploymentStatus = String(deployment?.status || "").toLowerCase();
   const instanceStatus = String(instance?.status || deployment?.instanceStatus || "").toLowerCase();
   return deploymentStatus === "success"
-    && ["running", "partial_running", "gateway_ready", "dashboard_ready"].includes(instanceStatus);
+    && canProbeLocalInstanceReadiness({ status: instanceStatus, physicalStatus: instance?.physical_status });
 }
 
 export function shouldContinueQuickDeployPolling(

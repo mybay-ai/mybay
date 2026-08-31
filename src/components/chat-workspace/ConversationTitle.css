@@ -1,0 +1,26 @@
+.conversation-title {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.conversation-title-text {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .conversation-title[data-reading="pointer"] .conversation-title-text {
+    width: max-content;
+    overflow: visible;
+    text-overflow: clip;
+    animation: conversation-title-read var(--conversation-title-duration) linear forwards;
+  }
+}
+
+@keyframes conversation-title-read {
+  from { transform: translateX(0); }
+  to { transform: translateX(var(--conversation-title-offset)); }
+}

@@ -12,7 +12,7 @@ export type RunDisplayStatus =
   | "stopped"
   | "unknown";
 
-export type ToolDisplayStatus = "running" | "waiting_for_approval" | "completed" | "failed" | "stopped";
+export type ToolDisplayStatus = "running" | "waiting_for_approval" | "completed" | "failed" | "stopped" | "unknown";
 
 const TERMINAL_DISPLAY_STATUSES = new Set<RunDisplayStatus>(["completed", "failed", "stopped"]);
 
@@ -66,9 +66,10 @@ export function resolveRunDisplayStatus(args: {
   return "idle";
 }
 
-export function resolveToolDisplayStatus(toolStatus: ChatToolStepStatus, runStatus: RunDisplayStatus): ToolDisplayStatus {
+export function resolveToolDisplayStatus(toolStatus: ChatToolStepStatus, runStatus: RunDisplayStatus, completionInferred = false): ToolDisplayStatus {
+  if (completionInferred) return runStatus === "stopped" ? "stopped" : "unknown";
   if (toolStatus === "completed") return "completed";
-  if (toolStatus === "failed") return runStatus === "stopped" ? "stopped" : "failed";
+  if (toolStatus === "failed") return "failed";
   if (runStatus === "waiting_for_approval") return "waiting_for_approval";
   if (runStatus === "stopped") return "stopped";
   if (runStatus === "failed") return "failed";
@@ -95,6 +96,7 @@ export function getToolStatusI18nKey(status: ToolDisplayStatus): string {
     waiting_for_approval: "toolWaitingForApproval",
     completed: "toolCompleted",
     failed: "toolFailed",
-    stopped: "toolStopped"
+    stopped: "toolStopped",
+    unknown: "toolResultUnknown"
   }[status];
 }

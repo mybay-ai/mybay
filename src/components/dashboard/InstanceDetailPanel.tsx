@@ -633,6 +633,9 @@ export function InstanceDetailPanel({
             )}
           >
             <Briefcase className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+            <span>{t("instance_detail_context_tab")}</span>
+          </button>
+
           <button
             onClick={() => setDetailTab('diagnostics')}
             className={cn(
@@ -646,8 +649,6 @@ export function InstanceDetailPanel({
             <span>{t("instance_detail_diagnostics_tab")}</span>
           </button>
 
-            <span>{t("instance_detail_context_tab")}</span>
-          </button>
         </div>
 
         {/* Workspace Working Area Panel */}

@@ -1,13 +1,18 @@
 import { Download, ExternalLink, FileText, LoaderCircle, TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { isGeneratedArtifactPreviewable, type GeneratedArtifact } from "./generatedArtifacts";
+import { getGeneratedArtifactActionPath, isGeneratedArtifactPreviewable, type GeneratedArtifact } from "./generatedArtifacts";
 
 export function selectMessageGeneratedArtifacts(
   artifacts: GeneratedArtifact[],
   messageId: string,
   runId?: string | null
 ): GeneratedArtifact[] {
-  return artifacts.filter(artifact => artifact.messageId === messageId || Boolean(runId && artifact.runId === runId));
+  return artifacts.flatMap(artifact => {
+    const references = artifact.references || [artifact];
+    const reference = references.find(item => item.messageId === messageId)
+      || references.find(item => Boolean(runId && item.runId === runId));
+    return reference ? [{ ...artifact, messageId: reference.messageId, runId: reference.runId, requestId: reference.requestId }] : [];
+  });
 }
 
 export function ChatGeneratedArtifactCards({
@@ -37,8 +42,8 @@ export function ChatGeneratedArtifactCards({
                 <p className="truncate text-[10px] text-content-muted">{t(`chatWorkspace.workspaceGeneratedArtifactStatus_${artifact.status}`)}</p>
               </div>
               <div className="flex shrink-0 items-center gap-0.5">
-                {onPreview && <button type="button" disabled={!previewable} onClick={() => onPreview(artifact.path)} className="rounded-md p-1.5 text-content-muted hover:bg-surface hover:text-indigo-600 disabled:opacity-30" title={t("chatWorkspace.workspacePreviewFile")}><ExternalLink className="h-3.5 w-3.5" /></button>}
-                {onDownload && <button type="button" disabled={!previewable} onClick={() => onDownload(artifact.path)} className="rounded-md p-1.5 text-content-muted hover:bg-surface hover:text-emerald-600 disabled:opacity-30" title={t("chatWorkspace.runResultSummaryDownloadFile")}><Download className="h-3.5 w-3.5" /></button>}
+                {onPreview && <button type="button" disabled={!previewable} onClick={() => onPreview(getGeneratedArtifactActionPath(artifact))} className="rounded-md p-1.5 text-content-muted hover:bg-surface hover:text-indigo-600 disabled:opacity-30" title={t("chatWorkspace.workspacePreviewFile")}><ExternalLink className="h-3.5 w-3.5" /></button>}
+                {onDownload && <button type="button" disabled={!previewable} onClick={() => onDownload(getGeneratedArtifactActionPath(artifact))} className="rounded-md p-1.5 text-content-muted hover:bg-surface hover:text-emerald-600 disabled:opacity-30" title={t("chatWorkspace.runResultSummaryDownloadFile")}><Download className="h-3.5 w-3.5" /></button>}
               </div>
             </div>
           );

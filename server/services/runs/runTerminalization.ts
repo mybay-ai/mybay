@@ -1,3 +1,7 @@
+import type { LocalFileEvidence } from "../../../shared/localRunFileEvidence";
+import type { LocalRunTimeline } from "../../../shared/localRunTimeline";
+import type { LocalRunFileDiffs } from "../../../shared/localRunFileDiff";
+import { createLocalRunUsage, type LocalRunUsage } from "../../../shared/localRunUsage";
 import { containsDsmlToolCallProtocol, DSML_TOOL_CALL_ERROR_CODE } from "../../utils/dsmlToolCallGuard";
 import { sanitizeStep } from "./runStepSanitizer";
 
@@ -29,6 +33,9 @@ export interface FinishRunResult {
 }
 
 export interface FinishRunParams {
+  usageEvidence?: LocalRunUsage;
+  fileDiffs?: LocalRunFileDiffs;
+  timeline?: LocalRunTimeline;
   runId: string;
   status: RunTerminalStatus;
   assistantContent: string;
@@ -40,9 +47,13 @@ export interface FinishRunParams {
   reconcilerId?: string;
   expectedUpstreamRunId?: string;
   completionAudit?: Record<string, unknown>;
+  fileEvidence?: LocalFileEvidence;
 }
 
 export interface RunTerminalizationInput {
+  durationSource?: LocalRunUsage["durationSource"];
+  fileDiffs?: LocalRunFileDiffs;
+  timeline?: LocalRunTimeline;
   runId: string;
   finalStatus: RunTerminalStatus;
   assistantContent?: string;
@@ -51,6 +62,7 @@ export interface RunTerminalizationInput {
   durationMs?: number | null;
   expectedUpstreamRunId?: string;
   completionAudit?: Record<string, unknown>;
+  fileEvidence?: LocalFileEvidence;
 }
 
 export interface RunTerminalizationDependencies {
@@ -180,22 +192,23 @@ export async function terminalizeRun(
     }));
   }
 
-  if (input.usage && dependencies.observeUsage) {
-    await dependencies.observeUsage({ runId: input.runId, effectiveStatus, usage: input.usage });
-  }
-
+  const usageEvidence = createLocalRunUsage(input.usage, { durationMs: input.durationMs, durationSource: input.durationSource });
   const result = await dependencies.finishRun({
     runId: input.runId,
     status: effectiveStatus,
     assistantContent: effectiveAssistantContent,
     errorCode: safeErrorCode,
-    usagePromptTokens: input.usage?.prompt_tokens ?? input.usage?.input_tokens ?? null,
-    usageCompletionTokens: input.usage?.completion_tokens ?? input.usage?.output_tokens ?? null,
-    usageTotalTokens: input.usage?.total_tokens ?? null,
+    usageEvidence,
+    usagePromptTokens: usageEvidence.inputTokens,
+    usageCompletionTokens: usageEvidence.outputTokens,
+    usageTotalTokens: usageEvidence.totalTokens,
     durationMs: input.durationMs ?? null,
     reconcilerId: input.expectedUpstreamRunId ? undefined : dependencies.ownerId,
     expectedUpstreamRunId: input.expectedUpstreamRunId,
     completionAudit: input.completionAudit,
+    fileEvidence: input.fileEvidence,
+    fileDiffs: input.fileDiffs,
+    timeline: leakedToolProtocol ? undefined : input.timeline,
   });
 
   if (result.status === "already_terminal") {
@@ -226,5 +239,11 @@ export async function terminalizeRun(
   const latestRun = await dependencies.getRun(input.runId).catch(() => null);
   notifyConversation(input.runId, effectiveStatus, latestRun, dependencies);
   dependencies.setTerminalExpiry(input.runId);
+  // Optional observers cannot delay terminal state or its visible notification.
+  if (input.usage && dependencies.observeUsage) {
+    void Promise.resolve().then(() => dependencies.observeUsage!({
+      runId: input.runId, effectiveStatus, usage: input.usage!,
+    })).catch(() => dependencies.warn("Optional run usage observation failed"));
+  }
   return true;
 }

@@ -42,6 +42,23 @@ describe("local SQLite store", () => {
     expect(readStore().systemSettings.test_key).toBe("test_val");
   });
 
+  it("refuses a future schema before initializing or writing the database", () => {
+    mutateStore((store) => { store.systemSettings.recovery_marker = "keep"; });
+    closeLocalDatabase();
+    const future = new DatabaseSync(sqlitePath);
+    future.prepare("UPDATE localMetadata SET value = '999' WHERE key = 'schema_version'").run();
+    // A future edition may replace tables. Older initialization must not recreate them.
+    future.exec("DROP TABLE chatMessageFeedback; PRAGMA wal_checkpoint(TRUNCATE); PRAGMA journal_mode=DELETE;");
+    future.close();
+    const before = fs.readFileSync(sqlitePath);
+    expect(() => readStore()).toThrow(/schema.*999.*newer|newer.*schema/i);
+    expect(fs.readFileSync(sqlitePath)).toEqual(before);
+    const preserved = new DatabaseSync(sqlitePath, { readOnly: true });
+    expect(preserved.prepare("SELECT name FROM sqlite_master WHERE name = 'chatMessageFeedback'").get()).toBeUndefined();
+    expect(preserved.prepare("SELECT value FROM systemSettings WHERE key = 'recovery_marker'").get()?.value).toBe("keep");
+    preserved.close();
+  });
+
   it("rolls back a failed transaction", () => {
     expect(() => mutateStore((store) => {
       store.users.push({ id: "rolled-back", username: "unsafe" });
@@ -152,5 +169,23 @@ describe("local SQLite store", () => {
     expect((verified.prepare("SELECT value FROM localMetadata WHERE key = ?").get("schema_version") as { value: string }).value).toBe("1");
     expect((verified.prepare("SELECT data FROM chatRuns WHERE id = ?").get("run-invalid") as { data: string }).data).toBe("{invalid");
     verified.close();
+  });
+});
+
+
+describe("test database safety", () => {
+  afterEach(() => { closeLocalDatabase(); delete process.env.MYBAY_SQLITE_PATH; delete process.env.LOCAL_STORE_PATH; });
+  it("uses a temporary default even after fixture environment cleanup", () => {
+    delete process.env.MYBAY_SQLITE_PATH;
+    delete process.env.LOCAL_STORE_PATH;
+    expect(getLocalDatabasePath()).not.toBe(path.resolve("data/mybay.sqlite"));
+    expect(getLocalDatabasePath()).toContain("mybay-test-store-");
+    mutateStore(data => { data.systemSettings.isolated = "yes"; });
+    closeLocalDatabase();
+    expect(readStore().systemSettings.isolated).toBe("yes");
+  });
+  it.each(["MYBAY_SQLITE_PATH", "LOCAL_STORE_PATH"])("refuses an explicit live database in %s", key => {
+    process.env[key] = key === "LOCAL_STORE_PATH" ? "data/mybay.json" : "data/mybay.sqlite";
+    expect(() => getLocalDatabasePath()).toThrow("Tests must use an isolated database");
   });
 });

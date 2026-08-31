@@ -19,7 +19,9 @@ describe("release package path filtering", () => {
       "data/local-store.json", "data/local-store.json.bak", "data/mybay.sqlite.migration-complete",
       "node_modules/pkg/index.js", "dist/server.cjs", "coverage/index.html", ".env", ".env.production",
       "release/mybay-local.zip", "runtime/state.json", "secrets/token.txt", "logs/server.log", "uploads/private.txt",
-      ".npmrc", "id_rsa", "id_ed25519", "secret.pem", "certificate.p12", "Dockerfile (2).txt"
+      "backups/mybay-backup/manifest.json", "backups/mybay-backup/data/instances/agent/report.html",
+      ".npmrc", "id_rsa", "id_ed25519", "secret.pem", "certificate.p12", "certificate.cer", "Dockerfile (2).txt",
+      ".codex-worktrees/experiment/private.txt"
     ]) expect(shouldIncludeReleasePath(target), target).toBe(false);
   });
 

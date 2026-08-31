@@ -1,6 +1,11 @@
-import { ArrowDown, ArrowUp, ChevronLeft, Edit3, Folder, FolderInput, FolderPlus, LoaderCircle, MessageSquare, Pin, Plus, Search, Trash2, X } from "lucide-react";
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import type { ConversationPlacement, ConversationSection } from "../../../shared/localConversationPlacement";
+import { useConversationSidebarDrag } from "./useConversationSidebarDrag";
+import { useSidebarCollapsedGroups } from "./useSidebarCollapsedGroups";
+import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, ChevronLeft, Edit3, Folder, FolderOpen, GripVertical, FolderInput, FolderPlus, LoaderCircle, MessageSquare, MoreHorizontal, Pin, Plus, Search, Trash2, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ConversationTitle } from "./ConversationTitle";
+import { ConversationActionsDialog } from "./ConversationActionsDialog";
 import { api } from "../../lib/api";
 
 export interface ConversationSearchResult {
@@ -20,13 +25,16 @@ interface ChatConversationSidebarProps {
   sidebarOpen: boolean;
   selectedId: string;
   loadingConversations: boolean;
+  creatingConversation?: boolean;
   conversations: any[];
   conversationProjects: any[];
   selectedConversationId: string | null;
   renamingId: string | null;
   renameValue: string;
   loadingMoreConversations: boolean;
-  onCreateConversation: () => void;
+  onCreateConversation: (projectId?: string | null) => void;
+  onPlaceConversation: (placement: ConversationPlacement) => void;
+  organizingConversations?: boolean;
   onCreateProject: (name: string) => void;
   onRenameProject: (id: string, name: string) => void;
   onDeleteProject: (id: string) => void;
@@ -51,6 +59,7 @@ export function ChatConversationSidebar({
   sidebarOpen,
   selectedId,
   loadingConversations,
+  creatingConversation = false,
   conversations,
   conversationProjects,
   selectedConversationId,
@@ -58,6 +67,8 @@ export function ChatConversationSidebar({
   renameValue,
   loadingMoreConversations,
   onCreateConversation,
+  onPlaceConversation,
+  organizingConversations = false,
   onCreateProject,
   onRenameProject,
   onDeleteProject,
@@ -81,6 +92,12 @@ export function ChatConversationSidebar({
   const [editingProject, setEditingProject] = useState<any | null>(null);
   const [projectName, setProjectName] = useState("");
   const [moveConversationId, setMoveConversationId] = useState<string | null>(null);
+  const [actionsId, setActionsId] = useState<string | null>(null);
+  const [projectActionsId, setProjectActionsId] = useState<string | null>(null);
+  const collapsed = useSidebarCollapsedGroups(selectedId);
+  const drag = useConversationSidebarDrag(selectedId, organizingConversations || creatingConversation || Boolean(renamingId), onPlaceConversation, collapsed.expand);
+  const projectActions = conversationProjects.find(project => project.id === projectActionsId);
+  const renameFinishedRef = useRef(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<ConversationSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -97,6 +114,8 @@ export function ChatConversationSidebar({
   }, [projectModalMode]);
 
   useEffect(() => {
+    setActionsId(null);
+    setProjectActionsId(null);
     setSearchQuery("");
     setSearchResults([]);
     setSearching(false);
@@ -184,12 +203,16 @@ export function ChatConversationSidebar({
   const recentConversations = conversations.filter((conv) => !conv.pinned_at && !projectConversationIds.has(conv.id));
   const hasAnyConversation = conversations.length > 0;
 
-  const renderSectionTitle = (label: string, icon?: React.ReactNode) => (
-    <div className="flex items-center gap-1.5 px-1.5 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wide text-content-muted">
-      {icon}
-      <span>{label}</span>
-    </div>
+  const renderSectionTitle = (key: string, label: string, count: number, icon?: React.ReactNode) => (
+    <button type="button" onClick={() => collapsed.toggle(key)} aria-expanded={!collapsed.isCollapsed(key)}
+      aria-label={label} onDragEnter={() => { if (drag.draggedId && key === "projects") collapsed.expand(key); }}
+      className="flex w-full items-center gap-2 rounded-lg px-1.5 py-2 text-left text-[12px] font-semibold text-content-muted hover:bg-surface-muted focus-visible:outline focus-visible:outline-indigo-500">
+      {collapsed.isCollapsed(key) ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+      {icon}<span className="flex-1">{label}</span><span title={t("chatWorkspace.loadedGroupCount")} className="rounded-md bg-surface-muted px-1.5 text-[10px] tabular-nums">{count}</span>
+    </button>
   );
+  const dropClass = (key: string) => drag.over?.key === key ? "ring-2 ring-indigo-500/60 bg-indigo-500/10" : "";
+  const emptyDrop = (key: string) => <div className="rounded-lg border border-dashed border-outline px-3 py-3 text-center text-[11px] leading-5 text-content-muted">{t(key)}</div>;
 
   const renderConversation = (conv: any) => {
     const isSelected = conv.id === selectedConversationId;
@@ -200,87 +223,73 @@ export function ChatConversationSidebar({
       : conv.project_id
         ? conversations.filter((item) => !item.pinned_at && item.project_id === conv.project_id)
         : recentConversations;
+    const section: ConversationSection = isPinned ? { kind: "pinned" } : conv.project_id && projectGroups.some(group => group.project.id === conv.project_id) ? { kind: "project", projectId: conv.project_id } : { kind: "recent" };
     const sectionIndex = sectionItems.findIndex((item) => item.id === conv.id);
 
     return (
       <div
         key={conv.id}
-        onClick={() => {
-          if (!isRenaming) onSelectConversation(conv.id);
-        }}
-        className={`group relative p-2.5 pr-[10.5rem] rounded-xl flex items-center gap-2.5 cursor-pointer transition-all select-none border ${
+        data-conversation-title-row
+        draggable={!isRenaming && !organizingConversations && !creatingConversation}
+        onDragStart={event => drag.start(event, conv.id)} onDragEnd={drag.reset}
+        {...drag.targetProps(section, conv.id)}
+        className={`group relative ${drag.draggedId === conv.id ? "opacity-40" : ""} p-1 rounded-xl flex items-center gap-1 transition-all select-none border ${
           isSelected
             ? "bg-white text-slate-950 font-semibold border-indigo-200 shadow-sm dark:bg-indigo-500/15 max-sm:dark:bg-indigo-500/20 dark:text-indigo-100 dark:border-indigo-400/35"
             : "bg-surface/55 text-content-secondary hover:bg-surface hover:border-outline-strong border-transparent max-sm:dark:bg-slate-900/70 dark:border-slate-800/70"
         }`}
       >
-        <MessageSquare className={`w-4 h-4 shrink-0 ${isSelected ? "text-indigo-600 dark:text-indigo-300" : "text-content-muted"}`} />
-
+        {drag.over?.key === conv.id && <span className={`pointer-events-none absolute inset-x-1 z-10 h-0.5 bg-indigo-500 ${drag.over.position === "before" ? "-top-1" : "-bottom-1"}`} />}
+        {!isRenaming && <button type="button" draggable={false} disabled={organizingConversations || creatingConversation}
+          aria-label={`${t("chatWorkspace.dragConversation")}: ${conv.title}`} title={t("chatWorkspace.dragConversation")}
+          onPointerDown={event => drag.pointerStart(event, conv.id)} onPointerMove={drag.pointerMove} onPointerUp={drag.pointerEnd}
+          onPointerCancel={drag.reset} onLostPointerCapture={drag.reset}
+          onClick={event => { event.preventDefault(); event.stopPropagation(); }}
+          className="relative flex h-8 w-5 shrink-0 touch-none cursor-grab items-center justify-center rounded text-content-muted active:cursor-grabbing focus-visible:outline focus-visible:outline-indigo-500">
+          {isPinned ? <Pin className="h-3.5 w-3.5 text-indigo-500 group-hover:opacity-0" /> : <MessageSquare className="h-3.5 w-3.5 group-hover:opacity-0" />}
+          <GripVertical className="absolute h-4 w-4 opacity-0 group-hover:opacity-100" />
+        </button>}
         {isRenaming ? (
           <input
             type="text"
             value={renameValue}
             onChange={(e) => setRenameValue(e.target.value)}
-            onBlur={() => onRenameSubmit(conv.id)}
+            aria-label={t("chatWorkspace.renameChat")}
+            maxLength={100}
+            onBlur={() => { if (!renameFinishedRef.current) { renameFinishedRef.current = true; onRenameSubmit(conv.id); } }}
             onKeyDown={(e) => {
-              if (e.key === "Enter") onRenameSubmit(conv.id);
-              if (e.key === "Escape") setRenamingId(null);
+              if (e.key === "Enter" && !e.nativeEvent.isComposing && !renameFinishedRef.current) { e.preventDefault(); renameFinishedRef.current = true; onRenameSubmit(conv.id); }
+              if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); renameFinishedRef.current = true; setRenamingId(null); }
             }}
             autoFocus
             onClick={(e) => e.stopPropagation()}
-            className="flex-1 bg-surface border border-outline-strong rounded text-[13px] px-1.5 py-0.5 text-content outline-none focus:ring-1 focus:ring-indigo-500"
+            className="min-w-0 flex-1 m-1.5 bg-surface border border-outline-strong rounded text-[13px] px-1.5 py-0.5 text-content outline-none focus:ring-1 focus:ring-indigo-500"
           />
         ) : (
-          <span className="min-w-0 flex-1 truncate text-[13px] text-left leading-relaxed">{conv.title}</span>
+          <button type="button" data-conversation-title-trigger aria-current={isSelected ? "true" : undefined}
+            onClick={() => { if (!drag.draggedId) onSelectConversation(conv.id); }}
+            className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg p-1.5 text-left text-[13px] leading-relaxed focus-visible:outline focus-visible:outline-indigo-500">
+
+            <span className="min-w-0 flex-1"><ConversationTitle title={conv.title} disabled={actionsId !== null || Boolean(drag.draggedId)} /></span>
+          </button>
         )}
 
         {!isRenaming && (
-          <div className="absolute right-2 top-1/2 flex h-7 w-40 -translate-y-1/2 items-center justify-end gap-1 rounded-lg bg-surface/95 opacity-100 shadow-[0_0_10px_rgba(255,255,255,0.9)] transition-opacity sm:opacity-0 sm:group-hover:opacity-100 dark:shadow-[0_0_10px_rgba(15,23,42,0.9)]">
-            <button
-              onClick={(event) => onTogglePinConversation(conv.id, event)}
-              className={`p-1 rounded ${isPinned ? "text-indigo-600 hover:bg-indigo-50 dark:text-indigo-300 dark:hover:bg-indigo-950/40" : "text-content-muted hover:text-indigo-600 hover:bg-indigo-50 dark:hover:text-indigo-300 dark:hover:bg-indigo-950/40"}`}
-              title={isPinned ? t("chatWorkspace.unpinChat") : t("chatWorkspace.pinChat")}
-            >
-              <Pin className="w-3.5 h-3.5" />
+          <>
+            <button type="button" disabled={organizingConversations} draggable={false} aria-haspopup="dialog" aria-label={`${t("chatWorkspace.conversationActions")}: ${conv.title}`}
+              title={t("chatWorkspace.conversationActions")} onClick={() => setActionsId(conv.id)}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-content-muted hover:bg-surface-muted hover:text-content focus-visible:outline focus-visible:outline-indigo-500">
+              <MoreHorizontal className="h-4 w-4" />
             </button>
-            <button
-              onClick={(event) => onMoveConversation(conv.id, "up", event)}
-              disabled={sectionIndex <= 0}
-              className="p-1 text-content-muted hover:text-content-secondary hover:bg-outline/50 rounded disabled:cursor-not-allowed disabled:opacity-30"
-              title={t("chatWorkspace.moveChatUp")}
-            >
-              <ArrowUp className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={(event) => onMoveConversation(conv.id, "down", event)}
-              disabled={sectionIndex < 0 || sectionIndex >= sectionItems.length - 1}
-              className="p-1 text-content-muted hover:text-content-secondary hover:bg-outline/50 rounded disabled:cursor-not-allowed disabled:opacity-30"
-              title={t("chatWorkspace.moveChatDown")}
-            >
-              <ArrowDown className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={(event) => { event.stopPropagation(); setMoveConversationId(conv.id); }}
-              className="p-1 text-content-muted hover:text-indigo-600 hover:bg-indigo-50 rounded dark:hover:text-indigo-300 dark:hover:bg-indigo-950/40"
-              title={t("chatWorkspace.moveToProject")}
-            >
-              <FolderInput className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={(event) => onStartRename(conv.id, conv.title, event)}
-              className="p-1 text-content-muted hover:text-content-secondary hover:bg-outline/50 rounded"
-              title={t("chatWorkspace.renameChat")}
-            >
-              <Edit3 className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={(event) => onDeleteConversation(conv.id, event)}
-              className="p-1 text-content-muted hover:text-red-600 hover:bg-red-50 rounded dark:hover:text-red-300 dark:hover:bg-red-950/40"
-              title={t("chatWorkspace.deleteChat")}
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-          </div>
+            {actionsId === conv.id && <ConversationActionsDialog title={conv.title} label={t("chatWorkspace.conversationActions")} closeLabel={t("chatWorkspace.cancel")} onClose={() => setActionsId(null)}>
+              <button type="button" onClick={event => { setActionsId(null); onTogglePinConversation(conv.id, event); }}><Pin className="h-4 w-4" />{t(isPinned ? "chatWorkspace.unpinChat" : "chatWorkspace.pinChat")}</button>
+              <button type="button" disabled={sectionIndex <= 0} onClick={event => { setActionsId(null); onMoveConversation(conv.id, "up", event); }}><ArrowUp className="h-4 w-4" />{t("chatWorkspace.moveChatUp")}</button>
+              <button type="button" disabled={sectionIndex < 0 || sectionIndex >= sectionItems.length - 1} onClick={event => { setActionsId(null); onMoveConversation(conv.id, "down", event); }}><ArrowDown className="h-4 w-4" />{t("chatWorkspace.moveChatDown")}</button>
+              <button type="button" onClick={() => { setActionsId(null); setMoveConversationId(conv.id); }}><FolderInput className="h-4 w-4" />{t("chatWorkspace.moveToProject")}</button>
+              <button type="button" onClick={event => { setActionsId(null); renameFinishedRef.current = false; onStartRename(conv.id, conv.title, event); }}><Edit3 className="h-4 w-4" />{t("chatWorkspace.renameChat")}</button>
+              <button type="button" className="text-red-600 dark:text-red-300" onClick={event => { setActionsId(null); onDeleteConversation(conv.id, event); }}><Trash2 className="h-4 w-4" />{t("chatWorkspace.deleteChat")}</button>
+            </ConversationActionsDialog>}
+          </>
         )}
       </div>
     );
@@ -288,7 +297,7 @@ export function ChatConversationSidebar({
 
   return (
     <div
-      className={`absolute inset-y-0 left-0 z-30 w-[min(82vw,280px)] bg-slate-100/80 dark:bg-slate-950 max-md:dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 shrink-0 transition-transform md:transition-all duration-300 flex flex-col ${
+      className={`absolute inset-y-0 left-0 z-30 w-[min(82vw,280px)] bg-surface border-r border-slate-200 dark:border-slate-800 shrink-0 transition-transform md:transition-all duration-300 flex flex-col ${
         mobileSidebarOpen ? "translate-x-0 shadow-xl max-md:shadow-2xl max-md:shadow-slate-950/40" : "-translate-x-full"
       } md:relative md:inset-auto md:translate-x-0 md:shadow-none ${
         sidebarOpen ? "md:w-[292px]" : "md:w-0 md:overflow-hidden md:border-r-0"
@@ -296,13 +305,13 @@ export function ChatConversationSidebar({
     >
       <div className="p-3 border-b border-outline bg-surface/70 max-sm:dark:bg-slate-950 shrink-0 flex items-center gap-2">
         <button
-          onClick={onCreateConversation}
+          onClick={() => onCreateConversation()}
           className="flex-1 h-9 px-3.5 bg-slate-950 hover:bg-slate-800 text-white text-[13px] font-semibold rounded-lg inline-flex items-center justify-center gap-2 transition-colors whitespace-nowrap shadow-xs dark:bg-indigo-600 dark:hover:bg-indigo-500"
           title={t("chatWorkspace.newChat")}
-          disabled={!selectedId}
+          disabled={!selectedId || creatingConversation || organizingConversations}
         >
           <Plus className="w-4 h-4 shrink-0" />
-          <span>{t("chatWorkspace.newChat")}</span>
+          <span>{t(creatingConversation ? "chatWorkspace.creatingConversation" : "chatWorkspace.newChat")}</span>
         </button>
         <button
           onClick={openCreateProjectModal}
@@ -348,7 +357,7 @@ export function ChatConversationSidebar({
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-2.5 space-y-1.5 [-webkit-overflow-scrolling:touch]" onScroll={onScroll}>
+      <div ref={drag.scrollRef} onDragOverCapture={drag.scroll} onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget instanceof Node ? event.relatedTarget : null)) drag.stopScroll(); }} className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-2.5 space-y-1.5 [-webkit-overflow-scrolling:touch]" onScroll={event => { if (searchQuery.trim().length < 2) onScroll(event); }}>
         {searchQuery.trim().length >= 2 ? (
           searching ? (
             <div className="flex items-center justify-center gap-2 py-10 text-[13px] text-content-muted"><LoaderCircle className="h-4 w-4 animate-spin" />{t("chatWorkspace.searchingConversations")}</div>
@@ -363,12 +372,13 @@ export function ChatConversationSidebar({
                 <button
                   type="button"
                   key={`${result.conversation_id}-${result.message_id || "title"}-${index}`}
+                  data-conversation-title-trigger
                   onClick={() => onSelectSearchResult(result)}
                   className="w-full rounded-xl border border-transparent bg-surface/55 p-3 text-left transition hover:border-indigo-200 hover:bg-indigo-50 dark:hover:border-indigo-500/35 dark:hover:bg-indigo-950/30"
                 >
                   <div className="flex items-center gap-2">
                     <MessageSquare className="h-3.5 w-3.5 shrink-0 text-indigo-500" />
-                    <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-content">{result.conversation_title}</span>
+                    <span className="min-w-0 flex-1 text-[13px] font-semibold text-content"><ConversationTitle title={result.conversation_title} /></span>
                     <span className="shrink-0 text-[10px] text-content-muted">{t(result.matched_field === "title" ? "chatWorkspace.titleMatch" : "chatWorkspace.messageMatch")}</span>
                   </div>
                   {result.matched_field === "message" && <p className="mt-1.5 line-clamp-3 text-[12px] leading-5 text-content-muted">{result.snippet}</p>}
@@ -382,7 +392,7 @@ export function ChatConversationSidebar({
               <div key={i} className="h-11 bg-surface/70 rounded-lg animate-pulse border border-outline/70" />
             ))}
           </div>
-        ) : !hasAnyConversation ? (
+        ) : !hasAnyConversation && projectGroups.length === 0 ? (
           <div className="text-center py-8 px-4 text-content-muted text-[13px]">
             <MessageSquare className="w-6 h-6 mx-auto mb-2 text-slate-300 dark:text-slate-600" />
             <p>{t("chatWorkspace.emptyHistory")}</p>
@@ -390,73 +400,38 @@ export function ChatConversationSidebar({
           </div>
         ) : (
           <>
-            {pinnedConversations.length > 0 && (
-              <>
-                {renderSectionTitle(t("chatWorkspace.pinnedChats"), <Pin className="h-3 w-3" />)}
-                <div className="space-y-1.5">{pinnedConversations.map(renderConversation)}</div>
-              </>
-            )}
-
-            {projectGroups.length > 0 && (
-              <>
-                {renderSectionTitle(t("chatWorkspace.projects"), <Folder className="h-3 w-3" />)}
-                <div className="space-y-2">
-                  {projectGroups.map(({ project, items }, projectIndex) => (
-                    <Fragment key={project.id}>
-                      <div className="group/project flex items-center gap-2 rounded-lg px-1.5 py-1 text-[12px] font-semibold text-content-muted hover:bg-surface/70">
-                        <Folder className="h-3.5 w-3.5 text-slate-400" />
-                        <span className="min-w-0 flex-1 truncate">{project.name}</span>
-                        <span className="rounded-full bg-outline/70 px-1.5 py-0.5 text-[10px] font-semibold text-content-muted">{items.length}</span>
-                        <button
-                          type="button"
-                          onClick={(event) => onMoveProject(project.id, "up", event)}
-                          disabled={projectIndex <= 0}
-                          className="rounded p-1 text-slate-400 opacity-100 hover:bg-outline hover:text-content-secondary disabled:cursor-not-allowed disabled:opacity-25 sm:opacity-0 sm:group-hover/project:opacity-100"
-                          title={t("chatWorkspace.moveProjectUp")}
-                        >
-                          <ArrowUp className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(event) => onMoveProject(project.id, "down", event)}
-                          disabled={projectIndex >= projectGroups.length - 1}
-                          className="rounded p-1 text-slate-400 opacity-100 hover:bg-outline hover:text-content-secondary disabled:cursor-not-allowed disabled:opacity-25 sm:opacity-0 sm:group-hover/project:opacity-100"
-                          title={t("chatWorkspace.moveProjectDown")}
-                        >
-                          <ArrowDown className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(event) => { event.stopPropagation(); openRenameProjectModal(project); }}
-                          className="rounded p-1 text-slate-400 opacity-100 hover:bg-outline hover:text-content-secondary sm:opacity-0 sm:group-hover/project:opacity-100"
-                          title={t("chatWorkspace.renameProject")}
-                        >
-                          <Edit3 className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(event) => { event.stopPropagation(); onDeleteProject(project.id); }}
-                          className="rounded p-1 text-slate-400 opacity-100 hover:bg-red-50 hover:text-red-600 sm:opacity-0 sm:group-hover/project:opacity-100 dark:hover:bg-red-950/40 dark:hover:text-red-300"
-                          title={t("chatWorkspace.deleteProject")}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                      <div className="space-y-1.5 pl-2">{items.length > 0 ? items.map(renderConversation) : (
-                        <div className="rounded-lg border border-dashed border-outline bg-surface/45 px-4 py-2 text-[11px] text-content-muted">{t("chatWorkspace.emptyProject")}</div>
-                      )}</div>
-                    </Fragment>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {recentConversations.length > 0 && (
-              <>
-                {renderSectionTitle(t("chatWorkspace.recentChats"))}
-                <div className="space-y-1.5">{recentConversations.map(renderConversation)}</div>
-              </>
-            )}
+            <section aria-label={t("chatWorkspace.pinnedChats")} {...drag.targetProps({ kind: "pinned" })} className={`rounded-xl p-1 ${dropClass("pinned")}`}>
+              {renderSectionTitle("pinned", t("chatWorkspace.pinnedChats"), pinnedConversations.length, <Pin className="h-3.5 w-3.5" />)}
+              {!collapsed.isCollapsed("pinned") && <div className="space-y-1.5">{pinnedConversations.length ? pinnedConversations.map(renderConversation) : emptyDrop("chatWorkspace.dropToPinned")}</div>}
+            </section>
+            <section aria-label={t("chatWorkspace.projects")} className="rounded-xl p-1">
+              {renderSectionTitle("projects", t("chatWorkspace.projects"), projectGroups.length, <Folder className="h-3.5 w-3.5" />)}
+              {!collapsed.isCollapsed("projects") && <div className="space-y-2">
+                {projectGroups.map(({ project, items }) => {
+                  const key = `project:${project.id}`;
+                  const closed = collapsed.isCollapsed(key);
+                  return <div key={project.id} {...drag.targetProps({ kind: "project", projectId: project.id })} className={`rounded-xl border border-outline/70 p-1 ${dropClass(key)}`}>
+                    <div className="group/project flex items-center gap-1">
+                      <button type="button" onClick={() => collapsed.toggle(key)} aria-expanded={!closed} title={project.name}
+                        className="flex min-w-0 flex-1 items-center gap-1.5 rounded-lg py-2 text-left text-[13px] font-semibold text-content-secondary hover:bg-surface-muted focus-visible:outline focus-visible:outline-indigo-500">
+                        {closed ? <ChevronRight className="h-3.5 w-3.5 shrink-0" /> : <ChevronDown className="h-3.5 w-3.5 shrink-0" />}
+                        {closed ? <Folder className="h-4 w-4 shrink-0" /> : <FolderOpen className="h-4 w-4 shrink-0" />}
+                        <span className="min-w-0 flex-1 truncate">{project.name}</span><span title={t("chatWorkspace.loadedGroupCount")} className="text-[10px] text-content-muted">{items.length}</span>
+                      </button>
+                      <button type="button" disabled={creatingConversation || organizingConversations} aria-label={`${t("chatWorkspace.newChatInProject")}: ${project.name}`} title={t("chatWorkspace.newChatInProject")}
+                        onClick={() => { collapsed.expand(key); onCreateConversation(project.id); }} className="rounded-lg p-1.5 text-content-muted hover:bg-surface-muted"><Plus className="h-3.5 w-3.5" /></button>
+                      <button type="button" disabled={organizingConversations} aria-haspopup="dialog" aria-label={`${t("chatWorkspace.projectActions")}: ${project.name}`} onClick={() => setProjectActionsId(project.id)} className="rounded-lg p-1.5 text-content-muted hover:bg-surface-muted"><MoreHorizontal className="h-3.5 w-3.5" /></button>
+                    </div>
+                    {!closed && <div className="space-y-1.5">{items.length ? items.map(renderConversation) : emptyDrop("chatWorkspace.dropToProject")}</div>}
+                  </div>;
+                })}
+                {projectGroups.length === 0 && <button type="button" onClick={openCreateProjectModal} className="w-full rounded-xl border border-dashed border-outline px-3 py-3 text-[12px] text-content-muted hover:bg-surface-muted">{t("chatWorkspace.createProject")}</button>}
+              </div>}
+            </section>
+            <section aria-label={t("chatWorkspace.recentChats")} {...drag.targetProps({ kind: "recent" })} className={`rounded-xl p-1 ${dropClass("recent")}`}>
+              {renderSectionTitle("recent", t("chatWorkspace.recentChats"), recentConversations.length, <MessageSquare className="h-3.5 w-3.5" />)}
+              {!collapsed.isCollapsed("recent") && <div className="space-y-1.5">{recentConversations.length ? recentConversations.map(renderConversation) : emptyDrop("chatWorkspace.dropToRecent")}</div>}
+            </section>
           </>
         )}
 
@@ -467,6 +442,14 @@ export function ChatConversationSidebar({
         )}
       </div>
 
+      <div role="status" aria-live="polite" className="shrink-0 border-t border-outline px-3 py-2 text-[11px] leading-5 text-content-muted">{t(organizingConversations ? "chatWorkspace.savingConversationOrder" : "chatWorkspace.dragConversationHint")}</div>
+      {projectActions && <ConversationActionsDialog title={projectActions.name} label={t("chatWorkspace.projectActions")} closeLabel={t("chatWorkspace.cancel")} onClose={() => setProjectActionsId(null)}>
+        <button type="button" disabled={creatingConversation} onClick={() => { setProjectActionsId(null); collapsed.expand(`project:${projectActions.id}`); onCreateConversation(projectActions.id); }}><Plus className="h-4 w-4" />{t("chatWorkspace.newChatInProject")}</button>
+        <button type="button" disabled={conversationProjects[0]?.id === projectActions.id} onClick={event => { setProjectActionsId(null); onMoveProject(projectActions.id, "up", event); }}><ArrowUp className="h-4 w-4" />{t("chatWorkspace.moveProjectUp")}</button>
+        <button type="button" disabled={conversationProjects.at(-1)?.id === projectActions.id} onClick={event => { setProjectActionsId(null); onMoveProject(projectActions.id, "down", event); }}><ArrowDown className="h-4 w-4" />{t("chatWorkspace.moveProjectDown")}</button>
+        <button type="button" onClick={() => { setProjectActionsId(null); openRenameProjectModal(projectActions); }}><Edit3 className="h-4 w-4" />{t("chatWorkspace.renameProject")}</button>
+        <button type="button" className="text-red-600 dark:text-red-300" onClick={() => { setProjectActionsId(null); onDeleteProject(projectActions.id); }}><Trash2 className="h-4 w-4" />{t("chatWorkspace.deleteProject")}</button>
+      </ConversationActionsDialog>}
       {projectModalMode && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 backdrop-blur-sm" onMouseDown={closeProjectModal}>
           <div className="w-full max-w-md rounded-2xl border border-outline bg-surface p-5 shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>

@@ -14,6 +14,8 @@ const probeCapabilities = vi.hoisted(() => vi.fn());
 const probeCapabilitiesDetailed = vi.hoisted(() => vi.fn());
 const requestRunsReconcile = vi.hoisted(() => vi.fn());
 const requestRunReconcile = vi.hoisted(() => vi.fn(() => true));
+const isQuestionBridgeInstalling = vi.hoisted(() => vi.fn(() => false));
+vi.mock("../../../services/runs/questionBridgeInstaller", () => ({ isQuestionBridgeInstalling }));
 
 vi.mock("../../../middlewares/auth", () => ({
   authenticateToken: (req: any, _res: any, next: any) => {
@@ -42,6 +44,57 @@ vi.mock("../../../utils/managedOperationGuard", () => ({ guardManagedOperation: 
 import { registerRunRoutes } from "./runs.routes";
 
 describe("Interactive Agent POST /runs integration", () => {
+  it("rechecks plugin installation after awaited validation before committing a new Run", async () => {
+    process.env.MYBAY_ASYNC_CHAT_RUNS_ENABLED = "true";
+    getInstanceById.mockResolvedValue({ id: instanceId, user_id: userId, owner_id: userId, config_json: "{}" });
+    getConversationForOwnerAndInstance.mockResolvedValue({ id: conversationId, user_id: userId, instance_id: instanceId });
+    probeCapabilities.mockResolvedValue("supported");
+    isQuestionBridgeInstalling.mockReturnValueOnce(false).mockReturnValueOnce(true);
+    const app = express(); app.use(express.json());
+    const router = express.Router(); registerRunRoutes(router); app.use("/api/instances", router);
+    const server = app.listen(0);
+    try {
+      await new Promise<void>(resolve => server.once("listening", resolve));
+      const url = `http://127.0.0.1:${(server.address() as any).port}/api/instances/${instanceId}/runs`;
+      const response = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ conversationId, content: "test", requestId: "install-race" }) });
+      expect(response.status).toBe(409);
+      expect((await response.json()).error).toBe("INSTANCE_BUSY");
+      expect(isQuestionBridgeInstalling).toHaveBeenCalledTimes(2);
+      expect(beginChatRun).not.toHaveBeenCalled();
+    } finally { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); }
+  });
+  it("serves only owned, conversation-bound stored file snapshots without caching or run DTO leakage", async () => {
+    const runId = "44444444-4444-4444-8444-444444444444";
+    getInstanceById.mockResolvedValue({ id: instanceId, user_id: userId, owner_id: userId });
+    getConversationForOwnerAndInstance.mockResolvedValue({ id: conversationId, user_id: userId, instance_id: instanceId });
+    const run = { id: runId, user_id: userId, instance_id: instanceId, conversation_id: conversationId, status: "completed", file_diffs: {
+      version: 1, runId, conversationId, capturedBefore: "2026-08-31T00:00:00Z", capturedAfter: "2026-08-31T00:00:01Z", files: [{ path: "a.txt", before: "BEFORE", after: "AFTER" }],
+    } };
+    getChatRun.mockResolvedValue(run);
+    const app = express();
+    const router = express.Router(); registerRunRoutes(router); app.use("/api/instances", router);
+    const server = app.listen(0);
+    try {
+      await new Promise<void>(resolve => server.once("listening", resolve));
+      const address = server.address();
+      if (!address || typeof address === "string") throw new Error("No test port");
+      const base = `http://127.0.0.1:${address.port}/api/instances/${instanceId}/runs/${runId}`;
+      const url = `${base}/file-diff?path=a.txt&conversationId=${conversationId}`;
+      const response = await fetch(url);
+      expect(response.status).toBe(200);
+      expect(response.headers.get("cache-control")).toBe("no-store");
+      expect(await response.json()).toMatchObject({ available: true, file: { path: "a.txt", before: "BEFORE", after: "AFTER" } });
+      expect(JSON.stringify(await (await fetch(base)).json())).not.toContain("BEFORE");
+      expect((await fetch(`${base}/file-diff?path=a.txt&conversationId=${userId}`)).status).toBe(404);
+      expect((await fetch(`${base}/file-diff?path=..%2Fa.txt&conversationId=${conversationId}`)).status).toBe(400);
+      getChatRun.mockResolvedValue({ ...run, user_id: "someone-else" });
+      expect((await fetch(url)).status).toBe(404);
+      getChatRun.mockResolvedValue({ ...run, instance_id: "other-instance" });
+      expect((await fetch(url)).status).toBe(404);
+      getChatRun.mockResolvedValue({ ...run, file_diffs: undefined });
+      expect(await (await fetch(url)).json()).toEqual({ success: true, available: false });
+    } finally { server.close(); }
+  });
   afterEach(() => {
     delete process.env.MYBAY_ASYNC_CHAT_RUNS_ENABLED;
     vi.clearAllMocks();

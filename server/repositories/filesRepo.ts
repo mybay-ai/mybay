@@ -12,10 +12,18 @@ export interface FileRecord {
   storage_path: string;
   deleted_at?: string | null;
   cleanup_completed_at?: string | null;
+  upload_request_id?: string;
   created_at: string;
 }
 
 export const filesRepo = {
+  findUpload(ownerId: string, instanceId: string, conversationId: string, uploadId: string) {
+    return dbAdapter.findChatUpload(ownerId, instanceId, conversationId, uploadId) as Promise<FileRecord | null>;
+  },
+
+  createUploadOnce(data: Partial<FileRecord> & { upload_request_id: string }) {
+    return dbAdapter.createChatUploadOnce(data) as Promise<{ file: FileRecord; created: boolean }>;
+  },
   create(data: Partial<FileRecord>) {
     return dbAdapter.createFileRecord(data) as Promise<FileRecord>;
   },

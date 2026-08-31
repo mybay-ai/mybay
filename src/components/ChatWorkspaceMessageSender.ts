@@ -3,6 +3,7 @@ import { api } from "../lib/api";
 import { humanizeChatError } from "../lib/chatRuntimeErrors";
 import { MAX_CHAT_USER_MESSAGE_CHARS, countChatMessageCharacters } from "../../shared/chatMessageContract";
 import { isConcurrencyTakeoverError } from "./chat-workspace/chatMessagePolicy";
+import { serializeLongTextDraft } from "./chat-workspace/composerLongText";
 import {
   buildOptimisticAttachmentMetadata,
   generateUUIDv4,
@@ -17,11 +18,13 @@ import {
 export function createChatWorkspaceMessageSender(context: any) {
   const {
     uploadInFlightRef,
+    conversationCreationInFlightRef,
     isUploading,
     showToast,
     t,
     pendingAttachments,
     input,
+    pendingLongTexts = [],
     editingRetryMessageIdRef,
     selectedId,
     setError,
@@ -72,6 +75,10 @@ export function createChatWorkspaceMessageSender(context: any) {
       e.preventDefault();
     }
 
+    if (conversationCreationInFlightRef?.current) {
+      showToast(t("dashboard:chatWorkspace.creatingConversation"), "warning");
+      return;
+    }
     if (uploadInFlightRef.current || isUploading) {
       showToast(t("dashboard:chatWorkspace.attachmentUploading", { defaultValue: "附件正在上传中，请稍候..." }), "warning");
       return;
@@ -79,7 +86,7 @@ export function createChatWorkspaceMessageSender(context: any) {
     const usesAttachmentOverride = options?.attachments !== undefined;
     const attachmentsForSend = [...(options?.attachments || pendingAttachments)];
 
-    const messageContent = customContent !== undefined ? customContent : input;
+    const messageContent = customContent !== undefined ? customContent : serializeLongTextDraft(pendingLongTexts, input);
     const userMsgContent = messageContent.trim();
     const editingReplaceMessageId = customContent === undefined ? editingRetryMessageIdRef.current : null;
     const sendOptions: SendOptions | undefined = editingReplaceMessageId
@@ -107,11 +114,11 @@ export function createChatWorkspaceMessageSender(context: any) {
 
     const isSameConversationRunning = sending && (!activeRunConversationId || activeRunConversationId === selectedConversationIdRef.current);
     if (isSameConversationRunning) {
+      if (enqueueFollowUpMessage(userMsgContent, attachmentsForSend) === false) return;
       if (customContent === undefined) {
         setInput("");
       }
-      enqueueFollowUpMessage(userMsgContent, attachmentsForSend);
-      if (attachmentsForSend.length > 0) setPendingAttachments([]);
+      if (!usesAttachmentOverride && attachmentsForSend.length > 0) setPendingAttachments([]);
       return;
     }
 
@@ -166,7 +173,6 @@ export function createChatWorkspaceMessageSender(context: any) {
       const scopedInterruptNotice = interruptNoticeMsg ? { ...interruptNoticeMsg, conversation_id: conversationId } : null;
       setMessages(prev => deduplicateMessages([...prev, scopedUserMsg, ...(scopedInterruptNotice ? [scopedInterruptNotice] : [])], conversationId));
       optimisticUserMessageInserted = true;
-      shouldScrollToBottomRef.current = true;
     };
 
     const replaceExistingUserMessage = (conversationId: string | null) => {
@@ -177,7 +183,6 @@ export function createChatWorkspaceMessageSender(context: any) {
           : message
       )), conversationId));
       optimisticUserMessageInserted = true;
-      shouldScrollToBottomRef.current = true;
     };
 
     if (customContent === undefined) {
@@ -228,7 +233,9 @@ export function createChatWorkspaceMessageSender(context: any) {
 
     setSending(true);
     setError(null);
-    shouldScrollToBottomRef.current = true;
+    // A queued background dispatch or a late response must not pull a reader
+    // away from history. Only a new user submission requests forced following.
+    if (!sendOptions?.queuedMessageIds?.length) shouldScrollToBottomRef.current = true;
 
     let activeConvId = selectedConversationId;
     activeChatRequestIdRef.current = requestId;
@@ -303,13 +310,19 @@ export function createChatWorkspaceMessageSender(context: any) {
           requestPath: `/api/instances/${selectedId}/runs`
         });
 
+        // A locally accepted Stop releases the composer before the Runtime has
+        // necessarily released its slot. Keep one request identity while the
+        // transport retries that bounded cancellation window.
         const runRes = await createChatRunWithRetry(selectedId, {
           conversationId: activeConvId,
           content: userMsg,
           requestId,
           reasoningEffort,
           attachmentIds: attachmentsForSend.map(a => a.id)
-        }, isInterruptingActiveRun);
+        }, true, () => shouldAcceptChatResponse(
+          { selectedId: selectedIdRef.current, activeChatRequestId: activeChatRequestIdRef.current, activeChatGeneration: activeChatGenerationRef.current },
+          { selectedId: initialSelectedId, requestId, activeChatGeneration: currentChatGen }
+        ));
 
         if (!shouldAcceptChatResponse(
           { selectedId: selectedIdRef.current, activeChatRequestId: activeChatRequestIdRef.current, activeChatGeneration: activeChatGenerationRef.current },
@@ -330,7 +343,7 @@ export function createChatWorkspaceMessageSender(context: any) {
             requestId,
             assistantMessageId: tempAssistantMsgId,
             status: "queued",
-            initialStep: { id: `queued-${runRes.runId}`, tool: "agent", label: t("dashboard:chatWorkspace.toolStepAgentTaskQueued"), stepType: "tool_call", startedAt: queuedAt }
+            initialStep: { id: `${runRes.runId}-task_queued`, tool: "agent", label: t("dashboard:chatWorkspace.toolStepAgentTaskQueued"), stepType: "model_reasoning", startedAt: queuedAt }
           });
           setRunMetrics({ runId: runRes.runId, status: "queued", startedAt: queuedAt });
           if (isInterruptingActiveRun) {
@@ -346,7 +359,9 @@ export function createChatWorkspaceMessageSender(context: any) {
             role: "assistant" as const,
             content: "",
             status: "pending",
-            conversation_id: activeConvId
+            request_id: requestId,
+            conversation_id: activeConvId,
+            metadata: { runId: runRes.runId, requestId }
           };
           if (optimisticChatContextRef.current?.requestId === requestId) {
             optimisticChatContextRef.current = {
@@ -399,7 +414,6 @@ export function createChatWorkspaceMessageSender(context: any) {
             duration_ms: res.durationMs ?? null,
             metadata: null
           };
-          shouldScrollToBottomRef.current = true;
           setMessages(prev => deduplicateMessages([...prev, assistantMsg], activeConvId));
           setConversations(prev => {
             const matched = prev.find(c => c.id === activeConvId);
@@ -449,7 +463,6 @@ export function createChatWorkspaceMessageSender(context: any) {
             conversation_id: activeConvId,
             sequence_no: res.assistantSequenceNo ?? undefined
           };
-          shouldScrollToBottomRef.current = true;
           setMessages(prev => deduplicateMessages([...prev, assistantMsg], activeConvId));
           setConversations(prev => {
             const matched = prev.find(c => c.id === activeConvId);
@@ -566,20 +579,22 @@ export function createChatWorkspaceMessageSender(context: any) {
         friendlyMsg = humanizedError.message || "由于后端无权直接读取容器内局部 .env，请在麦贝控制台的实例设置或平台凭证中心重新配置该供应商的 API 密钥。";
       }
 
+      if (isTakeoverRace) {
+        friendlyMsg = t("dashboard:chatWorkspace.agentRunBusyRetry");
+      }
+
       if (optimisticUserMessageInserted) {
-        const shouldQueueMessage = isTakeoverRace;
-        const shouldMarkSuperseded = isInterruptingActiveRun && isTakeoverRace;
+        // A rejected creation is not in the follow-up queue. Keep it visibly
+        // retryable if the bounded transport retry window has been exhausted.
         setMessages(prev => prev
           .filter(m => m.id !== tempAssistantMsgId)
-          .map(m => m.id === tempUserMsgId ? {
+          .map(m => (m.id === tempUserMsgId || (
+            m.role === "user" && m.request_id === requestId && m.conversation_id === activeConvId
+          )) ? {
             ...m,
-            status: shouldMarkSuperseded ? "superseded" : shouldQueueMessage ? "queued" : "failed",
+            status: "failed",
             error_code: backendErr || "SEND_FAILED",
-            error_message: shouldMarkSuperseded
-              ? t("dashboard:chatWorkspace.messageSuperseded")
-              : shouldQueueMessage
-                ? t("dashboard:chatWorkspace.messageQueued")
-                : friendlyMsg
+            error_message: friendlyMsg
           } : m)
         );
       } else if (sendOptions?.queuedMessageIds?.length) {
@@ -587,9 +602,9 @@ export function createChatWorkspaceMessageSender(context: any) {
           .filter(m => m.id !== tempAssistantMsgId)
           .map(m => sendOptions.queuedMessageIds!.includes(m.id) ? {
             ...m,
-            status: isTakeoverRace ? "queued" : "failed",
+            status: "failed",
             error_code: backendErr || "SEND_FAILED",
-            error_message: isTakeoverRace ? t("dashboard:chatWorkspace.messageQueued") : friendlyMsg
+            error_message: friendlyMsg
           } : m)
         );
       } else {

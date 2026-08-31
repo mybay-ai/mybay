@@ -18,6 +18,8 @@ export function useQueuedChatFollowUps(options: {
   selectedConversationIdRef: MutableRefObject<string | null>;
   activeRunId: string | null;
   sending: boolean;
+  creatingConversation?: boolean;
+  conversationCreationInFlightRef?: MutableRefObject<boolean>;
   isUploading: boolean;
   uploadInFlightRef: MutableRefObject<boolean>;
   setMessages: Dispatch<SetStateAction<ChatMessage[]>>;
@@ -32,6 +34,8 @@ export function useQueuedChatFollowUps(options: {
     selectedConversationIdRef,
     activeRunId,
     sending,
+    creatingConversation,
+    conversationCreationInFlightRef,
     isUploading,
     uploadInFlightRef,
     setMessages,
@@ -49,7 +53,7 @@ export function useQueuedChatFollowUps(options: {
   };
 
   const enqueueFollowUpMessage = (content: string, attachments: PendingAttachment[]) => {
-    if (!content.trim() || !selectedIdRef.current || !selectedConversationIdRef.current) return;
+    if (!content.trim() || !selectedIdRef.current || !selectedConversationIdRef.current) return false;
 
     let queuedMessageId: string;
     try {
@@ -57,7 +61,7 @@ export function useQueuedChatFollowUps(options: {
     } catch (error: any) {
       if (error?.code === "SECURE_RANDOM_UNAVAILABLE") {
         setError(t("dashboard:chatWorkspace.secureRandomUnavailable"));
-        return;
+        return false;
       }
       throw error;
     }
@@ -83,10 +87,11 @@ export function useQueuedChatFollowUps(options: {
     }], selectedConversationIdRef.current));
     shouldScrollToBottomRef.current = true;
     setQueueSignal(signal => signal + 1);
+    return true;
   };
 
   useEffect(() => {
-    if (sending || activeRunId || isUploading || uploadInFlightRef.current || !selectedId || !selectedConversationId) return;
+    if (creatingConversation || conversationCreationInFlightRef?.current || sending || activeRunId || isUploading || uploadInFlightRef.current || !selectedId || !selectedConversationId) return;
 
     const queuedItem = pendingFollowUpsRef.current.find(item => (
       item.instanceId === selectedId && (!item.conversationId || item.conversationId === selectedConversationId)
@@ -102,7 +107,7 @@ export function useQueuedChatFollowUps(options: {
 
     let sent = false;
     const timerId = window.setTimeout(() => {
-      if (uploadInFlightRef.current || isUploading) {
+      if (conversationCreationInFlightRef?.current || uploadInFlightRef.current || isUploading) {
         setMessages(previous => previous.map(message => (
           message.id === queuedMessageId
             ? { ...message, status: "queued", error_code: "QUEUED_FOLLOW_UP", error_message: t("dashboard:chatWorkspace.messageQueued") }
@@ -132,7 +137,7 @@ export function useQueuedChatFollowUps(options: {
         )));
       }
     };
-  }, [activeRunId, isUploading, queueSignal, selectedConversationId, selectedId, sending]);
+  }, [activeRunId, creatingConversation, isUploading, queueSignal, selectedConversationId, selectedId, sending]);
 
   return { clearQueuedFollowUps, enqueueFollowUpMessage, queuedFollowUpSenderRef };
 }
