@@ -89,7 +89,7 @@
         "eslint-plugin-react-hooks": "^5.2.0",
         "globals": "^16.5.0",
         "i18next": "^26.3.6",
-        "lucide-react": "^0.546.0",
+        "lucide-react": "^1.35.0",
         "motion": "^12.43.0",
         "pdfjs-dist": "5.4.296",
         "qrcode.react": "^4.2.0",
