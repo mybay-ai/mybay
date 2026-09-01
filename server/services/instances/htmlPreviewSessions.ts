@@ -92,11 +92,32 @@ export function serializeHtmlPreviewCredentialCookie(
     `Path=${path}`,
     `Max-Age=${maxAge}`,
     "HttpOnly",
-    "SameSite=Strict",
+    secure ? "SameSite=None" : "SameSite=Strict",
     secure ? "Secure" : "",
   ].filter(Boolean).join("; ");
 }
 
+export function serializeHtmlPreviewCredentialCookies(
+  session: HtmlPreviewSession,
+  credentialSecret: string,
+  secure: boolean,
+): string[] {
+  const cookie = serializeHtmlPreviewCredentialCookie(session, credentialSecret, secure);
+  // Sandboxed frames have an opaque origin. Keep credentials HttpOnly and
+  // path-scoped, while supporting browsers that partition third-party cookies.
+  return secure ? [cookie, cookie + "; Partitioned"] : [cookie];
+}
+
 export function clearHtmlPreviewSessionsForTests(): void {
   sessions.clear();
+}
+
+// The outer instance router must recognize the narrowly scoped credential too;
+// sandboxed subresources must never need the main console login cookie.
+export function isAuthorizedHtmlPreviewAssetRequest(method: string, requestPath: string, cookieHeader?: string): boolean {
+  if (method !== "GET") return false;
+  const match = /^\/([A-Za-z0-9_-]+)\/files\/html-preview-session\/([A-Za-z0-9_-]{20,40})\/(.+)$/.exec(requestPath);
+  if (!match) return false;
+  const session = getAuthorizedHtmlPreviewSession(match[2], cookieHeader);
+  return Boolean(session && session.instanceId === match[1]);
 }

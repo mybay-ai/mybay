@@ -1,4 +1,5 @@
-import { createLocalRunUsage } from "../../../../shared/localRunUsage";
+import { createLocalRunUsage, usageWithReportedModel } from "../../../../shared/localRunUsage";
+import { createConfiguredModelEvidence } from "../../../../shared/localModelEvidence";
 import { Router, Response } from "express";
 import { AuthenticatedRequest, authenticateToken } from "../../../middlewares/auth";
 import { dbAdapter } from "../../../db";
@@ -332,7 +333,7 @@ export function registerQuickRoutes(router: Router) {
                 ok: true,
                 statusCode: 200,
                 message: response.json.choices[0].message.content,
-                usage: response.json.usage || null,
+                usage: usageWithReportedModel(response.json.usage || {}, response.json.model),
                 sessionId: getSingleHeader(response.headers["x-hermes-session-id"]) || getSingleHeader(response.headers["X-Hermes-Session-Id"]) || null,
                 durationMs: response.durationMs || (Date.now() - startTime)
               };
@@ -398,6 +399,7 @@ export function registerQuickRoutes(router: Router) {
           status: 'completed',
           assistantContent: upstreamResponse.message,
           usageEvidence,
+          modelEvidence: createConfiguredModelEvidence(quickConfig.model),
           usagePromptTokens: usageEvidence.inputTokens,
           usageCompletionTokens: usageEvidence.outputTokens,
           usageTotalTokens: usageEvidence.totalTokens,

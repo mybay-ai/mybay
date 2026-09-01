@@ -12,7 +12,7 @@
 
 语言：[English](./README.md) | [简体中文](./README.zh-CN.md)
 
-> **发布状态：`v0.1.25`。** 在 0.x 阶段，公共接口、Runtime Adapter、部署细节与升级行为仍可能调整。
+> **发布状态：`v0.1.26`。** 在 0.x 阶段，公共接口、Runtime Adapter、部署细节与升级行为仍可能调整。
 
 | Runtime | 支持状态 |
 | --- | --- |

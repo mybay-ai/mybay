@@ -83,7 +83,7 @@ export const InstanceGrid = React.memo(function InstanceGrid({
   };
 
   return (
-    <div className={cn("grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6", viewMode === 'table' && "md:hidden")}>
+    <div className={cn("grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6", viewMode === 'table' && "xl:hidden")}>
       <AnimatePresence>
         {instances.map((inst) => {
           const caps = getInstanceCapabilities(inst);
@@ -216,7 +216,7 @@ export const InstanceGrid = React.memo(function InstanceGrid({
                 {/* Operations Triggers */}
                 <div className="shrink-0 flex items-center z-10" onClick={e => e.stopPropagation()}>
                   {/* Mobile view manager sheet trigger */}
-                  <div className="md:hidden">
+                  <div className="xl:hidden">
                     <Button
                       variant="outline"
                       className="bg-surface-muted/50 hover:bg-surface-muted border-outline px-3 h-8.5 rounded-lg text-[13px] font-semibold text-content-secondary flex items-center gap-1 transition-colors active:scale-95 shadow-xs"
@@ -228,7 +228,7 @@ export const InstanceGrid = React.memo(function InstanceGrid({
                   </div>
 
                   {/* Desktop actions triggers */}
-                  <div className="hidden md:flex gap-1.5 relative">
+                  <div className="hidden xl:flex gap-1.5 relative">
                     {caps.canRestoreFromArchive ? (
                       <Button
                         variant="ghost"

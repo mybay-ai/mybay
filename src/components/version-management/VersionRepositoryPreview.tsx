@@ -23,6 +23,34 @@ export function VersionRepositoryPreview({
   handlePrewarm
 }: VersionRepositoryPreviewProps) {
   const { t } = useTranslation("dashboard");
+
+  const renderOfficialImageCell = (variant: any, compact = false) => {
+    if (!variant) return <span className="text-content-muted">{t("versionRepository.notDiscovered")}</span>;
+    const isPrewarmed = variant.is_prewarmed === 1 || variant.is_prewarmed === true;
+    const status = variant.prewarm_status || (isPrewarmed ? "cached" : "idle");
+    return (
+      <div className={cn("flex gap-2", compact ? "flex-col items-start" : "items-center gap-3")}>
+        <span className="max-w-full break-all font-mono text-xs text-content-secondary">{variant.image}:{variant.tag}</span>
+        <div className="flex items-center gap-2">
+          <span className={isPrewarmed ? "text-emerald-600 font-bold" : status === "failed" ? "text-red-500 font-bold" : "text-content-muted"}>
+            {t(`versionRepository.statuses.${status}`, { defaultValue: status })}
+          </span>
+          {currentUser?.role === "admin" && !isPrewarmed && status !== "pulling" && status !== "queued" && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handlePrewarm(variant)}
+              disabled={prewarmingVersion === variant.version}
+              className="h-6 px-2 text-[11px] font-bold border-blue-200 text-blue-600 hover:bg-status-info-bg"
+            >
+              {t("versionRepository.pullImage")}
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
       <Card className="p-0 border border-outline rounded-2xl overflow-hidden shadow-sm bg-surface">
         <div className="px-5 py-4 bg-surface-muted border-b border-outline flex items-center justify-between">
@@ -44,7 +72,34 @@ export function VersionRepositoryPreview({
             <span>{t("versionRepository.refresh")}</span>
           </Button>
         </div>
-        <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-slate-200">
+        <div className="space-y-3 p-3 xl:hidden">
+          {versions.slice(0, 3).map((v) => (
+            <article key={v.version} className="rounded-xl border border-outline bg-surface-muted/40 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="truncate font-mono font-bold text-content-secondary">{v.version}</span>
+                  {v.version === latestOfficialVer && (
+                    <span className="shrink-0 rounded bg-status-info-bg px-1.5 py-0.5 text-[9px] font-black uppercase text-status-info-text">
+                      {t("versionRepository.latest")}
+                    </span>
+                  )}
+                </div>
+                <span className="shrink-0 text-[11px] text-content-muted">{v.releaseAt}</span>
+              </div>
+              <div className="mt-3 border-t border-outline pt-3">
+                <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-content-muted">{t("versionRepository.officialImage")}</p>
+                {renderOfficialImageCell(v.coreVariant, true)}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-1">
+                <span className="rounded bg-control-hover px-2 py-1 text-content-secondary">{t("versionRepository.core")}</span>
+                {v.capabilities?.includes("feishu") && (
+                  <span className="rounded bg-status-info-bg px-2 py-1 text-status-info-text">{t("versionRepository.feishu")}</span>
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
+        <div className="hidden overflow-x-auto scrollbar-thin scrollbar-thumb-slate-200 xl:block">
           <table className="w-full text-left text-[13px] min-w-[700px]">
             <thead>
               <tr className="bg-surface-muted text-content-muted font-bold border-b border-outline">
@@ -56,31 +111,6 @@ export function VersionRepositoryPreview({
             </thead>
             <tbody className="divide-y divide-outline">
               {versions.slice(0, 3).map((v) => {
-                const renderOfficialImageCell = (variant: any) => {
-                  if (!variant) return <span className="text-content-muted">{t("versionRepository.notDiscovered")}</span>;
-                  const isPrewarmed = variant.is_prewarmed === 1 || variant.is_prewarmed === true;
-                  const status = variant.prewarm_status || (isPrewarmed ? "cached" : "idle");
-                  return (
-                    <div className="flex items-center gap-3">
-                      <span className="font-mono text-xs text-content-secondary">{variant.image}:{variant.tag}</span>
-                      <span className={isPrewarmed ? "text-emerald-600 font-bold" : status === "failed" ? "text-red-500 font-bold" : "text-content-muted"}>
-                        {t(`versionRepository.statuses.${status}`, { defaultValue: status })}
-                      </span>
-                      {currentUser?.role === "admin" && !isPrewarmed && status !== "pulling" && status !== "queued" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handlePrewarm(variant)}
-                          disabled={prewarmingVersion === variant.version}
-                          className="h-6 px-2 text-[11px] font-bold border-blue-200 text-blue-600 hover:bg-blue-50"
-                        >
-                          {t("versionRepository.pullImage")}
-                        </Button>
-                      )}
-                    </div>
-                  );
-                };
-
                 const isFamilyLatest = v.version === latestOfficialVer;
 
                 return (

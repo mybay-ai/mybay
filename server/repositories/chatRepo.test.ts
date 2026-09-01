@@ -5,12 +5,14 @@ import { closeLocalDatabase, mutateStore, readStore } from "../localStore";
 import { chatRepo, encodeConversationCursor } from "./chatRepo";
 import { createLocalRunTimeline } from "../../shared/localRunTimeline";
 import { createLocalRunUsage } from "../../shared/localRunUsage";
+import { createConfiguredModelEvidence } from "../../shared/localModelEvidence";
 
 describe("chatRepo local status contract", () => {
   it("persists usage across reopen, with no accumulation, cross-conversation leakage or late overwrite", async () => {
     const c = await chatRepo.createConversation("u", "i", "Usage");
     const other = await chatRepo.createConversation("u", "i", "Other");
-    await chatRepo.beginChatRun({ conversationId: c.id, userId: "u", instanceId: "i", content: "test", requestId: "usage-req", runId: "usage-run" });
+    const modelEvidence = createConfiguredModelEvidence("deepseek-v4-flash");
+    await chatRepo.beginChatRun({ conversationId: c.id, userId: "u", instanceId: "i", content: "test", requestId: "usage-req", runId: "usage-run", modelEvidence });
     const usageEvidence = createLocalRunUsage({ total_tokens: 100, cache_read_tokens: 0, scope: "session" });
     expect((await chatRepo.finishChatRun({ runId: "usage-run", status: "completed", reconcilerId: "wrong", usageEvidence })).status).toBe("lease_lost");
     expect((await chatRepo.getChatRun("usage-run")).usage_evidence).toBeUndefined();
@@ -21,17 +23,21 @@ describe("chatRepo local status contract", () => {
     const messages = await chatRepo.listMessages(c.id, 100);
     expect(messages.filter(m => m.role === "assistant")).toHaveLength(1);
     expect(messages.find(m => m.role === "assistant")?.metadata?.usage_evidence).toEqual(usageEvidence);
+    expect(messages.find(m => m.role === "assistant")?.metadata?.model_evidence).toEqual(modelEvidence);
     expect(await chatRepo.listMessages(other.id, 100)).toEqual([]);
   });
   it("saves Quick response evidence once without changing legacy records", async () => {
     const c = await chatRepo.createConversation("u", "i", "Quick usage");
     const turn = await chatRepo.beginChatTurn({ conversationId: c.id, userId: "u", instanceId: "i", content: "test", requestId: "quick-usage" });
     const usageEvidence = createLocalRunUsage({ total_tokens: 0, model: "reported-model" }, { source: "provider_response" });
-    const input = { conversationId: c.id, userMessageId: turn.message_id!, status: "completed" as const, assistantContent: "done", usageEvidence };
+    const modelEvidence = createConfiguredModelEvidence("configured-model");
+    const input = { conversationId: c.id, userMessageId: turn.message_id!, status: "completed" as const, assistantContent: "done", usageEvidence, modelEvidence };
     await chatRepo.finishChatTurn(input);
     expect((await chatRepo.finishChatTurn(input)).status).toBe("TURN_NOT_PENDING");
     closeLocalDatabase();
-    expect((await chatRepo.listMessages(c.id, 100)).find(m => m.role === "assistant")?.metadata?.usage_evidence).toEqual(usageEvidence);
+    const message = (await chatRepo.listMessages(c.id, 100)).find(m => m.role === "assistant");
+    expect(message?.metadata?.usage_evidence).toEqual(usageEvidence);
+    expect(message?.metadata?.model_evidence).toEqual(modelEvidence);
   });
   it("persists file snapshots with terminal state, keeps content out of messages, and rejects late replacement", async () => {
     const c = await chatRepo.createConversation("u", "i", "Diff");

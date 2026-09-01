@@ -1060,36 +1060,36 @@
     "timelineTip": "Stable Release",
     "releases": [
       {
-        "version": "v0.1.25",
-        "date": "2026.08.31",
+        "version": "v0.1.26",
+        "date": "2026.09.01",
         "badge": "STABLE",
-        "summary": "MyBay Open Source v0.1.25 improves local Agent conversations, file workflows, and maintenance tooling.",
+        "summary": "MyBay Open Source v0.1.26 hardens instance files, dark responsive layouts, and local Agent question handling.",
         "sections": [
           {
-            "title": "Conversation history and composer",
+            "title": "Instance file center",
             "type": "feature",
             "items": [
-              "Organize pinned, project, and recent conversations with persistent ordering, drag handles, and menu fallbacks.",
-              "Keep history titles on one line with ellipsis; mouse hover reveals and scrolls overflowing text.",
-              "Preserve conversation selection, chat mode, drafts, and long-text input across navigation."
+              "Add secure allowlisted uploads with quota checks, progress, cancellation, retry, and duplicate protection.",
+              "Preview text, images, and PDFs locally, with explicit external-open and download actions for other formats.",
+              "Improve instance switching, stale-request isolation, search, filtering, sorting, usage feedback, and responsive layouts."
             ]
           },
           {
-            "title": "Agent execution and file handling",
+            "title": "Agent conversations",
             "type": "feature",
             "items": [
-              "Improve cancellation, retry, follow-up ordering, empty-response handling, and stale request isolation.",
-              "Show execution steps, structured local questions, usage evidence, and bounded file-change diffs.",
-              "Add attachment upload progress, cancellation, retry, duplicate-upload protection, and clipboard support."
+              "Show persisted provider and model evidence with compact token, timing, and cache details on desktop and mobile.",
+              "Inspect, install, and repair the local structured-question bridge with precise health status and bounded probes.",
+              "Recover pending questions after refresh, expire them when a run stops, and prevent duplicate or late answers."
             ]
           },
           {
-            "title": "Local storage and operations",
+            "title": "Dark and responsive interface",
             "type": "feature",
             "items": [
-              "Scope SQLite reads and writes to the required collections to reduce unrelated rewrites.",
-              "Improve deployment readiness messages and provide sanitized diagnostic exports.",
-              "Add isolated restore, same-image service recovery, and controlled Compose adoption tools. Cross-version rollback and target-environment certification remain separate validation tasks."
+              "Replace fixed light surfaces and low-contrast text across instance, version, documentation, and legal views.",
+              "Improve mobile instance actions, file workflows, usage details, and deploy navigation in dark appearance.",
+              "Add theme guardrails and accessibility status announcements for critical asynchronous states."
             ]
           }
         ]

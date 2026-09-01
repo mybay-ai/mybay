@@ -102,7 +102,7 @@ describe("Interactive Agent POST /runs integration", () => {
 
   it("creates a queued Run when the gate is enabled and Hermes supports Runs", async () => {
     process.env.MYBAY_ASYNC_CHAT_RUNS_ENABLED = "true";
-    getInstanceById.mockResolvedValue({ id: instanceId, user_id: userId, owner_id: userId, config_json: "{}" });
+    getInstanceById.mockResolvedValue({ id: instanceId, user_id: userId, owner_id: userId, config_json: JSON.stringify({ model: "deepseek-v4-flash" }) });
     getConversationForOwnerAndInstance.mockResolvedValue({ id: conversationId, user_id: userId, instance_id: instanceId });
     probeCapabilities.mockResolvedValue("supported");
     probeCapabilitiesDetailed.mockResolvedValue({
@@ -143,7 +143,8 @@ describe("Interactive Agent POST /runs integration", () => {
         conversationId,
         userId,
         requestId: "request-1",
-        reasoningEffort: "fast"
+        reasoningEffort: "fast",
+        modelEvidence: { version: 1, model: "deepseek-v4-flash", source: "configured_snapshot" }
       }));
       expect(requestRunReconcile).toHaveBeenCalledWith(body.runId);
       expect(requestRunsReconcile).not.toHaveBeenCalled();

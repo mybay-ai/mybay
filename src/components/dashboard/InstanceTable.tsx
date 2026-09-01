@@ -71,11 +71,11 @@ export const InstanceTable = React.memo(function InstanceTable({
   return (
     <div className={cn(
       "hidden bg-surface rounded-xl border border-outline/50 shadow-xs overflow-hidden",
-      viewMode === 'table' ? "md:block" : "md:hidden"
+      viewMode === 'table' ? "xl:block" : "xl:hidden"
     )}>
       <div className="overflow-x-auto">
         <table className="w-full text-left text-[12px] border-collapse">
-          <thead className="bg-[#f9fafb] border-b border-outline/50 text-content-muted font-semibold text-[13px] tracking-wider uppercase">
+          <thead className="bg-surface-muted border-b border-outline/50 text-content-secondary font-semibold text-[13px] tracking-wider uppercase">
             <tr>
               <th className="px-5 py-2.5 w-12">
                 <input

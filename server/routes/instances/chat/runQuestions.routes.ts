@@ -3,8 +3,7 @@ import { authenticateToken, type AuthenticatedRequest } from "../../../middlewar
 import { resolveInstanceAuthority, resolveInstanceRunAuthority } from "../../../services/instances/resourceAuthorityService";
 import { authorityActorFromRequest, sendAuthorityFailure } from "../../../services/instances/resourceAuthorityHttp";
 import { QuestionError, runQuestionsRepo } from "../../../repositories/runQuestionsRepo";
-import { questionBridgeEnabled } from "../../../services/runs/questionBridgeCredentials";
-import { installLocalQuestionBridge } from "../../../services/runs/questionBridgeInstaller";
+import { inspectLocalQuestionBridge, installLocalQuestionBridge } from "../../../services/runs/questionBridgeInstaller";
 import { isValidInstanceId, isValidUUID } from "./validators";
 
 export function registerRunQuestionRoutes(router: Router) {
@@ -14,7 +13,8 @@ export function registerRunQuestionRoutes(router: Router) {
     try {
       const authority = await resolveInstanceAuthority({ actor: authorityActorFromRequest(req), instanceId: req.params.id });
       if (authority.ok === false) return sendAuthorityFailure(res, authority, "无法访问目标实例。");
-      return res.json({ success: true, installed: questionBridgeEnabled(req.params.id) });
+      const status = await inspectLocalQuestionBridge(authority.instance);
+      return res.json({ success: true, installed: status.configured, ...status });
     } catch { return res.status(500).json({ success: false, error: "INTERNAL_ERROR" }); }
   });
   router.post("/:id/question-bridge/install", authenticateToken, async (req: AuthenticatedRequest, res) => {

@@ -5,6 +5,11 @@ import { getMimeType } from "../services/instances/instanceFileSecurityService";
 import { parseMediaByteRange } from "./mediaRange";
 
 const STREAMABLE_VIDEO_EXTENSIONS = new Set([".mp4", ".mov"]);
+const STREAMABLE_MEDIA_EXTENSIONS = new Set([".mp4", ".mov", ".webm", ".mp3", ".wav", ".ogg"]);
+
+export function isStreamableMediaFile(fileName: string): boolean {
+  return STREAMABLE_MEDIA_EXTENSIONS.has(path.extname(fileName).toLowerCase());
+}
 
 export function isStreamableVideoFile(fileName: string): boolean {
   return STREAMABLE_VIDEO_EXTENSIONS.has(path.extname(fileName).toLowerCase());
@@ -19,6 +24,19 @@ export function streamLocalVideo(
 ) {
   if (!isStreamableVideoFile(displayName)) {
     return res.status(415).json({ success: false, error: "VIDEO_PREVIEW_TYPE_UNSUPPORTED", code: "VIDEO_PREVIEW_TYPE_UNSUPPORTED", message: "该文件不是支持的视频格式。" });
+  }
+  return streamLocalMedia(req, res, absolutePath, displayName, allowedRoot);
+}
+
+export function streamLocalMedia(
+  req: { headers: { range?: string } },
+  res: Response,
+  absolutePath: string,
+  displayName: string,
+  allowedRoot = path.dirname(absolutePath),
+) {
+  if (!isStreamableMediaFile(displayName)) {
+    return res.status(415).json({ success: false, error: "MEDIA_PREVIEW_TYPE_UNSUPPORTED", code: "MEDIA_PREVIEW_TYPE_UNSUPPORTED", message: "该文件不是支持的音视频格式。" });
   }
 
   const canonicalRoot = fs.realpathSync(path.resolve(allowedRoot));
@@ -51,6 +69,9 @@ export function streamLocalVideo(
   if (range) res.setHeader("Content-Range", `bytes ${start}-${end}/${stats.size}`);
 
   const stream = fs.createReadStream(canonicalPath, { start, end });
+  const disconnect = () => stream.destroy();
+  res.once("close", disconnect);
+  stream.once("close", () => res.off("close", disconnect));
   stream.on("error", (error) => {
     if (!res.headersSent) res.status(500).json({ success: false, error: "VIDEO_PREVIEW_TRANSFER_FAILED", code: "VIDEO_PREVIEW_TRANSFER_FAILED", message: "视频传输失败。" });
     else res.destroy(error);

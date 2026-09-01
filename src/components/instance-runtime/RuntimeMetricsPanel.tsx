@@ -126,19 +126,19 @@ export function RuntimeMetricsPanel({
             <Activity className="w-4 h-4 text-brand-500 shrink-0" />
             <span className="font-semibold text-content-secondary">{t("runtimeMetrics.title")}</span>
           </div>
-          <div className="w-px h-3 bg-slate-200 shrink-0" />
+          <div className="w-px h-3 bg-outline shrink-0" />
 
           <div className="flex items-center gap-1 font-mono text-[11px]">
             <span className="text-content-muted">CPU:</span>
             <span className="font-semibold text-content-secondary">{formatMetricValue(stats.cpu, "%")}</span>
           </div>
-          <div className="w-px h-3 bg-slate-200 shrink-0" />
+          <div className="w-px h-3 bg-outline shrink-0" />
 
           <div className="flex items-center gap-1 font-mono text-[11px]">
             <span className="text-content-muted">{t("runtimeMetrics.memoryShort")}:</span>
             <span className="font-semibold text-content-secondary">{typeof stats.memory === "number" ? `${stats.memory} MB` : formatMetricValue(stats.memory)}</span>
           </div>
-          <div className="w-px h-3 bg-slate-200 shrink-0" />
+          <div className="w-px h-3 bg-outline shrink-0" />
 
           <div className="flex items-center gap-1 font-mono text-[11px]">
             <span className="text-content-muted">{t("runtimeMetrics.storageShort")}:</span>
@@ -148,7 +148,7 @@ export function RuntimeMetricsPanel({
                 : `${stats.storageUsagePercent !== null && stats.storageUsagePercent !== undefined ? `${stats.storageUsagePercent}%` : "--"}`}
             </span>
           </div>
-          <div className="w-px h-3 bg-slate-200 shrink-0" />
+          <div className="w-px h-3 bg-outline shrink-0" />
 
           <div className="flex items-center gap-1 text-[11px]">
             <span className="text-content-muted">{t("runtimeMetrics.timeShort")}:</span>
@@ -159,7 +159,7 @@ export function RuntimeMetricsPanel({
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); setShowMetricsDetails(!showMetricsDetails); }}
-          className="flex items-center gap-1 px-2.5 py-1 bg-control-hover hover:bg-slate-200 text-content-secondary rounded-lg text-[11px] font-semibold border border-outline/60 transition-all shrink-0 cursor-pointer"
+          className="flex items-center gap-1 px-2.5 py-1 bg-control-hover hover:bg-surface-muted text-content-secondary rounded-lg text-[11px] font-semibold border border-outline/60 transition-all shrink-0 cursor-pointer"
         >
           <span>{showMetricsDetails ? t("runtimeMetrics.hideMetrics") : t("runtimeMetrics.showCharts")}</span>
           {showMetricsDetails ? <ChevronUp className="w-3.5 h-3.5 text-content-muted" /> : <ChevronDown className="w-3.5 h-3.5 text-content-muted" />}

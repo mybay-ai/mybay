@@ -104,7 +104,7 @@ export function WizardFooter({
             type="button"
             onClick={onNext}
             disabled={nextDisabled}
-            className={`flex-[2] sm:flex-none bg-slate-900 dark:bg-slate-100 border-slate-800 dark:border-slate-200 text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-200 h-11 sm:h-10 min-w-[120px] px-6 flex items-center justify-center gap-1.5 text-sm font-bold shrink-0 transition-all rounded-xl ${nextDisabled ? 'opacity-40 cursor-not-allowed bg-slate-400 dark:bg-slate-800 border-transparent' : 'active:scale-[0.98]'}`}
+            className={`flex-[2] sm:flex-none h-11 sm:h-10 min-w-[120px] px-6 flex items-center justify-center gap-1.5 text-sm font-bold shrink-0 transition-all rounded-xl border ${nextDisabled ? 'cursor-not-allowed bg-surface-muted border-outline text-content-muted disabled:opacity-100' : 'bg-action hover:bg-action-hover border-transparent text-action-contrast active:scale-[0.98]'}`}
             title={nextDisabled && disableReason ? disableReason : undefined}
           >
             <span>{t("wizardCopy.footer.next")}</span>

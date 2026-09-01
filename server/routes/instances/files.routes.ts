@@ -1,4 +1,5 @@
 import { Router, Response } from "express";
+import { createInstanceFileUploadRoutes } from "./fileUpload.routes";
 import { AuthenticatedRequest, authenticateToken } from "../../middlewares/auth";
 import { dbAdapter } from "../../db";
 import { parseTraefikEnv } from "../../infrastructure/traefik/traefikConfig";
@@ -38,10 +39,10 @@ import {
 import {
   createHtmlPreviewSession,
   getAuthorizedHtmlPreviewSession,
-  serializeHtmlPreviewCredentialCookie,
+  serializeHtmlPreviewCredentialCookies,
 } from "../../services/instances/htmlPreviewSessions";
 import { renderLocalOfficePreview } from "../../utils/officeArtifactPreview";
-import { streamLocalVideo } from "../../utils/mediaStream";
+import { streamLocalMedia } from "../../utils/mediaStream";
 import { createLocalGeneratedArtifactSnapshot } from "../../utils/localGeneratedArtifactLifecycle";
 import rateLimit from "express-rate-limit";
 import { getClientIp } from "../../utils/ip";
@@ -242,6 +243,14 @@ function scanInstanceUsage(rootDir: string) {
 
 export function createFilesRoutes(deps: RouterDependencies) {
   const router = Router();
+  router.use(createInstanceFileUploadRoutes({
+    authenticate: authenticateToken,
+    validateAccess: validateFileAccess,
+    // Docker Desktop bind mounts can take tens of seconds to scan. Keep both
+    // authoritative checks within the upload client's 120-second timeout.
+    checkQuota: (instance, root) => checkInstanceStorageQuota(instance, root, { timeoutMs: 45_000 }),
+    isSensitive: isSensitiveFile,
+  }));
   const { io, wrappedUpdateStatus, docker, setupSessionMap, containerStatsCache } = deps;
 
   router.use([
@@ -545,10 +554,10 @@ export function createFilesRoutes(deps: RouterDependencies) {
         assetAliases: inspection.aliases,
       });
       const encodedEntryPath = project.entryPath.split("/").map(encodeURIComponent).join("/");
-      res.setHeader("Set-Cookie", serializeHtmlPreviewCredentialCookie(
+      res.setHeader("Set-Cookie", serializeHtmlPreviewCredentialCookies(
         created.session,
         created.credentialSecret,
-        req.secure || String(req.get("x-forwarded-proto") || "").toLowerCase() === "https",
+        req.secure || String(req.get("x-forwarded-proto") || "").toLowerCase() === "https" || req.hostname === "localhost",
       ));
       res.setHeader("Cache-Control", "private, no-store, max-age=0");
       return res.redirect(303, `/api/instances/${encodeURIComponent(req.params.id)}/files/html-preview-session/${created.session.publicId}/${encodedEntryPath}`);
@@ -686,7 +695,7 @@ export function createFilesRoutes(deps: RouterDependencies) {
       if ("error" in validation) return res.status(validation.status).json({ error: validation.error });
       const exportGuard = await guardFileExport(validation.absolutePath, path.basename(validation.absolutePath), validation.rootDir);
       if (exportGuard.ok === false) return res.status(exportGuard.status).json({ error: exportGuard.error, code: exportGuard.code });
-      return streamLocalVideo(req, res, exportGuard.realPath, path.basename(exportGuard.realPath), exportGuard.rootPath);
+      return streamLocalMedia(req, res, exportGuard.realPath, path.basename(exportGuard.realPath), exportGuard.rootPath);
     } catch (e: any) {
       return res.status(500).json({ error: "视频预览失败: " + sanitizeErrorMessage(e.message), code: "VIDEO_PREVIEW_FAILED" });
     }

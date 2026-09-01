@@ -23,7 +23,7 @@ const TermsPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#fafbfc]">
+    <div className="min-h-screen bg-app-canvas text-content">
       {/* Hero Section (FAQ style) */}
       <section 
         className="relative overflow-hidden text-white pt-32 pb-24 px-6 sm:px-8 border-b border-slate-800/80"
@@ -44,7 +44,7 @@ const TermsPage: React.FC = () => {
             transition={{ duration: 0.4 }}
             className="inline-flex items-center gap-2"
           >
-            <Link to="/" className="inline-flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors text-[11px] font-bold uppercase tracking-widest">
+            <Link to="/" className="inline-flex items-center gap-1.5 text-content-muted hover:text-white transition-colors text-[11px] font-bold uppercase tracking-widest">
               <ArrowLeft className="w-3.5 h-3.5" />
               {t("terms.backHome")}
             </Link>
@@ -76,7 +76,7 @@ const TermsPage: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="pt-2 flex items-center justify-center gap-2 text-slate-500 text-xs font-bold"
+            className="pt-2 flex items-center justify-center gap-2 text-content-muted text-xs font-bold"
           >
             <AlertCircle className="w-3.5 h-3.5" />
             {t("terms.lastUpdated", { date: lastUpdated })}
@@ -99,18 +99,18 @@ const TermsPage: React.FC = () => {
                 transition={{ delay: idx * 0.05 }}
               >
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
+                  <div className="p-2.5 bg-status-info-bg text-status-info-text rounded-xl">
                     <Icon className="w-5 h-5" />
                   </div>
-                  <h2 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">
+                  <h2 className="text-xl md:text-2xl font-bold text-content tracking-tight">
                     {section.title}
                   </h2>
                 </div>
-                <div className="bg-white border border-slate-150 rounded-2xl p-6 md:p-8 shadow-sm">
+                <div className="bg-surface border border-outline rounded-2xl p-6 md:p-8 shadow-sm">
                   <ul className="space-y-4">
                     {section.content.map((point, pIdx) => (
-                      <li key={pIdx} className="flex gap-3 text-sm md:text-base text-slate-600 leading-relaxed">
-                        <div className="w-1.5 h-1.5 rounded-full bg-blue-100 border border-blue-200 mt-2.5 shrink-0" />
+                      <li key={pIdx} className="flex gap-3 text-sm md:text-base text-content-secondary leading-relaxed">
+                        <div className="w-1.5 h-1.5 rounded-full bg-status-info-bg border border-status-info-border mt-2.5 shrink-0" />
                         <span>{point}</span>
                       </li>
                     ))}
@@ -120,12 +120,12 @@ const TermsPage: React.FC = () => {
             );
           })}
 
-          <section className="bg-slate-50 border border-slate-150 rounded-3xl p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+          <section className="bg-surface-muted border border-outline rounded-3xl p-8 flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="space-y-2 text-center md:text-left">
-              <h3 className="text-lg font-bold text-slate-900">
+              <h3 className="text-lg font-bold text-content">
                 {t("terms.suggestions", { defaultValue: "Have suggestions?" })}
               </h3>
-              <p className="text-sm text-slate-500 max-w-sm">
+              <p className="text-sm text-content-muted max-w-sm">
                 {t("terms.suggestionsDesc", { defaultValue: "We are tailoring rules to safeguard standard compliance benchmarks. Reach out with feedback." })}
               </p>
             </div>
@@ -138,8 +138,8 @@ const TermsPage: React.FC = () => {
             </a>
           </section>
 
-          <footer className="text-center pt-8 border-t border-slate-100">
-            <p className="text-xs text-slate-400 font-medium">
+          <footer className="text-center pt-8 border-t border-outline">
+            <p className="text-xs text-content-muted font-medium">
               {t("terms.footer")}
             </p>
           </footer>

@@ -12,6 +12,14 @@ Hermes Agent is maintained by Nous Research and is distributed under the MIT Lic
 - Copyright: Nous Research
 - License: MIT License (<https://github.com/NousResearch/hermes-agent/blob/main/LICENSE>)
 
+## PDF.js
+
+The instance file center uses the `pdfjs-dist` distribution of Mozilla PDF.js to render local PDF previews in the browser.
+
+- Project: <https://github.com/mozilla/pdf.js>
+- Copyright: Mozilla Foundation and PDF.js contributors
+- License: Apache License 2.0 (<https://github.com/mozilla/pdf.js/blob/master/LICENSE>)
+
 The following names and marks are trademarks or registered trademarks of their respective owners:
 
 - Anthropic and Claude — Anthropic PBC

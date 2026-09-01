@@ -23,7 +23,7 @@ export function QuestionCard({ question, enabled, onAnswer }: { question: LocalR
     catch { setFailed(true); }
     finally { lock.current = false; setBusy(false); }
   };
-  return <section className="my-3 rounded-xl border border-outline bg-surface p-3 text-content" aria-label={t("chatWorkspace.questionTitle")} aria-busy={busy}>
+  return <section className="my-3 rounded-xl border border-outline bg-surface p-3 text-content" aria-label={t("chatWorkspace.questionTitle")} aria-busy={busy} aria-live="polite">
     <p className="text-xs font-semibold text-primary">{t("chatWorkspace.questionTitle")}</p>
     <p className="mt-1 whitespace-pre-wrap break-words text-sm">{question.spec.title}</p>
     {pending ? <>
@@ -47,7 +47,7 @@ export function QuestionCard({ question, enabled, onAnswer }: { question: LocalR
         <button type="button" disabled={!enabled || busy} onClick={() => void submit(true)} className="rounded-lg border border-outline px-3 py-2 text-xs disabled:opacity-50">{t("chatWorkspace.questionReject")}</button>
       </div>
     </> : <div className="mt-2 text-sm">
-      <p>{t(question.status === "answered" ? "chatWorkspace.questionAnswered" : question.status === "rejected" ? "chatWorkspace.questionRejected" : "chatWorkspace.questionExpired")}</p>
+      <p role="status">{t(question.status === "answered" ? "chatWorkspace.questionAnswered" : question.status === "rejected" ? "chatWorkspace.questionRejected" : "chatWorkspace.questionExpired")}</p>
       {question.answer && <p className="mt-1 whitespace-pre-wrap break-words">{[...question.spec.options.filter(option => question.answer!.selected.includes(option.id)).map(option => option.label), question.answer.custom].filter(Boolean).join(" · ")}</p>}
     </div>}
     {failed && <p role="alert" className="mt-2 text-xs text-red-600">{t("chatWorkspace.questionAnswerFailed")}</p>}
@@ -94,6 +94,6 @@ export function ChatRunQuestions({ instanceId, conversationId, runId, knownClose
   };
   return <>
     {questions.map(question => <QuestionCard key={question.id} question={knownClosed && question.status === "pending" ? { ...question, status: "expired" } : question} enabled={active && !error && !knownClosed} onAnswer={value => answer(question.id, value)} />)}
-    {error && questions.some(question => question.status === "pending") && <p role="status" className="text-xs text-amber-700">{t("chatWorkspace.questionReconnecting")}</p>}
+    {error && questions.some(question => question.status === "pending") && <p role="status" className="text-xs text-amber-700 dark:text-amber-300">{t("chatWorkspace.questionReconnecting")}</p>}
   </>;
 }

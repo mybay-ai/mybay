@@ -216,7 +216,7 @@ export function DocsLayout({
   );
 
   return (
-    <div className="min-h-screen bg-surface md:bg-[#fafafa]">
+    <div className="min-h-screen bg-app-canvas">
       
       {/* Mobile Drawer Trigger & Header */}
       <div className="md:hidden sticky top-[72px] z-30 bg-surface/90 backdrop-blur-md border-b border-outline px-4 py-3 flex items-center justify-between -mx-0">

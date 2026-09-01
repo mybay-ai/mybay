@@ -16,7 +16,7 @@
 
   --theme-content: var(--mybay-slate-50);
   --theme-content-secondary: var(--mybay-slate-300);
-  --theme-content-muted: var(--mybay-slate-500);
+  --theme-content-muted: var(--mybay-slate-400);
   --theme-content-inverse: var(--mybay-slate-950);
   --theme-outline: rgba(71, 85, 105, 0.45);
   --theme-outline-strong: var(--mybay-slate-600);

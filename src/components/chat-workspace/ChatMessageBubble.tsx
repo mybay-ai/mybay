@@ -1,5 +1,6 @@
 import { ChatUsageDetails } from "./ChatUsageDetails";
 import { readLocalRunUsage, usageNumber } from "../../../shared/localRunUsage";
+import { readLocalModelEvidence } from "../../../shared/localModelEvidence";
 import { Children, isValidElement, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { Brain, Check, Clock3, Copy, ExternalLink, FileText, Gauge, Sparkles, ThumbsDown, ThumbsUp } from "lucide-react";
@@ -152,8 +153,15 @@ function formatMessageDuration(value: number | null | undefined) {
   return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
 }
 
-function getAssistantModelLabel(message: ChatMessage, unknown: string) {
-  return readLocalRunUsage(message.metadata?.usage_evidence)?.model ?? unknown;
+function getAssistantModelPresentation(message: ChatMessage, liveConfiguredModel: string, t: (key: string) => string) {
+  const reportedModel = readLocalRunUsage(message.metadata?.usage_evidence)?.model;
+  if (reportedModel) return { label: reportedModel, title: t("chatWorkspace.usage.modelReportedTitle") };
+  const configuredSnapshot = readLocalModelEvidence(message.metadata?.model_evidence)?.model;
+  if (configuredSnapshot) return { label: configuredSnapshot, title: t("chatWorkspace.usage.modelConfiguredTitle") };
+  if (["pending", "streaming"].includes(message.status) && liveConfiguredModel) {
+    return { label: liveConfiguredModel, title: t("chatWorkspace.usage.modelLiveConfiguredTitle") };
+  }
+  return { label: t("chatWorkspace.usage.unknownModel"), title: t("chatWorkspace.usage.modelUnknownTitle") };
 }
 
 async function copyTextToClipboard(value: string) {
@@ -484,6 +492,7 @@ export function ChatMessageBubble({
   onOpenInstanceFilePath,
   onDownloadInstanceFilePath,
   generatedArtifacts = [],
+  fallbackModelLabel = "",
   instanceId,
   onMessageFeedbackChange,
   runExecutionState: liveRunExecutionState,
@@ -519,7 +528,8 @@ export function ChatMessageBubble({
     setFeedback(message.user_feedback === "like" ? "up" : message.user_feedback === "dislike" ? "down" : null);
   }, [message.id, message.user_feedback]);
 
-  const assistantModelLabel = useMemo(() => getAssistantModelLabel(message, t("chatWorkspace.usage.unknownModel")), [message, t]);
+  const assistantModel = useMemo(() => getAssistantModelPresentation(message, fallbackModelLabel, t), [message, fallbackModelLabel, t]);
+  const assistantModelLabel = assistantModel.label;
   const failureInfo = useMemo(() => humanizeChatError(
     { code: message.error_code, message: message.error_message },
     t("chatWorkspace.messageFailed")
@@ -609,7 +619,6 @@ export function ChatMessageBubble({
         {isUser && <ChatMessageAttachments attachments={messageAttachments} onOpen={onOpenConversationFile} />}
         {!isUser && <ChatGeneratedArtifactCards artifacts={messageGeneratedArtifacts} onPreview={onOpenInstanceFilePath} onDownload={onDownloadInstanceFilePath} />}
         {!isUser && <ChatRunFileChanges instanceId={instanceId} conversationId={selectedConversationId} runId={messageRunId} evidence={message.metadata?.file_evidence} execution={runExecutionState} artifacts={messageGeneratedArtifacts} onOpen={onOpenInstanceFilePath} />}
-        {!isUser && !["pending", "streaming"].includes(message.status) && <ChatUsageDetails message={message} />}
         {!isUser && displayContent.trim() && (
           <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-outline pt-2 text-content-muted">
             <button
@@ -638,16 +647,17 @@ export function ChatMessageBubble({
             >
               <ThumbsDown className="h-3.5 w-3.5" />
             </button>
-            <span className="ml-1 inline-flex min-w-0 items-center gap-1 rounded-full px-2 py-1 text-[12px] font-medium text-content-muted" title={assistantModelLabel}>
+            {assistantDurationLabel && (
+              <span className="ml-1 inline-flex min-w-0 items-center gap-1 rounded-full px-2 py-1 text-[12px] font-medium text-content-muted" title={t("chatWorkspace.messageProcessedDuration", { duration: assistantDurationLabel })}>
+                <Clock3 className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{t("chatWorkspace.messageProcessedDuration", { duration: assistantDurationLabel })}</span>
+              </span>
+            )}
+            <span className={`inline-flex min-w-0 items-center gap-1 rounded-full px-2 py-1 text-[12px] font-medium text-content-muted${assistantDurationLabel ? "" : " ml-1"}`} title={`${assistantModelLabel} · ${assistantModel.title}`}>
               <Brain className="h-3.5 w-3.5 shrink-0" />
               <span className="truncate">{assistantModelLabel}</span>
             </span>
-            {assistantDurationLabel && (
-              <span className="inline-flex min-w-0 items-center gap-1 rounded-full px-2 py-1 text-[12px] font-medium text-content-muted" title={t("chatWorkspace.messageProcessedDuration", { duration: assistantDurationLabel })}>
-                <Clock3 className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">{assistantDurationLabel}</span>
-              </span>
-            )}
+            {!["pending", "streaming"].includes(message.status) && <ChatUsageDetails message={message} />}
             {assistantTokenUsageLabel && (
               <span className="inline-flex min-w-0 items-center gap-1 rounded-full px-2 py-1 text-[12px] font-medium text-content-muted" title={t("chatWorkspace.messageTokensUsed")}>
                 <Gauge className="h-3.5 w-3.5 shrink-0" />
@@ -663,5 +673,3 @@ export function ChatMessageBubble({
     </div>
   );
 }
-
-

@@ -23,7 +23,7 @@ const ChangelogPage: React.FC = () => {
   const releases = Array.isArray(releasesTemp) ? releasesTemp : [];
 
   return (
-    <div className="min-h-screen bg-[#fafbfc] selection:bg-blue-100 selection:text-blue-900">
+    <div className="min-h-screen bg-app-canvas text-content selection:bg-blue-100 selection:text-blue-900">
       {/* Hero Section (FAQ style) */}
       <section 
         className="relative overflow-hidden text-white pt-32 pb-24 px-6 sm:px-8 border-b border-slate-800/80"
@@ -39,7 +39,7 @@ const ChangelogPage: React.FC = () => {
 
         <div className="max-w-4xl mx-auto text-center relative z-10 space-y-6">
           <div className="mb-2">
-            <Link to="/" className="inline-flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors text-[11px] font-bold uppercase tracking-widest text-left">
+            <Link to="/" className="inline-flex items-center gap-1.5 text-content-muted hover:text-white transition-colors text-[11px] font-bold uppercase tracking-widest text-left">
               <ArrowLeft className="w-3.5 h-3.5" />
               {t("changelog.backHome", { defaultValue: "Back to Home" })}
             </Link>
@@ -69,7 +69,7 @@ const ChangelogPage: React.FC = () => {
         {/* Timeline */}
         <div className="space-y-24 relative">
           {/* Vertical line shadow */}
-          <div className="absolute left-6 md:left-[39.5px] top-4 bottom-0 w-[1px] bg-slate-100 -z-10" />
+          <div className="absolute left-6 md:left-[39.5px] top-4 bottom-0 w-[1px] bg-outline -z-10" />
 
           {releases.map((release, rIdx) => (
             <motion.section 
@@ -80,11 +80,11 @@ const ChangelogPage: React.FC = () => {
               className="relative pl-16 md:pl-24"
             >
               {/* Dot */}
-              <div className="absolute left-5 md:left-9 top-1.5 w-3 h-3 rounded-full border-2 border-blue-600 bg-white ring-4 ring-white" />
+              <div className="absolute left-5 md:left-9 top-1.5 w-3 h-3 rounded-full border-2 border-blue-600 bg-surface ring-4 ring-surface" />
               
               <div className="flex flex-col md:flex-row md:items-baseline justify-between mb-6 gap-2">
                 <div className="flex items-center gap-3">
-                  <h2 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
+                  <h2 className="text-2xl md:text-3xl font-black text-content tracking-tight">
                     {release.version}
                   </h2>
                   {release.badge && (
@@ -93,14 +93,14 @@ const ChangelogPage: React.FC = () => {
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-2 text-slate-400">
+                <div className="flex items-center gap-2 text-content-muted">
                   <Calendar className="w-3.5 h-3.5" />
                   <span className="text-xs font-mono font-medium">{release.date}</span>
                 </div>
               </div>
 
-              <div className="bg-slate-50/50 rounded-3xl p-6 md:p-8 border border-slate-100/80">
-                <p className="text-slate-700 font-medium mb-8 leading-relaxed">
+              <div className="bg-surface-muted/50 rounded-3xl p-6 md:p-8 border border-outline/80">
+                <p className="text-content-secondary font-medium mb-8 leading-relaxed">
                   {release.summary}
                 </p>
 
@@ -116,14 +116,14 @@ const ChangelogPage: React.FC = () => {
                           <div className={`p-1.5 rounded-lg ${iconBg}`}>
                             <TypeIcon className={`w-3.5 h-3.5 ${typeColor}`} />
                           </div>
-                          <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                          <h4 className="text-[11px] font-black text-content-muted uppercase tracking-widest">
                             {section.title}
                           </h4>
                         </div>
                         <ul className="space-y-3">
                           {section.items.map((item, iIdx) => (
-                            <li key={iIdx} className="flex gap-2 text-[13px] text-slate-600 leading-relaxed group">
-                              <span className="text-slate-300 mt-1.5 shrink-0 group-hover:text-blue-400 transition-colors">
+                            <li key={iIdx} className="flex gap-2 text-[13px] text-content-secondary leading-relaxed group">
+                              <span className="text-content-muted mt-1.5 shrink-0 group-hover:text-blue-400 transition-colors">
                                 <ChevronRight className="w-3 h-3" />
                               </span>
                               <span>{item}</span>

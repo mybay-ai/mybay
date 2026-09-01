@@ -22,6 +22,7 @@ import { runtimeRegistry } from "../../../runtime/runtimeRegistry";
 import { safeLocalEvidencePath } from "../../../../shared/localRunFileEvidence";
 import { getStoredFileDiff } from "../../../services/runs/runFileSnapshots";
 import { isQuestionBridgeInstalling } from "../../../services/runs/questionBridgeInstaller";
+import { createConfiguredModelEvidence } from "../../../../shared/localModelEvidence";
 
 export function requireInteractiveRunsEnabled(_req: AuthenticatedRequest, res: Response, next: NextFunction) {
   if (!isInteractiveRunsEnabled()) {
@@ -204,6 +205,7 @@ export function registerRunRoutes(router: Router) {
         runId,
         reasoningEffort: normalizedReasoningEffort,
         runtimeBinding: runtimeRegistry.createBindingForInstance(instance),
+        modelEvidence: createConfiguredModelEvidence(config.model || config.current_model || config.MODEL || instance.model_name),
       });
 
 

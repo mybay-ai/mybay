@@ -381,19 +381,19 @@ export function InstancesPanel({
             <div key={i} className="animate-pulse flex flex-col p-4 md:p-6 bg-surface rounded-2xl shadow-card border border-outline/50">
               <div className="flex justify-between items-start mb-4">
                 <div className="flex gap-4">
-                  <div className="w-1.5 h-12 bg-slate-200 rounded-full" />
+                  <div className="w-1.5 h-12 bg-surface-muted rounded-full" />
                   <div className="space-y-3 py-1">
-                    <div className="w-32 md:w-40 h-5 bg-slate-200 rounded-md" />
-                    <div className="w-24 h-4 bg-slate-200 rounded-md" />
+                    <div className="w-32 md:w-40 h-5 bg-surface-muted rounded-md" />
+                    <div className="w-24 h-4 bg-surface-muted rounded-md" />
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <div className="w-11 h-11 md:w-9 md:h-9 bg-slate-200 rounded-xl md:rounded-lg" />
-                  <div className="w-11 h-11 md:w-9 md:h-9 bg-slate-200 rounded-xl md:rounded-lg" />
+                  <div className="w-11 h-11 md:w-9 md:h-9 bg-surface-muted rounded-xl md:rounded-lg" />
+                  <div className="w-11 h-11 md:w-9 md:h-9 bg-surface-muted rounded-xl md:rounded-lg" />
                 </div>
               </div>
-              <div className="w-full h-11 bg-slate-200 rounded-xl md:rounded-lg mb-4" />
-              <div className="w-full h-10 bg-slate-200 rounded-xl md:rounded-lg" />
+              <div className="w-full h-11 bg-surface-muted rounded-xl md:rounded-lg mb-4" />
+              <div className="w-full h-10 bg-surface-muted rounded-xl md:rounded-lg" />
             </div>
           ))}
         </div>
@@ -495,33 +495,62 @@ export function InstancesPanel({
                   isMobile={isMobile}
                 />
               ) : (
-                /* Desktop detailed table */
-                <InstanceTable 
-                  instances={paginatedInstances}
-                  viewMode={viewMode}
-                  activeLogs={activeLogs}
-                  setActiveLogs={setActiveLogs}
-                  setDetailTab={setDetailTab}
-                  currentUser={currentUser}
-                  handleExportConfig={handleExportConfig}
-                  handleDelete={handleDelete}
-                  handleArchive={handleArchive}
-                  handleRestore={handleRestore}
-                  handleInstanceAction={handleInstanceAction}
-                  actioningIds={actioningIds}
-                  handleOpenLink={handleOpenLink}
-                  fetchInstances={fetchInstances}
-                  setEditingInstance={setEditingInstance}
-                  onRenameInstance={onRenameInstance}
-                  onViewGuide={onViewGuide}
-                  handleOpenTerminalView={handleOpenTerminalView}
-                  selectedInstanceIds={selectedInstanceIds}
-                  onSelectInstance={handleSelectInstance}
-                  onSelectAll={handleSelectAll}
-                  allSelected={allOnPageSelected}
-                  deletingIds={effectiveDeletingIds}
-                  isMobile={isMobile}
-                />
+                <>
+                  {/* Mid-width card fallback; the detailed table starts at xl. */}
+                  <InstanceGrid
+                    instances={paginatedInstances}
+                    viewMode={viewMode}
+                    activeLogs={activeLogs}
+                    setActiveLogs={setActiveLogs}
+                    setDetailTab={setDetailTab}
+                    currentUser={currentUser}
+                    copiedId={copiedId}
+                    handleExportConfig={handleExportConfig}
+                    handleDelete={handleDelete}
+                    handleArchive={handleArchive}
+                    handleRestore={handleRestore}
+                    handleInstanceAction={handleInstanceAction}
+                    actioningIds={actioningIds}
+                    handleCopyUrl={handleCopyUrl}
+                    handleOpenLink={handleOpenLink}
+                    fetchInstances={fetchInstances}
+                    setEditingInstance={setEditingInstance}
+                    onRenameInstance={onRenameInstance}
+                    setMobileMenuOpenInstance={setMobileMenuOpenInstance}
+                    onViewGuide={onViewGuide}
+                    handleOpenTerminalView={handleOpenTerminalView}
+                    selectedInstanceIds={selectedInstanceIds}
+                    onSelectInstance={handleSelectInstance}
+                    deletingIds={effectiveDeletingIds}
+                    isMobile={isMobile}
+                  />
+                  <InstanceTable
+                    instances={paginatedInstances}
+                    viewMode={viewMode}
+                    activeLogs={activeLogs}
+                    setActiveLogs={setActiveLogs}
+                    setDetailTab={setDetailTab}
+                    currentUser={currentUser}
+                    handleExportConfig={handleExportConfig}
+                    handleDelete={handleDelete}
+                    handleArchive={handleArchive}
+                    handleRestore={handleRestore}
+                    handleInstanceAction={handleInstanceAction}
+                    actioningIds={actioningIds}
+                    handleOpenLink={handleOpenLink}
+                    fetchInstances={fetchInstances}
+                    setEditingInstance={setEditingInstance}
+                    onRenameInstance={onRenameInstance}
+                    onViewGuide={onViewGuide}
+                    handleOpenTerminalView={handleOpenTerminalView}
+                    selectedInstanceIds={selectedInstanceIds}
+                    onSelectInstance={handleSelectInstance}
+                    onSelectAll={handleSelectAll}
+                    allSelected={allOnPageSelected}
+                    deletingIds={effectiveDeletingIds}
+                    isMobile={isMobile}
+                  />
+                </>
               )}
             </>
           )}

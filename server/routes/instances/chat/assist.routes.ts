@@ -11,6 +11,8 @@ import { authorityActorFromRequest, sendAuthorityFailure } from "../../../servic
 import { canWriteHttpResponse, createSyncChatRequestLifecycle } from "../../../services/syncChatCancellation";
 import { buildAssistContext, chatLimiter, extractSafeErrorMessage, isChatTurnRpcSchemaError, isValidInstanceId, isValidUUID, getDefaultMaxTokensForReasoning, getReasoningInstruction, normalizeChatTemperature, normalizeReasoningEffort, resolveQuickChatModelConfig } from "./helpers";
 import { CHAT_CONTEXT_MESSAGE_LIMIT, chatUserMessageLimitMessage, isChatUserMessageTooLong, selectRecentMessagesForContext } from "../../../../shared/chatMessageContract";
+import { createLocalRunUsage } from "../../../../shared/localRunUsage";
+import { createConfiguredModelEvidence } from "../../../../shared/localModelEvidence";
 
 export function registerAssistRoutes(router: Router) {
   // 6b. Active Conversation Assist Chat (Synchronous Skills Assist Engine)
@@ -318,15 +320,23 @@ export function registerAssistRoutes(router: Router) {
         }
 
         phase = "finish_chat_turn_success";
+        const durMs = upstreamResponse.durationMs || (Date.now() - startTime);
+        const usageEvidence = createLocalRunUsage(upstreamResponse.usage, {
+          source: "provider_response",
+          durationMs: durMs,
+          durationSource: "local_elapsed",
+        });
         const finishResult = await chatRepo.finishChatTurn({
           conversationId,
           userMessageId,
           status: 'completed',
           assistantContent: upstreamResponse.message,
-          usagePromptTokens: upstreamResponse.usage?.prompt_tokens,
-          usageCompletionTokens: upstreamResponse.usage?.completion_tokens,
-          usageTotalTokens: upstreamResponse.usage?.total_tokens,
-          durationMs: upstreamResponse.durationMs || (Date.now() - startTime)
+          usageEvidence,
+          modelEvidence: createConfiguredModelEvidence(quickConfig.model),
+          usagePromptTokens: usageEvidence.inputTokens ?? undefined,
+          usageCompletionTokens: usageEvidence.outputTokens ?? undefined,
+          usageTotalTokens: usageEvidence.totalTokens ?? undefined,
+          durationMs: durMs
         });
 
         if (finishResult.status === 'success') {

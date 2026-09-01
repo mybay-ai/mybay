@@ -85,10 +85,10 @@ const FAQItemCard: React.FC<FAQItemCardProps> = ({ item, searchQuery, onTagClick
   return (
     <div 
       className={cn(
-        "bg-white border rounded-2xl transition-all duration-300 overflow-hidden",
+        "bg-surface border rounded-2xl transition-all duration-300 overflow-hidden",
         isOpen 
           ? "border-blue-200 shadow-md shadow-blue-50/50" 
-          : "border-slate-150 hover:border-slate-300 hover:shadow-sm"
+          : "border-outline hover:border-outline-strong hover:shadow-sm"
       )}
     >
       <button
@@ -96,19 +96,19 @@ const FAQItemCard: React.FC<FAQItemCardProps> = ({ item, searchQuery, onTagClick
         className="w-full text-left px-5 py-4 md:px-6 md:py-5 flex items-start gap-4 justify-between leading-relaxed"
       >
         <div className="space-y-1">
-          <span className="text-xs font-semibold px-2 py-0.5 bg-slate-100 text-slate-500 rounded-md">
+          <span className="text-xs font-semibold px-2 py-0.5 bg-surface-muted text-content-muted rounded-md">
             {categories.find(cat => cat.id === item.category)?.name || item.category}
           </span>
           <h4 className={cn(
-            "text-sm md:text-base font-bold text-slate-900 leading-snug transition-colors pt-1",
-            isOpen ? "text-blue-600" : "group-hover:text-slate-900"
+            "text-sm md:text-base font-bold text-content leading-snug transition-colors pt-1",
+            isOpen ? "text-blue-600" : "group-hover:text-content"
           )}>
             {highlightText(item.question, searchQuery)}
           </h4>
         </div>
         <div className={cn(
           "p-1.5 rounded-lg border transition-all duration-300 shrink-0 mt-1",
-          isOpen ? "bg-blue-50 border-blue-200 text-blue-600 rotate-180" : "bg-slate-50 border-slate-100 text-slate-400"
+          isOpen ? "bg-blue-50 border-blue-200 text-blue-600 rotate-180" : "bg-surface-muted border-outline text-content-muted"
         )}>
           <ChevronDown className="w-4 h-4" />
         </div>
@@ -122,14 +122,14 @@ const FAQItemCard: React.FC<FAQItemCardProps> = ({ item, searchQuery, onTagClick
             exit={{ height: 0 }}
             transition={{ duration: 0.25, ease: "easeInOut" }}
           >
-            <div className="px-5 pb-5 md:px-6 md:pb-6 pt-1 border-t border-slate-50 bg-slate-50/30">
-              <div className="prose prose-slate prose-sm max-w-none text-slate-600 space-y-4 text-sm leading-relaxed whitespace-pre-wrap text-left">
+            <div className="px-5 pb-5 md:px-6 md:pb-6 pt-1 border-t border-outline bg-surface-muted/30">
+              <div className="prose prose-slate prose-sm max-w-none text-content-secondary space-y-4 text-sm leading-relaxed whitespace-pre-wrap text-left">
                 {highlightText(item.answer, searchQuery)}
               </div>
               
               {/* Special tags on the FAQ answer */}
-              <div className="flex flex-wrap items-center gap-1.5 mt-4 pt-4 border-t border-dashed border-slate-100">
-                <span className="text-[10px] text-slate-400 font-medium">{t("faq.tagLabel")}</span>
+              <div className="flex flex-wrap items-center gap-1.5 mt-4 pt-4 border-t border-dashed border-outline">
+                <span className="text-[10px] text-content-muted font-medium">{t("faq.tagLabel")}</span>
                 {item.tags.map((tag) => (
                   <button
                     key={tag}
@@ -137,7 +137,7 @@ const FAQItemCard: React.FC<FAQItemCardProps> = ({ item, searchQuery, onTagClick
                       e.stopPropagation();
                       onTagClick(tag);
                     }}
-                    className="text-[10px] font-medium px-2 py-0.5 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-slate-500 transition-colors rounded-full"
+                    className="text-[10px] font-medium px-2 py-0.5 bg-surface-muted hover:bg-blue-50 hover:text-blue-600 text-content-muted transition-colors rounded-full"
                   >
                     #{tag}
                   </button>
@@ -219,7 +219,7 @@ const FAQPage: React.FC = () => {
   }, [activeCategory, searchQuery, items, categories]);
 
   return (
-    <div className="min-h-screen bg-[#fafbfc] text-[#0f172a] selection:bg-blue-100 selection:text-blue-900 pb-20">
+    <div className="min-h-screen bg-app-canvas text-content selection:bg-blue-100 selection:text-blue-900 pb-20">
       {/* 1. Hero Area */}
       <section 
         className="relative overflow-hidden text-white pt-32 pb-24 px-6 sm:px-8 border-b border-slate-800/80"
@@ -236,7 +236,7 @@ const FAQPage: React.FC = () => {
 
         <div className="max-w-4xl mx-auto text-center relative z-10 space-y-6">
           <div className="inline-flex items-center gap-1.5 justify-center">
-            <Link to="/" className="inline-flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors text-[11px] font-bold uppercase tracking-widest text-left">
+            <Link to="/" className="inline-flex items-center gap-1.5 text-content-muted hover:text-white transition-colors text-[11px] font-bold uppercase tracking-widest text-left">
               <ArrowLeft className="w-3.5 h-3.5" />
               {t("faq.appStrings.backHome")}
             </Link>
@@ -282,7 +282,7 @@ const FAQPage: React.FC = () => {
                   borderColor: "rgba(255, 255, 255, 0.5)"
                 }}
               >
-                <Search className="w-5 h-5 text-slate-400 ml-4 shrink-0" />
+                <Search className="w-5 h-5 text-content-muted ml-4 shrink-0" />
                 <input 
                   type="text"
                   placeholder={t("faq.searchPlaceholder")}
@@ -294,7 +294,7 @@ const FAQPage: React.FC = () => {
                 {searchQuery && (
                   <button 
                     onClick={() => setSearchQuery("")}
-                    className="p-1 text-slate-500 hover:text-slate-800 mr-3 rounded-full hover:bg-slate-200/60 transition-colors shrink-0"
+                    className="p-1 text-content-muted hover:text-slate-800 mr-3 rounded-full hover:bg-control-hover transition-colors shrink-0"
                     title="Clear search"
                   >
                     <X className="w-4 h-4" />
@@ -305,7 +305,7 @@ const FAQPage: React.FC = () => {
 
             {/* Quick searches chips */}
             <div className="flex flex-wrap items-center justify-center gap-2 mt-5 text-xs">
-              <span className="text-slate-400 font-medium mr-1">{t("faq.appStrings.popularTags")}</span>
+              <span className="text-content-muted font-medium mr-1">{t("faq.appStrings.popularTags")}</span>
               {recommendedSearches.map((keyword) => (
                 <button
                   key={keyword}
@@ -339,10 +339,10 @@ const FAQPage: React.FC = () => {
           
           {/* Inner Sidebar Category Selector */}
           <div className="lg:col-span-1 space-y-6">
-            <div className="bg-white border border-slate-150 rounded-2xl p-4 sticky top-6 shadow-sm">
-              <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
-                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-slate-500" />
+            <div className="bg-surface border border-outline rounded-2xl p-4 sticky top-6 shadow-sm">
+              <div className="flex items-center justify-between pb-3 mb-3 border-b border-outline">
+                <h3 className="text-sm font-bold text-content flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-content-muted" />
                   {t("faq.appStrings.filterCategory")}
                 </h3>
                 {activeCategory !== "all" && (
@@ -363,7 +363,7 @@ const FAQPage: React.FC = () => {
                     "w-full text-left px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-between",
                     activeCategory === "all"
                       ? "bg-blue-600 text-white shadow-sm"
-                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                      : "text-content-secondary hover:bg-surface-muted hover:text-content"
                   )}
                 >
                   <span className="flex items-center gap-2.5">
@@ -372,7 +372,7 @@ const FAQPage: React.FC = () => {
                   </span>
                   <span className={cn(
                     "text-2xs px-2 py-0.5 rounded-full font-bold",
-                    activeCategory === "all" ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-500"
+                    activeCategory === "all" ? "bg-blue-500 text-white" : "bg-surface-muted text-content-muted"
                   )}>
                     {items.length}
                   </span>
@@ -391,19 +391,19 @@ const FAQPage: React.FC = () => {
                         "w-full text-left px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-between group",
                         isActive
                           ? "bg-blue-600 text-white shadow-sm"
-                          : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                          : "text-content-secondary hover:bg-surface-muted hover:text-content"
                       )}
                     >
                       <span className="flex items-center gap-2.5 min-w-0 truncate">
                         <CategoryIcon className={cn(
                           "w-4 h-4 shrink-0 transition-transform group-hover:scale-110",
-                          isActive ? "text-white" : "text-slate-400"
+                          isActive ? "text-white" : "text-content-muted"
                         )} />
                         <span className="truncate">{cat.name}</span>
                       </span>
                       <span className={cn(
                         "text-2xs px-2 py-0.5 rounded-full font-bold shrink-0",
-                        isActive ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-500"
+                        isActive ? "bg-blue-500 text-white" : "bg-surface-muted text-content-muted"
                       )}>
                         {count}
                       </span>
@@ -418,14 +418,14 @@ const FAQPage: React.FC = () => {
           <div className="lg:col-span-3 space-y-6">
             
             {/* Header / Active filters notification */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-150 p-4 rounded-2xl shadow-sm text-left">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface border border-outline p-4 rounded-2xl shadow-sm text-left">
               <div className="space-y-0.5">
-                <h2 className="text-lg font-bold text-slate-900">
+                <h2 className="text-lg font-bold text-content">
                   {activeCategory === "all" 
                     ? t("faq.appStrings.allCoreQs")
                     : categories.find(c => c.id === activeCategory)?.name}
                 </h2>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-content-muted">
                   {activeCategory === "all" 
                     ? t("faq.appStrings.allSearchDesc")
                     : categories.find(c => c.id === activeCategory)?.description}
@@ -433,7 +433,7 @@ const FAQPage: React.FC = () => {
               </div>
 
               {/* Status information */}
-              <div className="text-xs text-slate-500 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 flex items-center gap-2 shrink-0 self-start sm:self-auto">
+              <div className="text-xs text-content-muted bg-surface-muted px-3 py-1.5 rounded-xl border border-outline flex items-center gap-2 shrink-0 self-start sm:self-auto">
                 <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-ping" />
                 <span>
                   {t("faq.appStrings.resultsFoundTag").replace("{{count}}", String(filteredItems.length))}
@@ -446,15 +446,15 @@ const FAQPage: React.FC = () => {
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white border border-dashed border-slate-200 rounded-3xl p-12 text-center"
+                className="bg-surface border border-dashed border-outline-strong rounded-3xl p-12 text-center"
               >
-                <div className="w-16 h-16 bg-slate-50 border border-slate-100 rounded-2xl mx-auto flex items-center justify-center mb-4">
-                  <FileSearch className="w-8 h-8 text-slate-400" />
+                <div className="w-16 h-16 bg-surface-muted border border-outline rounded-2xl mx-auto flex items-center justify-center mb-4">
+                  <FileSearch className="w-8 h-8 text-content-muted" />
                 </div>
-                <h3 className="text-base font-bold text-slate-900 mb-1">
+                <h3 className="text-base font-bold text-content mb-1">
                   {t("faq.appStrings.noResult")}
                 </h3>
-                <p className="text-sm text-slate-500 max-w-sm mx-auto mb-6">
+                <p className="text-sm text-content-muted max-w-sm mx-auto mb-6">
                   {t("faq.appStrings.noResultDesc").replace("{{query}}", searchQuery)}
                 </p>
                 <div className="flex items-center justify-center gap-3">
@@ -466,7 +466,7 @@ const FAQPage: React.FC = () => {
                   </button>
                   <Link
                     to="/app/guides"
-                    className="text-xs font-semibold px-4 py-2 text-slate-600 hover:text-slate-900 transition-colors bg-slate-100 hover:bg-slate-200 rounded-xl"
+                    className="text-xs font-semibold px-4 py-2 text-content-secondary hover:text-content transition-colors bg-surface-muted hover:bg-control-hover rounded-xl"
                   >
                     {t("faq.appStrings.viewGuidebooks")}
                   </Link>
@@ -497,16 +497,16 @@ const FAQPage: React.FC = () => {
             )}
 
             {/* 4. Support Call-to-action Section */}
-            <div className="bg-gradient-to-r from-slate-50 to-slate-100/70 border border-slate-150 rounded-3xl p-6 sm:p-8 mt-12 grid grid-cols-1 md:grid-cols-2 gap-6 items-center text-left">
+            <div className="bg-gradient-to-r from-slate-50 to-slate-100/70 border border-outline rounded-3xl p-6 sm:p-8 mt-12 grid grid-cols-1 md:grid-cols-2 gap-6 items-center text-left">
               <div className="space-y-3">
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 border border-blue-100 rounded-lg text-blue-600 text-[10px] font-bold uppercase tracking-wider">
                   <LifeBuoy className="w-3.5 h-3.5" />
                   <span>{t("faq.appStrings.unresolvedHeader")}</span>
                 </div>
-                <h3 className="text-xl font-bold text-slate-900 tracking-tight">
+                <h3 className="text-xl font-bold text-content tracking-tight">
                   {t("faq.appStrings.unresolvedTitle")}
                 </h3>
-                <p className="text-xs md:text-sm text-slate-500 leading-relaxed">
+                <p className="text-xs md:text-sm text-content-muted leading-relaxed">
                   {t("faq.appStrings.unresolvedDesc")}
                 </p>
               </div>
@@ -515,65 +515,65 @@ const FAQPage: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <a
                   href="mailto:support@mybay.ai?subject=MyBay Product Support Request"
-                  className="bg-white hover:bg-slate-50 border border-slate-150 p-4 rounded-2xl shadow-xs transition-all flex flex-col items-start gap-2 group cursor-pointer"
+                  className="bg-surface hover:bg-surface-muted border border-outline p-4 rounded-2xl shadow-xs transition-all flex flex-col items-start gap-2 group cursor-pointer"
                 >
                   <div className="p-2 bg-blue-50 text-blue-600 rounded-xl group-hover:scale-110 transition-transform">
                     <MessageCircle className="w-4 h-4" />
                   </div>
                   <div>
-                    <span className="text-xs font-bold text-slate-900 flex items-center gap-1">
+                    <span className="text-xs font-bold text-content flex items-center gap-1">
                       {t("faq.appStrings.contactSupport")}
-                      <ArrowRight className="w-3 h-3 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                      <ArrowRight className="w-3 h-3 text-content-muted group-hover:translate-x-0.5 transition-transform" />
                     </span>
-                    <span className="text-[11px] text-slate-400">{t("faq.appStrings.contactSupportSub")}</span>
+                    <span className="text-[11px] text-content-muted">{t("faq.appStrings.contactSupportSub")}</span>
                   </div>
                 </a>
 
                 <Link
                   to="/app/instances"
-                  className="bg-white hover:bg-slate-50 border border-slate-150 p-4 rounded-2xl shadow-xs transition-all flex flex-col items-start gap-2 group"
+                  className="bg-surface hover:bg-surface-muted border border-outline p-4 rounded-2xl shadow-xs transition-all flex flex-col items-start gap-2 group"
                 >
                   <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl group-hover:scale-110 transition-transform">
                     <Server className="w-4 h-4" />
                   </div>
                   <div>
-                    <span className="text-xs font-bold text-slate-900 flex items-center gap-1 border-0">
+                    <span className="text-xs font-bold text-content flex items-center gap-1 border-0">
                       {t("faq.appStrings.examineLogs")}
-                      <ArrowRight className="w-3 h-3 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                      <ArrowRight className="w-3 h-3 text-content-muted group-hover:translate-x-0.5 transition-transform" />
                     </span>
-                    <span className="text-[11px] text-slate-400">{t("faq.appStrings.examineLogsSub")}</span>
+                    <span className="text-[11px] text-content-muted">{t("faq.appStrings.examineLogsSub")}</span>
                   </div>
                 </Link>
 
                 <Link
                   to="/app"
-                  className="bg-white hover:bg-slate-50 border border-slate-150 p-4 rounded-2xl shadow-xs transition-all flex flex-col items-start gap-2 group"
+                  className="bg-surface hover:bg-surface-muted border border-outline p-4 rounded-2xl shadow-xs transition-all flex flex-col items-start gap-2 group"
                 >
                   <div className="p-2 bg-teal-50 text-teal-600 rounded-xl group-hover:scale-110 transition-transform">
                     <History className="w-4 h-4" />
                   </div>
                   <div>
-                    <span className="text-xs font-bold text-slate-900 flex items-center gap-1 border-0">
+                    <span className="text-xs font-bold text-content flex items-center gap-1 border-0">
                       {t("faq.appStrings.returnConsole")}
-                      <ArrowRight className="w-3 h-3 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                      <ArrowRight className="w-3 h-3 text-content-muted group-hover:translate-x-0.5 transition-transform" />
                     </span>
-                    <span className="text-[11px] text-slate-400">{t("faq.appStrings.returnConsoleSub")}</span>
+                    <span className="text-[11px] text-content-muted">{t("faq.appStrings.returnConsoleSub")}</span>
                   </div>
                 </Link>
 
                 <a
                   href="mailto:support@mybay.ai?subject=MyBay Feature Feedback"
-                  className="bg-white hover:bg-slate-50 border border-slate-150 p-4 rounded-2xl shadow-xs transition-all flex flex-col items-start gap-2 group cursor-pointer"
+                  className="bg-surface hover:bg-surface-muted border border-outline p-4 rounded-2xl shadow-xs transition-all flex flex-col items-start gap-2 group cursor-pointer"
                 >
                   <div className="p-2 bg-amber-50 text-amber-600 rounded-xl group-hover:scale-110 transition-transform">
                     <Sparkles className="w-4 h-4" />
                   </div>
                   <div>
-                    <span className="text-xs font-bold text-slate-900 flex items-center gap-1">
+                    <span className="text-xs font-bold text-content flex items-center gap-1">
                       {t("faq.appStrings.suggestFeatures")}
-                      <ArrowRight className="w-3 h-3 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                      <ArrowRight className="w-3 h-3 text-content-muted group-hover:translate-x-0.5 transition-transform" />
                     </span>
-                    <span className="text-[11px] text-slate-400">{t("faq.appStrings.suggestFeaturesSub")}</span>
+                    <span className="text-[11px] text-content-muted">{t("faq.appStrings.suggestFeaturesSub")}</span>
                   </div>
                 </a>
               </div>

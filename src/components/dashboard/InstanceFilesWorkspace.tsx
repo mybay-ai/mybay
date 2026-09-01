@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, CheckCircle2, ChevronDown, FolderOpen } from "lucide-react";
+import { ChevronDown, FolderOpen } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import type { AgentInstance, User as UserType } from "../../types";
 import { buildInstanceFilesNavigationUrl } from "../../constants/routes";
 import { InstanceFilesSection } from "../InstanceFilesSection";
+import { getRefinedStatusLabel } from "./instanceStatus";
 
 interface InstanceFilesWorkspaceProps {
   instances: AgentInstance[];
@@ -22,6 +23,7 @@ export function InstanceFilesWorkspace({ instances, currentUser }: InstanceFiles
     () => instances.find((instance) => instance.id === selectedInstanceId) || null,
     [instances, selectedInstanceId]
   );
+  const statusLabel = selectedInstance ? getRefinedStatusLabel(selectedInstance) : null;
 
   useEffect(() => {
     if (!queryInstanceId) {
@@ -84,10 +86,10 @@ export function InstanceFilesWorkspace({ instances, currentUser }: InstanceFiles
 
         {selectedInstance && (
           <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-outline/60 pt-3 text-xs text-content-muted">
-            <span className="font-mono">ID: {selectedInstance.id}</span>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 font-semibold text-emerald-600 dark:text-emerald-400">
-              {selectedInstance.status === "running" ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertCircle className="h-3.5 w-3.5" />}
-              {selectedInstance.status}
+            <span className="font-mono break-all">ID: {selectedInstance.id}</span>
+            <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-semibold ${statusLabel?.textClass || ""}`}>
+              <span className={`h-2 w-2 shrink-0 rounded-full ${statusLabel?.color || "bg-slate-400"}`} />
+              {statusLabel?.i18nKey ? t(statusLabel.i18nKey) : statusLabel?.text}
             </span>
             <span>{t("files_center_root_hint")}</span>
           </div>

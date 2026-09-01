@@ -167,7 +167,7 @@ export default function SecurityPage() {
   const copy = COPY[i18n.language.toLowerCase().startsWith("zh") ? "zh" : "en"];
 
   return (
-    <div className="min-h-screen bg-[#f7f9fc]" data-page="security">
+    <div className="min-h-screen bg-app-canvas text-content" data-page="security">
       <section
         className="relative overflow-hidden border-b border-blue-900/60 px-6 pb-24 pt-32 text-white sm:px-8"
         style={{ background: "radial-gradient(circle at 50% 10%, rgba(59,130,246,.28), transparent 36%), linear-gradient(135deg,#070d20 0%,#101b3d 52%,#101f4c 100%)" }}
@@ -190,19 +190,19 @@ export default function SecurityPage() {
         <section>
           <div className="mb-8 flex items-center gap-3">
             <div className="rounded-xl bg-blue-50 p-2.5 text-blue-600"><ShieldCheck className="h-5 w-5" /></div>
-            <h2 className="text-2xl font-bold tracking-tight text-slate-950">{copy.practicesTitle}</h2>
+            <h2 className="text-2xl font-bold tracking-tight text-content">{copy.practicesTitle}</h2>
           </div>
           <div className="grid gap-5 md:grid-cols-2">
             {copy.cards.map((card, index) => {
               const Icon = CARD_ICONS[index];
               return (
-                <motion.article key={card.title} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm sm:p-7">
+                <motion.article key={card.title} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="rounded-2xl border border-outline bg-surface p-6 shadow-sm sm:p-7">
                   <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-slate-950 text-blue-300"><Icon className="h-5 w-5" /></div>
-                  <h3 className="text-lg font-semibold text-slate-950">{card.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-500">{card.description}</p>
+                  <h3 className="text-lg font-semibold text-content">{card.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-content-muted">{card.description}</p>
                   <ul className="mt-5 space-y-3">
                     {card.points.map((point) => (
-                      <li key={point} className="flex gap-2.5 text-sm leading-6 text-slate-600">
+                      <li key={point} className="flex gap-2.5 text-sm leading-6 text-content-secondary">
                         <CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-emerald-500" /><span>{point}</span>
                       </li>
                     ))}
@@ -213,7 +213,7 @@ export default function SecurityPage() {
           </div>
         </section>
 
-        <section className="mt-14 overflow-hidden rounded-3xl border border-blue-200/50 bg-slate-950 text-white shadow-xl shadow-slate-200/50">
+        <section className="mt-14 overflow-hidden rounded-3xl border border-blue-200/50 bg-slate-950 text-white shadow-xl shadow-black/10">
           <div className="grid lg:grid-cols-[1.15fr_.85fr]">
             <div className="p-7 sm:p-10">
               <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/15 text-blue-300"><Mail className="h-6 w-6" /></div>
@@ -231,11 +231,11 @@ export default function SecurityPage() {
           </div>
         </section>
 
-        <section className="mt-8 grid gap-6 rounded-2xl border border-amber-200/70 bg-amber-50/70 p-6 sm:grid-cols-[auto_1fr] sm:p-8">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100 text-amber-700"><AlertTriangle className="h-5 w-5" /></div>
+        <section className="mt-8 grid gap-6 rounded-2xl border border-status-warning-border bg-status-warning-bg p-6 sm:grid-cols-[auto_1fr] sm:p-8">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-status-warning-bg text-status-warning-text"><AlertTriangle className="h-5 w-5" /></div>
           <div>
-            <h2 className="text-lg font-semibold text-slate-950">{copy.boundariesTitle}</h2>
-            <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600">{copy.boundaries.map((point) => <li key={point}>• {point}</li>)}</ul>
+            <h2 className="text-lg font-semibold text-content">{copy.boundariesTitle}</h2>
+            <ul className="mt-3 space-y-2 text-sm leading-6 text-content-secondary">{copy.boundaries.map((point) => <li key={point}>• {point}</li>)}</ul>
           </div>
         </section>
 

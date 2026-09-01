@@ -62,7 +62,7 @@ export function MobileInstanceSheet({
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
         className="fixed bottom-0 left-0 right-0 bg-surface rounded-t-2xl shadow-xl z-[101] p-5 pb-8 md:hidden border-t border-outline/80"
       >
-        <div className="w-12 h-1 bg-slate-200 rounded-full mx-auto mb-4" />
+        <div className="w-12 h-1 bg-outline-strong rounded-full mx-auto mb-4" />
         <div className="flex justify-between items-start mb-4">
           <div className="flex-1 min-w-0">
             <h3 className="text-base font-semibold text-content truncate">{mobileMenuOpenInstance.name}</h3>
@@ -83,7 +83,7 @@ export function MobileInstanceSheet({
               {caps.canStart && (
                 <button 
                   className={cn(
-                    "flex flex-col items-center gap-1.5 p-3 rounded-xl bg-emerald-50/40 border border-emerald-100 text-emerald-700 font-semibold active:bg-emerald-100/40 transition-colors",
+                    "flex flex-col items-center gap-1.5 p-3 rounded-xl bg-status-success-bg border border-status-success-border text-status-success-text font-semibold active:brightness-110 transition-colors",
                     !caps.canRestart && !caps.canStop && "col-span-2 py-4 flex-row justify-center"
                   )}
                   onClick={() => closeAndExecute(() => handleInstanceAction(mobileMenuOpenInstance.id, 'start'))}
@@ -97,7 +97,7 @@ export function MobileInstanceSheet({
               {caps.canRestart && (
                 <button 
                   className={cn(
-                    "flex flex-col items-center gap-1.5 p-3 rounded-xl bg-indigo-50/40 border border-indigo-100 text-indigo-700 font-semibold active:bg-indigo-100/40 transition-colors",
+                    "flex flex-col items-center gap-1.5 p-3 rounded-xl bg-status-info-bg border border-status-info-border text-status-info-text font-semibold active:brightness-110 transition-colors",
                     !caps.canStart && !caps.canStop && "col-span-2 py-4 flex-row justify-center"
                   )}
                   onClick={() => closeAndExecute(() => handleInstanceAction(mobileMenuOpenInstance.id, 'restart'))}
@@ -127,25 +127,25 @@ export function MobileInstanceSheet({
           {/* 2. 维护操作区：重新部署 / 刷新网关 / 从归档恢复 */}
           {caps.isArchived ? (
             <button 
-              className="flex items-center gap-3.5 p-3.5 rounded-xl bg-indigo-50/50 border border-indigo-200/50 text-indigo-700 font-medium active:bg-indigo-100/50 transition-colors shadow-xs w-full"
+              className="flex items-center gap-3.5 p-3.5 rounded-xl bg-status-info-bg border border-status-info-border text-status-info-text font-medium active:brightness-110 transition-colors shadow-xs w-full"
               onClick={() => closeAndExecute(() => handleRestore(mobileMenuOpenInstance.id))}
             >
-              <RefreshCw className="w-4.5 h-4.5 text-indigo-600" />
+              <RefreshCw className="w-4.5 h-4.5 text-status-info-text" />
               <div className="text-left">
                 <p className="text-[13px] font-semibold">{t("mobile_sheet_restore_title")}</p>
-                <p className="text-[11px] text-indigo-500 font-normal">{t("mobile_sheet_restore_desc")}</p>
+                <p className="text-[11px] text-status-info-text/80 font-normal">{t("mobile_sheet_restore_desc")}</p>
               </div>
             </button>
           ) : (
             <>
               <button 
-                className="flex items-center gap-3.5 p-3.5 rounded-xl bg-indigo-50/50 border border-indigo-200/50 text-indigo-700 font-medium active:bg-indigo-100/50 transition-colors shadow-xs w-full"
+                className="flex items-center gap-3.5 p-3.5 rounded-xl bg-status-info-bg border border-status-info-border text-status-info-text font-medium active:brightness-110 transition-colors shadow-xs w-full"
                 onClick={() => closeAndExecute(() => handleInstanceAction(mobileMenuOpenInstance.id, 'redeploy', true, t('confirm_redeploy')))}
               >
-                <RefreshCw className="w-4.5 h-4.5 text-indigo-600" />
+                <RefreshCw className="w-4.5 h-4.5 text-status-info-text" />
                 <div className="text-left">
                   <p className="text-[13px] font-semibold">{t("mobile_sheet_redeploy_title")}</p>
-                  <p className="text-[11px] text-indigo-500 font-normal">{t("mobile_sheet_redeploy_desc")}</p>
+                  <p className="text-[11px] text-status-info-text/80 font-normal">{t("mobile_sheet_redeploy_desc")}</p>
                 </div>
               </button>
 
@@ -217,13 +217,13 @@ export function MobileInstanceSheet({
           {/* 4. 危险操作区：归档 / 检查状态 / 导出 / 删除 */}
           {caps.canArchive && (
             <button 
-               className="flex items-center gap-3.5 p-3.5 rounded-xl bg-amber-50/40 border border-amber-200/50 text-amber-700 font-medium active:bg-amber-100 transition-colors w-full"
+               className="flex items-center gap-3.5 p-3.5 rounded-xl bg-status-warning-bg border border-status-warning-border text-status-warning-text font-medium active:brightness-110 transition-colors w-full"
                onClick={() => closeAndExecute(() => handleArchive(mobileMenuOpenInstance.id))}
             >
-              <Archive className="w-4.5 h-4.5 text-amber-500" />
+              <Archive className="w-4.5 h-4.5 text-status-warning-text" />
               <div className="text-left">
                 <p className="text-[13px] font-semibold">{t("mobile_sheet_archive_title")}</p>
-                <p className="text-[11px] text-amber-600 font-normal font-mono">{t("mobile_sheet_archive_desc")}</p>
+                <p className="text-[11px] text-status-warning-text/80 font-normal font-mono">{t("mobile_sheet_archive_desc")}</p>
               </div>
             </button>
           )}
@@ -251,13 +251,13 @@ export function MobileInstanceSheet({
           </button>
           <div className="h-px bg-surface-muted my-1" />
           <button 
-            className="flex items-center gap-3.5 p-3.5 rounded-xl bg-red-50/40 border border-red-100 text-red-600 font-medium active:bg-red-50 transition-colors shadow-xs"
+            className="flex items-center gap-3.5 p-3.5 rounded-xl bg-status-danger-bg border border-status-danger-border text-status-danger-text font-medium active:brightness-110 transition-colors shadow-xs"
             onClick={(e) => closeAndExecute(() => handleDelete(mobileMenuOpenInstance.id, e))}
           >
             <Trash2 className="w-4.5 h-4.5" />
             <div className="text-left">
               <p className="text-[13px] font-semibold uppercase tracking-tight">{t("mobile_sheet_delete_title")}</p>
-              <p className="text-[11px] text-red-400 font-normal">{t("mobile_sheet_delete_desc")}</p>
+              <p className="text-[11px] text-status-danger-text/80 font-normal">{t("mobile_sheet_delete_desc")}</p>
             </div>
           </button>
         </div>

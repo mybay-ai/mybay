@@ -1,5 +1,6 @@
 import { Brain, Gauge, HelpCircle, Sparkles, Zap } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { ChatQuestionSetup } from "./ChatQuestionSetup";
 
 type ReasoningEffort = "fast" | "balanced" | "deep";
 
@@ -9,6 +10,8 @@ interface ChatSettingsPanelProps {
   reasoningEffort: ReasoningEffort;
   setReasoningEffort: (effort: ReasoningEffort) => void;
   chatMode: "quick" | "assist" | "agent";
+  instanceId: string;
+  busy: boolean;
   selectedSkillId: string;
   setSelectedSkillId: (skillId: string) => void;
 }
@@ -19,6 +22,8 @@ export function ChatSettingsPanel({
   reasoningEffort,
   setReasoningEffort,
   chatMode,
+  instanceId,
+  busy,
   selectedSkillId,
   setSelectedSkillId
 }: ChatSettingsPanelProps) {
@@ -93,6 +98,8 @@ export function ChatSettingsPanel({
               </div>
             </section>
           </div>
+
+          {chatMode === "agent" && <ChatQuestionSetup key={instanceId} instanceId={instanceId} busy={busy} />}
 
           <div className="flex items-start gap-2 text-[13px] text-content-muted">
             <HelpCircle className="w-3.5 h-3.5 shrink-0 text-content-muted mt-0.5" />

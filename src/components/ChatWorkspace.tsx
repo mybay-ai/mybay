@@ -15,7 +15,6 @@ import { useChatComposerDraft } from "./chat-workspace/useChatComposerDraft";
 import { useChatAutoFollow } from "./chat-workspace/useChatAutoFollow";
 import { completeLatestHistoryWindow, getHistorySearchQuery, needsLatestHistoryWindow, requestLatestHistoryWindow, type ChatHistoryNavigation } from "./chat-workspace/chatHistoryNavigation";
 import { ChatMessagesPanel } from "./chat-workspace/ChatMessagesPanel";
-import { ChatQuestionSetup } from "./chat-workspace/ChatQuestionSetup";
 import { ChatSettingsPanel } from "./chat-workspace/ChatSettingsPanel";
 import { useChatRuns } from "./chat-workspace/useChatRuns";
 import { ChatWorkspaceHeader } from "./chat-workspace/ChatWorkspaceHeader";
@@ -1100,6 +1099,8 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
           reasoningEffort={reasoningEffort}
           setReasoningEffort={setReasoningEffort}
           chatMode={chatMode}
+          instanceId={selectedId}
+          busy={selectedConversationIsRunning}
           selectedSkillId={selectedSkillId}
           setSelectedSkillId={setSelectedSkillId}
         />
@@ -1302,7 +1303,6 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
           />
 
           {/* Message input area */}
-          {selectedId && <ChatQuestionSetup key={selectedId} instanceId={selectedId} busy={selectedConversationIsRunning} />}
           {selectedId && (
             <ChatInputBar
               creatingConversation={creatingConversation}

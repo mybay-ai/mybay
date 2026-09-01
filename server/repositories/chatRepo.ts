@@ -1,5 +1,6 @@
 import { placeConversation, type ConversationPlacement } from "../../shared/localConversationPlacement";
 import { readLocalRunUsage, type LocalRunUsage } from "../../shared/localRunUsage";
+import { readLocalModelEvidence, type LocalModelEvidence } from "../../shared/localModelEvidence";
 import { settleRunQuestions } from "../../shared/localRunQuestions";
 import { readLocalFileEvidence, type LocalFileEvidence } from "../../shared/localRunFileEvidence";
 import { readLocalRunTimeline, type LocalRunTimeline } from "../../shared/localRunTimeline";
@@ -466,7 +467,7 @@ export const chatRepo = {
     });
   },
 
-  async finishChatTurn(params: { conversationId: string; userMessageId: string; status: 'completed' | 'failed'; assistantContent?: string; errorCode?: string; usagePromptTokens?: number; usageCompletionTokens?: number; usageTotalTokens?: number; durationMs?: number; newSessionId?: string; usageEvidence?: LocalRunUsage; }): Promise<{ status: string; assistant_message_id: string | null; assistant_sequence_no: number | null }> {
+  async finishChatTurn(params: { conversationId: string; userMessageId: string; status: 'completed' | 'failed'; assistantContent?: string; errorCode?: string; usagePromptTokens?: number; usageCompletionTokens?: number; usageTotalTokens?: number; durationMs?: number; newSessionId?: string; usageEvidence?: LocalRunUsage; modelEvidence?: LocalModelEvidence | null; }): Promise<{ status: string; assistant_message_id: string | null; assistant_sequence_no: number | null }> {
     return mutateStore((data) => {
       const userMsg = data.chatMessages.find((m: any) => m.id === params.userMessageId && m.conversation_id === params.conversationId);
       if (!userMsg || userMsg.status !== "pending") return { status: "TURN_NOT_PENDING", assistant_message_id: null, assistant_sequence_no: null };
@@ -477,13 +478,15 @@ export const chatRepo = {
       const assistant = { id: randomUUID(), conversation_id: params.conversationId, instance_id: userMsg.instance_id, role: "assistant", content: params.assistantContent ?? "", status: params.status, sequence_no: nextSequence(data.chatMessages, params.conversationId), request_id: userMsg.request_id, error_code: params.errorCode ?? null, usage_prompt_tokens: params.usagePromptTokens ?? null, usage_completion_tokens: params.usageCompletionTokens ?? null, usage_total_tokens: params.usageTotalTokens ?? null, duration_ms: params.durationMs ?? null, metadata: {}, created_at: now, updated_at: now };
       const usageEvidence = readLocalRunUsage(params.usageEvidence);
       if (usageEvidence) Object.assign(assistant.metadata, { usage_evidence: usageEvidence });
+      const modelEvidence = readLocalModelEvidence(params.modelEvidence);
+      if (modelEvidence) Object.assign(assistant.metadata, { model_evidence: modelEvidence });
       data.chatMessages.push(assistant);
       touchConversation(data, params.conversationId, params.newSessionId ? { session_id: params.newSessionId, last_message_at: now } : { last_message_at: now });
       return { status: params.status === "failed" ? "failed_logged" : "success", assistant_message_id: assistant.id, assistant_sequence_no: assistant.sequence_no };
     });
   },
 
-  async beginChatRun(params: { conversationId: string; userId: string; instanceId: string; content: string; requestId: string; runId: string; reasoningEffort?: "fast" | "balanced" | "deep"; runtimeBinding?: RuntimeBinding; }): Promise<{ status: string; user_message_id: string | null; sequence_no: number | null; run_id?: string | null; run_status?: string | null }> {
+  async beginChatRun(params: { conversationId: string; userId: string; instanceId: string; content: string; requestId: string; runId: string; reasoningEffort?: "fast" | "balanced" | "deep"; runtimeBinding?: RuntimeBinding; modelEvidence?: LocalModelEvidence | null; }): Promise<{ status: string; user_message_id: string | null; sequence_no: number | null; run_id?: string | null; run_status?: string | null }> {
     return mutateStoreCollections(["conversations", "chatMessages", "chatRuns"] as const, (data) => {
       const conv = data.conversations.find((c: any) => c.id === params.conversationId && c.user_id === params.userId && c.instance_id === params.instanceId);
       if (!conv) throw new Error("CONVERSATION_NOT_FOUND_OR_ACCESS_DENIED");
@@ -511,7 +514,8 @@ export const chatRepo = {
       runtimeRegistry.getForBinding(runtimeBinding);
       const userMessage = { id: randomUUID(), conversation_id: params.conversationId, instance_id: params.instanceId, role: "user", content: params.content, status: "pending", sequence_no: nextSequence(data.chatMessages, params.conversationId), request_id: params.requestId, error_code: null, usage_prompt_tokens: null, usage_completion_tokens: null, usage_total_tokens: null, duration_ms: null, metadata: { run_id: params.runId }, created_at: now, updated_at: now };
       data.chatMessages.push(userMessage);
-      data.chatRuns.push({ id: params.runId, conversation_id: params.conversationId, user_id: params.userId, instance_id: params.instanceId, user_message_id: userMessage.id, status: "queued", upstream_run_id: null, dispatch_attempts: 0, request_id: params.requestId, partial_output: null, error_code: null, last_event_seq: 0, stop_attempts: 0, stop_requested_at: null, reconciled_by: null, lease_expires_at: null, reasoning_effort: params.reasoningEffort || "balanced", runtime_type: runtimeBinding.runtimeType, runtime_provider_key: runtimeBinding.providerKey, runtime_contract_version: runtimeBinding.contractVersion, created_at: now, updated_at: now, started_at: null, completed_at: null, last_observed_at: null });
+      const modelEvidence = readLocalModelEvidence(params.modelEvidence);
+      data.chatRuns.push({ id: params.runId, conversation_id: params.conversationId, user_id: params.userId, instance_id: params.instanceId, user_message_id: userMessage.id, status: "queued", upstream_run_id: null, dispatch_attempts: 0, request_id: params.requestId, partial_output: null, error_code: null, last_event_seq: 0, stop_attempts: 0, stop_requested_at: null, reconciled_by: null, lease_expires_at: null, reasoning_effort: params.reasoningEffort || "balanced", runtime_type: runtimeBinding.runtimeType, runtime_provider_key: runtimeBinding.providerKey, runtime_contract_version: runtimeBinding.contractVersion, ...(modelEvidence ? { model_evidence: modelEvidence } : {}), created_at: now, updated_at: now, started_at: null, completed_at: null, last_observed_at: null });
       Object.assign(conv, { updated_at: now, last_message_at: now });
       return { status: "success", user_message_id: userMessage.id, sequence_no: userMessage.sequence_no };
     });
@@ -611,6 +615,8 @@ export const chatRepo = {
       const assistant = { id: randomUUID(), conversation_id: run.conversation_id, instance_id: run.instance_id, role: "assistant", content: params.assistantContent ?? "", status: assistantStatus, sequence_no: nextSequence(data.chatMessages, run.conversation_id), request_id: run.request_id, error_code: params.errorCode ?? null, usage_prompt_tokens: params.usagePromptTokens ?? null, usage_completion_tokens: params.usageCompletionTokens ?? null, usage_total_tokens: params.usageTotalTokens ?? null, duration_ms: params.durationMs ?? null, metadata: { run_id: run.id, ...(fileChanges.length ? { file_evidence: fileEvidence } : {}), ...(params.completionAudit ? { completion_verification: params.completionAudit } : {}) }, created_at: now, updated_at: now };
       const usageEvidence = readLocalRunUsage(params.usageEvidence);
       if (usageEvidence) Object.assign(assistant.metadata, { usage_evidence: usageEvidence });
+      const modelEvidence = readLocalModelEvidence(run.model_evidence);
+      if (modelEvidence) Object.assign(assistant.metadata, { model_evidence: modelEvidence });
       data.chatMessages.push(assistant);
       if (timeline) Object.assign(assistant.metadata, { run_timeline: { ...timeline, status: params.status } });
       const userMessage = data.chatMessages.find((m: any) => m.id === run.user_message_id);

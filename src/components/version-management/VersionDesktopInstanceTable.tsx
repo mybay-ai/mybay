@@ -33,11 +33,11 @@ export function VersionDesktopInstanceTable({
   const { t, i18n } = useTranslation("dashboard");
 
   return (
-      <Card className="hidden md:block bg-surface border border-outline rounded-2xl overflow-hidden shadow-sm">
+      <Card className="hidden xl:block bg-surface border border-outline rounded-2xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-surface-muted border-b border-outline text-[#475569] text-[13px] font-bold">
+              <tr className="bg-surface-muted border-b border-outline text-content-secondary text-[13px] font-bold">
                 <th className="p-4 w-12 text-center">
                   <input
                     type="checkbox"
@@ -110,7 +110,7 @@ export function VersionDesktopInstanceTable({
                       {inst.last_upgrade_at ? (
                         new Date(inst.last_upgrade_at).toLocaleString(i18n.resolvedLanguage || i18n.language, { hour12: false })
                       ) : (
-                        <span className="text-slate-300">—</span>
+                        <span className="text-content-muted">—</span>
                       )}
                     </td>
 
@@ -221,7 +221,7 @@ export function VersionDesktopInstanceTable({
               {filteredInstances.length === 0 && (
                 <tr>
                   <td colSpan={6} className="text-center py-12 text-content-muted">
-                    <Box className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                    <Box className="w-8 h-8 text-content-muted mx-auto mb-2" />
                     <span>{t("versionManagement.table.empty")}</span>
                   </td>
                 </tr>

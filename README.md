@@ -12,7 +12,7 @@ Deploy and operate multiple isolated Hermes Agent instances on infrastructure yo
 
 Languages: [English](./README.md) | [简体中文](./README.zh-CN.md)
 
-> **Release status: `v0.1.25`.** Public interfaces, runtime adapters, deployment details, and upgrade behavior may still change during the 0.x series.
+> **Release status: `v0.1.26`.** Public interfaces, runtime adapters, deployment details, and upgrade behavior may still change during the 0.x series.
 
 | Runtime | Status |
 | --- | --- |

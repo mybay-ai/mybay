@@ -36,6 +36,7 @@ import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "./server/utils/authSecrets";
 import { sanitizeErrorMessage } from "./server/utils/sanitizer";
 import { authenticateToken } from "./server/middlewares/auth";
+import { isAuthorizedHtmlPreviewAssetRequest } from "./server/services/instances/htmlPreviewSessions";
 import { startDockerGC } from "./server/dockerGC";
 import { buildVersionFamilies } from "./server/repositories/versionsRepo";
 import { discoverHermesVersions } from "./server/services/hermesVersionDiscovery";
@@ -315,7 +316,10 @@ async function startServer() {
   app.use("/api/credentials", protectedApiLimiter, authenticateToken, credentialsRouter);
   app.use("/api/oauth/providers", protectedApiLimiter, authenticateToken, oauthProvidersRouter);
   app.use("/api/deployments", protectedApiLimiter, createDeploymentsRouter());
-  app.use("/api/instances", protectedApiLimiter, authenticateToken, createInstancesRouter(io));
+  app.use("/api/instances", protectedApiLimiter, (req, res, next) => {
+    if (isAuthorizedHtmlPreviewAssetRequest(req.method, req.path, req.headers.cookie)) return next();
+    return authenticateToken(req, res, next);
+  }, createInstancesRouter(io));
 
   // Log all registered routes for diagnostics
   console.log("[System] MyBay Open Source starting...");

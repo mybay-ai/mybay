@@ -31,10 +31,10 @@ export function VersionMobileInstanceCards({
   const { t } = useTranslation("dashboard");
 
   return (
-      <div className="md:hidden space-y-4">
+      <div className="xl:hidden space-y-4">
         {filteredInstances.length === 0 ? (
           <div className="text-center py-12 text-content-muted bg-surface border border-outline rounded-2xl">
-            <Box className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+            <Box className="w-8 h-8 text-content-muted mx-auto mb-2" />
             <span>{t("versionManagement.table.empty")}</span>
           </div>
         ) : (

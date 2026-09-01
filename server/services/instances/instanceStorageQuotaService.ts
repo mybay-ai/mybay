@@ -36,7 +36,7 @@ export async function resolveInstanceDiskLimitMb(instance: any): Promise<number 
   return Number.isFinite(envDisk) && envDisk > 0 ? envDisk : 4096;
 }
 
-export async function checkInstanceStorageQuota(instance: any, rootDir: string): Promise<StorageQuotaStats> {
+export async function checkInstanceStorageQuota(instance: any, rootDir: string, options: { timeoutMs?: number } = {}): Promise<StorageQuotaStats> {
   let storageUsedBytes: number | null = null;
   let storageUsagePercent: number | null = null;
   let storageStatus: "normal" | "warning" | "exceeded" | "unknown" = "normal";
@@ -55,7 +55,7 @@ export async function checkInstanceStorageQuota(instance: any, rootDir: string):
 
   try {
     if (fs.existsSync(rootDir)) {
-      storageUsedBytes = await getDirectorySizeBytes(rootDir);
+      storageUsedBytes = await getDirectorySizeBytes(rootDir, options.timeoutMs);
     } else {
       storageUsedBytes = 0;
     }

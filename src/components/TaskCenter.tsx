@@ -520,7 +520,7 @@ export function TaskCenter({ currentUser, instances }: TaskCenterProps) {
                         onClick={() => handleToggleJob(job.id)}
                         type="button"
                         className={`w-11 h-6 rounded-full p-0.5 transition-colors focus:outline-none ${
-                          job.is_active ? "bg-green-500" : "bg-slate-200"
+                          job.is_active ? "bg-green-500" : "bg-surface-muted"
                         }`}
                       >
                         <div className={`w-5 h-5 rounded-full bg-white transition-transform ${

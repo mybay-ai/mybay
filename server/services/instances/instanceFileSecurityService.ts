@@ -13,6 +13,7 @@ import { docker } from "../../routes/instances/index"; // Wait, circular depende
 
 export const isSensitiveFile = (filename: string) => {
   const sensitivePatterns = [
+    /^\.mybay-upload-/i,
     /^\.env/i,
     /\.key$/i,
     /\.pem$/i,
