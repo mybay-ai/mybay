@@ -51,4 +51,35 @@ describe("quick deployment validation", () => {
     draft.permissionConfirmed = false;
     expect(validateQuickDeployDraft(draft)).toContainEqual(expect.objectContaining({ code: "permissionConfirmationRequired" }));
   });
+
+  it("requires credentials for each supported external quick-deploy channel", () => {
+    const telegram = validDraft();
+    telegram.channel = "telegram";
+    expect(validateQuickDeployDraft(telegram)).toContainEqual(expect.objectContaining({ code: "telegramBotTokenRequired" }));
+    telegram.telegramBotToken = "123456:telegram-token";
+    expect(validateQuickDeployDraft(telegram)).toEqual([]);
+
+    const feishu = validDraft();
+    feishu.channel = "feishu";
+    expect(validateQuickDeployDraft(feishu)).toContainEqual(expect.objectContaining({ code: "feishuCredentialsRequired" }));
+    feishu.feishuAppId = "cli_local";
+    feishu.feishuAppSecret = "feishu-secret";
+    expect(validateQuickDeployDraft(feishu)).toEqual([]);
+
+    const weixin = validDraft();
+    weixin.channel = "weixin";
+    expect(validateQuickDeployDraft(weixin)).toContainEqual(expect.objectContaining({ code: "weixinCredentialsRequired" }));
+    weixin.weixinAccountId = "wx-account";
+    weixin.weixinToken = "wx-token";
+    expect(validateQuickDeployDraft(weixin)).toEqual([]);
+  });
+
+  it("routes channels outside the quick-deploy set to advanced setup", () => {
+    const draft = validDraft() as any;
+    draft.channel = "slack";
+    expect(validateQuickDeployDraft(draft)).toContainEqual(expect.objectContaining({
+      code: "unsupportedChannel",
+      requiresAdvanced: true,
+    }));
+  });
 });

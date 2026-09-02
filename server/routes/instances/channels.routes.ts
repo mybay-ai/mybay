@@ -334,6 +334,8 @@ export function createChannelsRoutes(deps: RouterDependencies) {
 
       // 5. Regenerate actual config & credentials environment on physical disk (.env, config.yaml, mybay.instance.yaml)
       const { writePhysicalConfigs } = await import("../../configWriter");
+      const { hydrateA2ARuntimePeers } = await import("../../services/a2aRuntimeConfig");
+      await hydrateA2ARuntimePeers(instance.id, config);
       const { finalEnvMap } = writePhysicalConfigs(instance.id, config);
 
       // 6. Connect to docker to signal reload

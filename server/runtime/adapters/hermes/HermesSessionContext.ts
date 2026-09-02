@@ -12,11 +12,28 @@ export type AgentReasoningEffort = "fast" | "balanced" | "deep";
 export const HERMES_CONVERSATION_EFFICIENCY_POLICY = `Hermes 对话执行策略：
 - 对于能够仅根据当前消息和随请求提供的对话历史回答的问题，直接回答，不要搜索网页、读取文件、执行命令或写入用户档案。
 - “请记住”默认表示在当前对话中记住；除非用户明确要求跨会话持久保存，否则不要调用工具或写入文件、长期记忆、用户画像。
-- 只有用户明确要求操作工作区、文件、终端、网页或其他外部资源时，才调用相应工具。`;
+- 只有用户明确要求操作工作区、文件、终端、网页或其他外部资源时，才调用相应工具。
+- 不要为了补充可能相关的背景主动搜索其他会话；只有用户明确提到过去的对话或要求跨会话查找时，才允许检索一次，若信息不足就直接说明，不要连续改写关键词重试。
+- 同一工具或同一能力失败后最多重试一次；若仍失败，立即改用已有的低延迟替代能力，或清楚说明限制后继续回答。
+- 浏览器控制不可用或首次调用失败时，不要等待或重复尝试；立即改用网页提取、HTTP 或终端方式完成只读访问。`;
 
 export interface HermesSessionBindingResult {
   sessionId: string;
   state: "existing" | "created" | "fallback";
+}
+
+const HERMES_SESSION_TITLE_MAX_CODE_POINTS = 100;
+
+export function buildHermesSessionTitle(title: string | null | undefined, conversationId: string): string {
+  // Hermes enforces globally unique session titles and rejects duplicates with
+  // HTTP 400. MyBay conversation titles are intentionally presentation-first
+  // and can repeat (or truncate to the same 80 characters), so keep the native
+  // title readable while reserving a deterministic unique suffix.
+  const suffix = ` [${conversationId}]`;
+  const fallbackTitle = "MyBay Agent Conversation";
+  const baseCodePoints = Array.from(title?.trim() || fallbackTitle);
+  const availableCodePoints = Math.max(0, HERMES_SESSION_TITLE_MAX_CODE_POINTS - Array.from(suffix).length);
+  return `${baseCodePoints.slice(0, availableCodePoints).join("")}${suffix}`;
 }
 
 function isTransientSessionCreateFailure(statusCode: number): boolean {
@@ -79,7 +96,7 @@ export function createRunHermesSessionContextController(
       instanceId,
       method: "POST",
       path: "/api/sessions",
-      body: { title: title || "MyBay Agent Conversation" },
+      body: { title: buildHermesSessionTitle(title, conversationId) },
       timeoutMs: 10000
     });
 
@@ -151,7 +168,16 @@ export function createRunHermesSessionContextController(
       return true;
     });
 
-    if (deduplicateHistoryEnabled && sessionBinding.state === "existing") {
+    // Hermes /v1/runs creates a fresh agent for each request. An existing
+    // session id is therefore not proof that its persisted transcript was
+    // hydrated into this run. Keep the current-only optimization for a truly
+    // empty conversation, but explicitly bridge any MyBay-managed history so
+    // short follow-ups such as "1" or "continue" retain their context.
+    if (
+      deduplicateHistoryEnabled
+      && sessionBinding.state === "existing"
+      && filteredHistory.length === 0
+    ) {
       return {
         input: userPromptWithAttachment,
         instructions: effectiveSystemPolicy,

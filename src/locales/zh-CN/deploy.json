@@ -272,7 +272,7 @@
     "quickDeploy":  {
                         "badge":  "本地快速部署",
                         "title":  "几分钟内启动你的 Agent",
-                        "description":  "使用经过验证的安全默认值部署 Hermes Agent。只需选择模型凭证并确认访问保护，其余配置由 MyBay 自动完成。",
+                        "description":  "使用经过验证的安全默认值部署 Hermes Agent，并可直接配置 Web、Telegram、飞书或个人微信消息渠道。",
                         "advanced":  "切换到高级配置",
                         "deploy":  "立即部署 Agent",
                         "instance":  {
@@ -295,6 +295,11 @@
                                       "test":  "测试模型连接",
                                       "testPassed":  "模型连接已通过"
                                   },
+                        "channel":  {
+                                        "title":  "消息渠道",
+                                        "description":  "选择 Agent 接收消息的入口。飞书和个人微信支持扫码绑定，Telegram 使用 Bot Token。",
+                                        "configurationHint":  "完成扫码后凭证会自动填入；你也可以手动填写。外部渠道默认采用“稍后绑定”的安全访问策略。"
+                                    },
                         "access":  {
                                        "title":  "Dashboard 访问保护",
                                        "description":  "该账号和密码用于首次访问 Agent Dashboard，请妥善保存。",
@@ -303,9 +308,9 @@
                                    },
                         "review":  {
                                        "title":  "安全默认配置",
-                                       "description":  "快速部署固定使用 Hermes Runtime、Web Chat、自动路径和受保护的 Dashboard。",
+                                       "description":  "快速部署固定使用 Hermes Runtime、自动路径、受保护的 Dashboard 和安全的渠道访问策略。",
                                        "runtime":  "Hermes Runtime",
-                                       "resources":  "Web Chat · 1 CPU · 1024 MB",
+                                       "resources":  "{{channel}} · 1 CPU · 1024 MB",
                                        "confirm":  "我已检查模型与访问配置，并同意使用以上权限创建本地 Agent。"
                                    },
                         "created":  {
@@ -324,7 +329,7 @@
                                          "failedStage":  "部署任务失败",
                                          "attempt":  "当前尝试 {{current}} / {{max}}",
                                          "runtimeTitle":  "Runtime 状态",
-                                         "chatTitle":  "Chat 就绪状态",
+                                         "chatTitle":  "对话就绪状态",
                                          "tones":  {
                                                        "pending":  "正在检查",
                                                        "ready":  "已经就绪",
@@ -335,13 +340,28 @@
                                          "pollExpired":  "等待就绪时间较长，请进入实例管理查看实时状态和日志。",
                                          "retryFailed":  "无法重新启动部署任务。",
                                          "retry":  "重试部署",
-                                         "openChat":  "进入 Chat",
+                                         "openChat":  "开始对话",
+                                         "statuses":  {
+                                                          "queued":  "等待部署",
+                                                          "retry_wait":  "等待重试",
+                                                          "deploying":  "部署中",
+                                                          "provisioning":  "正在准备实例",
+                                                          "creating":  "正在创建实例",
+                                                          "initializing":  "正在初始化",
+                                                          "container_starting":  "正在启动容器",
+                                                          "gateway_starting":  "正在启动网关",
+                                                          "gateway_syncing":  "正在同步网关",
+                                                          "waiting_web_port":  "等待 Web 服务",
+                                                          "health_checking":  "正在检查健康状态",
+                                                          "partial_running":  "部分服务已运行"
+                                                      },
                                          "viewInstances":  "查看实例管理"
                                      },
                         "validation":  {
                                            "unsupportedSchemaVersion":  "快速部署草稿版本不受支持，请切换到高级配置。",
                                            "unsupportedRuntime":  "快速部署当前仅支持 Hermes Runtime。",
                                            "unsupportedEntrypoint":  "快速部署当前仅支持 Web Chat。",
+                                           "unsupportedChannel":  "该消息渠道不属于快速部署支持范围，请切换到高级配置。",
                                            "nameRequired":  "请填写实例名称。",
                                            "dashboardUsernameRequired":  "请填写 Dashboard 访问账号。",
                                            "dashboardPasswordTooShort":  "Dashboard 密码至少需要 8 个字符。",
@@ -352,6 +372,9 @@
                                            "savedCredentialRequired":  "请选择一个已保存的模型凭证。",
                                            "oauthCredentialRequired":  "请先连接并授权模型订阅账号。",
                                            "apiKeyRequired":  "请填写模型 API Key。",
+                                           "telegramBotTokenRequired":  "请填写 Telegram Bot Token。",
+                                           "feishuCredentialsRequired":  "请扫码绑定飞书，或填写 App ID 和 App Secret。",
+                                           "weixinCredentialsRequired":  "请扫码绑定个人微信，或填写账号 ID 和 Token。",
                                            "permissionConfirmationRequired":  "请完成安全与权限确认。",
                                            "skillRequiresAdvancedConfiguration":  "所选技能需要在高级配置中确认。",
                                            "modelTestRequired":  "请先完成并通过模型连接测试。"
@@ -1233,7 +1256,11 @@
                                             "hermesBadge":  "标准 / 全功能",
                                             "hermesDescription":  "经典全功能运行时，包含 9119 控制接口、Python 执行器和多种消息渠道。",
                                             "piBadge":  "实验预览 / 即将推出",
-                                            "piDescription":  "Pi Agent 当前仍是实验预览，暂时无法部署；请改用 Hermes Agent。"
+                                            "piDescription":  "Pi Agent 当前仅提供接入规范，尚未实现部署；请改用 Hermes Agent。",
+                                            "runtimeLoading":  "正在加载已验证的运行时能力…",
+                                            "runtimeLoadError":  "无法验证运行时能力。为避免创建不受支持的运行时，部署选择已关闭。",
+                                            "runtimeUnavailable":  "运行时不可用",
+                                            "runtimeSpecOnly":  "仅提供规范 | 已禁用部署"
                                         },
                        "preflight":  {
                                          "localRuntime":  "本地运行环境",

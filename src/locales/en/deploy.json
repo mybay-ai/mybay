@@ -272,7 +272,7 @@
     "quickDeploy":  {
                         "badge":  "Local quick deploy",
                         "title":  "Start your Agent in minutes",
-                        "description":  "Deploy a Hermes Agent with verified safe defaults. Choose model credentials and confirm access protection; MyBay handles the remaining local configuration.",
+                        "description":  "Deploy a Hermes Agent with verified safe defaults and configure Web, Telegram, Feishu, or personal WeChat messaging directly.",
                         "advanced":  "Switch to advanced setup",
                         "deploy":  "Deploy Agent now",
                         "instance":  {
@@ -295,6 +295,11 @@
                                       "test":  "Test model connection",
                                       "testPassed":  "Model connection passed"
                                   },
+                        "channel":  {
+                                        "title":  "Messaging channel",
+                                        "description":  "Choose where the Agent receives messages. Feishu and personal WeChat support QR binding; Telegram uses a bot token.",
+                                        "configurationHint":  "Credentials are filled automatically after a successful scan, or you can enter them manually. External channels use the safe bind-later access policy by default."
+                                    },
                         "access":  {
                                        "title":  "Dashboard access protection",
                                        "description":  "Use this username and password for the first Agent Dashboard login. Store them securely.",
@@ -303,9 +308,9 @@
                                    },
                         "review":  {
                                        "title":  "Safe defaults",
-                                       "description":  "Quick deploy uses Hermes Runtime, Web Chat, an automatic path, and a protected Dashboard.",
+                                       "description":  "Quick deploy uses Hermes Runtime, an automatic path, a protected Dashboard, and a safe channel access policy.",
                                        "runtime":  "Hermes Runtime",
-                                       "resources":  "Web Chat · 1 CPU · 1024 MB",
+                                       "resources":  "{{channel}} · 1 CPU · 1024 MB",
                                        "confirm":  "I reviewed the model and access settings and approve creating a local Agent with these permissions."
                                    },
                         "created":  {
@@ -336,12 +341,27 @@
                                          "retryFailed":  "Unable to restart the deployment task.",
                                          "retry":  "Retry deployment",
                                          "openChat":  "Open Chat",
+                                         "statuses":  {
+                                                          "queued":  "Queued",
+                                                          "retry_wait":  "Waiting to retry",
+                                                          "deploying":  "Deploying",
+                                                          "provisioning":  "Provisioning instance",
+                                                          "creating":  "Creating instance",
+                                                          "initializing":  "Initializing",
+                                                          "container_starting":  "Starting container",
+                                                          "gateway_starting":  "Starting gateway",
+                                                          "gateway_syncing":  "Synchronizing gateway",
+                                                          "waiting_web_port":  "Waiting for web service",
+                                                          "health_checking":  "Checking health",
+                                                          "partial_running":  "Partially running"
+                                                      },
                                          "viewInstances":  "View instance management"
                                      },
                         "validation":  {
                                            "unsupportedSchemaVersion":  "This quick deployment draft version is unsupported. Switch to advanced setup.",
                                            "unsupportedRuntime":  "Quick deploy currently supports Hermes Runtime only.",
                                            "unsupportedEntrypoint":  "Quick deploy currently supports Web Chat only.",
+                                           "unsupportedChannel":  "This messaging channel is outside quick deploy. Switch to advanced setup.",
                                            "nameRequired":  "Enter an instance name.",
                                            "dashboardUsernameRequired":  "Enter a Dashboard access username.",
                                            "dashboardPasswordTooShort":  "The Dashboard password must contain at least 8 characters.",
@@ -352,6 +372,9 @@
                                            "savedCredentialRequired":  "Choose a saved model credential.",
                                            "oauthCredentialRequired":  "Connect and authorize the model subscription account first.",
                                            "apiKeyRequired":  "Enter the model API key.",
+                                           "telegramBotTokenRequired":  "Enter the Telegram bot token.",
+                                           "feishuCredentialsRequired":  "Bind Feishu by QR code, or enter the App ID and App Secret.",
+                                           "weixinCredentialsRequired":  "Bind personal WeChat by QR code, or enter the account ID and token.",
                                            "permissionConfirmationRequired":  "Complete the safety and permission confirmation.",
                                            "skillRequiresAdvancedConfiguration":  "The selected skill requires confirmation in advanced setup.",
                                            "modelTestRequired":  "Run and pass the model connection test first."
@@ -1233,7 +1256,11 @@
                                             "hermesBadge":  "Standard / Full featured",
                                             "hermesDescription":  "Classic full-featured runtime with the 9119 control API, Python executor, and multiple messaging channels.",
                                             "piBadge":  "Experimental preview / Coming soon",
-                                            "piDescription":  "Pi Agent is currently an experimental preview and cannot be deployed yet. Select Hermes Agent instead."
+                                            "piDescription":  "Pi Agent is a specification-only integration and cannot be deployed yet. Select Hermes Agent instead.",
+                                            "runtimeLoading":  "Loading verified runtime capabilities…",
+                                            "runtimeLoadError":  "Runtime capabilities could not be verified. Deployment selection is disabled to prevent an unsupported runtime from being created.",
+                                            "runtimeUnavailable":  "Runtime unavailable",
+                                            "runtimeSpecOnly":  "Specification only | Deployment disabled"
                                         },
                        "preflight":  {
                                          "localRuntime":  "Local runtime",

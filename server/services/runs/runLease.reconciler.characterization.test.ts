@@ -102,7 +102,7 @@ describe("Runs reconciler lease lifecycle characterization", () => {
   it("persists the existing failure path before releasing the lease", async () => {
     const order: string[] = [];
     vi.spyOn(chatRepo, "claimRuns").mockResolvedValueOnce([claimedRun("queued")]).mockResolvedValue([]);
-    vi.spyOn(chatRepo, "listMessages").mockResolvedValue([]);
+    vi.spyOn(chatRepo, "getMessage").mockResolvedValue(null);
     vi.spyOn(chatRepo, "updateChatRun").mockResolvedValue(true);
     vi.spyOn(chatRepo, "getChatRun").mockResolvedValue(null);
     vi.spyOn(chatRepo, "finishChatRun").mockImplementation(async () => {
@@ -122,10 +122,10 @@ describe("Runs reconciler lease lifecycle characterization", () => {
 
   it("renews every 25 seconds while processing and stops the renew timer afterwards", async () => {
     vi.useFakeTimers();
-    let resolveMessages: ((messages: never[]) => void) | undefined;
-    const messagesPending = new Promise<never[]>((resolve) => { resolveMessages = resolve; });
+    let resolveMessage: ((message: null) => void) | undefined;
+    const messagePending = new Promise<null>((resolve) => { resolveMessage = resolve; });
     vi.spyOn(chatRepo, "claimRuns").mockResolvedValueOnce([claimedRun("queued")]).mockResolvedValue([]);
-    vi.spyOn(chatRepo, "listMessages").mockReturnValue(messagesPending);
+    vi.spyOn(chatRepo, "getMessage").mockReturnValue(messagePending);
     const renew = vi.spyOn(chatRepo, "renewRunLease").mockResolvedValue(true);
     const release = vi.spyOn(chatRepo, "releaseRunLease").mockResolvedValue(true);
     vi.spyOn(chatRepo, "finishChatRun").mockResolvedValue({
@@ -146,7 +146,7 @@ describe("Runs reconciler lease lifecycle characterization", () => {
       leaseSeconds: 60
     }));
 
-    resolveMessages?.([]);
+    resolveMessage?.(null);
     await flushMicrotasks(24);
     expect(release).toHaveBeenCalledOnce();
     await vi.advanceTimersByTimeAsync(25_000);
@@ -155,10 +155,10 @@ describe("Runs reconciler lease lifecycle characterization", () => {
 
   it("marks a rejected renewal as lease-lost and skips release", async () => {
     vi.useFakeTimers();
-    let resolveMessages: ((messages: never[]) => void) | undefined;
-    const messagesPending = new Promise<never[]>((resolve) => { resolveMessages = resolve; });
+    let resolveMessage: ((message: null) => void) | undefined;
+    const messagePending = new Promise<null>((resolve) => { resolveMessage = resolve; });
     vi.spyOn(chatRepo, "claimRuns").mockResolvedValueOnce([claimedRun("queued")]).mockResolvedValue([]);
-    vi.spyOn(chatRepo, "listMessages").mockReturnValue(messagesPending);
+    vi.spyOn(chatRepo, "getMessage").mockReturnValue(messagePending);
     vi.spyOn(chatRepo, "renewRunLease").mockResolvedValue(false);
     const release = vi.spyOn(chatRepo, "releaseRunLease").mockResolvedValue(true);
     const finish = vi.spyOn(chatRepo, "finishChatRun").mockResolvedValue({
@@ -172,7 +172,7 @@ describe("Runs reconciler lease lifecycle characterization", () => {
     await startRunsReconciler(60_000, { allowInTest: true, cacheCleanupIntervalMs: 60_000 });
     await flushMicrotasks();
     await vi.advanceTimersByTimeAsync(25_000);
-    resolveMessages?.([]);
+    resolveMessage?.(null);
     await flushMicrotasks(24);
 
     expect(finish).toHaveBeenCalledWith(expect.objectContaining({ reconcilerId: expect.any(String) }));

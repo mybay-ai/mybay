@@ -75,6 +75,39 @@ describe("Run lease repository characterization", () => {
       .toEqual(["run-1"]);
   });
 
+  it("reuses a same-owner initial lease without extending or rewriting it", async () => {
+    const conversation = await chatRepo.createConversation("user-1", "instance-1", "Initial lease test");
+    await chatRepo.beginChatRun({
+      conversationId: conversation.id,
+      userId: "user-1",
+      instanceId: "instance-1",
+      content: "run",
+      requestId: "request-initial-lease",
+      runId: "run-initial-lease",
+      initialLease: { reconcilerId: "worker-targeted", leaseSeconds: 60 },
+    });
+    const before = readStore().chatRuns.find((run) => run.id === "run-initial-lease");
+    vi.advanceTimersByTime(10_000);
+
+    const claimed = await chatRepo.claimRunById({
+      runId: "run-initial-lease",
+      reconcilerId: "worker-targeted",
+      leaseSeconds: 60,
+    });
+    const after = readStore().chatRuns.find((run) => run.id === "run-initial-lease");
+
+    expect(claimed?.id).toBe("run-initial-lease");
+    expect(before?.reconciled_by).toBe("worker-targeted");
+    expect(before?.lease_expires_at).toBe("2026-08-17T00:01:00.000Z");
+    expect(after?.lease_expires_at).toBe(before?.lease_expires_at);
+    expect(after?.updated_at).toBe(before?.updated_at);
+    expect(await chatRepo.claimRunById({
+      runId: "run-initial-lease",
+      reconcilerId: "worker-other",
+      leaseSeconds: 60,
+    })).toBeNull();
+  });
+
   it("prevents another owner from claiming or mutating an active lease", async () => {
     await createRun();
     await chatRepo.claimRuns({ reconcilerId: "worker-a", leaseSeconds: 60 });

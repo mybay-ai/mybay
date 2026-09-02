@@ -1,0 +1,182 @@
+{
+  "schemaVersion": 1,
+  "runtime": {
+    "type": "hermes",
+    "providerKey": "hermes-core",
+    "contractVersion": 1
+  },
+  "checks": [
+    {
+      "requirementId": "runtime-install",
+      "status": "passed",
+      "scope": "runtime",
+      "observedAt": "2026-09-02T13:32:10.286Z",
+      "environment": "Windows + Docker Desktop; MyBay OSS 0.1.26; Hermes v2026.8.27; isolated localhost test Agent",
+      "evidenceRefs": [
+        "certification/artifacts/hermes-experimental-20260902.json#observations.runtimeInstall"
+      ],
+      "note": "Observed a MyBay-managed Hermes deployment in running state and received HTTP 200 from its Runtime health endpoint."
+    },
+    {
+      "requirementId": "task-submit",
+      "status": "passed",
+      "scope": "runtime",
+      "observedAt": "2026-09-02T13:03:07.645Z",
+      "environment": "Windows + Docker Desktop; MyBay OSS 0.1.26; Hermes v2026.8.27; isolated localhost test Agent",
+      "evidenceRefs": [
+        "certification/artifacts/hermes-experimental-20260902.json#observations.taskSubmit"
+      ],
+      "note": "A real task produced a persisted Hermes-owned Runtime Binding and a terminal completed run."
+    },
+    {
+      "requirementId": "streaming-output",
+      "status": "passed",
+      "scope": "runtime",
+      "observedAt": "2026-09-02T13:03:16.580Z",
+      "environment": "Windows + Docker Desktop; MyBay OSS 0.1.26; Hermes v2026.8.27; isolated localhost test Agent",
+      "evidenceRefs": [
+        "certification/artifacts/hermes-experimental-20260902.json#observations.streamingOutput"
+      ],
+      "note": "The browser observed a non-empty text event before the persisted terminal time; ordered markers and event sequence were retained."
+    },
+    {
+      "requirementId": "cancellation",
+      "status": "passed",
+      "scope": "runtime",
+      "observedAt": "2026-09-02T13:31:22.875Z",
+      "environment": "Windows + Docker Desktop; MyBay OSS 0.1.26; Hermes v2026.8.27; isolated localhost test Agent",
+      "evidenceRefs": [
+        "certification/artifacts/hermes-experimental-20260902.json#observations.cancellation",
+        "certification/artifacts/hermes-experimental-20260902.json#observations.queueReleaseAfterCancellation"
+      ],
+      "note": "An active task reached persisted cancelled/CANCELLED_UPSTREAM after stop, and the next task completed successfully."
+    },
+    {
+      "requirementId": "session-recovery",
+      "status": "passed",
+      "scope": "runtime",
+      "observedAt": "2026-09-02T14:09:23.501Z",
+      "environment": "Windows + Docker Desktop; MyBay OSS 0.1.26; Hermes v2026.8.27; isolated localhost test Agent",
+      "evidenceRefs": [
+        "certification/artifacts/hermes-beta-core-20260902.json#observations.sessionRecovery"
+      ],
+      "note": "The browser restored the conversation after reload, the same persisted native Session binding was retained, and a harmless two-fact follow-up completed with the expected context."
+    },
+    {
+      "requirementId": "file-artifact",
+      "status": "passed",
+      "scope": "runtime",
+      "observedAt": "2026-09-02T14:18:28.481Z",
+      "environment": "Windows + Docker Desktop; MyBay OSS 0.1.26; Hermes v2026.8.27; isolated localhost test Agent",
+      "evidenceRefs": [
+        "certification/artifacts/hermes-beta-core-20260902.json#observations.fileArtifact"
+      ],
+      "note": "A Runtime-created 46-byte text artifact was persisted, previewed in chat and the file center before and after reload, matched its SHA-256, and was absent from four other Agent workspaces."
+    },
+    {
+      "requirementId": "usage-reporting",
+      "status": "passed",
+      "scope": "runtime",
+      "observedAt": "2026-09-02T14:18:28.481Z",
+      "environment": "Windows + Docker Desktop; MyBay OSS 0.1.26; Hermes v2026.8.27; isolated localhost test Agent",
+      "evidenceRefs": [
+        "certification/artifacts/hermes-beta-core-20260902.json#observations.usageReporting"
+      ],
+      "note": "A completed Runtime run persisted one non-zero terminal usage snapshot on both the run and assistant message, and the browser displayed its values, source, and unknown-scope limitation before and after reload."
+    },
+    {
+      "requirementId": "tool-events",
+      "status": "passed",
+      "scope": "runtime",
+      "observedAt": "2026-09-02T14:18:20.104Z",
+      "environment": "Windows + Docker Desktop; MyBay OSS 0.1.26; Hermes v2026.8.27; isolated localhost test Agent",
+      "evidenceRefs": [
+        "certification/artifacts/hermes-beta-core-20260902.json#observations.toolEvents"
+      ],
+      "note": "A real Runtime file-tool lifecycle retained one stable sanitized step identifier from running to completed, persisted ordered event sequences, and remained visible in the browser after reload."
+    },
+    {
+      "requirementId": "restart-recovery",
+      "status": "passed",
+      "scope": "runtime",
+      "observedAt": "2026-09-02T15:12:11.073Z",
+      "environment": "Windows + Docker Desktop; MyBay OSS 0.1.26; Hermes v2026.8.27; isolated localhost test Agent",
+      "evidenceRefs": [
+        "certification/artifacts/hermes-beta-core-20260902.json#observations.restartRecovery"
+      ],
+      "note": "After a controlled restart of only the test Runtime container, its health recovered, the container identity, native Session binding, and file hash were preserved, and a browser task in the original conversation completed with the expected harmless facts."
+    },
+    {
+      "requirementId": "control-plane-deploy",
+      "status": "passed",
+      "scope": "e2e",
+      "observedAt": "2026-09-02T15:43:15.947Z",
+      "environment": "Windows + Docker Desktop; MyBay OSS 0.1.26; Hermes v2026.8.27; isolated localhost test Agent",
+      "command": "MyBay UI: Agent instance center -> isolated test Agent -> Redeploy -> Confirm",
+      "evidenceRefs": [
+        "certification/artifacts/hermes-certified-control-plane-deploy-20260902.json#observations.controlPlaneDeploy"
+      ],
+      "note": "The supported MyBay product path rebuilt only the isolated test Runtime, traversed deploying to running, restored control-plane and Runtime health, reported the chat API ready, and preserved the mounted test artifact byte-for-byte."
+    },
+    {
+      "requirementId": "security",
+      "status": "passed",
+      "scope": "e2e",
+      "observedAt": "2026-09-02T16:02:04.998Z",
+      "environment": "Windows + Docker Desktop; MyBay OSS 0.1.26; Hermes v2026.8.27; isolated localhost test Agent",
+      "command": "Authenticated browser acceptance + anonymous HTTP probes + deployed-container inspection + focused security test suite",
+      "evidenceRefs": [
+        "certification/artifacts/hermes-certified-security-20260903.json#observations.security"
+      ],
+      "note": "Anonymous protected routes returned 401; the authenticated product reported strong admin authentication and encrypted credential storage; Runtime-private files were removed from the file center; and the deployed non-privileged, loopback-bound Agent had only its own data mount, no Docker socket, resource limits, and fail-closed privileged capability policy."
+    },
+    {
+      "requirementId": "upgrade",
+      "status": "passed",
+      "scope": "e2e",
+      "observedAt": "2026-09-02T16:26:04.399Z",
+      "environment": "Windows + Docker Desktop; MyBay OSS 0.1.26; Hermes v2026.8.27 upgraded to v2026.8.31; isolated localhost test Agent",
+      "command": "MyBay UI: Agent version repository -> isolated test Agent -> schedule v2026.8.31 -> server preflight -> confirm upgrade",
+      "evidenceRefs": [
+        "certification/artifacts/hermes-certified-upgrade-rollback-20260903.json#observations.upgrade"
+      ],
+      "note": "The supported product path passed preflight with no blockers, replaced the Runtime container, reached completed/success with Runtime and chat readiness healthy, and preserved all observed conversations, messages, runs, native Session bindings, and the mounted artifact hash."
+    },
+    {
+      "requirementId": "rollback",
+      "status": "passed",
+      "scope": "e2e",
+      "observedAt": "2026-09-02T16:28:11.741Z",
+      "environment": "Windows + Docker Desktop; MyBay OSS 0.1.26; Hermes v2026.8.31 rolled back to v2026.8.27; isolated localhost test Agent",
+      "command": "MyBay UI: Agent version repository -> isolated test Agent -> rollback -> confirm v2026.8.27",
+      "evidenceRefs": [
+        "certification/artifacts/hermes-certified-upgrade-rollback-20260903.json#observations.rollback"
+      ],
+      "note": "The built-in rollback path replaced the upgraded container, restored v2026.8.27, reached rolled_back/success with Runtime and chat readiness healthy, and retained the same supported persisted state and artifact hash."
+    },
+    {
+      "requirementId": "backup-restore",
+      "status": "passed",
+      "scope": "e2e",
+      "observedAt": "2026-09-02T17:09:41.000Z",
+      "environment": "Windows + Docker Desktop; MyBay OSS 0.1.26; Hermes source v2026.8.27 restored to a disposable v2026.8.31 clone; isolated localhost test Agent",
+      "command": "MyBay UI: isolated test Agent -> export redacted backup -> import preview -> create stopped clone -> rebind credential and set new password -> initial deployment -> file-center preview -> delete disposable clone",
+      "evidenceRefs": [
+        "certification/artifacts/hermes-certified-backup-restore-20260903.json#observations.backupRestore"
+      ],
+      "note": "The supported product path exported and validated a redacted backup, restored it to an isolated non-conflicting clone, reached running/chat-ready state after explicit credential reconfiguration, and rendered a byte-identical Runtime output in the browser file center while the source Agent and its persisted state remained unchanged."
+    },
+    {
+      "requirementId": "real-e2e",
+      "status": "passed",
+      "scope": "e2e",
+      "observedAt": "2026-09-02T17:24:34.875Z",
+      "environment": "Windows + Docker Desktop; MyBay OSS 0.1.26; Hermes v2026.8.27; isolated localhost test Agent; credentialed DeepSeek model",
+      "command": "Authenticated MyBay UI: Agent workspace -> isolated test Agent -> new conversation -> deterministic no-tool task -> observe live stream state and completed result -> reload",
+      "evidenceRefs": [
+        "certification/artifacts/hermes-certified-real-e2e-20260903.json#observations.realE2E"
+      ],
+      "note": "A credentialed browser task traversed the supported MyBay product path into Hermes, exposed an active streaming state, persisted ordered text events and a Hermes-owned completed run with terminal usage evidence, returned the exact expected response, and restored the conversation, result, model, and usage after reload."
+    }
+  ]
+}

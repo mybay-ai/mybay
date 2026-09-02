@@ -10,8 +10,10 @@ const packageJson = JSON.parse(fs.readFileSync(path.join(PROJECT_ROOT, "package.
 const archivePath = path.resolve(process.argv[2] || path.join(PROJECT_ROOT, "release", "mybay-open-source-v" + packageJson.version + ".zip"));
 const requiredFiles = [
   ".env.example", "BRAND_ASSETS.md", "CODE_OF_CONDUCT.md", "COMMERCIAL-LICENSE.md", "CONTRIBUTING.md", "Dockerfile", "Dockerfile.feishu", "LICENSE",
-  "README.md", "README.zh-CN.md", "SECURITY.md", "THIRD_PARTY_NOTICES.md", "TRADEMARKS.md", "deploy/traefik/dynamic.yml",
-  "docker-compose.server.yml", "docker-compose.yml", "package-lock.json", "package.json", "quick-start.ps1", "quick-start.sh", "scripts/quick-start-env.ps1", "scripts/quick-start-env.sh",
+  "README.md", "README.zh-CN.md", "SECURITY.md", "THIRD_PARTY_NOTICES.md", "TRADEMARKS.md", "WINDOWS-README.md", "WINDOWS-README.zh-CN.md", "deploy/traefik/dynamic.yml",
+  "docker-compose.server.yml", "docker-compose.windows.yml", "docker-compose.yml", "package-lock.json", "package.json", "quick-start.ps1", "quick-start.sh",
+  "Repair-MyBay.bat", "Start-MyBay.bat", "Stop-MyBay.bat", "Uninstall-MyBay.bat", "View-Logs.bat", "scripts/quick-start-env.ps1", "scripts/quick-start-env.sh",
+  "scripts/windows-control.ps1", "scripts/windows-preflight.ps1", "scripts/windows-prerequisites.ps1",
 ];
 
 if (!fs.existsSync(archivePath)) throw new Error("Release archive not found: " + archivePath);

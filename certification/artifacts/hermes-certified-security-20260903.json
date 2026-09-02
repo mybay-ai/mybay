@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "artifactType": "runtime-certified-security-live-evidence",
+  "generatedAt": "2026-09-02T16:02:04.998Z",
+  "sanitization": {
+    "identifiers": "SHA-256 only",
+    "credentials": "values, cookies, tokens, passwords, and encryption material were not collected",
+    "filesystem": "only file names, counts, policy outcomes, and one pre-existing harmless artifact hash were retained",
+    "docker": "host source paths and raw environment variables were omitted"
+  },
+  "environment": {
+    "host": "Windows with Docker Desktop",
+    "application": "MyBay OSS 0.1.26 on localhost",
+    "runtime": {
+      "type": "hermes",
+      "providerKey": "hermes-core",
+      "contractVersion": 1,
+      "image": "nousresearch/hermes-agent:v2026.8.27"
+    },
+    "instanceRef": "sha256:8439695264f8e6c69df1c2bbf3f419b18a6beb0106cae7023521a35b30916f0a",
+    "containerRef": "sha256:efda06003f652f7f511dfdf07a4ccff6cc325bd9cab1fb2c68cf70f40dd27e2f"
+  },
+  "observations": {
+    "security": {
+      "observedAt": "2026-09-02T16:02:04.998Z",
+      "result": "passed",
+      "authentication": {
+        "anonymousProtectedRequests": [
+          {
+            "routeClass": "instance list",
+            "httpStatus": 401
+          },
+          {
+            "routeClass": "credential list",
+            "httpStatus": 401
+          },
+          {
+            "routeClass": "system settings",
+            "httpStatus": 401
+          },
+          {
+            "routeClass": "instance file preview",
+            "httpStatus": 401
+          }
+        ],
+        "authenticatedBrowserSessionWorked": true,
+        "customStrongAdminPasswordReported": true,
+        "cookieMutationOriginPolicyCovered": true
+      },
+      "secretHandling": {
+        "aes256GcmEncryptionConfigured": true,
+        "credentialUiExposedSecretValue": false,
+        "credentialUiReportedSavedAndVerifiedStatusOnly": true,
+        "diagnosticRedactionCovered": true,
+        "apiCredentialSerializationCovered": true,
+        "rawSecretsReadDuringAcceptance": false
+      },
+      "instanceIsolation": {
+        "browserFileEntriesBeforeRemediation": 48,
+        "browserFileEntriesAfterRemediation": 32,
+        "privateNamesRemovedFromBrowser": [
+          "auth.json",
+          "config.yaml.bak-*",
+          "*.db-wal",
+          "*.db-shm"
+        ],
+        "privateDirectoriesRemovedFromBrowser": [
+          "backups",
+          "home",
+          "logs",
+          "pairing",
+          "sessions",
+          "state"
+        ],
+        "sensitivePathDirectAccessRejectedByPolicy": true,
+        "pathTraversalRejectedByPolicy": true,
+        "crossOwnerAccessRejectedByPolicy": true,
+        "ordinaryArtifactStillVisible": true,
+        "ordinaryArtifactSha256": "1c8f7f7376ac9439c3432f9ca78f656de86f15cedbf39375f1e3035aca330317",
+        "mountDestinations": [
+          "/opt/data"
+        ],
+        "otherInstanceMounts": 0
+      },
+      "privilegedCapabilityGuards": {
+        "containerPrivileged": false,
+        "dockerSocketMounted": false,
+        "hostPortBinding": "127.0.0.1 only",
+        "privateIpcNamespace": true,
+        "privateCgroupNamespace": true,
+        "hostPidNamespace": false,
+        "memoryLimitBytes": 1073741824,
+        "nanoCpus": 1000000000,
+        "pidsLimit": 512,
+        "environmentDockerSocketGateEnabled": false,
+        "administratorDockerSocketGrantEnabled": false,
+        "productionDockerSkillRejectedByPolicy": true,
+        "comingSoonSkillsRejectedByServerPolicy": true,
+        "missingSandboxGuardsRejectedByServerPolicy": true,
+        "disabledRuntimeToolsets": [
+          "session_search",
+          "browser",
+          "delegation",
+          "image_gen",
+          "vision",
+          "skills"
+        ]
+      },
+      "postRemediationHealth": {
+        "controlPlaneHttpStatus": 200,
+        "runtimeHttpStatus": 200,
+        "agentContainersRecreated": 0
+      },
+      "verification": {
+        "securityTestFilesPassed": 22,
+        "securityTestsPassed": 122,
+        "lintPassed": true,
+        "typecheckPassed": true,
+        "strictCoreTypecheckPassed": true,
+        "strictBoundaryTypecheckPassed": true,
+        "apiErrorContractPassed": true
+      },
+      "boundary": "The ordinary Hermes Runtime is not represented as a full sandbox. Capabilities whose required guards are absent remain unavailable or are rejected; this evidence certifies the fail-closed product policy, authenticated local control plane, secret redaction, instance data boundary, and deployed container restrictions."
+    }
+  }
+}

@@ -43,6 +43,10 @@ import {
   resolveProviderCredentialSelection,
 } from "../../services/instanceConfig/instanceConfigRoutePolicy";
 import { createRuntimeConfigRoutes } from "./config/runtimeConfig.routes";
+import {
+  collectReservedInstancePorts,
+  disableCredentiallessA2AForRestore,
+} from "../../utils/configArchiveRestorePolicy";
 
 export function createConfigImportRoutes(deps: RouterDependencies) {
   const router = Router();
@@ -502,10 +506,19 @@ export function createConfigImportRoutes(deps: RouterDependencies) {
 
       // Strict cleansing of any potentially masked keys or sensitive strings
       scrubSensitiveAndRedacted(configData);
+      disableCredentiallessA2AForRestore(configData);
 
       // Preserve UI selected name and path
       configData.name = name;
       configData.path = pathSlug;
+
+      // A restored clone must never inherit the source Agent's host port. Keep
+      // stopped records in the exclusion set too, so parallel restores cannot
+      // reserve the same port before their first deployment.
+      const reservedPorts = collectReservedInstancePorts(instances);
+      const assignedPort = await findAvailablePort(docker, reservedPorts);
+      configData.host_port = assignedPort;
+      configData.port = String(assignedPort);
 
       // Force resource limit compliance
       const resolvedLimits = await resolveResourceLimitsForInstance(
@@ -742,7 +755,7 @@ export function createConfigImportRoutes(deps: RouterDependencies) {
       'feishuAppSecret', 'qqBotSecret', 'whatsappAccessToken', 'slackBotToken',
       'slackSigningSecret', 'slackAppToken', 'dingtalkAppSecret', 'dingtalkRobotSecret',
       'wechatAppSecret', 'wechatMpAppSecret', 'wecomAppSecret', 'weixinToken', 'webhookSecret', 'skillTavilyApiKey', 'skillSerperApiKey',
-      'skillGithubToken',
+      'skillGithubToken', 'a2aBearerToken',
       'wecomToken', 'wecomEncodingAesKey', 'wechatMpToken', 'wechatMpEncodingAesKey',
       'hermesApiKey', 'chatApiKey', 'hermesDashboardAuthSecret', 'dashboardAuthSecret'
     ];

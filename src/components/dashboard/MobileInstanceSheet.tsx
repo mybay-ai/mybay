@@ -52,7 +52,7 @@ export function MobileInstanceSheet({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-slate-900/75 z-[100] md:hidden"
+        className="fixed inset-0 bg-slate-900/75 z-[100] xl:hidden"
         onClick={() => setMobileMenuOpenInstance(null)}
       />
       <motion.div 
@@ -60,7 +60,7 @@ export function MobileInstanceSheet({
         animate={{ y: 0 }}
         exit={{ y: "100%" }}
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
-        className="fixed bottom-0 left-0 right-0 bg-surface rounded-t-2xl shadow-xl z-[101] p-5 pb-8 md:hidden border-t border-outline/80"
+        className="fixed bottom-0 left-0 right-0 bg-surface rounded-t-2xl shadow-xl z-[101] p-5 pb-8 xl:hidden border-t border-outline/80"
       >
         <div className="w-12 h-1 bg-outline-strong rounded-full mx-auto mb-4" />
         <div className="flex justify-between items-start mb-4">

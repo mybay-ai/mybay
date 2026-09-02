@@ -28,18 +28,21 @@ export function isExternalDeployChannel(channel: string | undefined | null) {
 interface ChannelSelectorProps {
   selectedId: string;
   onSelect: (id: string) => void;
+  channelIds?: string[];
+  compact?: boolean;
   externalChannelsAllowed?: boolean;
   isChannelAllowed?: (id: string) => boolean;
   lockedMessage?: string;
 }
 
-export function ChannelSelector({ selectedId, onSelect, externalChannelsAllowed = true, isChannelAllowed, lockedMessage }: ChannelSelectorProps) {
+export function ChannelSelector({ selectedId, onSelect, channelIds, compact = false, externalChannelsAllowed = true, isChannelAllowed, lockedMessage }: ChannelSelectorProps) {
   const { t } = useTranslation("deploy");
+  const visibleChannels = channelIds ? CHANNELS.filter((channel) => channelIds.includes(channel.id)) : CHANNELS;
   return (
     <div className="space-y-2">
       <span className="text-[11px] font-bold text-content-muted uppercase tracking-wider block">{t("wizardCopy.channelSelector.title")}</span>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-3">
-        {CHANNELS.map(c => {
+      <div className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${compact ? "" : "md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4"}`}>
+        {visibleChannels.map(c => {
           const isSelected = selectedId === c.id;
           const regItem = channelRegistry[c.id];
           const supportLevel = regItem?.supportLevel || "experimental";

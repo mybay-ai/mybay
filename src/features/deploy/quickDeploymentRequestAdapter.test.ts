@@ -52,6 +52,32 @@ describe("quick deployment request adapter", () => {
     });
   });
 
+  it("passes only the selected external channel configuration with bind-later protection", () => {
+    const draft = validDraft();
+    draft.channel = "feishu";
+    draft.feishuAppId = "cli_quick";
+    draft.feishuAppSecret = "quick-secret";
+    draft.feishuRegion = "feishu";
+    draft.telegramBotToken = "must-not-leak";
+
+    const request = buildQuickDeploymentRequest({
+      draft,
+      path: "quick-feishu",
+      idempotencyKey: "quick-deploy-feishu-1",
+    });
+
+    expect(request.body).toMatchObject({
+      channel: "feishu",
+      channelMode: "production",
+      allowMode: "bind_later",
+      gatewayAllowAllUsers: false,
+      feishuAppId: "cli_quick",
+      feishuAppSecret: "quick-secret",
+      feishuRegion: "feishu",
+    });
+    expect(request.body).not.toHaveProperty("telegramBotToken");
+  });
+
   it("does not mutate the quick draft", () => {
     const draft = validDraft();
     const before = structuredClone(draft);

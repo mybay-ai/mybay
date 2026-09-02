@@ -32,6 +32,9 @@ jobs:
         run: |
           npm run release:create -- "release/mybay-$GITHUB_REF_NAME.zip"
           npm run release:check -- "release/mybay-$GITHUB_REF_NAME.zip"
+          VERSION="${GITHUB_REF_NAME#v}"
+          npm run release:create-windows -- "release/MyBay-Windows-v$VERSION.zip"
+          npm run release:check-windows -- "release/MyBay-Windows-v$VERSION.zip"
       - name: Generate source SBOM
         uses: anchore/sbom-action@v0.24.0
         with:
@@ -42,7 +45,9 @@ jobs:
           upload-release-assets: false
       - name: Generate checksums
         working-directory: release
-        run: sha256sum "mybay-$GITHUB_REF_NAME.zip" "mybay-$GITHUB_REF_NAME.spdx.json" > SHA256SUMS
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          sha256sum "mybay-$GITHUB_REF_NAME.zip" "MyBay-Windows-v$VERSION.zip" "mybay-$GITHUB_REF_NAME.spdx.json" > SHA256SUMS
       - uses: docker/setup-qemu-action@v4
       - uses: docker/setup-buildx-action@v4
       - name: Log in to GHCR
@@ -79,5 +84,6 @@ jobs:
           generate_release_notes: true
           files: |
             release/mybay-${{ github.ref_name }}.zip
+            release/MyBay-Windows-v*.zip
             release/mybay-${{ github.ref_name }}.spdx.json
             release/SHA256SUMS

@@ -11,6 +11,7 @@ import { VersionLogsModal } from "./version-management/VersionLogsModal";
 import { VersionRepositoryPreview } from "./version-management/VersionRepositoryPreview";
 import { VersionMobileInstanceCards } from "./version-management/VersionMobileInstanceCards";
 import { VersionDesktopInstanceTable } from "./version-management/VersionDesktopInstanceTable";
+import { UpgradePreflightDialog } from "./version-management/UpgradePreflightDialog";
 import { compareHermesVersions } from "../../shared/version";
 
 interface VersionItem {
@@ -57,6 +58,7 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
   const [versionFilter, setVersionFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [systemTagFilter, setSystemTagFilter] = useState("all");
+  const [preflight, setPreflight] = useState<any>({ open: false, loading: false, report: null, mode: null, ids: [], tag: "latest" });
   const debounceTimeoutRef = useRef<any>(null);
 
   const handleRefreshInstances = async () => {
@@ -436,7 +438,23 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
     setShowLogsModal(true);
   };
 
-  const handleUpgradeSingle = async (id: string, tag: string, e: React.MouseEvent) => {
+  const openUpgradePreflight = async (mode: "single" | "bulk", ids: string[], tag: string) => {
+    setPreflight({ open: true, loading: true, report: null, mode, ids, tag });
+    try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      const token = currentUser?.token;
+      if (token && token !== "null" && token !== "undefined") headers.Authorization = `Bearer ${token}`;
+      const response = await fetch("/api/instances/upgrade-preflight", { method: "POST", headers, body: JSON.stringify({ instanceIds: ids, tag }) });
+      const report = await response.json();
+      if (!response.ok) throw new Error(report.error || "UPGRADE_PREFLIGHT_FAILED");
+      setPreflight((current: any) => ({ ...current, loading: false, report }));
+    } catch (error: any) {
+      setPreflight((current: any) => ({ ...current, open: false, loading: false }));
+      showAlert({ title: t("versionRepository.preflight.title"), message: t("versionRepository.management.apiUnavailable"), type: "error", details: error.message });
+    }
+  };
+
+  const handleUpgradeSingle = async (id: string, tag: string, e: React.MouseEvent, preflightConfirmed = false) => {
     if (e && e.stopPropagation) e.stopPropagation();
 
     // Check Feishu upgrade compatibility
@@ -457,18 +475,7 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
       return;
     }
 
-    if (tag === "latest" && isFeishuInst) {
-      const confirmed = await showConfirm({
-        title: t("versionRepository.management.confirmUpgrade"),
-        message: t("versionRepository.management.single.latestFeishuConfirm", { name: inst.name }),
-        type: "info",
-        confirmText: t("versionRepository.management.executeUpgrade"),
-        cancelText: t("versionRepository.management.cancel")
-      });
-      if (!confirmed) {
-        return;
-      }
-    }
+    if (!preflightConfirmed) return openUpgradePreflight("single", [id], tag);
 
     setUpgradingId(id);
     try {
@@ -558,7 +565,7 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
     }
   };
 
-  const handleBulkUpgrade = async (overrideTag?: string) => {
+  const handleBulkUpgrade = async (overrideTag?: string, preflightConfirmed = false) => {
     if (selectedVisibleInstanceIds.length === 0) {
       showAlert({
         title: t("versionRepository.management.bulk.submitFailedTitle"),
@@ -591,16 +598,7 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
       return;
     }
 
-    const confirmed = await showConfirm({
-      title: t("versionRepository.management.confirmUpgrade"),
-      message: t("versionRepository.management.bulk.confirmMessage", { count: selectedVisibleInstanceIds.length, tag: effectiveTargetTag }),
-      type: "warning",
-      confirmText: t("versionRepository.management.bulk.confirmAction"),
-      cancelText: t("versionRepository.management.cancel")
-    });
-    if (!confirmed) {
-      return;
-    }
+    if (!preflightConfirmed) return openUpgradePreflight("bulk", selectedVisibleInstanceIds, effectiveTargetTag);
     setBulkUpgrading(true);
     try {
       const token = currentUser?.token;
@@ -876,6 +874,18 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
         loadingLogs={loadingLogs}
         onClose={() => { setShowLogsModal(false); setLogsInstanceId(null); }}
         onRefreshLogs={() => logsInstanceId && fetchLogs(logsInstanceId)}
+      />
+      <UpgradePreflightDialog
+        open={preflight.open}
+        loading={preflight.loading}
+        report={preflight.report}
+        onClose={() => setPreflight((current: any) => ({ ...current, open: false }))}
+        onConfirm={() => {
+          const current = preflight;
+          setPreflight((value: any) => ({ ...value, open: false }));
+          if (current.mode === "single") void handleUpgradeSingle(current.ids[0], current.tag, { stopPropagation() {} } as any, true);
+          else void handleBulkUpgrade(current.tag, true);
+        }}
       />
 
     </div>

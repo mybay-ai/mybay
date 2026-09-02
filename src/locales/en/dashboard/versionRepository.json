@@ -1,6 +1,6 @@
 {
   "title": "Image registry",
-  "subtitle": "Discovered official images and their local Docker cache status",
+  "subtitle": "Official releases, capability matrix, and local Docker cache status",
   "refresh": "Refresh local list",
   "refreshTitle": "Reload the locally discovered release list",
   "versionFamily": "Version / family",
@@ -12,10 +12,52 @@
   "pullImage": "Pull image",
   "core": "Core",
   "feishu": "Feishu/Lark",
+  "capabilityMatrix": {
+    "items": {
+      "core": { "label": "Core", "description": "Core chat, tools, and runtime capabilities" },
+      "feishu": { "label": "Feishu/Lark", "description": "Native Feishu and Lark channel support" },
+      "a2a": { "label": "A2A", "description": "A2A v1.0 agent discovery, calls, and task protocol" },
+      "outbound_webhooks": { "label": "Event webhooks", "description": "Signed runtime events delivered to external systems" },
+      "agent_redirects": { "label": "Live redirects", "description": "Correct an Agent without discarding work already in flight" },
+      "mcp_health": { "label": "MCP health", "description": "MCP server health and re-authentication checks" },
+      "bot_mode": { "label": "Bot Mode", "description": "Persistent Bots with distinct roles, models, memory, and skills" },
+      "peer_dm": { "label": "Bot DMs", "description": "Durable Bot messaging across profiles and gateways" },
+      "group_rooms": { "label": "Bot rooms", "description": "Multi-Bot group chats with @mentions" },
+      "cron_continuity": { "label": "Continuous cron", "description": "Scheduled tasks with memory, continuity, and notepads" },
+      "subagent_steering": { "label": "Subagent steering", "description": "Inspect, redirect, and stop running subagents" },
+      "browser_control": { "label": "Browser control", "description": "Agent control of the built-in browser" },
+      "gateway_control": { "label": "Gateway control", "description": "Gateway status queries and graceful pause support" }
+    }
+  },
   "recommended": "Recommended",
   "feishuUnsupported": "Feishu/Lark unsupported",
   "followLatest": "follow latest",
   "loadingImages": "Loading image registry...",
+  "preflight": {
+    "title": "Pre-upgrade safety check",
+    "subtitle": "Verify the target release, runtime, data, and rollback conditions before submission",
+    "loading": "Running server-side safety checks...",
+    "ready": "Ready to upgrade",
+    "blocked": "Upgrade blocked",
+    "cancel": "Cancel",
+    "confirm": "Confirm and start upgrade",
+    "resolveBlockers": "Resolve blockers first",
+    "summary": "{{passed}} passed · {{warnings}} warnings · {{blockers}} blockers",
+    "statuses": { "pass": "Check passed", "warning": "Review the risk before continuing", "blocker": "Must be resolved before upgrade" },
+    "checks": {
+      "TARGET_COMPATIBILITY": "Target release and channel compatibility",
+      "ACTIVE_OPERATION": "Concurrent instance operation",
+      "INSTANCE_STATE": "Instance runtime state",
+      "CONFIG_VALID": "Instance configuration integrity",
+      "DATA_DIRECTORY": "Data directory availability",
+      "DISK_SPACE": "Host disk space",
+      "ROLLBACK_READY": "Rollback readiness",
+      "TARGET_IMAGE": "Target image local cache",
+      "ARCHITECTURE": "Image and host architecture",
+      "CHAT_READINESS": "Current Chat readiness",
+      "SERVICE_INTERRUPTION": "Brief service interruption during upgrade"
+    }
+  },
   "statuses": {
     "idle": "Not downloaded",
     "queued": "Queued",

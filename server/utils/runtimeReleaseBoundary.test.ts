@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { getRuntimeReleaseBoundary, isPiRuntimeRequest, PI_RUNTIME_RELEASE_CODE } from "./runtimeReleaseBoundary";
+import {
+  getRuntimeReleaseBoundary,
+  isPiRuntimeRequest,
+  PI_RUNTIME_RELEASE_CODE,
+  UNSUPPORTED_RUNTIME_RELEASE_CODE,
+} from "./runtimeReleaseBoundary";
 
 describe("Pi runtime preview release boundary", () => {
   it("fails closed for runtime_type=pi", () => {
@@ -8,11 +13,23 @@ describe("Pi runtime preview release boundary", () => {
       status: 400,
       code: PI_RUNTIME_RELEASE_CODE
     });
+    expect(getRuntimeReleaseBoundary("pi")?.error).toContain("specification-only");
     expect(getRuntimeReleaseBoundary("pi")?.error).not.toMatch(/v?\d+\.\d+/i);
   });
 
   it("keeps the supported Hermes create path available", () => {
     expect(getRuntimeReleaseBoundary("hermes")).toBeNull();
     expect(getRuntimeReleaseBoundary(undefined)).toBeNull();
+  });
+
+  it("rejects unknown runtime types instead of silently deploying Hermes", () => {
+    expect(getRuntimeReleaseBoundary("unknown-runtime")).toMatchObject({
+      status: 400,
+      code: UNSUPPORTED_RUNTIME_RELEASE_CODE,
+    });
+    expect(getRuntimeReleaseBoundary({ type: "hermes" })).toMatchObject({
+      status: 400,
+      code: UNSUPPORTED_RUNTIME_RELEASE_CODE,
+    });
   });
 });

@@ -1,5 +1,5 @@
 name: oss-local-questions
-version: 1.0.0
-description: Ask structured questions through the local MyBay controller.
+version: 1.1.0
+description: Local MyBay questions and Hermes runtime compatibility fixes.
 provides_tools:
   - ask_user

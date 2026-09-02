@@ -3,9 +3,9 @@ import { readLocalRunUsage, usageNumber } from "../../../shared/localRunUsage";
 import { readLocalModelEvidence } from "../../../shared/localModelEvidence";
 import { Children, isValidElement, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { Brain, Check, Clock3, Copy, ExternalLink, FileText, Gauge, Sparkles, ThumbsDown, ThumbsUp } from "lucide-react";
+import { Brain, Check, Clock3, Copy, ExternalLink, FileText, Gauge, ThumbsDown, ThumbsUp } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import type { User as UserType } from "../../types";
+import type { AgentInstance, User as UserType } from "../../types";
 import type { ChatMessage } from "../../lib/chatWorkspaceState";
 import { ChatUserAvatar } from "./ChatUserAvatar";
 import { sanitizeChatDisplayContent } from "../../lib/chatProtocolSanitizer";
@@ -25,6 +25,7 @@ import { ChatMessageAttachments } from "./ChatMessageAttachments";
 import { ChatMessageStatusNotices } from "./ChatMessageStatusNotices";
 import { ChatRunFileChanges } from "./ChatRunFileChanges";
 import { ChatMarkdownRenderer } from "./ChatMessageContent";
+import { ChatAgentAvatar } from "./ChatAgentAvatar";
 
 interface ChatMessageBubbleProps {
   message: ChatMessage;
@@ -41,6 +42,7 @@ interface ChatMessageBubbleProps {
   onDownloadInstanceFilePath?: (filePath: string) => void;
   generatedArtifacts?: GeneratedArtifact[];
   fallbackModelLabel?: string;
+  agentInstance?: AgentInstance;
   instanceId?: string;
   onMessageFeedbackChange?: (messageId: string, feedback: "like" | "dislike" | null) => void;
   runExecutionState?: RunExecutionState | null;
@@ -411,12 +413,12 @@ function MarkdownChatContent({
       <ChatMarkdownRenderer
         content={content}
         components={{
-          p: ({ children }) => <p className="m-0 whitespace-pre-wrap leading-6">{linkifyMarkdownChildren(children, linkContext)}</p>,
+          p: ({ children }) => <p className="m-0 whitespace-pre-wrap leading-5">{linkifyMarkdownChildren(children, linkContext)}</p>,
           strong: ({ children }) => <strong className="font-semibold text-slate-950 dark:text-white">{linkifyMarkdownChildren(children, linkContext)}</strong>,
           em: ({ children }) => <em className="italic">{linkifyMarkdownChildren(children, linkContext)}</em>,
           ul: ({ children }) => <ul className="my-2 list-disc space-y-1 pl-5">{children}</ul>,
           ol: ({ children }) => <ol className="my-2 list-decimal space-y-1 pl-5">{children}</ol>,
-          li: ({ children }) => <li className="pl-0.5 leading-6">{linkifyMarkdownChildren(children, linkContext)}</li>,
+          li: ({ children }) => <li className="pl-0.5 leading-5">{linkifyMarkdownChildren(children, linkContext)}</li>,
           blockquote: ({ children }) => (
             <blockquote className="my-2 border-l-2 border-indigo-200 pl-3 text-content-secondary dark:border-indigo-400/40">
               {children}
@@ -493,6 +495,7 @@ export function ChatMessageBubble({
   onDownloadInstanceFilePath,
   generatedArtifacts = [],
   fallbackModelLabel = "",
+  agentInstance,
   instanceId,
   onMessageFeedbackChange,
   runExecutionState: liveRunExecutionState,
@@ -577,15 +580,13 @@ export function ChatMessageBubble({
       className={`flex gap-2 sm:gap-3.5 ${isUser ? "justify-end" : "justify-start"} animate-fade-in`}
     >
       {!isUser && (
-        <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center shrink-0 dark:bg-indigo-500/15 dark:text-indigo-300 dark:border-indigo-400/30">
-          <Sparkles className="w-4 h-4" />
-        </div>
+        <ChatAgentAvatar instance={agentInstance} />
       )}
 
-      <div className={`max-w-[90%] sm:max-w-[86%] rounded-2xl px-3.5 sm:px-4 py-2.5 sm:py-3 text-[14px] leading-6 shadow-sm relative break-words ${
+      <div className={`rounded-2xl px-3.5 sm:px-4 py-2.5 sm:py-3 text-[14px] leading-5 shadow-sm relative break-words ${
         isUser
-          ? "bg-slate-950 text-white rounded-tr-md font-normal dark:bg-indigo-600"
-          : "bg-surface/95 border border-outline/80 text-content rounded-tl-md whitespace-pre-wrap leading-relaxed"
+          ? "max-w-[90%] sm:max-w-[86%] bg-slate-950 text-white rounded-tr-md font-normal dark:bg-indigo-600"
+          : "max-w-[94%] sm:max-w-[92%] 2xl:max-w-[94%] bg-surface/95 border border-outline/80 text-content rounded-tl-md whitespace-pre-wrap"
       } ${message.status === "failed" ? "border-red-350 bg-red-50/20" : ""} ${message.status === "stopped" ? "border-amber-300 bg-amber-50/20" : ""} ${message.status === "queued" ? "border-amber-200 bg-amber-50/20" : ""} ${message.status === "superseded" ? "opacity-65" : ""}`}>
         {!isUser && runExecutionState && (
           <InlineRunTimeline execution={{ ...runExecutionState, blocks: presentation?.blocks || runExecutionState.blocks }}

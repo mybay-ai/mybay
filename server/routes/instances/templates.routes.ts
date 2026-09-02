@@ -75,6 +75,8 @@ export function createTemplatesRoutes(deps: RouterDependencies) {
       }
 
       // Just write the configs (it's a soft update if container details didn't change)
+      const { hydrateA2ARuntimePeers } = await import("../../services/a2aRuntimeConfig");
+      await hydrateA2ARuntimePeers(id, configWithDecryptedKeys);
       await writePhysicalConfigs(id, configWithDecryptedKeys);
 
       await deploymentEventsRepo.create({
@@ -267,6 +269,8 @@ export function createTemplatesRoutes(deps: RouterDependencies) {
       } else {
         // Soft Update (just rebuild mybay.template.yaml, SOUL.md, mybay.instance.yaml)
         const { writePhysicalConfigs } = await import("../../configWriter");
+        const { hydrateA2ARuntimePeers } = await import("../../services/a2aRuntimeConfig");
+        await hydrateA2ARuntimePeers(id, configWithDecryptedKeys);
         await writePhysicalConfigs(id, configWithDecryptedKeys);
 
         await deploymentEventsRepo.create({

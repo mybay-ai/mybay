@@ -12,9 +12,11 @@ This guide takes a new MyBay Open Source installation from Docker startup to the
 
 Start with Desktop mode unless you already need LAN or public-server access. The preflight checks for Desktop, LAN, and Server modes remain part of the deployment flow.
 
-## 2. Prepare Docker and clone MyBay
+## 2. Prepare the installation files
 
-Install Docker Desktop on Windows or macOS, or Docker Engine with Docker Compose v2 on Linux. Confirm that the Docker engine is running, then clone the repository:
+On Windows, download `MyBay-Windows-v*.zip` from [Releases](https://github.com/mybay-ai/mybay/releases/latest) and extract it to a normal local directory. Git, Node.js, npm, OpenSSL, and Docker Desktop do not need to be preinstalled.
+
+On macOS or Linux, install Docker Desktop or Docker Engine with Docker Compose v2, then clone the repository:
 
 ```bash
 git clone https://github.com/mybay-ai/mybay.git
@@ -25,14 +27,13 @@ Host Node.js is not required for the Docker deployment.
 
 ## 3. Start the local control plane
 
-### Windows PowerShell
+### Windows double-click launcher
 
-```powershell
-Set-ExecutionPolicy -Scope Process Bypass
-.\quick-start.ps1 -InstallPrerequisites
+```text
+Start-MyBay.bat
 ```
 
-If Docker Desktop is already installed and running, `-InstallPrerequisites` can be omitted.
+The launcher checks Windows, virtualization, WSL, Docker Linux-container mode, ports, and image connectivity; installs and starts Docker Desktop when needed; pulls the version-pinned image; and asks the user to choose the administrator password. When Windows must restart, a one-time continuation resumes installation after the next sign-in.
 
 ### macOS or Linux
 
@@ -41,7 +42,7 @@ chmod +x quick-start.sh
 ./quick-start.sh
 ```
 
-The launcher checks Docker, creates or preserves `.env`, generates missing local secrets and the administrator password, and starts the Compose services. Do not commit or share `.env`.
+The launcher checks Docker, creates or preserves `.env`, generates missing local secrets, and starts the Compose services. Do not commit or share `.env`.
 
 When startup finishes, open:
 

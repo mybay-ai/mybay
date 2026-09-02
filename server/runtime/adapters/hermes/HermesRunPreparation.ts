@@ -12,7 +12,17 @@ type HermesReasoningEffort = "low" | "medium" | "high";
 
 export function toHermesReasoningModelOptions(value: unknown) {
   const normalized: AgentReasoningEffort = value === "fast" || value === "deep" ? value : "balanced";
-  const effort: HermesReasoningEffort = normalized === "fast" ? "low" : normalized === "deep" ? "high" : "medium";
+  if (normalized === "fast") {
+    return {
+      reasoning: { enabled: false },
+      reasoning_effort: "none" as const,
+      // Hermes API Server 0.20.6 translates this request-scoped hint to
+      // service_tier="priority". Keep it exclusive to the user's explicit
+      // Fast choice so balanced/deep turns retain the configured default tier.
+      fast: true,
+    };
+  }
+  const effort: HermesReasoningEffort = normalized === "deep" ? "high" : "medium";
   return {
     reasoning: { enabled: true, effort },
     reasoning_effort: effort,

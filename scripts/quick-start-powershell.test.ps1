@@ -12,7 +12,15 @@ if ($errors.Count -ne 0) {
 $requiredPatterns = @(
     'ValidateSet\("desktop", "lan", "server"\)',
     '\[switch\]\$InstallPrerequisites',
+    '\[switch\]\$UsePrebuiltImage',
+    '\[switch\]\$PromptAdminPassword',
+    '\[switch\]\$OpenBrowser',
     'Docker\.DockerDesktop',
+    'Programs\\DockerDesktop',
+    'Find-DockerDesktopExecutable',
+    'windows-preflight\.ps1',
+    'Assert-MyBayWindowsHostReady',
+    'Assert-MyBayDockerLinuxEngine',
     '--accept-package-agreements',
     'Start-DockerDesktopAndWait',
     'RandomNumberGenerator',
@@ -22,7 +30,14 @@ $requiredPatterns = @(
     'VITE_MYBAY_PLATFORM_ORIGIN',
     'Invoke-WebRequest',
     'Test-HttpReady \$healthHost \$appPort',
-    '\$healthHost = if \(\$Mode -eq "lan"\) \{ \$LanBindIp \}'
+    '\$healthHost = if \(\$Mode -eq "lan"\) \{ \$LanBindIp \}',
+    'Invoke-Compose @\("pull", "mybay-local"\)',
+    'Read-InitialAdminPassword',
+    'Resolve-MyBayControlPanelPort',
+    'Assert-MyBayControlPanelImageAvailable',
+    'MYBAY_RESTART_REQUIRED',
+    'test -S /var/run/docker\.sock',
+    'Agent containers cannot be created'
 )
 foreach ($pattern in $requiredPatterns) {
     if ($source -notmatch $pattern) {

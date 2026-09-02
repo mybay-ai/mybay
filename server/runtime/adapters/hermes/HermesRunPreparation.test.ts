@@ -4,8 +4,9 @@ import { toHermesReasoningModelOptions } from "./HermesRunPreparation";
 describe("HermesRunPreparationProvider", () => {
   it("maps UI reasoning choices to Hermes request model options", () => {
     expect(toHermesReasoningModelOptions("fast")).toEqual({
-      reasoning: { enabled: true, effort: "low" },
-      reasoning_effort: "low",
+      reasoning: { enabled: false },
+      reasoning_effort: "none",
+      fast: true,
     });
     expect(toHermesReasoningModelOptions("balanced")).toEqual({
       reasoning: { enabled: true, effort: "medium" },
@@ -15,5 +16,11 @@ describe("HermesRunPreparationProvider", () => {
       reasoning: { enabled: true, effort: "high" },
       reasoning_effort: "high",
     });
+  });
+
+  it("does not override the configured service tier outside explicit fast mode", () => {
+    expect(toHermesReasoningModelOptions("balanced")).not.toHaveProperty("fast");
+    expect(toHermesReasoningModelOptions("deep")).not.toHaveProperty("fast");
+    expect(toHermesReasoningModelOptions(undefined)).not.toHaveProperty("fast");
   });
 });

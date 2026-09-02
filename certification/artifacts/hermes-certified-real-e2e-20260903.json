@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "artifactType": "runtime-certified-real-e2e-live-evidence",
+  "generatedAt": "2026-09-02T17:24:34.875Z",
+  "sanitization": {
+    "identifiers": "SHA-256 only",
+    "credentials": "not collected",
+    "database": "read-only queries against the isolated test-Agent conversation, messages, and run",
+    "browser": "only visible product state and harmless deterministic test content were retained"
+  },
+  "environment": {
+    "host": "Windows with Docker Desktop",
+    "application": "MyBay OSS 0.1.26 on localhost",
+    "runtime": {
+      "type": "hermes",
+      "providerKey": "hermes-core",
+      "contractVersion": 1,
+      "image": "nousresearch/hermes-agent:v2026.8.27",
+      "modelEvidence": {
+        "model": "deepseek-v4-flash",
+        "source": "configured_snapshot"
+      }
+    },
+    "instanceRef": "sha256:8439695264f8e6c69df1c2bbf3f419b18a6beb0106cae7023521a35b30916f0a",
+    "containerRef": "sha256:a11a00fb41bb8789c5fe734b7a0e0c44d271f8babefdd8f3cb3e2bfc71654bfe"
+  },
+  "observations": {
+    "realE2E": {
+      "observedAt": "2026-09-02T17:24:34.875Z",
+      "result": "passed",
+      "productPath": "Authenticated MyBay browser -> Agent workspace -> isolated test Agent -> new conversation -> send deterministic no-tool task -> observe live state and terminal response -> reload",
+      "task": {
+        "marker": "REAL_E2E_20260903_R7",
+        "expectedAssistantText": "REAL_E2E_20260903_R7_OK\n2+3=5",
+        "assistantContentSha256": "d427d2aa5b67af6b20af0aab8f7c7b109b31e1117c71c471fa816321d29b5ef3",
+        "toolCalls": 0
+      },
+      "browserLiveObservation": {
+        "authenticated": true,
+        "selectedAgent": "isolated test Agent",
+        "runningStateObserved": true,
+        "observedLabels": [
+          "waiting for execution",
+          "connecting conversation stream"
+        ],
+        "stopActionVisibleWhileActive": true,
+        "terminalState": "completed",
+        "terminalAssistantTextMatched": true,
+        "displayedDurationSeconds": 15,
+        "displayedTotalTokens": 10929,
+        "displayedToolCalls": 0
+      },
+      "runtimePersistence": {
+        "conversationRef": "sha256:33a0fa292059a75d4a3752503769e0da355361d8cbd651cea7b3e9f61a6ee92d",
+        "runRef": "sha256:5f9dbc412d68eb90e115042c8867c7e49681e4cf832fe087db38cc9e2cae6c45",
+        "requestRef": "sha256:2fef28abfc970a4148eaf6d6f702352482025374d00363d1dea7e5169c0f97ab",
+        "upstreamRunRef": "sha256:1d1862433bc866ff006003399ae07dc0c0b28c7da144c7ef4ba8ee9794b73bdb",
+        "nativeSessionRef": "sha256:7e59ad7079bf3e0ad138ec7e2b3272f5aabcdef18aea0114b5f9f8e6416ef02f",
+        "status": "completed",
+        "runtimeType": "hermes",
+        "runtimeProviderKey": "hermes-core",
+        "runtimeContractVersion": 1,
+        "createdAt": "2026-09-02T17:24:15.995Z",
+        "startedAt": "2026-09-02T17:24:19.833Z",
+        "completedAt": "2026-09-02T17:24:34.594Z",
+        "lastEventSequence": 29,
+        "partialOutputMatchedTerminalText": true,
+        "orderedTextEvents": [
+          {
+            "sequence": 9,
+            "text": "REAL_E2"
+          },
+          {
+            "sequence": 14,
+            "text": "E_20260903_R7_OK\n2+3=5"
+          }
+        ],
+        "completionVerificationSource": "runtime_status",
+        "usageEvidenceSource": "runtime_terminal",
+        "totalTokens": 10929,
+        "errorCode": null
+      },
+      "persistedStateDelta": {
+        "before": {
+          "conversations": 5,
+          "messages": 40,
+          "runs": 19,
+          "nativeSessionBindings": 4
+        },
+        "after": {
+          "conversations": 6,
+          "messages": 42,
+          "runs": 20,
+          "nativeSessionBindings": 5
+        }
+      },
+      "reloadVerification": {
+        "conversationListedAfterReload": true,
+        "userMessageRestored": true,
+        "assistantMessageRestored": true,
+        "terminalStateRestored": true,
+        "modelEvidenceRestored": true,
+        "usageRestored": true,
+        "workspaceResultRestored": true
+      }
+    }
+  },
+  "boundary": "This evidence covers one credentialed, authenticated browser-to-control-plane-to-Hermes Runtime task on the isolated local test Agent, including active UI state, ordered Runtime text events, persisted terminal ownership and usage evidence, and reload recovery. It does not claim a GitHub release, a clean-machine Windows installer run, a production deployment, or every model provider and channel combination."
+}

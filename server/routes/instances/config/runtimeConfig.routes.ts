@@ -30,6 +30,8 @@ export function createRuntimeConfigRoutes() {
       await dbAdapter.updateInstanceConfig(instance.id, JSON.stringify(config));
 
       const { writePhysicalConfigs } = await import("../../../configWriter");
+      const { hydrateA2ARuntimePeers } = await import("../../../services/a2aRuntimeConfig");
+      await hydrateA2ARuntimePeers(instance.id, config);
       writePhysicalConfigs(instance.id, config);
       const { docker } = await import("../../../lib/docker");
       try {

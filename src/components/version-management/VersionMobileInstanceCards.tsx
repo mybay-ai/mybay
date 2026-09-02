@@ -1,7 +1,9 @@
 import React from "react";
-import { ArrowUpRight, Box, CheckCircle, ChevronDown, History, Loader2, Terminal } from "lucide-react";
+import { AlertCircle, ArrowUpRight, Box, CheckCircle, ChevronDown, History, Loader2, Terminal } from "lucide-react";
 import { Button, Card, cn } from "../ui";
 import { useTranslation } from "react-i18next";
+import { getUpgradePhaseLabel } from "./versionStatusPresentation";
+import { normalizeAgentUpgradePhase } from "../../../shared/agentUpgradePhase";
 
 interface VersionMobileInstanceCardsProps {
   filteredInstances: any[];
@@ -43,6 +45,7 @@ export function VersionMobileInstanceCards({
             const currentTag = inst.agent_image_tag || "latest";
             const activeVersion = inst.resolved_version || inst.agent_version || currentTag;
             const upgradeStatus = inst.upgrade_status;
+            const upgradePhase = normalizeAgentUpgradePhase(inst.upgrade_phase, upgradeStatus);
             const previousTag = inst.previous_image_tag;
             const hasPendingUpdate = doesInstanceNeedUpdate(inst);
 
@@ -93,18 +96,23 @@ export function VersionMobileInstanceCards({
                   <div className="space-y-1">
                     <p className="text-content-muted font-bold uppercase tracking-wider text-[11px]">{t("versionManagement.mobile.upgradeStatus")}</p>
                     <div>
-                      {upgradeStatus === "upgrading" ? (
+                      {["queued", "pulling_image", "rebuilding", "health_check", "chat_ready", "rolling_back"].includes(upgradePhase) ? (
                         <span className="text-blue-600 font-bold flex items-center gap-1">
                           <Loader2 className="w-3 h-3 animate-spin" />
-                          {t("versionManagement.mobile.scheduling")}
+                          {getUpgradePhaseLabel(t, inst)}
                         </span>
-                      ) : upgradeStatus === "success" ? (
+                      ) : upgradePhase === "completed" || upgradePhase === "rolled_back" ? (
                         <span className="text-green-600 font-bold flex items-center gap-1">
                           <CheckCircle className="w-3 h-3" />
-                          {t("versionManagement.mobile.success")}
+                          {getUpgradePhaseLabel(t, inst)}
+                        </span>
+                      ) : upgradePhase === "failed" ? (
+                        <span className="text-red-600 font-bold flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />
+                          {getUpgradePhaseLabel(t, inst)}
                         </span>
                       ) : (
-                        <span className="text-content-muted">—</span>
+                        <span className="text-content-muted">{getUpgradePhaseLabel(t, inst)}</span>
                       )}
                     </div>
                   </div>

@@ -1,5 +1,6 @@
 import { docker } from "../../lib/docker";
 import { parseTraefikEnv } from "../../infrastructure/traefik/traefikConfig";
+import { A2A_COLLABORATION_NETWORK } from "../../../shared/a2aConfig";
 
 async function findTraefikContainer() {
   const { traefikContainerName } = parseTraefikEnv(process.env);
@@ -130,13 +131,29 @@ export async function verifyNetworkSecurity(instanceId: string, containerName: s
     const inspectData = await docker.getContainer(containerName).inspect();
     const networks = Object.keys(inspectData.NetworkSettings?.Networks || {});
     log(`[安全审计] 容器当前网络适配清单: [${networks.join(", ")}]`);
-    if (networks.length === 1 && networks[0] === targetNetwork) {
-      log("✓ [安全合规] 专属沙箱网络拓扑校验通过：容器在物理层面保持独立隔离。");
+    let trustedA2ANetwork = false;
+    if (networks.includes(A2A_COLLABORATION_NETWORK)) {
+      const a2aNetwork = await docker.getNetwork(A2A_COLLABORATION_NETWORK).inspect().catch(() => null);
+      trustedA2ANetwork = a2aNetwork?.Internal === true
+        && a2aNetwork?.Labels?.["com.mybay.managed"] === "true"
+        && a2aNetwork?.Labels?.["com.mybay.purpose"] === "a2a-collaboration";
+      log(trustedA2ANetwork
+        ? "✓ [安全合规] A2A 协作网络为受控内部网络：无默认外网出口，且未映射宿主机端口。"
+        : "⚠️ [安全警告] 检测到 A2A 网络，但其 Internal 属性或平台管理标签不符合安全要求。");
+    }
+    const allowedNetworks = new Set([targetNetwork, ...(trustedA2ANetwork ? [A2A_COLLABORATION_NETWORK] : [])]);
+    const unexpectedNetworks = networks.filter((network) => !allowedNetworks.has(network));
+    if (networks.includes(targetNetwork) && unexpectedNetworks.length === 0) {
+      log(trustedA2ANetwork
+        ? "✓ [安全合规] 网络拓扑校验通过：专属沙箱网络与受控 A2A 协作网络边界清晰。"
+        : "✓ [安全合规] 专属沙箱网络拓扑校验通过：容器在物理层面保持独立隔离。");
     } else {
-      log(`⚠️ [安全警告] 网络隔离检测非理想状态：容器连接了多重网络，实际应仅允许存在 [${targetNetwork}]。`);
+      log(`⚠️ [安全警告] 网络隔离检测非理想状态：缺少专属网络或存在未授权网络 [${unexpectedNetworks.join(", ") || "unknown"}]。`);
     }
     if (networks.some((network) => network === "traefik_proxy" || network === "bridge")) {
       log("⚠️ [安全警告] 横向渗透隐患：检测到容器不慎加入了公共代理网桥 [traefik_proxy] 或默认 [bridge] 网络，将增加跨租户安全隐患。");
+    } else if (trustedA2ANetwork) {
+      log("✓ [安全合规] 公共网络隔离校验通过：仅允许用户显式授权的 Agent 通过内部 A2A 网络协作。");
     } else {
       log("✓ [安全合规] 跨租户逻辑隔离校验通过：本节点与公共/跨租户层无任何直连链路，防御任何横向移动渗透。");
     }

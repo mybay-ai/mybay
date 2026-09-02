@@ -23,6 +23,9 @@ export function createQuickDeployDraft(input: QuickDeployDefaultsInput = {}): Qu
     entrypoint: "web",
     name: `mybay-agent-${suffix}`,
     purpose: "",
+    channel: "web",
+    feishuRegion: "feishu",
+    weixinBaseUrl: "https://ilinkai.weixin.qq.com",
     dashboardUsername: "admin",
     dashboardPassword: input.password || crypto.randomUUID(),
     modelStrategy: {

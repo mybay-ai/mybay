@@ -7,10 +7,12 @@ import { Button, Card, Input, Label } from "../../components/ui";
 import { ProviderSelect } from "../../components/ProviderSelect";
 import type { Credential, SetupFormData } from "../../types";
 import { api } from "../../lib/api";
+import { ChannelManualConfigForm } from "./ChannelManualConfigForm";
+import { ChannelSelector } from "./ChannelSelector";
 import { buildQuickDeployAdvancedInitialData } from "./quickDeployAdvancedHandoff";
 import { buildQuickDeployPath, createQuickDeployDraft } from "./quickDeployConfig";
 import { buildQuickDeploymentRequest } from "./quickDeploymentRequestAdapter";
-import type { QuickDeployDraft, QuickDeployValidationIssue } from "./quickDeployTypes";
+import type { QuickDeployChannel, QuickDeployDraft, QuickDeployValidationIssue } from "./quickDeployTypes";
 import { validateQuickDeployDraft } from "./quickDeployValidation";
 import { requiresPredeployModelTest } from "./deployStepValidation";
 import { QuickDeployDelivery } from "./QuickDeployDelivery";
@@ -67,6 +69,19 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
     }));
     setModelTest("idle");
     setModelTestMessage("");
+  };
+
+  const selectChannel = (channel: string) => {
+    if (!["web", "telegram", "feishu", "weixin"].includes(channel)) return;
+    setDraft((current) => ({
+      ...current,
+      channel: channel as QuickDeployChannel,
+      permissionConfirmed: false,
+    }));
+  };
+
+  const updateChannelField = (key: string, value: unknown) => {
+    setDraft((current) => ({ ...current, [key]: value, permissionConfirmed: false }));
   };
 
   const oauth = useProviderOAuth({
@@ -319,6 +334,22 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
             {modelNeedsTest && <Button type="button" variant="outline" onClick={testModel} disabled={modelTest === "testing" || optionsLoading}>{modelTest === "testing" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}{modelTest === "passed" ? t("quickDeploy.model.testPassed") : t("quickDeploy.model.test")}</Button>}
             {modelTest === "failed" && <p className="text-sm text-danger">{modelTestMessage || t("quickDeploy.errors.modelTestFailed")}</p>}
           </Card>
+
+          <Card className="space-y-5 p-6">
+            <div><h2 className="font-bold text-content">{t("quickDeploy.channel.title")}</h2><p className="mt-1 text-xs leading-5 text-content-muted">{t("quickDeploy.channel.description")}</p></div>
+            <ChannelSelector
+              selectedId={draft.channel}
+              onSelect={selectChannel}
+              channelIds={["web", "telegram", "feishu", "weixin"]}
+              compact
+            />
+            {draft.channel !== "web" && (
+              <div className="rounded-xl border border-outline bg-surface-muted/40 p-4">
+                <p className="mb-4 text-xs leading-5 text-content-muted">{t("quickDeploy.channel.configurationHint")}</p>
+                <ChannelManualConfigForm channel={draft.channel} data={draft} update={updateChannelField} />
+              </div>
+            )}
+          </Card>
         </div>
 
         <div className="space-y-6">
@@ -330,7 +361,7 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
 
           <Card className="space-y-4 p-6">
             <div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" /><div><h2 className="font-bold text-content">{t("quickDeploy.review.title")}</h2><p className="mt-1 text-xs leading-5 text-content-muted">{t("quickDeploy.review.description")}</p></div></div>
-            <div className="rounded-xl bg-surface-muted p-4 text-sm text-content-secondary"><p>{t("quickDeploy.review.runtime")}</p><p>{t("quickDeploy.review.resources")}</p><p>{strategy.provider} · {strategy.model}</p></div>
+            <div className="rounded-xl bg-surface-muted p-4 text-sm text-content-secondary"><p>{t("quickDeploy.review.runtime")}</p><p>{t("quickDeploy.review.resources", { channel: t(`wizardCopy.channelSelector.channels.${draft.channel}.name`) })}</p><p>{strategy.provider} · {strategy.model}</p></div>
             <label className="flex cursor-pointer items-start gap-3 text-sm text-content-secondary"><input type="checkbox" checked={draft.permissionConfirmed} onChange={(event) => updateDraft({ permissionConfirmed: event.target.checked })} className="mt-1 h-4 w-4 rounded border-outline" /><span>{t("quickDeploy.review.confirm")}</span></label>
             {preflight === "blocked" && <div className="flex gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/30 dark:text-red-300"><AlertCircle className="h-4 w-4 shrink-0" /><span>{t("quickDeploy.errors.preflightBlocked", { details: preflightMessage })}</span></div>}
             {submitted && !modelReady && <p className="text-sm text-danger">{t("quickDeploy.validation.modelTestRequired")}</p>}

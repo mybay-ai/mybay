@@ -1,6 +1,8 @@
 import { mergeLocalFileChanges } from "../../shared/localRunFileEvidence";
 import { createLocalTimelineCollector } from "../../shared/localRunTimeline";
 import { createRunFileSnapshots } from "./runs/runFileSnapshots";
+import { summarizeRunContextAssembly } from "./runs/runContextObservability";
+import { createRunLatencyObservability } from "./runs/runLatencyObservability";
 import { chatRepo } from "../repositories/chatRepo";
 import { emitChatConversationUpdated } from "./chatRealtime";
 import { dbAdapter } from "../db";
@@ -186,7 +188,21 @@ function getRuntimeRunEventController(driver: RuntimeDriver): RuntimeRunEventCon
 }
 const runSseStreamController = createRunSseStreamController();
 const runTimelineCollector = createLocalTimelineCollector();
+const runLatencyObservability = createRunLatencyObservability();
 const runFileSnapshots = createRunFileSnapshots(event => console.info(JSON.stringify({ operation: "run_file_snapshot", ...event })));
+
+/** Start the optional preimage scan as soon as an interactive Run has passed
+ * request authorization. processSingleRun() awaits this same per-Run promise
+ * before native dispatch, so moving the start earlier changes latency only —
+ * never the "snapshot before Agent writes" evidence boundary. */
+export function primeRunFileSnapshot(runId: string, instanceId: string): void {
+  void runFileSnapshots.before(runId, instanceId, true).catch(() => undefined);
+}
+
+export function discardRunFileSnapshot(runId: string): void {
+  runFileSnapshots.clear(runId);
+}
+
 const runEventCacheController = createRunEventCacheController({
   persistSequence: (runId, sequence, ownerId) =>
     chatRepo.updateChatRun(runId, { last_event_seq: sequence }, ownerId),
@@ -198,6 +214,7 @@ const runEventCacheController = createRunEventCacheController({
     runTimelineCollector.clear(runId);
     runFileSnapshots.clear(runId);
     runSseStreamController.clear(runId);
+    runLatencyObservability.clear(runId);
     for (const controller of runtimeRunEventControllers.values()) controller.clear(runId);
   },
   warn: (message) => console.warn(message),
@@ -321,6 +338,7 @@ export function handleRuntimeRunEvent(
   event: unknown,
   upstreamRunId = String((event as any)?.run_id || ""),
 ) {
+  runLatencyObservability.observeRuntimeEvent(run.id, event);
   getRuntimeRunEventController(driver).handle(run, event, upstreamRunId);
 }
 function ensureUpstreamRunEventStream(run: any, upstreamRunId: string, driver: RuntimeDriver) {
@@ -328,6 +346,7 @@ function ensureUpstreamRunEventStream(run: any, upstreamRunId: string, driver: R
     run.id,
     (signal, onChunk) => driver.runs.streamEvents(run.instance_id, upstreamRunId, signal, onChunk),
     (event) => handleRuntimeRunEvent(driver, run, event, upstreamRunId),
+    () => runLatencyObservability.markFirstUpstreamByte(run.id),
   );
 }
 
@@ -456,7 +475,7 @@ export async function completeRun(
     [...runtimeRunEventControllers.values()].flatMap(controller => [...(controller.get(runId)?.completedFileSteps?.values() || [])]),
   );
   const fileDiffs = await runFileSnapshots.after(runId, String(run?.conversation_id || ""), fileChanges);
-  return terminalizeRun({
+  const terminalized = await terminalizeRun({
     runId,
     finalStatus,
     assistantContent,
@@ -480,6 +499,17 @@ export async function completeRun(
       observeRunTerminalUsage(observedRunId, effectiveStatus, observedUsage),
     warn: (message) => console.warn(message),
   });
+  if (terminalized) {
+    const latestLatencyRun = await chatRepo.getChatRun(runId).catch(() => null);
+    console.info(JSON.stringify({
+      operation: "agent_run_latency_waterfall",
+      runId,
+      instanceId: String(run?.instance_id || ""),
+      runtimeType: String(run?.runtime_type || "unknown"),
+      ...runLatencyObservability.finish(runId, latestLatencyRun || run, finalStatus),
+    }));
+  }
+  return terminalized;
 }
 
 async function handleDispatchRecordResult(
@@ -511,10 +541,14 @@ export async function processSingleRun(
   leaseLostRuns: Set<string>,
   options: ProcessSingleRunOptions = {},
 ) {
+  const dispatchStartedAt = Date.now();
+  const dispatchTiming: Record<string, number | boolean | string> = {};
   const status = run.status;
   initRunSequence(run.id, run.last_event_seq || 0);
 
+  const authorityStartedAt = Date.now();
   const dispatchAuthority = await resolveRunDispatchAuthority(run);
+  dispatchTiming.authorityMs = Date.now() - authorityStartedAt;
   if (dispatchAuthority.ok === false) {
     logOperation("RUN_RESOURCE_AUTHORITY_REJECTED", run.id, run.instance_id, dispatchAuthority.status, dispatchAuthority.code);
     await completeRun(run.id, "failed", "", dispatchAuthority.code);
@@ -541,9 +575,11 @@ export async function processSingleRun(
   if (status === "queued") {
     if (!run.upstream_run_id) {
       // A. Load user message content to prepare context
-      const userMsg = (await chatRepo.listMessages(run.conversation_id, 100)).find((msg: any) => msg.id === run.user_message_id);
+      const userMessageStartedAt = Date.now();
+      const userMsg = await chatRepo.getMessage(run.user_message_id);
+      dispatchTiming.userMessageMs = Date.now() - userMessageStartedAt;
 
-      if (!userMsg) {
+      if (!userMsg || userMsg.conversation_id !== run.conversation_id) {
         logOperation("DISPATCH_FAILED_USER_MSG_MISSING", run.id, run.instance_id, 404, "USER_MESSAGE_MISSING");
         await completeRun(run.id, "failed", "", "USER_MESSAGE_MISSING");
         return;
@@ -551,10 +587,12 @@ export async function processSingleRun(
 
       // B. Increment dispatch attempts counter
       const nextAttempts = run.dispatch_attempts + 1;
+      const dispatchAttemptStartedAt = Date.now();
       const success = await chatRepo.updateChatRun(run.id, {
         dispatch_attempts: nextAttempts,
         last_dispatch_at: new Date().toISOString()
       }, RECONCILER_ID);
+      dispatchTiming.dispatchAttemptMs = Date.now() - dispatchAttemptStartedAt;
 
       if (!success) {
         leaseLostRuns.add(run.id);
@@ -563,6 +601,7 @@ export async function processSingleRun(
       }
 
       // C. Crash recovery check: search GET /v1/runs to see if it exists
+      const recoveryStartedAt = Date.now();
       let recoveredUpstreamId: string | null = null;
       if (shouldSearchForDispatchedRun(nextAttempts)) {
         const queryRes = await requestRunsForRun({
@@ -575,6 +614,7 @@ export async function processSingleRun(
           recoveredUpstreamId = findRecoveredUpstreamId(queryRes.json, run.id);
         }
       }
+      dispatchTiming.recoveryMs = Date.now() - recoveryStartedAt;
 
       if (recoveredUpstreamId) {
         logOperation("DISPATCH_RECOVERED", run.id, run.instance_id, 200);
@@ -589,8 +629,30 @@ export async function processSingleRun(
         return;
       }
 
+      const conversationDecision = resolveConversationDispatchMode(runtimeDriver.capabilities, {
+        preferBatch: runExecution.shouldPreferBatch(dispatchAuthority.instance),
+      });
+      if (conversationDecision.supported === false) {
+        await completeRun(run.id, "failed", "", conversationDecision.errorCode);
+        return;
+      }
+
+      // Start optional file evidence capture as soon as dispatch recovery has
+      // ruled out an already-running upstream task. Message/session preparation
+      // can safely overlap it, but dispatch still waits for the preimage.
+      const snapshotStartedAt = Date.now();
+      const baselinePromise = conversationDecision.mode === "streaming"
+        ? runFileSnapshots.before(run.id, run.instance_id, nextAttempts === 1)
+        .catch(() => undefined)
+        .finally(() => {
+          dispatchTiming.snapshotMs = Date.now() - snapshotStartedAt;
+        })
+        : Promise.resolve();
+
       // D. Build message context
+      const historyStartedAt = Date.now();
       const history = await chatRepo.getLatestCompletedMessagesForContext(run.conversation_id);
+      dispatchTiming.historyMs = Date.now() - historyStartedAt;
       const filteredHistory = filterCurrentRunMessageFromHistory(history, userMsg?.id, userMsg?.request_id);
       const runtimeMessages = filteredHistory.map(h => ({
         role: h.role,
@@ -603,6 +665,7 @@ export async function processSingleRun(
       const attachmentIds = Array.isArray(userMsg.metadata?.attachmentIds) ? userMsg.metadata.attachmentIds : [];
       let agentAttachmentContext = "";
       if (attachmentIds.length > 0) {
+        const attachmentsStartedAt = Date.now();
         try {
           const files = await loadAndValidateChatAttachments({
             attachmentIds,
@@ -616,6 +679,8 @@ export async function processSingleRun(
           logOperation("DISPATCH_FAILED_ATTACHMENT_INVALID", run.id, run.instance_id, attachmentErr?.status || 400, attachmentErr?.error || "INVALID_ATTACHMENT");
           await completeRun(run.id, "failed", "", attachmentErr?.error || "INVALID_ATTACHMENT");
           return;
+        } finally {
+          dispatchTiming.attachmentsMs = Date.now() - attachmentsStartedAt;
         }
       }
       runtimeMessages.push({
@@ -625,6 +690,7 @@ export async function processSingleRun(
 
       // E. Build the native Runtime dispatch body with the session bound to this conversation.
       let sessionBinding: RuntimeSessionBinding;
+      const sessionStartedAt = Date.now();
       try {
         sessionBinding = await runPreparation.ensureSessionForConversation(run);
       } catch (sessionErr: any) {
@@ -634,6 +700,8 @@ export async function processSingleRun(
         logOperation("RUNTIME_SESSION_BIND_FAILED", run.id, run.instance_id, sessionErr?.statusCode || 500, errorCode);
         await completeRun(run.id, "failed", "", errorCode);
         return;
+      } finally {
+        dispatchTiming.sessionMs = Date.now() - sessionStartedAt;
       }
       const runtimeSessionId = sessionBinding.sessionId;
 
@@ -646,6 +714,20 @@ export async function processSingleRun(
         historyMessages: history,
         reasoningEffort: run.reasoning_effort,
       });
+      console.info(JSON.stringify({
+        operation: "run_context_assembly",
+        runId: run.id,
+        instanceId: run.instance_id,
+        runtimeType: runtimeDriver.runtimeType,
+        ...summarizeRunContextAssembly({
+          sessionState: sessionBinding.state,
+          historyDeduplicationConfigured: process.env.MYBAY_DEDUPLICATE_CHAT_HISTORY === "true",
+          historyMessages: filteredHistory,
+          currentMessage: userMsg.content,
+          attachmentContext: agentAttachmentContext,
+          payload,
+        }),
+      }));
 
       emitRunLifecycleStep(
         run.id,
@@ -657,15 +739,16 @@ export async function processSingleRun(
       );
       addEventToCache(run.id, "status", JSON.stringify({ status: "queued" }));
 
-      const dispatchInstance = await dbAdapter.getInstanceById(run.instance_id);
-      const conversationDecision = resolveConversationDispatchMode(runtimeDriver.capabilities, {
-        preferBatch: runExecution.shouldPreferBatch(dispatchInstance),
-      });
-      if (conversationDecision.supported === false) {
-        await completeRun(run.id, "failed", "", conversationDecision.errorCode);
-        return;
-      }
       if (conversationDecision.mode === "batch") {
+        console.info(JSON.stringify({
+          operation: "run_dispatch_preparation_timing",
+          runId: run.id,
+          instanceId: run.instance_id,
+          runtimeType: runtimeDriver.runtimeType,
+          mode: "batch",
+          ...dispatchTiming,
+          totalMs: Date.now() - dispatchStartedAt,
+        }));
         await runExecution.executeBatch(run, runtimeMessages, runtimeSessionId, "provider_compatibility", userMsg?.id, userMsg?.request_id);
         return;
       }
@@ -695,7 +778,9 @@ export async function processSingleRun(
       }
 
       // Snapshot only before the first native dispatch. Recovery must never invent a new preimage.
-      await runFileSnapshots.before(run.id, run.instance_id, nextAttempts === 1);
+      const snapshotWaitStartedAt = Date.now();
+      await baselinePromise;
+      dispatchTiming.snapshotWaitMs = Date.now() - snapshotWaitStartedAt;
       const afterSnapshotRun = await chatRepo.getChatRun(run.id);
       if (!afterSnapshotRun || afterSnapshotRun.status !== "queued" || !hasValidRunLease(afterSnapshotRun)) return;
       const startTime = Date.now();
@@ -773,6 +858,18 @@ export async function processSingleRun(
       }
 
       const durationMs = Date.now() - startTime;
+      console.info(JSON.stringify({
+        operation: "run_dispatch_preparation_timing",
+        runId: run.id,
+        instanceId: run.instance_id,
+        runtimeType: runtimeDriver.runtimeType,
+        mode: "streaming",
+        ...dispatchTiming,
+        transportSubmitMs: durationMs,
+        totalMs: Date.now() - dispatchStartedAt,
+        statusCode: dispatchRes.statusCode,
+        ok: dispatchRes.ok,
+      }));
 
       const dispatchedUpstreamId = dispatchRes.json?.run_id || dispatchRes.json?.id;
       if (dispatchRes.ok && dispatchRes.json && dispatchedUpstreamId) {
@@ -1046,5 +1143,3 @@ export async function processSingleRun(
     });
   }
 }
-
-

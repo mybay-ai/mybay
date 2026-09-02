@@ -5,6 +5,13 @@ import { isValidInstanceId, isValidUUID } from "./validators";
 import { resolveInstanceAuthority, resolveInstanceRunAuthority } from "../../../services/instances/resourceAuthorityService";
 import { authorityActorFromRequest, sendAuthorityFailure } from "../../../services/instances/resourceAuthorityHttp";
 
+type FlushableResponse = Response & { flush?: () => void };
+
+export function writeAndFlushSse(res: Response, payload: string): void {
+  res.write(payload);
+  (res as FlushableResponse).flush?.();
+}
+
 export function registerRunEventRoutes(router: Router) {
 
 
@@ -111,9 +118,7 @@ export function registerRunEventRoutes(router: Router) {
     const handler = (evt: { id: number; event: string; data: string }) => {
       if (terminalSent) return;
 
-      res.write(`id: ${evt.id}\n`);
-      res.write(`event: ${evt.event}\n`);
-      res.write(`data: ${evt.data}\n\n`);
+      writeAndFlushSse(res, `id: ${evt.id}\nevent: ${evt.event}\ndata: ${evt.data}\n\n`);
 
       if (evt.event === 'status') {
         try {
@@ -145,10 +150,11 @@ export function registerRunEventRoutes(router: Router) {
       res.setHeader('Connection', 'keep-alive');
       res.setHeader('X-Accel-Buffering', 'no');
 
-      res.write(`: ok\n\n`);
+      res.flushHeaders();
+      writeAndFlushSse(res, `: ok\n\n`);
       heartbeatTimer = setInterval(() => {
         if (!res.writableEnded && !res.destroyed) {
-          res.write(`: ping\n\n`);
+          writeAndFlushSse(res, `: ping\n\n`);
         }
       }, SSE_HEARTBEAT_INTERVAL_MS);
       heartbeatTimer.unref?.();
@@ -156,16 +162,13 @@ export function registerRunEventRoutes(router: Router) {
       if (!isNaN(lastEventId)) {
         const { events: cachedEvts, recoveryOutOfBounds } = getEventsFromCache(runId, lastEventId);
         if (recoveryOutOfBounds) {
-          res.write(`event: error\n`);
-          res.write(`data: ${JSON.stringify({ errorCode: "RECOVERY_OUT_OF_BOUNDS" })}\n\n`);
+          writeAndFlushSse(res, `event: error\ndata: ${JSON.stringify({ errorCode: "RECOVERY_OUT_OF_BOUNDS" })}\n\n`);
           res.end();
           cleanup();
           return;
         }
         for (const evt of cachedEvts) {
-          res.write(`id: ${evt.id}\n`);
-          res.write(`event: ${evt.event}\n`);
-          res.write(`data: ${evt.data}\n\n`);
+          writeAndFlushSse(res, `id: ${evt.id}\nevent: ${evt.event}\ndata: ${evt.data}\n\n`);
           if (evt.event === 'status') {
             try {
               const parsed = JSON.parse(evt.data);
@@ -178,8 +181,7 @@ export function registerRunEventRoutes(router: Router) {
       }
 
       if (!terminalSent && ['completed', 'failed', 'cancelled', 'stopped', 'expired'].includes(run.status)) {
-        res.write(`event: status\n`);
-        res.write(`data: ${JSON.stringify({ status: run.status })}\n\n`);
+        writeAndFlushSse(res, `event: status\ndata: ${JSON.stringify({ status: run.status })}\n\n`);
         terminalSent = true;
       }
 

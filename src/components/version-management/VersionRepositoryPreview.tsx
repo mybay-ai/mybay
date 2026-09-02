@@ -2,6 +2,7 @@ import React from "react";
 import { Layers, RefreshCw } from "lucide-react";
 import { Button, Card, cn } from "../ui";
 import { useTranslation } from "react-i18next";
+import { VersionCapabilityBadges } from "./VersionCapabilityBadges";
 
 interface VersionRepositoryPreviewProps {
   versions: any[];
@@ -90,11 +91,8 @@ export function VersionRepositoryPreview({
                 <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-content-muted">{t("versionRepository.officialImage")}</p>
                 {renderOfficialImageCell(v.coreVariant, true)}
               </div>
-              <div className="mt-3 flex flex-wrap gap-1">
-                <span className="rounded bg-control-hover px-2 py-1 text-content-secondary">{t("versionRepository.core")}</span>
-                {v.capabilities?.includes("feishu") && (
-                  <span className="rounded bg-status-info-bg px-2 py-1 text-status-info-text">{t("versionRepository.feishu")}</span>
-                )}
+              <div className="mt-3">
+                <VersionCapabilityBadges capabilities={v.capabilities} compact />
               </div>
             </article>
           ))}
@@ -127,13 +125,8 @@ export function VersionRepositoryPreview({
                     <td className="px-5 py-3 whitespace-nowrap">
                       {renderOfficialImageCell(v.coreVariant)}
                     </td>
-                    <td className="px-5 py-3 whitespace-nowrap">
-                      <div className="flex gap-1">
-                        <span className="rounded bg-control-hover px-2 py-1 text-content-secondary">{t("versionRepository.core")}</span>
-                        {v.capabilities?.includes("feishu") && (
-                          <span className="rounded bg-blue-50 px-2 py-1 text-blue-700">{t("versionRepository.feishu")}</span>
-                        )}
-                      </div>
+                    <td className="px-5 py-3">
+                      <VersionCapabilityBadges capabilities={v.capabilities} />
                     </td>
                   </tr>
                 );

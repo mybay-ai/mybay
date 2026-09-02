@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "artifactType": "runtime-experimental-live-evidence",
+  "generatedAt": "2026-09-02T13:35:27.936Z",
+  "sanitization": {
+    "identifiers": "SHA-256 only",
+    "promptsAndResponses": "omitted; marker presence and character counts only",
+    "credentials": "not collected",
+    "database": "parameterized read-only queries against marker-scoped rows"
+  },
+  "environment": {
+    "host": "Windows with Docker Desktop",
+    "application": "MyBay OSS 0.1.26 on localhost",
+    "controlPanelHealthStatus": 200,
+    "runtime": {
+      "type": "hermes",
+      "providerKey": "hermes-core",
+      "contractVersion": 1,
+      "image": "nousresearch/hermes-agent:v2026.8.27",
+      "imageId": "sha256:e0df6adebddf29b91112aefc999d4aaf6846c9eb544faca5672a16a13590ff79",
+      "containerStatus": "running",
+      "runtimeStartedAt": "2026-09-02T06:41:24.748895575Z",
+      "healthEndpointStatus": 200,
+      "loopbackHostPort": 10103
+    },
+    "instanceRef": "sha256:8439695264f8e6c69df1c2bbf3f419b18a6beb0106cae7023521a35b30916f0a",
+    "conversationRef": "sha256:80ada616573250e6b95bee8d35adbb7b0e0366696f2148a56be9c0b8d44dbf36"
+  },
+  "observations": {
+    "runtimeInstall": {
+      "observedAt": "2026-09-02T13:32:10.286Z",
+      "result": "passed",
+      "detail": "An existing MyBay-managed Hermes deployment was running and its Runtime health endpoint returned HTTP 200. This proves initialization/current deployment health, not a fresh install workflow."
+    },
+    "taskSubmit": {
+      "observedAt": "2026-09-02T13:03:07.645Z",
+      "result": "passed",
+      "runRef": "sha256:24be55d4f51a9958410cd376d1477303f8a14620119393108c2bbc34a504efdd",
+      "requestRef": "sha256:e9974ba494e4ddc35abd8122a3922ef181eee0cc10710eb397e8ca1d41ad8a60",
+      "binding": {
+        "runtimeType": "hermes",
+        "providerKey": "hermes-core",
+        "contractVersion": 1
+      },
+      "terminalStatus": "completed"
+    },
+    "streamingOutput": {
+      "observedAt": "2026-09-02T13:03:16.580Z",
+      "result": "passed",
+      "runRef": "sha256:24be55d4f51a9958410cd376d1477303f8a14620119393108c2bbc34a504efdd",
+      "browserRunningStateObservedAt": "2026-09-02T13:03:14.158Z",
+      "browserFirstTextEventObservedAt": "2026-09-02T13:03:16.580Z",
+      "runtimeCompletedAt": "2026-09-02T13:03:21.042Z",
+      "persistedEventSequence": 135,
+      "assistantCharacters": 286,
+      "markers": {
+        "first": true,
+        "twentieth": true,
+        "done": true
+      },
+      "usageTotalTokens": 11815
+    },
+    "cancellation": {
+      "observedAt": "2026-09-02T13:31:22.875Z",
+      "result": "passed",
+      "runRef": "sha256:d733a1b0d395cc3f5005e2e99f4bb5ef72f6b1ef7621d2faea6f731d240c77ce",
+      "requestRef": "sha256:f09ae383a7bc03e763ae5b9b3c1d36a704bc695bdb2e5cd2c4ab76b590a70182",
+      "startedAt": "2026-09-02T13:31:15.596Z",
+      "stopRequestedAt": "2026-09-02T13:31:21.971Z",
+      "completedAt": "2026-09-02T13:31:22.875Z",
+      "terminalStatus": "cancelled",
+      "errorCode": "CANCELLED_UPSTREAM",
+      "stopAttempts": 2,
+      "persistedEventSequence": 11,
+      "browserTerminalLabel": "stopped"
+    },
+    "queueReleaseAfterCancellation": {
+      "observedAt": "2026-09-02T13:32:04.891Z",
+      "result": "passed",
+      "runRef": "sha256:3502bc9921d7f40b9ebc0da65c6616a7ea67a16e49d2fbd43c849b6e517a3526",
+      "requestRef": "sha256:9095d80c24094e9360a7aa5abb4a08d45cad7dbf76a05444ea248863788a4705",
+      "startedAt": "2026-09-02T13:31:58.606Z",
+      "completedAt": "2026-09-02T13:32:04.891Z",
+      "terminalStatus": "completed",
+      "expectedMarkerPresent": true,
+      "persistedEventSequence": 21
+    }
+  }
+}

@@ -10,10 +10,13 @@ const beginChatRun = vi.hoisted(() => vi.fn());
 const getChatRun = vi.hoisted(() => vi.fn());
 const getConversationForOwnerAndInstance = vi.hoisted(() => vi.fn());
 const requestStopChatRun = vi.hoisted(() => vi.fn());
+const releaseRunLease = vi.hoisted(() => vi.fn().mockResolvedValue(true));
 const probeCapabilities = vi.hoisted(() => vi.fn());
 const probeCapabilitiesDetailed = vi.hoisted(() => vi.fn());
 const requestRunsReconcile = vi.hoisted(() => vi.fn());
 const requestRunReconcile = vi.hoisted(() => vi.fn(() => true));
+const primeRunFileSnapshot = vi.hoisted(() => vi.fn());
+const discardRunFileSnapshot = vi.hoisted(() => vi.fn());
 const isQuestionBridgeInstalling = vi.hoisted(() => vi.fn(() => false));
 vi.mock("../../../services/runs/questionBridgeInstaller", () => ({ isQuestionBridgeInstalling }));
 
@@ -31,11 +34,20 @@ vi.mock("../../../repositories/chatRepo", () => ({
     finishChatRun: vi.fn(),
     getChatRun,
     getConversationForOwnerAndInstance,
-    requestStopChatRun
+    requestStopChatRun,
+    releaseRunLease,
   }
 }));
 vi.mock("../../../utils/capabilities", () => ({ probeCapabilities, probeCapabilitiesDetailed }));
-vi.mock("../../../services/runsReconciler", () => ({ emitRunLifecycleStep: vi.fn(), requestRunsAPI: vi.fn(), requestRunReconcile, requestRunsReconcile }));
+vi.mock("../../../services/runsReconciler", () => ({
+  discardRunFileSnapshot,
+  emitRunLifecycleStep: vi.fn(),
+  primeRunFileSnapshot,
+  RECONCILER_ID: "reconciler-route-test",
+  requestRunsAPI: vi.fn(),
+  requestRunReconcile,
+  requestRunsReconcile,
+}));
 vi.mock("../../../services/chatRealtime", () => ({ emitChatConversationUpdated: vi.fn() }));
 vi.mock("./limiters", () => ({ runsLimiter: (_req: any, _res: any, next: any) => next() }));
 vi.mock("../../../utils/chatAttachments", () => ({ loadAndValidateChatAttachments: vi.fn().mockResolvedValue([]) }));
@@ -144,8 +156,12 @@ describe("Interactive Agent POST /runs integration", () => {
         userId,
         requestId: "request-1",
         reasoningEffort: "fast",
-        modelEvidence: { version: 1, model: "deepseek-v4-flash", source: "configured_snapshot" }
+        modelEvidence: { version: 1, model: "deepseek-v4-flash", source: "configured_snapshot" },
+        initialLease: { reconcilerId: "reconciler-route-test", leaseSeconds: 60 },
       }));
+      expect(primeRunFileSnapshot).toHaveBeenCalledWith(body.runId, instanceId);
+      expect(primeRunFileSnapshot.mock.invocationCallOrder[0]).toBeLessThan(beginChatRun.mock.invocationCallOrder[0]);
+      expect(discardRunFileSnapshot).not.toHaveBeenCalled();
       expect(requestRunReconcile).toHaveBeenCalledWith(body.runId);
       expect(requestRunsReconcile).not.toHaveBeenCalled();
     } finally {
@@ -191,6 +207,49 @@ describe("Interactive Agent POST /runs integration", () => {
         runId: "55555555-5555-4555-8555-555555555555",
         status: "running"
       }));
+      expect(primeRunFileSnapshot).toHaveBeenCalledOnce();
+      expect(discardRunFileSnapshot).toHaveBeenCalledWith(primeRunFileSnapshot.mock.calls[0][0]);
+      expect(requestRunsReconcile).toHaveBeenCalledOnce();
+    } finally {
+      await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    }
+  });
+
+  it("releases the initial lease before falling back when targeted dispatch is unavailable", async () => {
+    process.env.MYBAY_ASYNC_CHAT_RUNS_ENABLED = "true";
+    getInstanceById.mockResolvedValue({ id: instanceId, user_id: userId, owner_id: userId, config_json: "{}" });
+    getConversationForOwnerAndInstance.mockResolvedValue({ id: conversationId, user_id: userId, instance_id: instanceId });
+    probeCapabilities.mockResolvedValue("supported");
+    beginChatRun.mockResolvedValue({
+      status: "success",
+      user_message_id: "44444444-4444-4444-8444-444444444444",
+      sequence_no: 1,
+    });
+    requestRunReconcile.mockReturnValueOnce(false);
+
+    const app = express();
+    app.use(express.json());
+    const router = express.Router();
+    registerRunRoutes(router);
+    app.use("/api/instances", router);
+    const server = app.listen(0);
+
+    try {
+      await new Promise<void>((resolve) => server.once("listening", resolve));
+      const address = server.address();
+      if (!address || typeof address === "string") throw new Error("Test server did not expose a TCP port");
+      const response = await fetch(`http://127.0.0.1:${address.port}/api/instances/${instanceId}/runs`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ conversationId, content: "Fallback dispatch", requestId: "request-fallback" }),
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(202);
+      expect(releaseRunLease).toHaveBeenCalledWith({
+        runId: body.runId,
+        reconcilerId: "reconciler-route-test",
+      });
       expect(requestRunsReconcile).toHaveBeenCalledOnce();
     } finally {
       await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));

@@ -14,10 +14,7 @@ Languages: [English](./README.md) | [简体中文](./README.zh-CN.md)
 
 > **Release status: `v0.1.26`.** Public interfaces, runtime adapters, deployment details, and upgrade behavior may still change during the 0.x series.
 
-| Runtime | Status |
-| --- | --- |
-| **Hermes Agent** | Supported in the current preview |
-| **Pi Agent** | Experimental specification only; deployment is not supported yet |
+Runtime availability and declared capabilities are generated from the shared catalog in the [Runtime Capability Matrix](./docs/runtime-capability-matrix.md). Evidence-backed certification is reported separately in [MyBay Runtime Certification](./docs/runtime-certification.md), so a registered adapter or capability declaration is never presented as proof of real Runtime or product E2E behavior.
 
 ![MyBay Open Source overview](./docs/images/main-open-source.png)
 
@@ -36,9 +33,19 @@ MyBay Open Source runs standalone with no hosted SaaS dependency, cloud master n
 
 ## Quick Start
 
-Prerequisite: Docker Engine or Docker Desktop with Docker Compose. Host Node.js is not required.
+**Windows 10/11: download, extract, and double-click**
+
+Download `MyBay-Windows-v*.zip` from the [latest release](https://github.com/mybay-ai/mybay/releases/latest), extract it to a normal local directory such as `C:\MyBay`, and double-click:
+
+```text
+Start-MyBay.bat
+```
+
+The launcher checks Windows, virtualization, WSL, Docker, ports, and image connectivity; installs and starts Docker Desktop when needed; pulls the version-pinned MyBay image; asks you to choose the administrator password; and opens the browser after the health check passes. WSL setup registers a one-time continuation when Windows must restart, so installation resumes after the next sign-in. Git, Node.js, npm, and OpenSSL are not required.
 
 **macOS or Linux**
+
+Prerequisite: Docker Engine or Docker Desktop with Docker Compose. Host Node.js is not required.
 
 ```bash
 git clone https://github.com/mybay-ai/mybay.git
@@ -47,20 +54,11 @@ chmod +x quick-start.sh
 ./quick-start.sh
 ```
 
-**Windows PowerShell 5.1 or PowerShell 7**
-
-```powershell
-git clone https://github.com/mybay-ai/mybay.git
-cd mybay
-Set-ExecutionPolicy -Scope Process Bypass
-.\quick-start.ps1
-```
-
-Open [http://localhost:3000](http://localhost:3000), sign in with the admin credentials stored in your local `.env` file, add a model provider, and deploy your first Hermes Agent instance. Never share or commit `.env`.
+Open [http://localhost:3000](http://localhost:3000), add a model provider, and deploy your first Hermes Agent instance. Never share or commit `.env`.
 
 For a first task that creates a file, select **Agent mode** beside the chat input. The default **Quick mode** replies with text only and does not execute tools or save files.
 
-Need Docker installed automatically on Windows, LAN access, public HTTPS, manual Compose, or a development setup? See [Deployment options](#deployment-options) or the complete **[Deploy Your First Agent in 10 Minutes](./docs/QUICKSTART.md)** guide.
+Need LAN access, public HTTPS, manual Compose, or a development setup? See [Deployment options](#deployment-options) or the complete **[Deploy Your First Agent in 10 Minutes](./docs/QUICKSTART.md)** guide.
 
 ## Product Preview
 
@@ -261,7 +259,7 @@ data/
 ## Runtime support status
 
 - **Hermes Agent:** The supported runtime for the current preview create and lifecycle flow.
-- **Pi Agent:** Experimental preview / coming soon. The UI cannot submit Pi deployments, and the API rejects `runtime_type=pi` with `PI_RUNTIME_PREVIEW_ONLY`. The included adapter and specification are integration previews, not a production support claim.
+- **Pi Agent:** Specification only. The UI cannot submit Pi deployments, and the API rejects `runtime_type=pi` with `PI_RUNTIME_PREVIEW_ONLY`. The included adapter and manifest are contract references, not a production support claim.
 
 The full Pi backend deployment path is planned for a future release.
 
@@ -307,7 +305,7 @@ MyBay includes an extensible **Agent Runtime Specification** for future runtime 
 - **JSON Schema Validation**: `/public/schemas/mybay.runtime.schema.json`
 - **Example Runtimes**:
   - Hermes Agent: `/public/specs/mybay.runtime.yaml`
-  - Pi Agent experimental reference: `/public/specs/pi.runtime.yaml`
+  - Pi Agent specification-only reference: `/public/specs/pi.runtime.yaml`
 
 With the `mybay.runtime.yaml` manifest, developers can declare container ports, health check endpoints, data volume mounts, and supported IM channels (Feishu, Telegram, Discord, Slack, etc.).
 

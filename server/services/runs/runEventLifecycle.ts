@@ -178,6 +178,7 @@ export interface RunSseStreamController {
     runId: string,
     start: (signal: AbortSignal, onChunk: (chunk: string) => void) => Promise<void>,
     onEvent: (event: unknown) => void,
+    onChunkObserved?: () => void,
   ): boolean;
   clear(runId: string): void;
   clearAll(): void;
@@ -205,11 +206,14 @@ export function createRunSseStreamController(maxBufferCharacters = 1024 * 1024):
   };
 
   return {
-    ensure: (runId, start, onEvent) => {
+    ensure: (runId, start, onEvent, onChunkObserved) => {
       if (activeStreams.has(runId)) return false;
       const controller = new AbortController();
       activeStreams.set(runId, controller);
-      void start(controller.signal, (chunk) => consume(runId, chunk, onEvent))
+      void start(controller.signal, (chunk) => {
+        onChunkObserved?.();
+        consume(runId, chunk, onEvent);
+      })
         .catch(() => {})
         .finally(() => {
           if (activeStreams.get(runId) === controller) activeStreams.delete(runId);

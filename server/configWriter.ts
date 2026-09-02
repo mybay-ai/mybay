@@ -11,10 +11,26 @@ import { isMaskedSecretPlaceholder, redactSecretsDeep } from "./utils/sanitizer"
 import { buildInstancePublicUrl } from "./utils/publicUrl";
 import { ensureEncryptedDashboardAuthSecret } from "./utils/dashboardAuthSecret";
 import { MANAGED_OPERATION_SYSTEM_POLICY } from "./utils/managedOperationGuard";
+import { buildA2AYamlConfig } from "./services/a2aRuntimeConfig";
 
 export const DEFAULT_AGENT_MAX_TURNS = 60;
+export const HERMES_NATIVE_CONFIG_VERSION = 12;
 export const DEFAULT_AGENT_GATEWAY_TIMEOUT = 300;
 export const DEFAULT_AGENT_RESTART_DRAIN_TIMEOUT = 60;
+// Hermes counts total API attempts here. Two preserves one transient-network
+// recovery attempt without allowing a single provider outage to stall a Run
+// through three full connection/read timeout windows.
+export const DEFAULT_AGENT_API_MAX_RETRIES = 2;
+export const DEFAULT_AGENT_DISABLED_TOOLSETS = Object.freeze([
+  "session_search",
+  "browser",
+  "delegation",
+  "image_gen",
+  "vision",
+] as const);
+export const EMPTY_SKILLS_DISABLED_TOOLSET = "skills";
+export const DEFAULT_AGENT_MCP_RESULT_SIZE_CHARS = 20_000;
+export const HERMES_A2A_PLUGIN = "platforms/a2a";
 export const DEFAULT_DELEGATION_CONFIG = {
   max_iterations: 15,
   max_concurrent_children: 1,
@@ -22,6 +38,44 @@ export const DEFAULT_DELEGATION_CONFIG = {
   child_timeout_seconds: 600,
   orchestrator_enabled: false
 };
+
+export function resolveAgentDisabledToolsets(config: any = {}): string[] {
+  const configured = config?.agentDisabledToolsets;
+  const hasExplicitPolicy = Array.isArray(configured);
+  const configuredSkills = Array.isArray(config?.skills)
+    ? config.skills.filter((value: unknown) => typeof value === "string" && value.trim())
+    : [];
+  const source = hasExplicitPolicy
+    ? configured
+    : [
+        ...DEFAULT_AGENT_DISABLED_TOOLSETS,
+        ...(configuredSkills.length === 0 ? [EMPTY_SKILLS_DISABLED_TOOLSET] : []),
+      ];
+
+  return Array.from(new Set(source
+    .filter((value: unknown): value is string => typeof value === "string")
+    .map((value: string) => value.trim())
+    .filter((value: string) => /^[a-z0-9_-]+$/i.test(value))));
+}
+
+export function resolveHermesPluginPolicy(
+  config: any = {},
+  enabled: string[] = [],
+  disabled: string[] = [],
+): { enabled: string[]; disabled: string[] } {
+  const nextEnabled = [...enabled];
+  let nextDisabled = [...disabled];
+
+  if (config?.a2aEnabled === true) {
+    if (!nextEnabled.includes(HERMES_A2A_PLUGIN)) nextEnabled.push(HERMES_A2A_PLUGIN);
+    nextDisabled = nextDisabled.filter((plugin) => plugin !== HERMES_A2A_PLUGIN);
+  }
+
+  return {
+    enabled: Array.from(new Set(nextEnabled)),
+    disabled: Array.from(new Set(nextDisabled)),
+  };
+}
 
 export function buildHermesNativeYamlTemplate(
   provider = "openai",
@@ -32,7 +86,19 @@ export function buildHermesNativeYamlTemplate(
   pluginsBlock = "",
   config: any = {}
 ) {
+  const disabledToolsetsYaml = resolveAgentDisabledToolsets(config)
+    .map((toolset) => `    - ${JSON.stringify(toolset)}`)
+    .join("\n");
+
+  const a2aYaml = buildA2AYamlConfig(config);
+  const gatewayYaml = yaml.dump(a2aYaml.gateway || {}).trim();
+  const a2aAgentsYaml = a2aYaml.a2a_agents
+    ? `\na2a_agents:\n${yaml.dump(a2aYaml.a2a_agents).split("\n").filter(Boolean).map((line) => `  ${line}`).join("\n")}\n`
+    : "";
+
   return `
+_config_version: ${HERMES_NATIVE_CONFIG_VERSION}
+
 model:
   provider: "${provider}"
   default: "${model}"
@@ -48,7 +114,7 @@ agent:
   max_turns: ${DEFAULT_AGENT_MAX_TURNS}
   gateway_timeout: ${DEFAULT_AGENT_GATEWAY_TIMEOUT}
   restart_drain_timeout: ${DEFAULT_AGENT_RESTART_DRAIN_TIMEOUT}
-  api_max_retries: 3
+  api_max_retries: ${DEFAULT_AGENT_API_MAX_RETRIES}
   service_tier: "standard"
   tool_use_enforcement: "auto"
   task_completion_guidance: true
@@ -59,7 +125,11 @@ agent:
   gateway_notify_interval: 60
   gateway_auto_continue_freshness: 1800
   image_input_mode: "auto"
-  disabled_toolsets: []
+  disabled_toolsets:
+${disabledToolsetsYaml || "    []"}
+
+tool_budget:
+  mcp_result_size_chars: ${DEFAULT_AGENT_MCP_RESULT_SIZE_CHARS}
 
 terminal: {}
 web: {}
@@ -82,8 +152,10 @@ delegation:
   orchestrator_enabled: ${DEFAULT_DELEGATION_CONFIG.orchestrator_enabled}
 skills: {}
 security: {}
-gateway: {}
+gateway:
+${gatewayYaml === "{}" ? "  {}" : gatewayYaml.split("\n").map((line) => `  ${line}`).join("\n")}
 sessions: {}
+${a2aAgentsYaml}
 
 model_catalog:
   enabled: false
@@ -356,6 +428,12 @@ export function writePhysicalConfigs(instanceId: string, config: any) {
         pluginsDisabled = [...config.plugins.disabled];
       }
     }
+
+    ({ enabled: pluginsEnabled, disabled: pluginsDisabled } = resolveHermesPluginPolicy(
+      config,
+      pluginsEnabled,
+      pluginsDisabled,
+    ));
 
     if (config.nativeDashboardBasicAuthEnabled === true) {
       ensureEncryptedDashboardAuthSecret(config);

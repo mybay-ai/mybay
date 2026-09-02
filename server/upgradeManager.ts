@@ -8,7 +8,7 @@ import { writePhysicalConfigs } from "./configWriter";
 import { getHostPath, buildDockerHostConfig, createGatewayContainer, createDashboardContainer, ensureFrontendBuilt } from "./dockerDeployment";
 import { getTraefikLabels } from "./proxy/traefik";
 import { parseTraefikEnv } from "./infrastructure/traefik/traefikConfig";
-import { runInstanceHealthChecks } from "./healthCheck";
+import { getContainerLogTail, probeGatewayReadiness } from "./healthCheck";
 import { rebuildProxyConfig } from "./proxy/nginx";
 import { resolveInstanceRole } from "./utils/instanceRole";
 
@@ -20,8 +20,30 @@ import {
   instanceOperationCoordinator,
   type InstanceOperation,
 } from "./services/instances/instanceOperationCoordinator";
+import type { AgentUpgradePhase } from "../shared/agentUpgradePhase";
 
 type UpgradeOperationResult = { success: boolean; error?: string };
+
+async function persistUpgradePhase(instanceId: string, phase: AgentUpgradePhase, io: SocketIOServer) {
+  await dbAdapter.updateInstanceVersionInfo(instanceId, { upgrade_phase: phase });
+  io.emit("instances_updated", { id: instanceId, upgrade_phase: phase });
+}
+
+async function waitForChatReadiness(
+  containerName: string,
+  instanceId: string,
+  enabledChannels: string[],
+): Promise<{ ready: boolean; detail: string }> {
+  let lastDetail = "Chat API port or gateway is not ready";
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const logsTail = await getContainerLogTail(containerName, 120).catch(() => "");
+    const probe = await probeGatewayReadiness(docker.getContainer(containerName), instanceId, logsTail, enabledChannels);
+    if (probe.gateway_ready && probe.chat_ready) return { ready: true, detail: "ready" };
+    lastDetail = probe.gateway_error || `gateway=${probe.gateway_status}, chat_ready=${Boolean(probe.chat_ready)}`;
+    if (attempt < 9) await new Promise(resolve => setTimeout(resolve, 3000));
+  }
+  return { ready: false, detail: lastDetail };
+}
 
 async function withInstanceUpgradeOperation(
   instanceId: string,
@@ -76,6 +98,13 @@ async function rollbackInstanceUnlocked(
     return res;
   } catch (err: any) {
     activeUpgrades.delete(instanceId);
+    await dbAdapter.updateInstanceVersionInfo(instanceId, {
+      status: instance.status || "running",
+      upgrade_status: "failed",
+      upgrade_phase: "failed",
+      upgrade_error: err.message || String(err),
+    }).catch(() => {});
+    io.emit("instances_updated", { id: instanceId, upgrade_phase: "failed" });
     return { success: false, error: err.message || String(err) };
   }
 }
@@ -264,6 +293,13 @@ async function upgradeInstanceUnlocked(
     return res;
   } catch (err: any) {
     activeUpgrades.delete(instanceId);
+    await dbAdapter.updateInstanceVersionInfo(instanceId, {
+      status: instance.status || "running",
+      upgrade_status: "failed",
+      upgrade_phase: "failed",
+      upgrade_error: err.message || String(err),
+    }).catch(() => {});
+    io.emit("instances_updated", { id: instanceId, upgrade_phase: "failed" });
     return { success: false, error: err.message || String(err) };
   }
 }
@@ -312,15 +348,21 @@ async function upgradeInstanceFlow(
   const targetImageFull = `${agentImage}:${imageTag}`;
 
   // 1. Mark status as upgrading
+  let currentPhase: AgentUpgradePhase = isDirectRollback ? "rolling_back" : "queued";
   await dbAdapter.updateInstanceVersionInfo(instanceId, {
     status: "upgrading",
     upgrade_status: "upgrading",
+    upgrade_phase: currentPhase,
     last_upgrade_at: new Date().toISOString(),
     previous_image_tag: previousTag
   });
   io.emit("instances_updated", { id: instanceId, status: "upgrading" });
 
   const logAction = isDirectRollback ? "rollback" : "upgrade";
+  const setPhase = async (phase: AgentUpgradePhase) => {
+    currentPhase = phase;
+    await persistUpgradePhase(instanceId, phase, io);
+  };
   const logUpgrade = async (msg: string) => {
     console.log(`[${logAction.toUpperCase()}][${instanceId}] ${msg}`);
     io.emit(`deploy_log_${instanceId}`, {
@@ -332,7 +374,8 @@ async function upgradeInstanceFlow(
       action: `${logAction}_progress`,
       user_id: userId,
       timestamp: new Date().toISOString(),
-      details: msg
+      details: msg,
+      phase: currentPhase
     });
   };
 
@@ -340,6 +383,7 @@ async function upgradeInstanceFlow(
 
   // Step 2. Pull target image
   try {
+    if (!isDirectRollback) await setPhase("pulling_image");
     let shouldPull = true;
 
     if (vObj?.source === "local_docker") {
@@ -392,6 +436,9 @@ async function upgradeInstanceFlow(
 
   // Step 3. Prepare config mapping & variables
   const config = JSON.parse(instance.config_json);
+  const { hydrateA2ARuntimePeers } = await import("./services/a2aRuntimeConfig");
+  await hydrateA2ARuntimePeers(instanceId, config);
+  if (!isDirectRollback) await setPhase("rebuilding");
   const ctx = buildDeploymentContext(instance, config);
   const gatewayContainerName = ctx.gatewayContainerName;
   const dashboardContainerName = ctx.dashboardContainerName;
@@ -440,6 +487,7 @@ async function upgradeInstanceFlow(
     await dbAdapter.updateInstanceVersionInfo(instanceId, {
       status: "running",
       upgrade_status: "failed",
+      upgrade_phase: "failed",
       upgrade_error: errMsg
     });
     
@@ -539,6 +587,12 @@ async function upgradeInstanceFlow(
       HostConfig: hostConfig
     });
 
+    if (config.a2aEnabled === true) {
+      const { connectContainerToA2ANetwork } = await import("./services/a2aNetwork");
+      await connectContainerToA2ANetwork(docker, nextCreatedDash.id || dashboardContainerName);
+      await logUpgrade(`[Agent 协作] 已接入仅内部可达的 A2A 协作网络，未映射宿主机端口。`);
+    }
+
     await nextCreatedDash.start();
     await logUpgrade(`[创建新节点] 统一运行 of 麦贝容器启动成功！`);
 
@@ -580,6 +634,7 @@ async function upgradeInstanceFlow(
   }
 
   // Step 6. Perform health check on the new version
+  if (!isDirectRollback) await setPhase("health_check");
   await logUpgrade(`[健康自检] 正在测试新容器节点的端口可用性以及链路通信质量...`);
   try {
     const healthResult = await new Promise<{ success: boolean; err?: string }>((resolve) => {
@@ -604,6 +659,19 @@ async function upgradeInstanceFlow(
     }
 
     await logUpgrade(`[健康自检] ✅ 恭喜！各项端口测压通过，服务健康度：优！`);
+
+    if (!isDirectRollback) await setPhase("chat_ready");
+    await logUpgrade(`[对话就绪] 正在验证 Agent 网关与 Chat API 端口是否可以接收对话任务...`);
+    const enabledChannels = [
+      ...(Array.isArray(config.enabledChannels) ? config.enabledChannels : []),
+      ...(Array.isArray(config.channels) ? config.channels : []),
+      ...(config.channel ? [config.channel] : []),
+    ].map(channel => String(channel).toLowerCase());
+    const chatReadiness = await waitForChatReadiness(dashboardContainerName, instanceId, [...new Set(enabledChannels)]);
+    if (!chatReadiness.ready) {
+      throw new Error(`Chat readiness check failed: ${chatReadiness.detail}`);
+    }
+    await logUpgrade(`[对话就绪] ✅ Agent 网关与 Chat API 已就绪，可以开始对话。`);
 
     // Clean up temporary old backup containers
     await logUpgrade(`[深度提纯] 正在安全的擦除和回收历史未启用的暂存容器物理资源...`);
@@ -642,12 +710,15 @@ async function upgradeInstanceFlow(
       agent_version: resolvedVer,
       resolved_version: resolvedVer,
       upgrade_status: "success",
+      upgrade_phase: isDirectRollback ? "rolled_back" : "completed",
       upgrade_error: null,
+      container_id: nextCreatedDash.id,
       container_name: dashboardContainerName,
       data_volume_path: hostInstanceDataDir,
       traefik_labels: isTraefik ? JSON.stringify(dashboardLabels) : null
     });
     io.emit("instances_updated", { id: instanceId, status: "running" });
+    currentPhase = isDirectRollback ? "rolled_back" : "completed";
 
     await logUpgrade(`[执行完成] 🎉 实例 ${instance.name} 已彻底成功调度至镜像 ${targetImageFull}！所有前端访问、端口以及数据资产保持完好且零丢失！`);
 
@@ -682,6 +753,8 @@ async function rollbackFlow(
   const gatewayContainerName = ctx.gatewayContainerName;
   const dashboardContainerName = ctx.dashboardContainerName;
 
+  let rollbackPhase: AgentUpgradePhase = "rolling_back";
+  await persistUpgradePhase(instanceId, rollbackPhase, io);
   const logRollback = async (msg: string) => {
     console.log(`[ROLLBACK][${instanceId}] ${msg}`);
     io.emit(`deploy_log_${instanceId}`, {
@@ -693,7 +766,8 @@ async function rollbackFlow(
       action: "rollback_progress",
       user_id: userId,
       timestamp: new Date().toISOString(),
-      details: msg
+      details: msg,
+      phase: rollbackPhase
     });
   };
 
@@ -741,9 +815,11 @@ async function rollbackFlow(
     await dbAdapter.updateInstanceVersionInfo(instanceId, {
       status: "running",
       upgrade_status: "failed",
+      upgrade_phase: "rolled_back",
       upgrade_error: upgradeError
     });
     io.emit("instances_updated", { id: instanceId, status: "running" });
+    rollbackPhase = "rolled_back";
 
     await logRollback(`[回滚成功] ✅ 恭喜！链路崩溃防护隔离完成！服务已被完整恢复在先前稳定版本 [${originalTag}]！原前端解析与凭据保持完备！`);
 
@@ -753,6 +829,7 @@ async function rollbackFlow(
     await dbAdapter.updateInstanceVersionInfo(instanceId, {
       status: "failed",
       upgrade_status: "failed",
+      upgrade_phase: "failed",
       upgrade_error: `${upgradeError} | Rollback failed: ${rollbackErr.message}`
     });
     io.emit("instances_updated", { id: instanceId, status: "failed" });
@@ -770,6 +847,16 @@ export async function bulkUpgrade(
   const results: { [id: string]: { success: boolean; error?: string } } = {};
   const queue = [...instanceIds];
 
+  await Promise.all(instanceIds.map(async (instanceId) => {
+    await dbAdapter.updateInstanceVersionInfo(instanceId, {
+      upgrade_status: "upgrading",
+      upgrade_phase: "queued",
+      upgrade_error: null,
+      last_upgrade_at: new Date().toISOString(),
+    });
+    io.emit("instances_updated", { id: instanceId, upgrade_phase: "queued" });
+  }));
+
   const work = async () => {
     while (queue.length > 0) {
       const id = queue.shift();
@@ -777,8 +864,22 @@ export async function bulkUpgrade(
       try {
         const res = await upgradeInstance(id, targetTag, userId, role, io);
         results[id] = res;
+        if (!res.success) {
+          await dbAdapter.updateInstanceVersionInfo(id, {
+            upgrade_status: "failed",
+            upgrade_phase: "failed",
+            upgrade_error: res.error || "Bulk upgrade task failed before execution",
+          }).catch(() => {});
+          io.emit("instances_updated", { id, upgrade_phase: "failed" });
+        }
       } catch (err: any) {
         results[id] = { success: false, error: err.message || String(err) };
+        await dbAdapter.updateInstanceVersionInfo(id, {
+          upgrade_status: "failed",
+          upgrade_phase: "failed",
+          upgrade_error: err.message || String(err),
+        }).catch(() => {});
+        io.emit("instances_updated", { id, upgrade_phase: "failed" });
       }
     }
   };

@@ -8,14 +8,14 @@ import zh from "../../locales/zh-CN/dashboard/chatWorkspace.json";
 import { ChatInputBar } from "./ChatInputBar";
 import type { RunsCapabilityState } from "./runCapabilityProbe";
 
-async function renderMode(state: RunsCapabilityState, mode: "quick" | "agent" = "agent", language = "en", sending = false) {
+async function renderMode(state: RunsCapabilityState, mode: "quick" | "agent" = "agent", language = "en", sending = false, loadingConversations = false) {
   const i18n = createInstance();
   await i18n.use(initReactI18next).init({ lng: language, interpolation: { escapeValue: false }, resources: {
     en: { dashboard: { chatWorkspace: en } }, "zh-CN": { dashboard: { chatWorkspace: zh } },
   } });
   return renderToStaticMarkup(<I18nextProvider i18n={i18n}><ChatInputBar
     input="kept draft" attachmentConfig={{ allowedExtensions: null, maxFiles: null, maxFileSizeBytes: 1024 }}
-    sending={sending} activeRunId={sending ? "restored-run" : null} isChatReady
+    sending={sending} activeRunId={sending ? "restored-run" : null} isChatReady loadingConversations={loadingConversations}
     selectedChannel="web" chatMode={mode} onChatModeChange={vi.fn()} reasoningEffort="balanced" onReasoningEffortChange={vi.fn()}
     agentAvailable={state === "supported"} agentCapabilityState={state}
     onInputChange={vi.fn()} onSubmit={vi.fn()} onKeyDown={vi.fn()} onStopRun={vi.fn()}
@@ -55,4 +55,15 @@ describe("restored Agent mode capability guard", () => {
     expect(stop).toBeDefined();
     expect(stop).not.toMatch(/\sdisabled(?:=|\s|>)/);
   });
+
+  it.each([["en", en.loadingConversations], ["zh-CN", zh.loadingConversations]] as const)(
+    "blocks sending with a translated status while conversations restore (%s)",
+    async (language, message) => {
+      const html = await renderMode("supported", "agent", language, false, true);
+      expect(html).toContain('type="submit" disabled');
+      expect(html).toContain('role="status"');
+      expect(html).toContain(message);
+      expect(html).toContain("kept draft");
+    },
+  );
 });

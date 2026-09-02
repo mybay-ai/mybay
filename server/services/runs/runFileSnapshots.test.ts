@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getStoredFileDiff, isSnapshotPath, pruneRunFileDiffs, validateRunFileDiffs } from "./runFileSnapshots";
+import { decodeSnapshotWorkerResponse, getStoredFileDiff, isSnapshotPath, pruneRunFileDiffs, validateRunFileDiffs } from "./runFileSnapshots";
 
 const snapshot = { version: 1, runId: "r", conversationId: "c", capturedBefore: "2026-08-31T00:00:00Z", capturedAfter: "2026-08-31T00:00:01Z", files: [{ path: "src/a.ts", before: "old", after: "new" }] };
 describe("file snapshot boundaries", () => {
@@ -30,5 +30,16 @@ describe("file snapshot boundaries", () => {
     expect(rows[0].file_diffs).toBeUndefined();
     expect(rows[24].file_diffs).toEqual(snapshot);
     expect(rows.map(r => r.file_evidence.marker)).toEqual(Array.from({ length: 25 }, (_, i) => i));
+  });
+  it("accepts only bounded, correlated persistent-worker response frames", () => {
+    expect(decodeSnapshotWorkerResponse('{"id":"snapshot-12","ok":true,"value":{"files":[]}}')).toEqual({
+      id: "snapshot-12",
+      ok: true,
+      value: { files: [] },
+    });
+    expect(decodeSnapshotWorkerResponse('{"id":"other-12","ok":true}')).toBeUndefined();
+    expect(decodeSnapshotWorkerResponse('{"id":"snapshot-12","ok":"yes"}')).toBeUndefined();
+    expect(decodeSnapshotWorkerResponse("not-json")).toBeUndefined();
+    expect(decodeSnapshotWorkerResponse("x".repeat(2 * 1024 * 1024 + 1))).toBeUndefined();
   });
 });

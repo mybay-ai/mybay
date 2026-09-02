@@ -26,6 +26,7 @@ export function createChatCancellationController(options: {
   setSending: Dispatch<SetStateAction<boolean>>;
   setActiveRunConversationId: Dispatch<SetStateAction<string | null>>;
   handleStopRun: (runId: string, instanceId: string) => Promise<any>;
+  resumeActiveRunStreams: (runId: string, instanceId: string, conversationId: string) => void;
   waitForRunRelease: (instanceId: string, runId: string) => Promise<RunReleaseResult>;
   isCurrentRunContext: (runId: string, conversationId: string) => boolean;
   stopActiveRunStreams: () => void;
@@ -47,6 +48,7 @@ export function createChatCancellationController(options: {
     setSending,
     setActiveRunConversationId,
     handleStopRun,
+    resumeActiveRunStreams,
     waitForRunRelease,
     isCurrentRunContext,
     stopActiveRunStreams,
@@ -84,8 +86,20 @@ export function createChatCancellationController(options: {
     const targetConversationId = selectedConversationIdRef.current;
     if (!targetInstanceId || !targetConversationId || !targetRunId) return;
 
+    // Release the active SSE connection before issuing the control request.
+    // Browsers enforce a small per-origin HTTP/1.1 connection budget; keeping
+    // the stream open can otherwise queue the stop request behind the run it
+    // is supposed to cancel.
+    stopActiveRunStreams();
     const stopResult = await handleStopRun(targetRunId, targetInstanceId);
-    if (!stopResult?.ok) return;
+    if (!stopResult?.ok) {
+      if (selectedIdRef.current === targetInstanceId
+        && selectedConversationIdRef.current === targetConversationId
+        && isCurrentRunContext(targetRunId, targetConversationId)) {
+        resumeActiveRunStreams(targetRunId, targetInstanceId, targetConversationId);
+      }
+      return;
+    }
     if (selectedIdRef.current !== targetInstanceId
       || selectedConversationIdRef.current !== targetConversationId
       || !isCurrentRunContext(targetRunId, targetConversationId)) return;
@@ -94,7 +108,6 @@ export function createChatCancellationController(options: {
     // cancellation can finish later, so release the composer and close streams
     // now, then reconcile the persisted result in the background.
     const terminalStatus = isTerminalStopStatus(stopResult.status) ? stopResult.status : "stopped";
-    stopActiveRunStreams();
     finalizeActiveRunUi(targetRunId, terminalStatus);
     setActiveRunConversationId(null);
     activeChatGenerationRef.current += 1;

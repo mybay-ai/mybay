@@ -79,13 +79,14 @@ function prepareRepository(run: ReturnType<typeof runtimeRun>) {
     owner_id: run.user_id,
     config_json: {},
   } as never);
-  vi.spyOn(chatRepo, "listMessages").mockResolvedValue([{
+  vi.spyOn(chatRepo, "getMessage").mockResolvedValue({
     id: run.user_message_id,
+    conversation_id: run.conversation_id,
     request_id: run.request_id,
     role: "user",
     content: "fake runtime request",
     metadata: {},
-  }] as never);
+  } as never);
   vi.spyOn(chatRepo, "getLatestCompletedMessagesForContext").mockResolvedValue([]);
   vi.spyOn(chatRepo, "getConversationForSessionBinding").mockResolvedValue(null);
   vi.spyOn(chatRepo, "getChatRun").mockResolvedValue(run as never);
@@ -117,9 +118,12 @@ describe("second Runtime reconciler compatibility", () => {
   it("dispatches a queued Run through its persisted non-Hermes binding", async () => {
     const run = runtimeRun("fake-dispatch-run", "queued");
     prepareRepository(run);
+    const listMessages = vi.spyOn(chatRepo, "listMessages");
 
     await processSingleRun(run, new Set(), { runtimeRegistry: registryFor(fixture) });
 
+    expect(chatRepo.getMessage).toHaveBeenCalledWith("message-1");
+    expect(listMessages).not.toHaveBeenCalled();
     expect(fixture.state.ensuredSessions).toEqual([expect.objectContaining({
       instance_id: "instance-1",
       conversation_id: "conversation-1",

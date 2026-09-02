@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { Socket } from "socket.io-client";
 import { api } from "../../lib/api";
 import { getChatErrorMessage } from "../../lib/chatRuntimeErrors";
 import { getAuthToken } from "../../lib/auth";
@@ -9,6 +10,7 @@ import { canExecutePollingCallback, finalizeRunMetrics, finalizeRunSteps, isTerm
 import { normalizeRunSseResumeCursor, observeRunSseEventId } from "./runSseCursor";
 import { createRunExecutionState, deriveAssistantText, deriveToolSteps } from "./run/runReducer";
 import { consumeRunSseFrame } from "./run/runStreamCoordinator";
+import { resolveTextFlushDelay } from "./streamingPresentation";
 import { mergeRecoveredStreamingContent } from "./run/runTextReconciliation";
 import type { RunExecutionState, RunExecutionStatus, ToolEventPayload } from "./run/runTypes";
 import { finalizeRunExecution } from "./run/runFinalizer";
@@ -69,7 +71,34 @@ type UseChatRunsParams = {
   showToast: (message: string, type?: any) => void;
   t: (key: string, options?: any) => string;
   notificationUserId?: string;
+  socket?: Socket | null;
 };
+
+export async function requestChatRunStop(options: {
+  socket?: Socket | null;
+  instanceId: string;
+  runId: string;
+  fallback: () => Promise<any>;
+}): Promise<any> {
+  if (!options.socket?.connected) return options.fallback();
+  return new Promise((resolve, reject) => {
+    (options.socket as any).timeout(2500).emit(
+      "chat_workspace:stop_run",
+      { instanceId: options.instanceId, runId: options.runId },
+      (timeoutError: Error | null, response?: any) => {
+        if (timeoutError) {
+          void options.fallback().then(resolve, reject);
+          return;
+        }
+        if (response?.success) {
+          resolve(response);
+          return;
+        }
+        reject(Object.assign(new Error(String(response?.error || "RUN_STOP_FAILED")), { code: response?.error }));
+      },
+    );
+  });
+}
 
 export function useChatRuns({
   selectedId,
@@ -80,7 +109,8 @@ export function useChatRuns({
   refreshAuthoritativeHistory,
   showToast,
   t,
-  notificationUserId = ""
+  notificationUserId = "",
+  socket = null,
 }: UseChatRunsParams) {
   const [capabilitySnapshot, setCapabilitySnapshot] = useState<RunCapabilitySnapshot>(() => checkingRunCapabilities(""));
   const { state: runsCapabilityState, details: runCapabilities } = scopedRunCapabilities(capabilitySnapshot, selectedId);
@@ -109,6 +139,7 @@ export function useChatRuns({
   const recoveryTextBaselineRef = useRef("");
   const pendingTextConversationIdRef = useRef<string | null>(null);
   const textFlushTimerRef = useRef<any>(null);
+  const hasRenderedStreamingTextRef = useRef(false);
   const setStopPending = useCallback((pending: boolean) => {
     stopPendingRef.current = pending;
     setStopPendingState(pending);
@@ -191,6 +222,7 @@ export function useChatRuns({
     }
     pendingTextRef.current = "";
     pendingTextConversationIdRef.current = null;
+    hasRenderedStreamingTextRef.current = false;
     recoveryTextBaselineRef.current = params.recoveryTextBaseline || "";
     lastEventIdRef.current = normalizeRunSseResumeCursor(params.resumeAfterEventId);
     setApprovalRequests([]);
@@ -218,13 +250,19 @@ export function useChatRuns({
     if (execution) runExecutionRef.current = execution;
     setRunExecutionState(execution);
     if (execution) setMessages(prev => applyRunExecutionToMessages(prev, execution));
+    hasRenderedStreamingTextRef.current = true;
   }, [setMessages]);
 
   const scheduleTextFlush = useCallback(() => {
     if (textFlushTimerRef.current) return;
+    const delayMs = resolveTextFlushDelay(hasRenderedStreamingTextRef.current);
+    if (delayMs === 0) {
+      flushPendingText();
+      return;
+    }
     textFlushTimerRef.current = setTimeout(() => {
       flushPendingText();
-    }, 120);
+    }, delayMs);
   }, [flushPendingText]);
 
   const stopTerminalWatchdog = useCallback(() => {
@@ -269,6 +307,7 @@ export function useChatRuns({
     pendingTextRef.current = "";
     pendingTextConversationIdRef.current = null;
     recoveryTextBaselineRef.current = "";
+    hasRenderedStreamingTextRef.current = false;
     if (textFlushTimerRef.current) {
       clearTimeout(textFlushTimerRef.current);
       textFlushTimerRef.current = null;
@@ -585,7 +624,12 @@ export function useChatRuns({
     });
   }, [finalizeActiveRunUi, refreshAuthoritativeHistory, refreshRunMetrics, selectedConversationIdRef, selectedIdRef, setMessages, setRunTransportState, setSending, setStopPending, stopTerminalWatchdog, notificationUserId]);
 
-  const streamActiveRun = useCallback(async (runId: string, boundInstanceId = selectedIdRef.current, boundConversationId = selectedConversationIdRef.current) => {
+  const streamActiveRun = useCallback(async (
+    runId: string,
+    boundInstanceId = selectedIdRef.current,
+    boundConversationId = selectedConversationIdRef.current,
+    clientTiming?: { submittedAt?: number | null; acceptedAt?: number | null },
+  ) => {
     const streamGeneration = pollingGenerationRef.current;
     if (!boundInstanceId || !boundConversationId || currentRunIdRef.current !== runId) return;
 
@@ -601,6 +645,8 @@ export function useChatRuns({
     let attempt = 0;
     const maxAttempts = 5;
     let isTerminal = false;
+    let firstBusinessEventLogged = false;
+    let firstTextEventLogged = false;
 
     let fallbackStarted = false;
     const triggerFallback = () => {
@@ -636,6 +682,7 @@ export function useChatRuns({
       }
 
       let resetAttemptTimeoutId: any = null;
+      const connectStartedAt = Date.now();
 
       try {
         const urlSuffix = currentSeq > 0 ? `?last_event_id=${currentSeq}` : "";
@@ -657,6 +704,14 @@ export function useChatRuns({
           throw new Error("Response body reader unavailable");
         }
         setRunTransportState(runId, "connected");
+        console.info(JSON.stringify({
+          operation: "CHAT_RUN_SSE_OPEN",
+          runId,
+          submittedToOpenMs: clientTiming?.submittedAt ? Date.now() - clientTiming.submittedAt : null,
+          acceptedToOpenMs: clientTiming?.acceptedAt ? Date.now() - clientTiming.acceptedAt : null,
+          connectMs: Date.now() - connectStartedAt,
+          attempt,
+        }));
 
         const decoder = new TextDecoder();
         let buffer = "";
@@ -692,6 +747,24 @@ export function useChatRuns({
                     isTerminal = true;
                   }
                 } catch {}
+              }
+              if (!firstBusinessEventLogged) {
+                firstBusinessEventLogged = true;
+                console.info(JSON.stringify({
+                  operation: "CHAT_RUN_FIRST_EVENT",
+                  runId,
+                  event: dispEvent,
+                  submittedToFirstEventMs: clientTiming?.submittedAt ? Date.now() - clientTiming.submittedAt : null,
+                }));
+              }
+              if (dispEvent === "text" && !firstTextEventLogged) {
+                firstTextEventLogged = true;
+                console.info(JSON.stringify({
+                  operation: "CHAT_RUN_FIRST_TEXT",
+                  runId,
+                  submittedToFirstTextMs: clientTiming?.submittedAt ? Date.now() - clientTiming.submittedAt : null,
+                  acceptedToFirstTextMs: clientTiming?.acceptedAt ? Date.now() - clientTiming.acceptedAt : null,
+                }));
               }
               handleParsedSSEEvent(currentEventId, dispEvent, currentData, boundInstanceId, boundConversationId, runId);
               currentEventId = 0;
@@ -807,7 +880,12 @@ export function useChatRuns({
     if (currentRunIdRef.current !== targetRunId) return { ok: false as const, error: "STALE_RUN" };
     setStopPending(true);
     try {
-      const res = await api.post(`/api/instances/${targetInstanceId}/runs/${targetRunId}/stop`);
+      const res = await requestChatRunStop({
+        socket,
+        instanceId: targetInstanceId,
+        runId: targetRunId,
+        fallback: () => api.post(`/api/instances/${targetInstanceId}/runs/${targetRunId}/stop`),
+      });
       if (res && res.success) {
         showToast(t("dashboard:chatWorkspace.stopRequestSent"), "success");
         const status = normalizeStopRunStatus(res.status || res.runStatus || res.run_status) || "stopping";
@@ -829,7 +907,7 @@ export function useChatRuns({
     } finally {
       setStopPending(false);
     }
-  }, [activeRunId, runCapabilities.runStop, selectedId, setStopPending, showToast, t]);
+  }, [activeRunId, runCapabilities.runStop, selectedId, setStopPending, showToast, socket, t]);
 
 
   const respondToApproval = useCallback(async (choice: ChatApprovalChoice, approvalId?: string, resolveAll = false) => {

@@ -13,14 +13,14 @@ interface InstanceGridProps {
   viewMode: 'grid' | 'table';
   activeLogs: string | null;
   setActiveLogs: (id: string | null) => void;
-  setDetailTab: (tab: 'logs' | 'files' | 'context' | 'diagnostics') => void;
+  setDetailTab: (tab: 'logs' | 'files' | 'context' | 'diagnostics' | 'collaboration') => void;
   currentUser: UserType;
   copiedId: string | null;
   handleExportConfig: (e: React.MouseEvent, id: string, name: string) => void;
   handleDelete: (id: string, e?: React.MouseEvent) => void;
   handleArchive: (id: string, e?: React.MouseEvent) => void;
   handleRestore: (id: string, e?: React.MouseEvent) => void;
-  handleInstanceAction: (id: string, action: string) => void;
+  handleInstanceAction: (id: string, action: string, requireConfirm?: boolean, confirmMsg?: string) => void;
   handleCopyUrl: (e: React.MouseEvent, url: string, instId: string) => void;
   handleOpenLink: (e: React.MouseEvent, inst: AgentInstance) => void;
   fetchInstances: () => void;

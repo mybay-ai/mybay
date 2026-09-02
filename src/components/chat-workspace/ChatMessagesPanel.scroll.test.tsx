@@ -43,4 +43,9 @@ describe("chat scrolling accessibility and markup", () => {
   it("hides the return control while following", async () => {
     expect(await renderPanel("en", false)).not.toContain('aria-label="Back to latest"');
   });
+  it("expands the message stream responsively on desktop", async () => {
+    const html = await renderPanel("en", false);
+    expect(html).toContain("max-w-5xl");
+    expect(html).toContain("2xl:max-w-6xl");
+  });
 });

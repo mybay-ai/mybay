@@ -222,7 +222,7 @@ export function Dashboard({ instances, loading, fetchInstances, socket, currentU
   }, [isAdmin, navigate]);
 
   const [activeLogs, setActiveLogs] = useState<string | null>(null);
-  const [detailTab, setDetailTab] = useState<'logs' | 'files' | 'context' | 'diagnostics'>('logs');
+  const [detailTab, setDetailTab] = useState<'logs' | 'files' | 'context' | 'diagnostics' | 'collaboration'>('logs');
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -343,7 +343,7 @@ export function Dashboard({ instances, loading, fetchInstances, socket, currentU
                       </span>
                     </a>
                     <a
-                      href="https://github.com/nousresearch/hermes-agent"
+                      href="https://github.com/mybay-ai/mybay"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex flex-col p-4 rounded-xl border border-outline hover:border-indigo-300 dark:hover:border-indigo-700 bg-surface-muted/50 transition-all"

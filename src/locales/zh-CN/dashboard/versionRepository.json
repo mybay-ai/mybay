@@ -1,6 +1,6 @@
 {
   "title": "镜像仓库",
-  "subtitle": "查看已发现的官方镜像及其本地 Docker 缓存状态",
+  "subtitle": "查看官方版本、能力矩阵及其本地 Docker 缓存状态",
   "refresh": "刷新本地列表",
   "refreshTitle": "重新载入本地已发现的版本列表",
   "versionFamily": "版本 / 家族",
@@ -12,10 +12,52 @@
   "pullImage": "拉取镜像",
   "core": "核心",
   "feishu": "飞书/Lark",
+  "capabilityMatrix": {
+    "items": {
+      "core": { "label": "核心", "description": "基础对话、工具和运行时能力" },
+      "feishu": { "label": "飞书/Lark", "description": "原生飞书与 Lark 通道支持" },
+      "a2a": { "label": "A2A", "description": "A2A v1.0 Agent 发现、调用和任务协议" },
+      "outbound_webhooks": { "label": "事件 Webhook", "description": "向外部系统推送带签名的运行事件" },
+      "agent_redirects": { "label": "运行中纠偏", "description": "不中止当前工作的情况下修正 Agent 方向" },
+      "mcp_health": { "label": "MCP 健康检查", "description": "MCP 服务健康状态与重新认证检测" },
+      "bot_mode": { "label": "Bot 模式", "description": "具备独立角色、模型、记忆与技能的持久 Bot" },
+      "peer_dm": { "label": "Bot 私信", "description": "同机或跨网关 Bot 之间的持久消息" },
+      "group_rooms": { "label": "Bot 群聊", "description": "多 Bot 群组会话和 @提及协作" },
+      "cron_continuity": { "label": "持续定时任务", "description": "可保留记忆、上下文和记事本的定时任务" },
+      "subagent_steering": { "label": "子 Agent 调度", "description": "查看、纠偏和停止运行中的子 Agent" },
+      "browser_control": { "label": "浏览器控制", "description": "Agent 可操作内置浏览器页面" },
+      "gateway_control": { "label": "Gateway 控制", "description": "Gateway 状态查询与优雅暂停能力" }
+    }
+  },
   "recommended": "推荐",
   "feishuUnsupported": "不支持飞书/Lark",
   "followLatest": "跟随最新",
   "loadingImages": "正在载入镜像仓库...",
+  "preflight": {
+    "title": "升级前安全检查",
+    "subtitle": "提交前核对目标版本、运行环境、数据与回滚条件",
+    "loading": "正在执行服务端安全检查...",
+    "ready": "可以升级",
+    "blocked": "暂不可升级",
+    "cancel": "取消",
+    "confirm": "确认并开始升级",
+    "resolveBlockers": "请先处理阻断项",
+    "summary": "{{passed}} 项通过 · {{warnings}} 项警告 · {{blockers}} 项阻断",
+    "statuses": { "pass": "检查通过", "warning": "请确认风险后继续", "blocker": "必须处理后才能升级" },
+    "checks": {
+      "TARGET_COMPATIBILITY": "目标版本与渠道兼容性",
+      "ACTIVE_OPERATION": "实例并发操作",
+      "INSTANCE_STATE": "实例运行状态",
+      "CONFIG_VALID": "实例配置完整性",
+      "DATA_DIRECTORY": "数据目录可用性",
+      "DISK_SPACE": "宿主机磁盘空间",
+      "ROLLBACK_READY": "回滚条件",
+      "TARGET_IMAGE": "目标镜像本地缓存",
+      "ARCHITECTURE": "镜像与主机架构",
+      "CHAT_READINESS": "当前对话就绪状态",
+      "SERVICE_INTERRUPTION": "升级期间短暂中断"
+    }
+  },
   "statuses": {
     "idle": "未下载",
     "queued": "等待拉取",

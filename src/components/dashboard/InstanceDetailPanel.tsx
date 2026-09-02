@@ -24,7 +24,8 @@ import {
   ExternalLink,
   ShieldCheck,
   Eye,
-  EyeOff
+  EyeOff,
+  Share2,
 } from "lucide-react";
 import { Socket } from "socket.io-client";
 import { useTranslation } from "react-i18next";
@@ -39,13 +40,14 @@ import { api } from "../../lib/api";
 import { useFeedback } from "../FeedbackProvider";
 import { getRefinedStatusLabel } from "./instanceStatus";
 import { APP_ROUTES } from "../../constants/routes";
+import { InstanceA2ACollaboration } from "./InstanceA2ACollaboration";
 
 interface InstanceDetailPanelProps {
   activeLogs: string | null;
   instances: AgentInstance[];
   setActiveLogs: (id: string | null) => void;
-  detailTab: 'logs' | 'files' | 'context' | 'diagnostics';
-  setDetailTab: (tab: 'logs' | 'files' | 'context' | 'diagnostics') => void;
+  detailTab: 'logs' | 'files' | 'context' | 'diagnostics' | 'collaboration';
+  setDetailTab: (tab: 'logs' | 'files' | 'context' | 'diagnostics' | 'collaboration') => void;
   currentUser: UserType;
   socket: Socket | null;
   terminalDetailsRef: React.RefObject<HTMLDivElement | null>;
@@ -596,57 +598,70 @@ export function InstanceDetailPanel({
         })()}
 
         {/* Tab Selection Row */}
-        <div className="flex items-center px-4 md:px-6 py-2 border-b border-slate-200/80 dark:border-slate-800 bg-surface-muted/30 gap-1.5 shrink-0 overflow-x-auto sm:overflow-visible">
+        <div className="grid grid-cols-2 sm:flex sm:items-center px-3 sm:px-4 md:px-6 py-2 border-b border-slate-200/80 dark:border-slate-800 bg-surface-muted/30 gap-1.5 shrink-0">
           <button
             onClick={() => setDetailTab('logs')}
             className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-semibold transition-all duration-150 shrink-0",
+              "flex min-w-0 items-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 rounded-lg text-[12px] sm:text-[13px] font-semibold transition-all duration-150",
               detailTab === 'logs'
                 ? "bg-slate-200 dark:bg-slate-800 text-content border border-slate-300/60 dark:border-slate-700 shadow-2xs"
                 : "text-content-muted hover:text-slate-800 dark:hover:text-slate-200 hover:bg-control-hover"
             )}
           >
             <Terminal className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-            <span>{t("instance_detail_logs_tab")}</span>
+            <span className="min-w-0 leading-tight">{t("instance_detail_logs_tab")}</span>
           </button>
 
           <button
             onClick={() => setDetailTab('files')}
             className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-semibold transition-all duration-150 shrink-0",
+              "flex min-w-0 items-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 rounded-lg text-[12px] sm:text-[13px] font-semibold transition-all duration-150",
               detailTab === 'files'
                 ? "bg-slate-200 dark:bg-slate-800 text-content border border-slate-300/60 dark:border-slate-700 shadow-2xs"
                 : "text-content-muted hover:text-slate-800 dark:hover:text-slate-200 hover:bg-control-hover"
             )}
           >
             <Folder className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-            <span>{t("instance_detail_files_tab")}</span>
+            <span className="min-w-0 leading-tight">{t("instance_detail_files_tab")}</span>
           </button>
 
           <button
             onClick={() => setDetailTab('context')}
             className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-semibold transition-all duration-150 shrink-0",
+              "flex min-w-0 items-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 rounded-lg text-[12px] sm:text-[13px] font-semibold transition-all duration-150",
               detailTab === 'context'
                 ? "bg-slate-200 dark:bg-slate-800 text-content border border-slate-300/60 dark:border-slate-700 shadow-2xs"
                 : "text-content-muted hover:text-slate-800 dark:hover:text-slate-200 hover:bg-control-hover"
             )}
           >
             <Briefcase className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-            <span>{t("instance_detail_context_tab")}</span>
+            <span className="min-w-0 leading-tight">{t("instance_detail_context_tab")}</span>
           </button>
 
           <button
             onClick={() => setDetailTab('diagnostics')}
             className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-semibold transition-all duration-150 shrink-0",
+              "flex min-w-0 items-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 rounded-lg text-[12px] sm:text-[13px] font-semibold transition-all duration-150",
               detailTab === 'diagnostics'
                 ? "bg-slate-200 dark:bg-slate-800 text-content border border-slate-300/60 dark:border-slate-700 shadow-2xs"
                 : "text-content-muted hover:text-slate-800 dark:hover:text-slate-200 hover:bg-control-hover"
             )}
           >
             <ShieldCheck className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-            <span>{t("instance_detail_diagnostics_tab")}</span>
+            <span className="min-w-0 leading-tight">{t("instance_detail_diagnostics_tab")}</span>
+          </button>
+
+          <button
+            onClick={() => setDetailTab('collaboration')}
+            className={cn(
+              "flex min-w-0 items-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 rounded-lg text-[12px] sm:text-[13px] font-semibold transition-all duration-150",
+              detailTab === 'collaboration'
+                ? "bg-slate-200 dark:bg-slate-800 text-content border border-slate-300/60 dark:border-slate-700 shadow-2xs"
+                : "text-content-muted hover:text-slate-800 dark:hover:text-slate-200 hover:bg-control-hover"
+            )}
+          >
+            <Share2 className="w-3.5 h-3.5 text-violet-600 shrink-0" />
+            <span className="min-w-0 leading-tight">{t("instance_detail_collaboration_tab")}</span>
           </button>
 
         </div>
@@ -673,6 +688,22 @@ export function InstanceDetailPanel({
             <div className="flex-1 p-0 overflow-y-auto bg-surface-muted/50">
               <InstanceRuntimeContextViewer instanceId={selectedInstance.id} />
             </div>
+          ) : detailTab === 'collaboration' ? (
+            <InstanceA2ACollaboration
+              instance={selectedInstance}
+              onRedeploy={() => handleInstanceAction(selectedInstance.id, "redeploy", true, t("confirm_redeploy"))}
+              onRetryInChat={(draft) => navigate(`${APP_ROUTES.CHAT_WORKSPACE}?instanceId=${encodeURIComponent(selectedInstance.id)}`, {
+                state: { a2aRetryDraft: draft, a2aRetryInstanceId: selectedInstance.id },
+              })}
+              onOpenPeer={(peerId) => {
+                if (!instances.some((candidate) => candidate.id === peerId)) {
+                  showToast(t("a2a.peerUnavailable"), "error");
+                  return;
+                }
+                setActiveLogs(peerId);
+                setDetailTab("collaboration");
+              }}
+            />
           ) : (
             <InstanceDiagnosticsWorkspace
               instanceId={selectedInstance.id}

@@ -44,6 +44,11 @@ import {
 } from "../../services/instanceConfig/instanceConfigRoutePolicy";
 import { createRuntimeConfigRoutes } from "./config/runtimeConfig.routes";
 import { createConfigArchiveRoutes } from "./configArchive.routes";
+import {
+  collectReservedInstancePorts,
+  disableCredentiallessA2AForRestore,
+  isContainerlessInstanceEligibleForDeployment,
+} from "../../utils/configArchiveRestorePolicy";
 
 export function createConfigRoutes(deps: RouterDependencies) {
   const router = Router();
@@ -467,17 +472,18 @@ export function createConfigRoutes(deps: RouterDependencies) {
       }
 
       // --- Local container locator security audit ---
+      const isInitialDeployment = isContainerlessInstanceEligibleForDeployment(instance);
       try {
         const dbContainerId = instance.container_id;
         const dbContainerName = instance.container_name;
 
-        if (!dbContainerId && !dbContainerName) {
+        if (!dbContainerId && !dbContainerName && !isInitialDeployment) {
           return res.status(400).json({
             error: "容器定位自检判定：由于该实例在数据库中没有容器标识（container_id 与 container_name 均为空），暂无法进行配置热更新保存并重启。请确认实例已被成功初次部署上线。"
           });
         }
 
-        const containers = await docker.listContainers({ all: true });
+        const containers = isInitialDeployment ? [] : await docker.listContainers({ all: true });
 
         // Helper function for safe, compatible container ID matching (long vs short)
         const isContainerIdMatch = (dockerId: string, savedId: string) => {
@@ -492,7 +498,10 @@ export function createConfigRoutes(deps: RouterDependencies) {
 
         const localExpectedName = dbContainerName || `mybay-agent-${instance.id}`;
 
-        if (dbContainerId) {
+        if (isInitialDeployment) {
+          // No existing container can be overwritten. The owned, stopped
+          // record is safe to save and will be created by executeDeployment.
+        } else if (dbContainerId) {
           // 1. Try to find container by DB containerId
           const matchingContainer = containers.find((c: any) => isContainerIdMatch(c.Id, dbContainerId));
           if (matchingContainer) {
@@ -538,6 +547,28 @@ export function createConfigRoutes(deps: RouterDependencies) {
       } catch (err: any) {
         console.error("Local container locator audit failed:", err);
         return res.status(500).json({ error: "容器定位自检判定异常，服务器内部异常" });
+      }
+
+      if (isInitialDeployment) {
+        disableCredentiallessA2AForRestore(normalizedConfig);
+        const siblingInstances = (await dbAdapter.getInstances(req.user.id, req.user.role))
+          .filter((candidate: any) => candidate.id !== instance.id);
+        const reservedPorts = collectReservedInstancePorts(siblingInstances);
+        const configuredPort = Number.parseInt(
+          String(normalizedConfig.host_port || normalizedConfig.port || ""),
+          10,
+        );
+        if (
+          !Number.isInteger(configuredPort)
+          || configuredPort < 1
+          || configuredPort > 65535
+          || reservedPorts.includes(configuredPort)
+          || [3000, 15929].includes(configuredPort)
+        ) {
+          const assignedPort = await findAvailablePort(docker, reservedPorts);
+          normalizedConfig.host_port = assignedPort;
+          normalizedConfig.port = String(assignedPort);
+        }
       }
 
       const isFeishu = normalizedConfig.channel === "feishu" || 

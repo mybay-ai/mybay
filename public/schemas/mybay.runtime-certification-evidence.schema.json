@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mybay.ai/schemas/mybay.runtime-certification-evidence.schema.json",
+  "title": "MyBay Runtime Certification Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "runtime", "checks"],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "providerKey", "contractVersion"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]{0,79}$"
+        },
+        "providerKey": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]{0,79}$"
+        },
+        "contractVersion": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["requirementId", "status", "scope", "observedAt", "environment", "evidenceRefs"],
+        "properties": {
+          "requirementId": {
+            "enum": [
+              "runtime-install",
+              "task-submit",
+              "streaming-output",
+              "cancellation",
+              "session-recovery",
+              "file-artifact",
+              "usage-reporting",
+              "tool-events",
+              "restart-recovery",
+              "control-plane-deploy",
+              "upgrade",
+              "rollback",
+              "security",
+              "backup-restore",
+              "real-e2e"
+            ]
+          },
+          "status": {
+            "enum": ["passed", "failed"]
+          },
+          "scope": {
+            "enum": ["contract", "runtime", "e2e"]
+          },
+          "observedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "validUntil": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "environment": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "command": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "evidenceRefs": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            }
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        }
+      }
+    }
+  }
+}

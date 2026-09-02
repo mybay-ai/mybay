@@ -3,7 +3,15 @@ import * as crypto from "crypto";
 import { AuthenticatedRequest, authenticateToken } from "../../../middlewares/auth";
 import { chatRepo } from "../../../repositories/chatRepo";
 import { probeCapabilities, probeCapabilitiesDetailed } from "../../../utils/capabilities";
-import { emitRunLifecycleStep, requestRunReconcile, requestRunsAPI, requestRunsReconcile } from "../../../services/runsReconciler";
+import {
+  discardRunFileSnapshot,
+  emitRunLifecycleStep,
+  primeRunFileSnapshot,
+  RECONCILER_ID,
+  requestRunReconcile,
+  requestRunsAPI,
+  requestRunsReconcile,
+} from "../../../services/runsReconciler";
 import { emitChatConversationUpdated } from "../../../services/chatRealtime";
 import { runsLimiter } from "./limiters";
 import { isValidInstanceId, isValidUUID } from "./validators";
@@ -23,6 +31,7 @@ import { safeLocalEvidencePath } from "../../../../shared/localRunFileEvidence";
 import { getStoredFileDiff } from "../../../services/runs/runFileSnapshots";
 import { isQuestionBridgeInstalling } from "../../../services/runs/questionBridgeInstaller";
 import { createConfiguredModelEvidence } from "../../../../shared/localModelEvidence";
+import { DEFAULT_RUN_LEASE_POLICY } from "../../../services/runs/runLease";
 
 export function requireInteractiveRunsEnabled(_req: AuthenticatedRequest, res: Response, next: NextFunction) {
   if (!isInteractiveRunsEnabled()) {
@@ -104,6 +113,9 @@ export function registerRunRoutes(router: Router) {
   // ======================================================================
   router.post("/:id/runs", authenticateToken, runsLimiter, requireInteractiveRunsEnabled, async (req: AuthenticatedRequest, res: Response) => {
 
+    const requestStartedAt = Date.now();
+    const acceptTiming: Record<string, number> = {};
+    let primedSnapshotRunId: string | null = null;
     const { id } = req.params;
     const { conversationId, content, requestId, reasoningEffort, attachmentIds } = req.body;
     if (isQuestionBridgeInstalling(id)) return res.status(409).json({ success: false, error: "INSTANCE_BUSY" });
@@ -145,13 +157,16 @@ export function registerRunRoutes(router: Router) {
     }
 
     try {
+      const authorityStartedAt = Date.now();
       const instanceAuthority = await resolveInstanceAuthority({ actor: authorityActorFromRequest(req), instanceId: id });
       if (instanceAuthority.ok === false) return sendAuthorityFailure(res, instanceAuthority, "无法访问目标实例。");
       const conversationAuthority = await resolveConversationAuthority({ instance: instanceAuthority, conversationId });
       if (conversationAuthority.ok === false) return sendAuthorityFailure(res, conversationAuthority, "对话会话不存在或无权访问。");
+      acceptTiming.authorityMs = Date.now() - authorityStartedAt;
       const instance = instanceAuthority.instance;
 
       let validatedFiles: any[] = [];
+      const attachmentValidationStartedAt = Date.now();
       try {
         validatedFiles = await loadAndValidateChatAttachments({
           attachmentIds,
@@ -166,6 +181,8 @@ export function registerRunRoutes(router: Router) {
           error: attachmentErr.error || "INVALID_ATTACHMENT",
           message: attachmentErr.message || "Invalid attachment."
         });
+      } finally {
+        acceptTiming.attachmentValidationMs = Date.now() - attachmentValidationStartedAt;
       }
       const config = instance.config_json ? JSON.parse(instance.config_json) : {};
       if (config.modelBillingMode === "platform") {
@@ -176,7 +193,9 @@ export function registerRunRoutes(router: Router) {
         });
       }
 
+      const capabilityProbeStartedAt = Date.now();
       const cap = await probeCapabilities(instance);
+      acceptTiming.capabilityProbeMs = Date.now() - capabilityProbeStartedAt;
       if (cap === 'explicitly_unsupported') {
         return res.status(422).json({
           success: false,
@@ -196,6 +215,9 @@ export function registerRunRoutes(router: Router) {
       // Authorization/attachment checks above await I/O. Recheck at the commit
       // boundary so an install started during those awaits cannot restart a new Run.
       if (isQuestionBridgeInstalling(id)) return res.status(409).json({ success: false, error: "INSTANCE_BUSY" });
+      primeRunFileSnapshot(runId, id);
+      primedSnapshotRunId = runId;
+      const persistStartedAt = Date.now();
       const beginResult = await chatRepo.beginChatRun({
         conversationId,
         userId: req.user.id,
@@ -206,13 +228,30 @@ export function registerRunRoutes(router: Router) {
         reasoningEffort: normalizedReasoningEffort,
         runtimeBinding: runtimeRegistry.createBindingForInstance(instance),
         modelEvidence: createConfiguredModelEvidence(config.model || config.current_model || config.MODEL || instance.model_name),
+        initialLease: {
+          reconcilerId: RECONCILER_ID,
+          leaseSeconds: DEFAULT_RUN_LEASE_POLICY.leaseSeconds,
+        },
       });
+      acceptTiming.persistMs = Date.now() - persistStartedAt;
 
+      if (beginResult.status !== "success") {
+        discardRunFileSnapshot(runId);
+        primedSnapshotRunId = null;
+      }
 
       if (beginResult.status === 'IDEMPOTENT_REPLAY' && beginResult.run_id) {
         if (["queued", "running", "stopping"].includes(String(beginResult.run_status))) {
           requestRunsReconcile();
         }
+        console.info(JSON.stringify({
+          operation: "chat_run_accept_timing",
+          runId: beginResult.run_id,
+          instanceId: id,
+          replayed: true,
+          ...acceptTiming,
+          totalMs: Date.now() - requestStartedAt,
+        }));
         return res.status(200).json({
           success: true,
           replayed: true,
@@ -239,9 +278,12 @@ export function registerRunRoutes(router: Router) {
       }
 
       if (validatedFiles.length > 0) {
+        const attachmentMetadataStartedAt = Date.now();
         try {
           await chatRepo.updateChatMessageMetadata(beginResult.user_message_id, buildChatAttachmentMetadata(validatedFiles));
         } catch (metadataErr: any) {
+          discardRunFileSnapshot(runId);
+          primedSnapshotRunId = null;
           await chatRepo.finishChatRun({
             runId,
             status: "failed",
@@ -252,6 +294,8 @@ export function registerRunRoutes(router: Router) {
             error: "ATTACHMENT_METADATA_UPDATE_FAILED",
             message: "Failed to attach files to this Agent run. Please retry."
           });
+        } finally {
+          acceptTiming.attachmentMetadataMs = Date.now() - attachmentMetadataStartedAt;
         }
       }
 
@@ -276,8 +320,33 @@ export function registerRunRoutes(router: Router) {
       );
 
       // Keep the periodic scan as crash recovery, but dispatch interactive work now.
-      if (!requestRunReconcile(runId)) requestRunsReconcile();
+      if (!requestRunReconcile(runId)) {
+        // A targeted wake normally consumes the lease created with the Run. If
+        // the scheduler is not ready, release it before falling back to the
+        // broad scanner so the new Run remains immediately claimable.
+        const releasedInitialLease = await chatRepo.releaseRunLease({
+          runId,
+          reconcilerId: RECONCILER_ID,
+        });
+        if (!releasedInitialLease) {
+          console.warn(JSON.stringify({
+            operation: "chat_run_initial_lease_release_failed",
+            runId,
+            instanceId: id,
+          }));
+        }
+        requestRunsReconcile();
+      }
+      primedSnapshotRunId = null;
 
+      console.info(JSON.stringify({
+        operation: "chat_run_accept_timing",
+        runId,
+        instanceId: id,
+        replayed: false,
+        ...acceptTiming,
+        totalMs: Date.now() - requestStartedAt,
+      }));
       return res.status(202).json({
         success: true,
         runId,
@@ -287,6 +356,7 @@ export function registerRunRoutes(router: Router) {
       });
 
     } catch (err: any) {
+      if (primedSnapshotRunId) discardRunFileSnapshot(primedSnapshotRunId);
       console.error(JSON.stringify({
         operation: "create_chat_run_exception",
         instanceId: id,

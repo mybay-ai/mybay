@@ -1,19 +1,6 @@
-export interface RuntimeCapabilityDescriptor {
-  readonly conversation: {
-    readonly modes: ReadonlyArray<"streaming" | "batch">;
-  };
-  readonly cancellation: {
-    readonly supported: boolean;
-    readonly granularity?: "run" | "turn";
-  };
-  readonly terminal: {
-    readonly observation: "status" | "events" | "unsupported";
-  };
-  readonly interactions: {
-    readonly approvals: boolean;
-    readonly questions: boolean;
-  };
-}
+import type { RuntimeLifecycleCapabilities } from "../../../shared/runtimeCatalog";
+
+export type RuntimeCapabilityDescriptor = RuntimeLifecycleCapabilities;
 
 /** Build a capability declaration that cannot drift after registration. */
 export function defineRuntimeCapabilities(

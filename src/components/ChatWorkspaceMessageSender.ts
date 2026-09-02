@@ -19,6 +19,7 @@ export function createChatWorkspaceMessageSender(context: any) {
   const {
     uploadInFlightRef,
     conversationCreationInFlightRef,
+    loadingConversations,
     isUploading,
     showToast,
     t,
@@ -75,6 +76,10 @@ export function createChatWorkspaceMessageSender(context: any) {
       e.preventDefault();
     }
 
+    if (loadingConversations) {
+      showToast(t("dashboard:chatWorkspace.loadingConversations"), "warning");
+      return;
+    }
     if (conversationCreationInFlightRef?.current) {
       showToast(t("dashboard:chatWorkspace.creatingConversation"), "warning");
       return;
@@ -313,6 +318,7 @@ export function createChatWorkspaceMessageSender(context: any) {
         // A locally accepted Stop releases the composer before the Runtime has
         // necessarily released its slot. Keep one request identity while the
         // transport retries that bounded cancellation window.
+        const submittedAt = Date.now();
         const runRes = await createChatRunWithRetry(selectedId, {
           conversationId: activeConvId,
           content: userMsg,
@@ -332,6 +338,7 @@ export function createChatWorkspaceMessageSender(context: any) {
         }
 
         if (runRes && runRes.success && runRes.runId) {
+          const acceptedAt = Date.now();
           asyncRunAccepted = true;
           if (!usesAttachmentOverride) setPendingAttachments([]);
           setActiveRunId(runRes.runId);
@@ -373,11 +380,9 @@ export function createChatWorkspaceMessageSender(context: any) {
           }
           setMessages(prev => deduplicateMessages([...prev, assistantMsg], activeConvId));
 
-          setTimeout(() => {
-            streamActiveRun(runRes.runId).catch((err) => {
-              console.warn("[streamActiveRun] Unhandled promise rejection caught:", err);
-            });
-          }, 100);
+          void streamActiveRun(runRes.runId, initialSelectedId, activeConvId, { submittedAt, acceptedAt }).catch((err) => {
+            console.warn("[streamActiveRun] Unhandled promise rejection caught:", err);
+          });
 
           chatSuccess = true;
         } else {

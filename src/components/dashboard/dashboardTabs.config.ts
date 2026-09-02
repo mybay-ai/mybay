@@ -45,9 +45,9 @@ export const DASHBOARD_TABS: TabConfig[] = [
   },
   {
     key: "versions",
-    label: "Versions",
-    title: "Agent Versions",
-    description: "Browse local Agent image versions and compatibility notes",
+    label: "",
+    title: "",
+    description: "",
     icon: History
   },
   {

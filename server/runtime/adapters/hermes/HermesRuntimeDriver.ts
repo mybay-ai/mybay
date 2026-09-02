@@ -10,19 +10,15 @@ import { defineRuntimeCapabilities } from "../../contracts";
 import { hermesRunPreparationProvider } from "./HermesRunPreparation";
 import { hermesRunEventProvider } from "./HermesRunEvents";
 import { hermesRunExecutionProvider } from "./HermesRunExecution";
+import { HERMES_RUNTIME_DEFINITION } from "../../../../shared/runtimeCatalog";
 
-export const HERMES_RUNTIME_CAPABILITIES = defineRuntimeCapabilities({
-  conversation: { modes: ["streaming", "batch"] },
-  cancellation: { supported: true, granularity: "run" },
-  terminal: { observation: "status" },
-  interactions: { approvals: true, questions: false },
-});
+export const HERMES_RUNTIME_CAPABILITIES = defineRuntimeCapabilities(HERMES_RUNTIME_DEFINITION.lifecycle);
 
 export const hermesRuntimeDriver: RuntimeDriver = Object.freeze({
-  runtimeType: "hermes",
-  displayName: "Hermes",
-  providerKey: "hermes-core",
-  contractVersion: 1,
+  runtimeType: HERMES_RUNTIME_DEFINITION.runtime.type,
+  displayName: HERMES_RUNTIME_DEFINITION.displayName,
+  providerKey: HERMES_RUNTIME_DEFINITION.providerKey,
+  contractVersion: HERMES_RUNTIME_DEFINITION.contractVersion,
   capabilities: HERMES_RUNTIME_CAPABILITIES,
   preparation: hermesRunPreparationProvider,
   events: hermesRunEventProvider,
