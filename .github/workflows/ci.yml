@@ -55,6 +55,8 @@ jobs:
           Set-ExecutionPolicy -Scope Process Bypass
           .\scripts\quick-start-powershell.test.ps1
           .\scripts\quick-start-mode-switch-powershell.test.ps1
+          .\scripts\windows-launchers.test.ps1
+          .\scripts\windows-acceptance.ps1 -SkipRuntimeChecks -OutputDirectory "$env:RUNNER_TEMP\mybay-windows-diagnostics"
 
   test-and-build:
     runs-on: ubuntu-latest
@@ -176,6 +178,8 @@ jobs:
         run: |
           npm run release:create -- release/mybay-local-ci.zip
           npm run release:check -- release/mybay-local-ci.zip
+          npm run release:create-windows -- release/MyBay-Windows-ci.zip
+          npm run release:check-windows -- release/MyBay-Windows-ci.zip
           mkdir "$RUNNER_TEMP/mybay-release"
           unzip -q release/mybay-local-ci.zip -d "$RUNNER_TEMP/mybay-release"
           cd "$RUNNER_TEMP/mybay-release"

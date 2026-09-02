@@ -12,9 +12,11 @@
 
 首次使用建议选择 Desktop 模式。Desktop、LAN、Server 三种模式原有的部署前检查都会继续执行。
 
-## 2. 准备 Docker 并克隆项目
+## 2. 准备安装文件
 
-Windows 或 macOS 安装 Docker Desktop；Linux 安装 Docker Engine 和 Docker Compose v2。确认 Docker 引擎已经运行，然后克隆项目：
+Windows 用户从 [Releases](https://github.com/mybay-ai/mybay/releases/latest) 下载 `MyBay-Windows-v*.zip` 并解压到普通本地目录。无需预装 Git、Node.js、npm、OpenSSL 或 Docker Desktop。
+
+macOS/Linux 用户先安装 Docker Desktop，或者 Docker Engine 与 Docker Compose v2，然后克隆项目：
 
 ```bash
 git clone https://github.com/mybay-ai/mybay.git
@@ -25,14 +27,13 @@ cd mybay
 
 ## 3. 启动本地控制台
 
-### Windows PowerShell
+### Windows 双击启动
 
-```powershell
-Set-ExecutionPolicy -Scope Process Bypass
-.\quick-start.ps1 -InstallPrerequisites
+```text
+Start-MyBay.bat
 ```
 
-如果 Docker Desktop 已经安装并正在运行，可以省略 `-InstallPrerequisites`。
+启动器会检查 Windows、虚拟化、WSL、Docker Linux 容器模式、端口和镜像网络，在需要时安装和启动 Docker Desktop、拉取固定版本镜像，并要求用户设置管理员密码。Windows 要求重启时会登记一次性续装任务，重新登录后自动继续。
 
 ### macOS 或 Linux
 
@@ -41,7 +42,7 @@ chmod +x quick-start.sh
 ./quick-start.sh
 ```
 
-启动器会检查 Docker、创建或保留 `.env`、生成缺少的本地安全密钥和管理员密码，然后启动 Compose 服务。不要提交或分享 `.env`。
+启动器会检查 Docker、创建或保留 `.env`、生成缺少的本地安全密钥，然后启动 Compose 服务。不要提交或分享 `.env`。
 
 启动完成后打开：
 

@@ -1,10 +1,7 @@
 services:
   mybay-local:
-    build:
-      context: .
-      args:
-        VITE_PUBLIC_APP_URL: ${VITE_PUBLIC_APP_URL:-http://localhost:3000}
-        VITE_MYBAY_PLATFORM_ORIGIN: ${VITE_MYBAY_PLATFORM_ORIGIN:-http://localhost:3000}
+    image: ${MYBAY_CONTROL_PANEL_IMAGE:?MYBAY_CONTROL_PANEL_IMAGE is required}
+    pull_policy: missing
     container_name: mybay-local-control-panel
     env_file:
       - .env

@@ -12,6 +12,7 @@ release/
 *.log
 .env*
 !.env.example
+.mybay-install-state.json
 *.db
 *.sqlite
 *.sqlite3
@@ -32,6 +33,8 @@ uploads/
 logs/
 tmp/
 .bun/
+__pycache__/
+*.py[cod]
 
 *.sqlite-wal
 *.sqlite-shm

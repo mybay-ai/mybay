@@ -14,10 +14,7 @@
 
 > **发布状态：`v0.1.26`。** 在 0.x 阶段，公共接口、Runtime Adapter、部署细节与升级行为仍可能调整。
 
-| Runtime | 支持状态 |
-| --- | --- |
-| **Hermes Agent** | 当前预览版正式支持 |
-| **Pi Agent** | 仅提供实验性规范，暂不支持部署 |
+Runtime 可用性和声明能力统一由共享目录生成，详见 [Runtime 能力矩阵](./docs/runtime-capability-matrix.md)。基于证据的认证状态单独发布在 [MyBay Runtime Certification](./docs/runtime-certification.md)，注册 Adapter 或声明能力不会被当成真实 Runtime 或产品 E2E 已通过。
 
 ![麦贝开源版概览](./docs/images/main-zh-open-source.png)
 
@@ -36,9 +33,19 @@ MyBay 开源版完全独立运行，不依赖托管 SaaS、云端主节点、注
 
 ## 快速开始
 
-前置条件：Docker Engine 或 Docker Desktop，并启用 Docker Compose。宿主机不需要安装 Node.js。
+**Windows 10/11：下载、解压、双击**
+
+从 [Releases](https://github.com/mybay-ai/mybay/releases/latest) 下载 `MyBay-Windows-v*.zip`，解压到 `C:\MyBay` 等普通本地目录，然后双击：
+
+```text
+Start-MyBay.bat
+```
+
+启动器会检查 Windows、虚拟化、WSL、Docker、端口和镜像网络，在需要时安装并启动 Docker Desktop、拉取固定版本的 MyBay 镜像、让你设置管理员密码，并在健康检查通过后打开浏览器。WSL 安装要求重启时会登记一次性续装任务，重新登录后自动继续。不需要 Git、Node.js、npm 或 OpenSSL。完整说明见 [Windows 快速安装](./WINDOWS-README.zh-CN.md)。
 
 **macOS 或 Linux**
+
+前置条件：Docker Engine 或 Docker Desktop，并启用 Docker Compose。宿主机不需要安装 Node.js。
 
 ```bash
 git clone https://github.com/mybay-ai/mybay.git
@@ -47,20 +54,11 @@ chmod +x quick-start.sh
 ./quick-start.sh
 ```
 
-**Windows PowerShell 5.1 或 PowerShell 7**
-
-```powershell
-git clone https://github.com/mybay-ai/mybay.git
-cd mybay
-Set-ExecutionPolicy -Scope Process Bypass
-.\quick-start.ps1
-```
-
-打开 [http://localhost:3000](http://localhost:3000)，使用本机 `.env` 中保存的管理员账号登录，添加模型供应商，然后部署第一个 Hermes Agent 实例。不要分享或提交 `.env`。
+打开 [http://localhost:3000](http://localhost:3000)，添加模型供应商，然后部署第一个 Hermes Agent 实例。不要分享或提交 `.env`。
 
 第一次尝试生成文件时，请在对话输入框旁切换为“Agent模式”。默认的“快速模式”只回复文字，不执行工具或保存文件。
 
-如果需要在 Windows 自动安装 Docker、局域网访问、公网 HTTPS、手动 Compose 或开发模式，请继续查看[其他部署方式](#其他部署方式)，或阅读完整的 **[10 分钟部署第一个 Agent](./docs/QUICKSTART.zh-CN.md)** 教程。
+如果需要局域网访问、公网 HTTPS、手动 Compose 或开发模式，请继续查看[其他部署方式](#其他部署方式)，或阅读完整的 **[10 分钟部署第一个 Agent](./docs/QUICKSTART.zh-CN.md)** 教程。
 
 ## 产品预览
 
@@ -261,7 +259,7 @@ data/
 ## Runtime 支持状态
 
 - **Hermes Agent：** 当前 Preview 创建与生命周期链路支持的 Runtime。
-- **Pi Agent：** 实验预览 / 即将推出。UI 无法提交 Pi 部署，API 对 `runtime_type=pi` 明确返回 `PI_RUNTIME_PREVIEW_ONLY`。仓库中的 Adapter 与规范文件仅用于集成预览，不代表生产支持。
+- **Pi Agent：** 仅提供接入规范。UI 无法提交 Pi 部署，API 对 `runtime_type=pi` 明确返回 `PI_RUNTIME_PREVIEW_ONLY`。仓库中的 Adapter 与 Manifest 只用于契约参考，不代表生产支持。
 
 完整 Pi 后端部署链路计划在后续版本提供。
 
@@ -307,7 +305,7 @@ MyBay 提供可扩展的 **Agent Runtime Specification（运行态接入规范�
 - **JSON Schema 校验规范**：`/public/schemas/mybay.runtime.schema.json`
 - **运行态规格声明示例**：
   - Hermes Agent：`/public/specs/mybay.runtime.yaml`
-  - Pi Agent 实验参考：`/public/specs/pi.runtime.yaml`
+  - Pi Agent 规范参考：`/public/specs/pi.runtime.yaml`
 
 通过定义 `mybay.runtime.yaml` 规格文件，开发者可以标准化声明 Agent 容器端口、健康检查 Endpoint、挂载卷路径及支持的通讯渠道（飞书、Telegram、Discord、Slack、微信等）。
 
