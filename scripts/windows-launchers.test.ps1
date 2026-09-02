@@ -143,7 +143,7 @@ try {
     New-Item -ItemType Directory -Path $diagnosticTestRoot | Out-Null
     Copy-Item -LiteralPath (Join-Path $projectRoot "package.json") -Destination (Join-Path $diagnosticTestRoot "package.json")
     @(
-        "MYBAY_CONTROL_PANEL_IMAGE=ghcr.io/mybay-ai/mybay:0.1.26",
+        "MYBAY_CONTROL_PANEL_IMAGE=ghcr.io/mybay-ai/mybay:0.1.27-rc.1",
         "LOCAL_ADMIN_PASSWORD=diagnostic-password-sentinel",
         "JWT_SECRET=diagnostic-jwt-sentinel",
         "ENCRYPTION_KEY=diagnostic-encryption-sentinel",

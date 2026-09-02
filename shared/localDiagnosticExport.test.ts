@@ -21,4 +21,9 @@ describe("sanitized local diagnostic export", () => {
     expect(JSON.stringify(result)).not.toContain("PRIVATE");
     expect(readLocalDiagnosticExport(null)).toBeNull();
   });
+  it("retains a bounded release-candidate version", () => {
+    const report = buildLocalDiagnosticExport({}, "0.1.27-rc.1", null);
+    expect(report.applicationVersion).toBe("0.1.27-rc.1");
+    expect(readLocalDiagnosticExport(report)?.applicationVersion).toBe("0.1.27-rc.1");
+  });
 });

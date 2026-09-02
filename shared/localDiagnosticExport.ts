@@ -6,6 +6,7 @@ const pick = (value: unknown, allowed: string[]) => typeof value === "string" &&
 const obj = (value: unknown): Record<string, unknown> => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 const uuid = (value: unknown) => typeof value === "string" && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value) ? value : null;
 const time = (value: unknown) => typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value) && Number.isFinite(Date.parse(value)) ? value : null;
+const applicationVersion = (value: unknown) => typeof value === "string" && /^\d{1,4}\.\d{1,4}\.\d{1,4}(?:-(?:alpha|beta|rc)(?:\.\d{1,6})?)?$/i.test(value) ? value : "unknown";
 
 export function buildLocalDiagnosticExport(report: unknown, version: unknown, reportId: unknown) {
   const data = obj(report), instance = obj(data.instance), capabilities = obj(data.capabilities);
@@ -13,7 +14,7 @@ export function buildLocalDiagnosticExport(report: unknown, version: unknown, re
     schema: "mybay.local-diagnostic.v1",
     reportId: uuid(reportId),
     generatedAt: time(data.generatedAt),
-    applicationVersion: typeof version === "string" && /^\d{1,4}\.\d{1,4}\.\d{1,4}$/.test(version) ? version : "unknown",
+    applicationVersion: applicationVersion(version),
     deploymentMode: pick(capabilities.deploymentMode, ["desktop", "lan", "server"]),
     instanceId: uuid(instance.id),
     instanceStatus: pick(instance.status, ["running", "stopped", "failed", "pending", "deploying", "stopping", "deleted"]),
