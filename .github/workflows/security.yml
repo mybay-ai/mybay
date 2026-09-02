@@ -19,7 +19,7 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: github/codeql-action/init@v4
         with:
           languages: javascript-typescript
@@ -29,7 +29,7 @@ jobs:
     name: Container vulnerability scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Build production image
         run: docker build --tag mybay-security-scan:${{ github.sha }} .
       - name: Block actionable high and critical vulnerabilities
