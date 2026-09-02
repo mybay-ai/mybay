@@ -44,7 +44,7 @@ export function LogViewer({
   // States for audit logs
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
 
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const logBodyRef = useRef<HTMLDivElement>(null);
 
   // Deployment Logs
   useEffect(() => {
@@ -94,7 +94,11 @@ export function LogViewer({
   // Auto-scroll
   useEffect(() => {
     if (autoScroll && activeTab !== 'audit') {
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      const frame = window.requestAnimationFrame(() => {
+        const logBody = logBodyRef.current;
+        if (logBody) logBody.scrollTop = logBody.scrollHeight;
+      });
+      return () => window.cancelAnimationFrame(frame);
     }
   }, [deployLogs, runtimeLogs, autoScroll, activeTab]);
 
@@ -107,11 +111,11 @@ export function LogViewer({
   return (
     <div className="flex flex-col flex-1 min-h-[500px] min-w-0 bg-white dark:bg-slate-950">
        {(
-          <div className="flex bg-slate-50 dark:bg-slate-900 border-b border-slate-200/60 dark:border-slate-800 p-1.5 gap-1 shrink-0 w-full overflow-x-auto">
+          <div className="grid grid-cols-3 sm:flex bg-slate-50 dark:bg-slate-900 border-b border-slate-200/60 dark:border-slate-800 p-1.5 gap-1 shrink-0 w-full">
              <button 
                 onClick={() => setActiveTab('deployment')}
                 className={cn(
-                   "flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 flex-1 sm:flex-initial whitespace-nowrap",
+                   "flex min-w-0 items-center justify-center gap-1 px-1.5 sm:gap-1.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 sm:flex-initial whitespace-nowrap",
                    activeTab === 'deployment' 
                      ? "bg-white dark:bg-slate-800 shadow-xs text-slate-800 dark:text-slate-100 border border-slate-200/40 dark:border-slate-700 font-semibold" 
                      : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100/30 dark:hover:bg-slate-800/50"
@@ -124,7 +128,7 @@ export function LogViewer({
              <button 
                 onClick={() => setActiveTab('runtime')}
                 className={cn(
-                   "flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 flex-1 sm:flex-initial whitespace-nowrap",
+                   "flex min-w-0 items-center justify-center gap-1 px-1.5 sm:gap-1.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 sm:flex-initial whitespace-nowrap",
                    activeTab === 'runtime' 
                      ? "bg-white dark:bg-slate-800 shadow-xs text-slate-800 dark:text-slate-100 border border-slate-200/40 dark:border-slate-700 font-semibold" 
                      : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100/30 dark:hover:bg-slate-800/50"
@@ -137,7 +141,7 @@ export function LogViewer({
              <button 
                 onClick={() => setActiveTab('audit')}
                 className={cn(
-                   "flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 flex-1 sm:flex-initial whitespace-nowrap",
+                   "flex min-w-0 items-center justify-center gap-1 px-1.5 sm:gap-1.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 sm:flex-initial whitespace-nowrap",
                    activeTab === 'audit' 
                      ? "bg-white dark:bg-slate-800 shadow-xs text-slate-800 dark:text-slate-100 border border-slate-200/40 dark:border-slate-700 font-semibold" 
                      : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100/30 dark:hover:bg-slate-800/50"
@@ -196,7 +200,7 @@ export function LogViewer({
        )}
 
        {activeTab === 'deployment' && (
-          <div className="p-4 flex-1 overflow-y-auto font-mono text-[11.5px] leading-relaxed custom-scrollbar bg-slate-950 min-h-[400px]">
+          <div ref={logBodyRef} className="p-4 flex-1 overflow-y-auto font-mono text-[11.5px] leading-relaxed custom-scrollbar bg-slate-950 min-h-[400px]">
             {deployLogs.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full py-20 text-slate-500/80 gap-2">
                 <Terminal className="w-8 h-8 text-slate-700 opacity-60" />
@@ -212,12 +216,11 @@ export function LogViewer({
               ))
             )}
             {isDeploying && <div className="mt-2 text-white animate-pulse px-2">_</div>}
-            <div ref={bottomRef} />
           </div>
        )}
 
        {activeTab === 'runtime' && (
-          <div className="p-4 flex-1 overflow-y-auto font-mono text-[11.5px] leading-relaxed custom-scrollbar bg-slate-950 min-h-[400px]">
+          <div ref={logBodyRef} className="p-4 flex-1 overflow-y-auto font-mono text-[11.5px] leading-relaxed custom-scrollbar bg-slate-950 min-h-[400px]">
              {filteredRuntimeLogs.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full py-20 text-slate-500/80 gap-2">
                   <Terminal className="w-8 h-8 text-slate-700 opacity-60 animate-pulse" />
@@ -235,13 +238,12 @@ export function LogViewer({
                    </div>
                 ))
              )}
-             <div ref={bottomRef} />
           </div>
        )}
 
        {activeTab === 'audit' && (
-          <div className="flex-1 overflow-y-auto bg-white min-h-[400px]">
-             <table className="w-full text-left border-collapse">
+          <div className="flex-1 overflow-auto bg-white min-h-[400px]">
+             <table className="w-full min-w-[560px] text-left border-collapse">
                 <thead className="sticky top-0 bg-slate-50/95 border-b border-slate-200/50 backdrop-blur-xs">
                    <tr>
                       <th className="px-5 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">{t("logs_audit_time")}</th>

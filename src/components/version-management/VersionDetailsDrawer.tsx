@@ -1,7 +1,9 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { AlertCircle, History, Layers, Loader2, Terminal, Zap } from "lucide-react";
+import { AlertCircle, Check, History, Layers, Loader2, RotateCcw, Terminal, Zap } from "lucide-react";
 import { Button, Card, cn } from "../ui";
+import { AGENT_UPGRADE_TIMELINE_PHASES, normalizeAgentUpgradePhase } from "../../../shared/agentUpgradePhase";
+import { getRuntimeStatusLabel, getUpgradePhaseLabel } from "./versionStatusPresentation";
 
 interface VersionDetailsDrawerProps {
   instance: any | null;
@@ -34,6 +36,7 @@ export function VersionDetailsDrawer({
 
   const isFailed = instance.upgrade_status === "failed";
   const needsUpdate = doesInstanceNeedUpdate(instance);
+  const upgradePhase = normalizeAgentUpgradePhase(instance.upgrade_phase, instance.upgrade_status);
   const versionStatus = isFailed
     ? t("versionManagement.details.statusFailed")
     : needsUpdate
@@ -71,8 +74,35 @@ export function VersionDetailsDrawer({
               value={versionStatus}
               tone={isFailed ? "red" : needsUpdate ? "amber" : "green"}
             />
-            <DetailMetric label={t("versionManagement.details.runtimeStatus")} value={instance.status || "-"} />
-            <DetailMetric label={t("versionManagement.details.upgradeTaskStatus")} value={instance.upgrade_status || "-"} />
+            <DetailMetric label={t("versionManagement.details.runtimeStatus")} value={getRuntimeStatusLabel(t, instance.status)} />
+            <DetailMetric label={t("versionManagement.details.upgradeTaskStatus")} value={getUpgradePhaseLabel(t, instance)} />
+          </div>
+
+          <div className="rounded-2xl border border-outline bg-surface p-4">
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div>
+                <div className="text-[13px] font-bold text-content-secondary">{t("versionManagement.progress.title")}</div>
+                <p className="text-[12px] text-content-muted mt-1">{t("versionManagement.progress.description")}</p>
+              </div>
+              <span className={cn(
+                "shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-bold",
+                upgradePhase === "failed" ? "border-red-200 bg-red-50 text-red-700" :
+                upgradePhase === "rolling_back" || upgradePhase === "rolled_back" ? "border-orange-200 bg-orange-50 text-orange-700" :
+                upgradePhase === "completed" ? "border-emerald-200 bg-emerald-50 text-emerald-700" :
+                "border-blue-200 bg-blue-50 text-blue-700"
+              )}>{getUpgradePhaseLabel(t, instance)}</span>
+            </div>
+            {upgradePhase === "rolling_back" || upgradePhase === "rolled_back" ? (
+              <div className="flex items-center gap-3 rounded-xl border border-orange-200 bg-orange-50 px-3 py-3 text-orange-700">
+                <RotateCcw className={cn("w-4 h-4 shrink-0", upgradePhase === "rolling_back" && "animate-spin")} />
+                <span className="text-[13px] font-bold">{t(`versionManagement.phases.${upgradePhase}`)}</span>
+              </div>
+            ) : (
+              <UpgradeTimeline phase={upgradePhase} />
+            )}
+            {upgradePhase === "failed" && (
+              <p className="mt-3 text-[12px] font-semibold text-red-600">{t("versionManagement.progress.failedHint")}</p>
+            )}
           </div>
 
           <div className="rounded-2xl border border-outline bg-surface overflow-hidden">
@@ -143,6 +173,39 @@ export function VersionDetailsDrawer({
         </div>
       </Card>
     </div>
+  );
+}
+
+function UpgradeTimeline({ phase }: { phase: ReturnType<typeof normalizeAgentUpgradePhase> }) {
+  const { t } = useTranslation("dashboard");
+  const activeIndex = AGENT_UPGRADE_TIMELINE_PHASES.indexOf(phase as any);
+
+  return (
+    <ol className="grid grid-cols-2 sm:grid-cols-3 gap-2" aria-label={t("versionManagement.progress.title")}>
+      {AGENT_UPGRADE_TIMELINE_PHASES.map((step, index) => {
+        const terminalComplete = phase === "completed";
+        const complete = activeIndex >= 0 && (index < activeIndex || terminalComplete);
+        const active = !terminalComplete && index === activeIndex;
+        return (
+          <li key={step} className={cn(
+            "flex min-w-0 items-center gap-2 rounded-xl border px-3 py-2.5 text-[12px] font-bold",
+            complete && "border-emerald-200 bg-emerald-50 text-emerald-700",
+            active && "border-blue-300 bg-blue-50 text-blue-700",
+            !complete && !active && "border-outline bg-surface-muted text-content-muted"
+          )} aria-current={active ? "step" : undefined}>
+            <span className={cn(
+              "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px]",
+              complete && "border-emerald-500 bg-emerald-500 text-white",
+              active && "border-blue-500 bg-blue-500 text-white",
+              !complete && !active && "border-outline-strong bg-surface text-content-muted"
+            )}>
+              {complete ? <Check className="w-3 h-3" /> : active ? <Loader2 className="w-3 h-3 animate-spin" /> : index + 1}
+            </span>
+            <span className="truncate">{t(`versionManagement.phases.${step}`)}</span>
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 

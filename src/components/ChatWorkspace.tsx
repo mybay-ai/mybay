@@ -7,7 +7,7 @@ import { api } from "../lib/api";
 import { humanizeChatError } from "../lib/chatRuntimeErrors";
 import type { AgentInstance, User as UserType } from "../types";
 import { APP_ROUTES } from "../constants/routes";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useFeedback } from "./FeedbackProvider";
 import { ChatConversationSidebar, type ConversationSearchResult } from "./chat-workspace/ChatConversationSidebar";
 import { ChatInputBar, type ChatReasoningEffort, type PendingAttachment } from "./chat-workspace/ChatInputBar";
@@ -53,12 +53,14 @@ import { createChatWorkspaceMessageSender } from "./ChatWorkspaceMessageSender";
 import { resolveInitialChatInstanceId } from "./chat-workspace/chatInitialInstanceSelection";
 import { createChatSelectionPersistence } from "./chat-workspace/chatSelectionPersistence";
 import { createChatModePreference, type PreferredChatMode } from "./chat-workspace/chatModePreference";
+import { readA2ARetryNavigationState } from "./chat-workspace/a2aRetryNavigation";
 
 export { generateUUIDv4 } from "./chat-workspace/chatWorkspaceSendPolicy";
 
 export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType | null; socket?: Socket | null }) {
   const { t } = useTranslation(["dashboard", "common"]);
   const navigate = useNavigate();
+  const location = useLocation();
   const { showConfirm, showToast } = useFeedback();
   const selectionPersistence = useMemo(() => createChatSelectionPersistence(
     () => typeof window === "undefined" ? null : window.localStorage, currentUser?.id,
@@ -123,6 +125,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
   const activeSyncChatRequestRef = useRef<{ controller: AbortController; requestId: string; instanceId: string; conversationId: string | null } | null>(null);
   const syncCancelReconciliationTimersRef = useRef<number[]>([]);
   const editingRetryMessageIdRef = useRef<string | null>(null);
+  const consumedA2ARetryLocationRef = useRef<string | null>(null);
 
   const selectedIdRef = useRef(selectedId);
   const selectedConversationIdRef = useRef<string | null>(selectedConversationId);
@@ -132,6 +135,16 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     mobileOverlay,
     closeMobileOverlay: () => setMobileOverlay(null),
   });
+
+  useEffect(() => {
+    if (!selectedId || consumedA2ARetryLocationRef.current === location.key) return;
+    const retryState = readA2ARetryNavigationState(location.state, selectedId);
+    if (!retryState) return;
+    consumedA2ARetryLocationRef.current = location.key;
+    setInput(retryState.a2aRetryDraft);
+    setChatMode("agent");
+    navigate(`${location.pathname}${location.search}${location.hash}`, { replace: true, state: null });
+  }, [location.hash, location.key, location.pathname, location.search, location.state, navigate, selectedId, setInput]);
 
   const {
     attachmentConfig,
@@ -308,7 +321,8 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     },
     showToast,
     t,
-    notificationUserId: String(currentUser?.id || currentUser?.username || "")
+    notificationUserId: String(currentUser?.id || currentUser?.username || ""),
+    socket,
   });
 
   const {
@@ -880,6 +894,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
 
   const handleSend = createChatWorkspaceMessageSender({
     conversationCreationInFlightRef,
+    loadingConversations,
     uploadInFlightRef,
     isUploading,
     showToast,
@@ -959,6 +974,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     setSending,
     setActiveRunConversationId,
     handleStopRun,
+    resumeActiveRunStreams: streamActiveRun,
     waitForRunRelease,
     isCurrentRunContext,
     stopActiveRunStreams,
@@ -1306,6 +1322,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
           {selectedId && (
             <ChatInputBar
               creatingConversation={creatingConversation}
+              loadingConversations={loadingConversations}
               input={input}
               sending={selectedConversationIsRunning}
               activeRunId={selectedActiveRunId}

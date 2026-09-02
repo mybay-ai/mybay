@@ -208,12 +208,19 @@ describe("long-text sender integration", () => {
   });
 
   it("binds the placeholder before the first stream event so stopped history cannot duplicate it", async () => {
-    vi.useFakeTimers();
     const { context, send, messages } = fixture({ chatMode: "agent" });
+    let messagesWhenStreamStarted: ChatMessage[] = [];
+    context.streamActiveRun.mockImplementation(async () => {
+      messagesWhenStreamStarted = messages();
+    });
     await send();
     const user = messages().find(message => message.role === "user")!;
     const assistant = messages().find(message => message.role === "assistant")!;
     expect(assistant).toMatchObject({ request_id: user.request_id, metadata: { runId: "run-1", requestId: user.request_id } });
+    expect(messagesWhenStreamStarted.find(message => message.role === "assistant")).toMatchObject({
+      request_id: user.request_id,
+      metadata: { runId: "run-1", requestId: user.request_id },
+    });
     const execution = createRunExecutionState({
       runId: "run-1", conversationId: "conversation-1", requestId: user.request_id!,
       assistantMessageId: assistant.id, status: "running",
@@ -225,7 +232,11 @@ describe("long-text sender integration", () => {
     ];
     const reconciled = reconcileConversationMessages(persisted, stopped, null, "conversation-1");
     expect(reconciled.map(message => message.id)).toEqual(["persisted-user", "persisted-assistant"]);
-    expect(context.streamActiveRun).not.toHaveBeenCalled();
-    await vi.runAllTimersAsync();
+    expect(context.streamActiveRun).toHaveBeenCalledWith(
+      "run-1",
+      "instance-1",
+      "conversation-1",
+      expect.objectContaining({ submittedAt: expect.any(Number), acceptedAt: expect.any(Number) }),
+    );
   });
 });

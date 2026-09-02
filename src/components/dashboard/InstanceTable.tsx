@@ -1,5 +1,5 @@
 import React from "react";
-import { User, Box, AlertCircle, Download, Settings, Archive, Trash2, Play, Edit3, Globe } from "lucide-react";
+import { User, Box, AlertCircle, Play, Globe, MoreHorizontal } from "lucide-react";
 import { AgentInstance, User as UserType } from "../../types";
 import { Button, cn } from "../ui";
 import { ContainerStats } from "../ContainerStats";
@@ -12,13 +12,13 @@ interface InstanceTableProps {
   viewMode: 'grid' | 'table';
   activeLogs: string | null;
   setActiveLogs: (id: string | null) => void;
-  setDetailTab: (tab: 'logs' | 'files' | 'context' | 'diagnostics') => void;
+  setDetailTab: (tab: 'logs' | 'files' | 'context' | 'diagnostics' | 'collaboration') => void;
   currentUser: UserType;
   handleExportConfig: (e: React.MouseEvent, id: string, name: string) => void;
   handleDelete: (id: string, e?: React.MouseEvent) => void;
   handleArchive: (id: string, e?: React.MouseEvent) => void;
   handleRestore: (id: string, e?: React.MouseEvent) => void;
-  handleInstanceAction: (id: string, action: string) => void;
+  handleInstanceAction: (id: string, action: string, requireConfirm?: boolean, confirmMsg?: string) => void;
   handleOpenLink: (e: React.MouseEvent, inst: AgentInstance) => void;
   fetchInstances: () => void;
   setEditingInstance: (inst: AgentInstance) => void;
@@ -73,11 +73,18 @@ export const InstanceTable = React.memo(function InstanceTable({
       "hidden bg-surface rounded-xl border border-outline/50 shadow-xs overflow-hidden",
       viewMode === 'table' ? "xl:block" : "xl:hidden"
     )}>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-[12px] border-collapse">
+      <div className="overflow-x-auto [scrollbar-width:thin]">
+        <table className="w-full table-fixed text-left text-[12px] border-collapse">
+          <colgroup>
+            <col className="w-[52px]" />
+            <col className="w-[34%]" />
+            <col className="w-[120px]" />
+            <col className="w-[22%]" />
+            <col className="w-[280px]" />
+          </colgroup>
           <thead className="bg-surface-muted border-b border-outline/50 text-content-secondary font-semibold text-[13px] tracking-wider uppercase">
             <tr>
-              <th className="px-5 py-2.5 w-12">
+              <th className="px-4 py-2.5">
                 <input
                   type="checkbox"
                   className="rounded border-outline-strong text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
@@ -85,10 +92,10 @@ export const InstanceTable = React.memo(function InstanceTable({
                   onChange={(e) => onSelectAll(e.target.checked)}
                 />
               </th>
-              <th className="px-5 py-2.5 font-medium">{t("th_name")}</th>
-              <th className="px-5 py-2.5 font-medium">{t("th_status")}</th>
-              <th className="px-5 py-2.5 font-medium">{t("th_url")}</th>
-              <th className="px-5 py-2.5 text-right font-medium">{t("th_actions")}</th>
+              <th className="px-4 py-2.5 font-medium whitespace-nowrap">{t("th_name")}</th>
+              <th className="px-4 py-2.5 font-medium whitespace-nowrap">{t("th_status")}</th>
+              <th className="px-4 py-2.5 font-medium whitespace-nowrap">{t("th_url")}</th>
+              <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">{t("th_actions")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-outline/40">
@@ -98,7 +105,7 @@ export const InstanceTable = React.memo(function InstanceTable({
               return (
                 <React.Fragment key={inst.id}>
                   <tr className={cn("hover:bg-surface-muted/40 transition-colors", isExpanded && "bg-surface-muted/80 hover:bg-surface-muted")}>
-                    <td className="px-5 py-3.5" onClick={e => e.stopPropagation()}>
+                    <td className="px-4 py-3.5" onClick={e => e.stopPropagation()}>
                       <input
                         type="checkbox"
                         className="rounded border-outline-strong text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
@@ -107,20 +114,22 @@ export const InstanceTable = React.memo(function InstanceTable({
                         onChange={(e) => onSelectInstance(inst.id, e.target.checked)}
                       />
                     </td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-3">
+                    <td className="min-w-0 px-4 py-3.5">
+                      <div className="flex min-w-0 items-center gap-3">
                         <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${inst.archived ? 'bg-indigo-500' : inst.status === 'running' ? 'bg-emerald-500' : inst.status === 'partial_running' ? 'bg-amber-500' : inst.status === 'deploying' ? 'bg-blue-500 animate-pulse' : 'bg-slate-300'}`} />
-                        <div>
+                        <div className="min-w-0">
                            <div
-                             className="font-semibold text-[12px] text-content tracking-tight cursor-pointer hover:text-blue-600 active:text-blue-700 active:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 no-underline transition-colors"
+                             className="truncate font-semibold text-[12px] text-content tracking-tight cursor-pointer hover:text-blue-600 active:text-blue-700 active:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 no-underline transition-colors"
                              title={t("instance_detail_tooltip") || "点击查看实例详情"}
                              aria-label={t("instance_detail_tooltip") || "点击查看实例详情"}
                              onClick={(e) => openInstanceDetail(inst.id, e)}
                            >
                              {inst.name}
                            </div>
-                           <div className="flex flex-wrap items-center gap-2 mt-0.5 overflow-hidden">
-                             <span className="text-[13px] text-content-muted font-mono shrink-0">{inst.id}</span>
+                           <div className="mt-0.5 flex flex-nowrap items-center gap-2 overflow-hidden whitespace-nowrap">
+                             <span className="shrink-0 font-mono text-[13px] text-content-muted" title={inst.id}>
+                               {inst.id.length > 20 ? `${inst.id.slice(0, 8)}…${inst.id.slice(-4)}` : inst.id}
+                             </span>
                              {inst.archived && <span className="text-[13px] font-semibold bg-indigo-50/50 text-indigo-600 px-1.5 py-0.2 rounded border border-indigo-100/50 shrink-0">{t("badge_archived")}</span>}
                              {currentUser.role === 'admin' && inst.owner && (
                                <div className="flex items-center gap-1 px-1.5 py-0.5 bg-surface-muted/80 rounded text-[13px] text-content-muted font-semibold max-w-[80px] truncate shrink-0">
@@ -145,13 +154,13 @@ export const InstanceTable = React.memo(function InstanceTable({
                         </div>
                       </div>
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td className="px-4 py-3.5">
                         <div className="flex flex-col gap-1.5 items-start">
                           {(() => {
                             const label = getRefinedStatusLabel(inst);
                             return (
                               <span className={cn(
-                                "inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[13px] font-semibold border border-transparent",
+                                "inline-flex shrink-0 items-center gap-1 whitespace-nowrap px-2 py-0.5 rounded-md text-[13px] font-semibold border border-transparent",
                                 label.textClass
                               )}>
                                 <div className={cn(
@@ -192,20 +201,20 @@ export const InstanceTable = React.memo(function InstanceTable({
                           })()}
                         </div>
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td className="min-w-0 px-4 py-3.5">
                         <button
-                          className="font-mono text-[12px] text-content-muted hover:text-content max-w-[200px] truncate block text-left"
+                          className="block w-full truncate whitespace-nowrap text-left font-mono text-[12px] text-content-muted hover:text-content"
                           onClick={(e) => handleOpenLink(e, inst)}
                         >
                           {inst.url}
                         </button>
                     </td>
-                    <td className="px-5 py-3.5 text-right">
-                      <div className="flex gap-1.5 justify-end" onClick={e => e.stopPropagation()}>
-                        {caps.canStart && <Button disabled={actioningIds.has(inst.id)} variant="ghost" className="h-7.5 px-2 text-[12px] font-semibold text-emerald-700" onClick={() => handleInstanceAction(inst.id, "start")}>{t("actions.start")}</Button>}
-                        {caps.canRestart && <Button disabled={actioningIds.has(inst.id)} variant="ghost" className="h-7.5 px-2 text-[12px] font-semibold text-indigo-700" onClick={() => handleInstanceAction(inst.id, "restart")}>{t("actions.restart")}</Button>}
-                        {caps.canStop && <Button disabled={actioningIds.has(inst.id)} variant="ghost" className="h-7.5 px-2 text-[12px] font-semibold text-content-muted" onClick={() => { if (window.confirm(t("mobile_sheet_stop_confirm"))) handleInstanceAction(inst.id, "stop"); }}>{t("actions.stop")}</Button>}
-                        {caps.isFailed && <Button disabled={actioningIds.has(inst.id)} variant="ghost" className="h-7.5 px-2 text-[12px] font-semibold text-amber-700" onClick={() => { if (window.confirm(t("confirm_redeploy"))) handleInstanceAction(inst.id, "redeploy"); }}>{t("mobile_sheet_redeploy_title")}</Button>}
+                    <td className="px-4 py-3.5 text-right">
+                      <div className="ml-auto flex w-full flex-nowrap justify-end gap-1 whitespace-nowrap" onClick={e => e.stopPropagation()}>
+                        {caps.canStart && <Button disabled={actioningIds.has(inst.id)} variant="ghost" className="h-7.5 shrink-0 whitespace-nowrap px-2 text-[12px] font-semibold text-emerald-700" onClick={() => handleInstanceAction(inst.id, "start")}>{t("actions.start")}</Button>}
+                        {caps.canRestart && <Button disabled={actioningIds.has(inst.id)} variant="ghost" className="h-7.5 shrink-0 whitespace-nowrap px-2 text-[12px] font-semibold text-indigo-700" onClick={() => handleInstanceAction(inst.id, "restart")}>{t("actions.restart")}</Button>}
+                        {caps.canStop && <Button disabled={actioningIds.has(inst.id)} variant="ghost" className="h-7.5 shrink-0 whitespace-nowrap px-2 text-[12px] font-semibold text-content-muted" onClick={() => { if (window.confirm(t("mobile_sheet_stop_confirm"))) handleInstanceAction(inst.id, "stop"); }}>{t("actions.stop")}</Button>}
+                        {caps.isFailed && <Button disabled={actioningIds.has(inst.id)} variant="ghost" className="h-7.5 shrink-0 whitespace-nowrap px-2 text-[12px] font-semibold text-amber-700" onClick={() => { if (window.confirm(t("confirm_redeploy"))) handleInstanceAction(inst.id, "redeploy"); }}>{t("mobile_sheet_redeploy_title")}</Button>}
                         <Button
                           variant="ghost"
                           className="h-7.5 px-2.5 text-[13px] font-semibold text-content-secondary border border-outline hover:bg-surface-muted rounded-md shrink-0 transition-colors flex items-center gap-1"
@@ -214,43 +223,6 @@ export const InstanceTable = React.memo(function InstanceTable({
                         >
                           {t("action_detail")}
                         </Button>
-                        {!caps.isArchived && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              className="h-8 w-8 p-0 text-content-muted hover:text-brand-600 border border-transparent hover:border-outline hover:bg-surface-muted rounded-md transition-colors"
-                              onClick={(e) => { e.stopPropagation(); setEditingInstance(inst); }}
-                              title={t("action_settings_tooltip")}
-                            >
-                              <Settings className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              className="h-8 w-8 p-0 text-content-muted hover:text-blue-600 border border-transparent hover:border-blue-200 hover:bg-blue-50 rounded-md transition-colors"
-                              onClick={(e) => { e.stopPropagation(); onRenameInstance?.(inst); }}
-                              title={t("action_rename_tooltip")}
-                            >
-                              <Edit3 className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              className="h-7.5 w-7.5 p-0 text-content-muted hover:text-content-secondary border border-transparent hover:border-outline hover:bg-surface-muted rounded-md transition-colors"
-                              onClick={(e) => handleExportConfig(e, inst.id, inst.name)}
-                              title={t("action_export_archive_tooltip")}
-                            >
-                              <Download className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              className="h-8 w-8 p-0 text-content-muted hover:text-amber-600 border border-transparent hover:border-amber-200 hover:bg-amber-50 rounded-md transition-colors"
-                              onClick={(e) => handleArchive(inst.id, e)}
-                              title={t("action_archive_tooltip")}
-                              disabled={deletingIds.has(inst.id)}
-                            >
-                              <Archive className="w-4 h-4" />
-                            </Button>
-                          </>
-                        )}
                         {caps.canRestoreFromArchive && (
                           <Button
                             variant="ghost"
@@ -262,15 +234,33 @@ export const InstanceTable = React.memo(function InstanceTable({
                             {t("action_restore")}
                           </Button>
                         )}
-                        <Button
-                          variant="ghost"
-                          className="h-8 w-8 p-0 text-content-muted hover:text-red-700 border border-transparent hover:border-red-200 hover:bg-red-50 rounded-md transition-colors"
-                          onClick={(e) => handleDelete(inst.id, e)}
-                          title={t("action_delete_tooltip")}
-                          disabled={deletingIds.has(inst.id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        <div className="relative shrink-0">
+                          <select
+                            aria-label={`${t("action_more")}: ${inst.name}`}
+                            className="h-8 appearance-none rounded-md border border-outline bg-surface-muted py-0 pl-2 pr-7 text-[12px] font-semibold text-content-secondary outline-none transition-colors hover:bg-control-hover focus:border-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+                            defaultValue=""
+                            disabled={deletingIds.has(inst.id)}
+                            onClick={e => e.stopPropagation()}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              const action = e.currentTarget.value;
+                              e.currentTarget.value = "";
+                              if (action === "settings") setEditingInstance(inst);
+                              if (action === "rename") onRenameInstance?.(inst);
+                              if (action === "export") handleExportConfig(e as unknown as React.MouseEvent, inst.id, inst.name);
+                              if (action === "archive") handleArchive(inst.id, e as unknown as React.MouseEvent);
+                              if (action === "delete") handleDelete(inst.id, e as unknown as React.MouseEvent);
+                            }}
+                          >
+                            <option value="">{t("action_more")}</option>
+                            {!caps.isArchived && <option value="settings">{t("action_settings_tooltip")}</option>}
+                            {!caps.isArchived && <option value="rename">{t("action_rename_tooltip")}</option>}
+                            {!caps.isArchived && <option value="export">{t("action_export_archive_short")}</option>}
+                            {!caps.isArchived && <option value="archive">{t("action_archive_tooltip")}</option>}
+                            <option value="delete">{t("action_delete_tooltip")}</option>
+                          </select>
+                          <MoreHorizontal className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-content-muted" />
+                        </div>
                       </div>
                     </td>
                   </tr>

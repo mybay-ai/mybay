@@ -3,6 +3,8 @@ import { Label, Input, Button } from "../../components/ui";
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import type { RuntimeDefinition } from "../../../shared/runtimeCatalog";
+import { fetchRuntimeCatalog } from "./runtimeCatalogClient";
 
 interface InstanceInfoStepProps {
   data: any;
@@ -42,6 +44,8 @@ export function InstanceInfoStep({ data, update, updateTemplateInput, applyTempl
   const [error, setError] = useState<string | null>(null);
   const [consentChecked, setConsentChecked] = useState(false);
   const [jsonErrors, setJsonErrors] = useState<{ [key: string]: string }>({});
+  const [runtimeDefinitions, setRuntimeDefinitions] = useState<RuntimeDefinition[]>([]);
+  const [runtimeCatalogState, setRuntimeCatalogState] = useState<"loading" | "ready" | "error">("loading");
   const isDashboardAccessEnabled = data.enableDashboard !== false;
 
   const handleDashboardAccessChange = (enabled: boolean) => {
@@ -94,6 +98,28 @@ export function InstanceInfoStep({ data, update, updateTemplateInput, applyTempl
     if (currentUser?.token || !loading) {
     }
   }, [applyTemplate, currentUser?.token, i18n.resolvedLanguage]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
+    setRuntimeCatalogState("loading");
+    fetchRuntimeCatalog(controller.signal)
+      .then((catalog) => {
+        if (!active) return;
+        setRuntimeDefinitions(catalog.runtimes);
+        setRuntimeCatalogState("ready");
+      })
+      .catch((catalogError: any) => {
+        if (!active || catalogError?.name === "AbortError") return;
+        console.error("Runtime catalog loader error:", catalogError);
+        setRuntimeDefinitions([]);
+        setRuntimeCatalogState("error");
+      });
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [currentUser?.token]);
 
   const selectedTemplate = templates.find(tmpl => tmpl.id === data.template_id);
 
@@ -623,72 +649,84 @@ export function InstanceInfoStep({ data, update, updateTemplateInput, applyTempl
               <Bot className="w-4 h-4 text-blue-600" />
               <span>{t("wizardCopy.instanceInfo.runtimeType")}</span>
             </Label>
-            <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 px-2.5 py-0.5 rounded-full border border-indigo-100 dark:border-indigo-800/60">
-              Hermes Agent
-            </span>
+            {runtimeCatalogState === "ready" && (
+              <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 px-2.5 py-0.5 rounded-full border border-indigo-100 dark:border-indigo-800/60">
+                {runtimeDefinitions.find((runtime) => runtime.runtime.type === (data.runtime_type || "hermes"))?.displayName || t("wizardCopy.instanceInfo.runtimeUnavailable")}
+              </span>
+            )}
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                update("runtime_type", "hermes");
-                update("image", "nousresearch/hermes-agent");
-                update("imageTag", "latest");
-              }}
-              className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer relative ${
-                (data.runtime_type || 'hermes') === 'hermes'
-                  ? 'border-blue-500 dark:border-blue-400 bg-blue-50/40 dark:bg-blue-950/40 ring-2 ring-blue-500/20 shadow-sm'
-                  : 'border-outline bg-surface hover:border-outline-strong hover:bg-surface-muted/50'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-1.5">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-blue-100/80 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300">
-                    <Bot className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <span className="font-bold text-content text-[13px] block">Hermes Agent</span>
-                    <span className="text-[10px] text-blue-600 dark:text-blue-300 font-semibold">{t("wizardCopy.instanceInfo.hermesBadge")}</span>
-                  </div>
-                </div>
-                {(data.runtime_type || 'hermes') === 'hermes' && (
-                  <CheckCircle className="w-4 h-4 text-blue-600 dark:text-blue-300 shrink-0" />
-                )}
-              </div>
-              <p className="text-[11.5px] text-content-muted leading-relaxed">
-                {t("wizardCopy.instanceInfo.hermesDescription")}
-              </p>
-              <div className="mt-2 text-[10px] font-mono text-content-muted bg-surface-muted px-2 py-0.5 rounded inline-block border border-outline/60">
-                Port: 9119 | nousresearch/hermes-agent
-              </div>
-            </button>
-
-            <button
-              type="button"
-              disabled
-              aria-disabled="true"
-              title={t("wizardCopy.instanceInfo.piDescription")}
-              className="p-3.5 rounded-xl border text-left relative border-outline bg-surface-muted opacity-70 cursor-not-allowed"
-            >
-              <div className="flex items-center justify-between mb-1.5">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-purple-100/80 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300">
-                    <Zap className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <span className="font-bold text-content text-[13px] block">Pi Agent</span>
-                    <span className="text-[10px] text-purple-600 dark:text-purple-300 font-semibold">{t("wizardCopy.instanceInfo.piBadge")}</span>
-                  </div>
-                </div>
-              </div>
-              <p className="text-[11.5px] text-content-muted leading-relaxed">
-                {t("wizardCopy.instanceInfo.piDescription")}
-              </p>
-              <div className="mt-2 text-[10px] font-mono text-content-muted bg-surface-muted px-2 py-0.5 rounded inline-block border border-outline/60">
-                Preview only | Production create disabled
-              </div>
-            </button>
-          </div>
+          {runtimeCatalogState === "loading" && (
+            <div className="rounded-xl border border-outline bg-surface-muted px-3 py-4 text-xs text-content-muted">
+              {t("wizardCopy.instanceInfo.runtimeLoading")}
+            </div>
+          )}
+          {runtimeCatalogState === "error" && (
+            <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-3 text-xs text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300" role="alert">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{t("wizardCopy.instanceInfo.runtimeLoadError")}</span>
+            </div>
+          )}
+          {runtimeCatalogState === "ready" && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {runtimeDefinitions.map((definition) => {
+                const runtimeType = definition.runtime.type;
+                const selected = (data.runtime_type || "hermes") === runtimeType;
+                const deployable = definition.release.deploymentSupported;
+                const isPi = runtimeType === "pi";
+                const description = runtimeType === "hermes"
+                  ? t("wizardCopy.instanceInfo.hermesDescription")
+                  : runtimeType === "pi"
+                    ? t("wizardCopy.instanceInfo.piDescription")
+                    : definition.description;
+                const badge = runtimeType === "hermes"
+                  ? t("wizardCopy.instanceInfo.hermesBadge")
+                  : runtimeType === "pi"
+                    ? t("wizardCopy.instanceInfo.piBadge")
+                    : definition.release.certificationLevel;
+                return (
+                  <button
+                    key={runtimeType}
+                    type="button"
+                    disabled={!deployable}
+                    aria-disabled={!deployable}
+                    title={description}
+                    onClick={() => {
+                      if (!deployable) return;
+                      update("runtime_type", runtimeType);
+                      update("image", definition.runtime.image);
+                      update("imageTag", definition.runtime.tag);
+                    }}
+                    className={`p-3.5 rounded-xl border text-left transition-all relative ${
+                      !deployable
+                        ? "border-outline bg-surface-muted opacity-70 cursor-not-allowed"
+                        : selected
+                          ? "border-blue-500 dark:border-blue-400 bg-blue-50/40 dark:bg-blue-950/40 ring-2 ring-blue-500/20 shadow-sm cursor-pointer"
+                          : "border-outline bg-surface hover:border-outline-strong hover:bg-surface-muted/50 cursor-pointer"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <div className={`p-1.5 rounded-lg ${isPi ? "bg-purple-100/80 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300" : "bg-blue-100/80 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300"}`}>
+                          {isPi ? <Zap className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+                        </div>
+                        <div>
+                          <span className="font-bold text-content text-[13px] block">{definition.displayName}</span>
+                          <span className={`text-[10px] font-semibold ${isPi ? "text-purple-600 dark:text-purple-300" : "text-blue-600 dark:text-blue-300"}`}>{badge}</span>
+                        </div>
+                      </div>
+                      {selected && deployable && <CheckCircle className="w-4 h-4 text-blue-600 dark:text-blue-300 shrink-0" />}
+                    </div>
+                    <p className="text-[11.5px] text-content-muted leading-relaxed">{description}</p>
+                    <div className="mt-2 text-[10px] font-mono text-content-muted bg-surface-muted px-2 py-0.5 rounded inline-block border border-outline/60">
+                      {deployable
+                        ? `Port: ${definition.runtime.internalPort} | ${definition.runtime.image}`
+                        : t("wizardCopy.instanceInfo.runtimeSpecOnly")}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className="border-b border-outline pb-2">

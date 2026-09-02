@@ -10,6 +10,9 @@ export function validateQuickDeployDraft(draft: QuickDeployDraft): QuickDeployVa
   if (draft.schemaVersion !== 1) issues.push({ code: "unsupportedSchemaVersion", field: "schemaVersion", requiresAdvanced: true });
   if (runtimeType !== "hermes") issues.push({ code: "unsupportedRuntime", field: "runtimeType", requiresAdvanced: true });
   if (entrypoint !== "web") issues.push({ code: "unsupportedEntrypoint", field: "entrypoint", requiresAdvanced: true });
+  if (!["web", "telegram", "feishu", "weixin"].includes(String(draft.channel || ""))) {
+    issues.push({ code: "unsupportedChannel", field: "channel", requiresAdvanced: true });
+  }
   if (!draft.name?.trim()) issues.push({ code: "nameRequired", field: "name" });
   if (!draft.dashboardUsername?.trim()) issues.push({ code: "dashboardUsernameRequired", field: "dashboardUsername" });
   if ((draft.dashboardPassword || "").length < 8) issues.push({ code: "dashboardPasswordTooShort", field: "dashboardPassword" });
@@ -32,6 +35,15 @@ export function validateQuickDeployDraft(draft: QuickDeployDraft): QuickDeployVa
   }
   if (strategy?.mode === "byok" && config?.requiresApiKey && !strategy.apiKey?.trim()) {
     issues.push({ code: "apiKeyRequired", field: "modelStrategy.apiKey" });
+  }
+  if (draft.channel === "telegram" && !draft.telegramBotToken?.trim()) {
+    issues.push({ code: "telegramBotTokenRequired", field: "telegramBotToken" });
+  }
+  if (draft.channel === "feishu" && (!draft.feishuAppId?.trim() || !draft.feishuAppSecret?.trim())) {
+    issues.push({ code: "feishuCredentialsRequired", field: "feishuAppId" });
+  }
+  if (draft.channel === "weixin" && (!draft.weixinAccountId?.trim() || !draft.weixinToken?.trim())) {
+    issues.push({ code: "weixinCredentialsRequired", field: "weixinAccountId" });
   }
   if (!draft.permissionConfirmed) {
     issues.push({ code: "permissionConfirmationRequired", field: "permissionConfirmed" });

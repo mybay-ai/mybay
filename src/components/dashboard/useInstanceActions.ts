@@ -278,8 +278,11 @@ export function useInstanceActions(fetchInstances: () => void, currentUser: User
       a.download = filename;
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
+      // Keep the object URL alive long enough for Chromium to hand the
+      // generated archive to its download manager. Revoking it synchronously
+      // can cancel programmatic downloads in embedded browser contexts.
+      window.setTimeout(() => window.URL.revokeObjectURL(url), 1000);
       showToast(t("action_export_archive_success"), "success");
     } catch (err: any) {
       console.error("Export archive failed:", err);

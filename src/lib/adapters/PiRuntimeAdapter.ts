@@ -11,46 +11,12 @@ import {
   BackupResult 
 } from "./types";
 import { apiFetch } from "../api";
+import { PI_RUNTIME_DEFINITION, toRuntimeManifest } from "../../../shared/runtimeCatalog";
 
 export class PiRuntimeAdapter implements AgentRuntimeAdapter {
-  readonly runtimeType: AgentRuntimeType = "pi";
+  readonly runtimeType: AgentRuntimeType = PI_RUNTIME_DEFINITION.runtime.type;
 
-  readonly manifest: RuntimeManifest = {
-    name: "pi-agent",
-    displayName: "Pi Agent",
-    version: "1.0.0",
-    runtime: {
-      type: "pi",
-      image: "ghcr.io/mybay-ai/pi-agent",
-      internalPort: 8080,
-    },
-    health: {
-      endpoint: "/health",
-      intervalSeconds: 20,
-      timeoutSeconds: 5,
-    },
-    storage: {
-      dataPath: "/opt/pi/data",
-      configPath: "/opt/pi/config",
-    },
-    capabilities: {
-      chat: true,
-      fileUpload: true,
-      scheduledTasks: true,
-      browser: true,
-      shell: true,
-      imChannels: ["feishu", "telegram", "discord", "slack", "wechat", "dingtalk"],
-    },
-    resources: {
-      minimumMemory: "512Mi",
-      recommendedMemory: "1Gi",
-      minimumCpu: 0.5,
-    },
-    backup: {
-      includePaths: ["/opt/pi/data", "/opt/pi/config"],
-      excludePatterns: ["*.log", "cache/*"],
-    },
-  };
+  readonly manifest: RuntimeManifest = toRuntimeManifest(PI_RUNTIME_DEFINITION);
 
   async deploy(config: Record<string, any>): Promise<DeploymentResult> {
     try {
@@ -102,7 +68,7 @@ export class PiRuntimeAdapter implements AgentRuntimeAdapter {
       instanceId,
       runtimeType: this.runtimeType,
       status: data.status || "running",
-      healthPort: 8080,
+      healthPort: PI_RUNTIME_DEFINITION.runtime.internalPort,
       details: data.physical_status,
     };
   }
@@ -129,7 +95,7 @@ export class PiRuntimeAdapter implements AgentRuntimeAdapter {
       const data = await apiFetch(`/api/instances/${instanceId}/health`);
       return {
         healthy: data.status === "ok" || data.healthy === true,
-        endpoint: "/health",
+        endpoint: PI_RUNTIME_DEFINITION.health.endpoint,
         checkedAt,
         latencyMs: data.latencyMs,
         message: data.message || "Healthy",
@@ -137,7 +103,7 @@ export class PiRuntimeAdapter implements AgentRuntimeAdapter {
     } catch (err: any) {
       return {
         healthy: false,
-        endpoint: "/health",
+        endpoint: PI_RUNTIME_DEFINITION.health.endpoint,
         checkedAt,
         message: err.message || "Pi Agent health probe failed",
       };

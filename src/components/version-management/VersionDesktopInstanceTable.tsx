@@ -2,6 +2,8 @@ import React from "react";
 import { AlertCircle, AlertTriangle, ArrowUpRight, Box, Check, CheckCircle, ChevronDown, Loader2, MoreHorizontal, Terminal } from "lucide-react";
 import { Button, Card, cn } from "../ui";
 import { useTranslation } from "react-i18next";
+import { getUpgradePhaseLabel } from "./versionStatusPresentation";
+import { normalizeAgentUpgradePhase } from "../../../shared/agentUpgradePhase";
 
 interface VersionDesktopInstanceTableProps {
   filteredInstances: any[];
@@ -59,6 +61,7 @@ export function VersionDesktopInstanceTable({
                 const currentTag = inst.agent_image_tag || "latest";
                 const activeVersion = inst.resolved_version || inst.agent_version || currentTag;
                 const upgradeStatus = inst.upgrade_status;
+                const upgradePhase = normalizeAgentUpgradePhase(inst.upgrade_phase, upgradeStatus);
                 const previousTag = inst.previous_image_tag;
                 const upgradeError = inst.upgrade_error;
                 const hasPendingUpdate = doesInstanceNeedUpdate(inst);
@@ -116,17 +119,17 @@ export function VersionDesktopInstanceTable({
 
                     {/* DB Upgrade status */}
                     <td className="p-4">
-                      {upgradeStatus === "upgrading" ? (
+                      {["queued", "pulling_image", "rebuilding", "health_check", "chat_ready", "rolling_back"].includes(upgradePhase) ? (
                         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[13px] font-medium bg-blue-50 border border-blue-100 text-blue-700 animate-pulse">
                           <Loader2 className="w-3 h-3 animate-spin" />
-                          <span>{t("versionManagement.table.scheduling")}</span>
+                          <span>{getUpgradePhaseLabel(t, inst)}</span>
                         </span>
-                      ) : upgradeStatus === "success" ? (
+                      ) : upgradePhase === "completed" || upgradePhase === "rolled_back" ? (
                         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[13px] font-medium bg-green-50 border border-green-100 text-green-700">
                           <CheckCircle className="w-3 h-3" />
-                          <span>{t("versionManagement.status.success")}</span>
+                          <span>{getUpgradePhaseLabel(t, inst)}</span>
                         </span>
-                      ) : upgradeStatus === "failed" ? (
+                      ) : upgradePhase === "failed" ? (
                         <div className="flex flex-col items-start gap-1">
                           <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[13px] font-medium bg-red-50 border border-red-100 text-red-700">
                             <AlertCircle className="w-3 h-3" />
@@ -139,7 +142,7 @@ export function VersionDesktopInstanceTable({
                           )}
                         </div>
                       ) : (
-                        <span className="text-content-muted text-[13px]">—</span>
+                        <span className="text-content-muted text-[13px]">{getUpgradePhaseLabel(t, inst)}</span>
                       )}
                     </td>
 

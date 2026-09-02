@@ -11,46 +11,12 @@ import {
   BackupResult 
 } from "./types";
 import { apiFetch } from "../api";
+import { HERMES_RUNTIME_DEFINITION, toRuntimeManifest } from "../../../shared/runtimeCatalog";
 
 export class HermesRuntimeAdapter implements AgentRuntimeAdapter {
-  readonly runtimeType: AgentRuntimeType = "hermes";
+  readonly runtimeType: AgentRuntimeType = HERMES_RUNTIME_DEFINITION.runtime.type;
 
-  readonly manifest: RuntimeManifest = {
-    name: "hermes-agent",
-    displayName: "Hermes Agent",
-    version: "2026.8",
-    runtime: {
-      type: "hermes",
-      image: "ghcr.io/nousresearch/hermes-agent",
-      internalPort: 9119,
-    },
-    health: {
-      endpoint: "/health",
-      intervalSeconds: 30,
-      timeoutSeconds: 10,
-    },
-    storage: {
-      dataPath: "/opt/data",
-      configPath: "/opt/hermes/config",
-    },
-    capabilities: {
-      chat: true,
-      fileUpload: true,
-      scheduledTasks: true,
-      browser: true,
-      shell: true,
-      imChannels: ["feishu", "telegram", "discord", "dingtalk", "wechat", "qqbot", "whatsapp"],
-    },
-    resources: {
-      minimumMemory: "512Mi",
-      recommendedMemory: "1Gi",
-      minimumCpu: 0.5,
-    },
-    backup: {
-      includePaths: ["/opt/data", "/opt/hermes/config"],
-      excludePatterns: ["*.log", "tmp/*"],
-    },
-  };
+  readonly manifest: RuntimeManifest = toRuntimeManifest(HERMES_RUNTIME_DEFINITION);
 
   async deploy(config: Record<string, any>): Promise<DeploymentResult> {
     try {
@@ -102,7 +68,7 @@ export class HermesRuntimeAdapter implements AgentRuntimeAdapter {
       instanceId,
       runtimeType: this.runtimeType,
       status: data.status || "running",
-      healthPort: 9119,
+      healthPort: HERMES_RUNTIME_DEFINITION.runtime.internalPort,
       details: data.physical_status,
     };
   }
@@ -129,7 +95,7 @@ export class HermesRuntimeAdapter implements AgentRuntimeAdapter {
       const data = await apiFetch(`/api/instances/${instanceId}/health`);
       return {
         healthy: data.status === "ok" || data.healthy === true,
-        endpoint: "/health",
+        endpoint: HERMES_RUNTIME_DEFINITION.health.endpoint,
         checkedAt,
         latencyMs: data.latencyMs,
         message: data.message || "Healthy",
@@ -137,7 +103,7 @@ export class HermesRuntimeAdapter implements AgentRuntimeAdapter {
     } catch (err: any) {
       return {
         healthy: false,
-        endpoint: "/health",
+        endpoint: HERMES_RUNTIME_DEFINITION.health.endpoint,
         checkedAt,
         message: err.message || "Health check failed",
       };

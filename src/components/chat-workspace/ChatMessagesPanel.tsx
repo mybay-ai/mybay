@@ -6,6 +6,7 @@ import { findRetrySourceMessage } from "./run/retrySelectors";
 import type { AgentInstance, User as UserType } from "../../types";
 import type { ChatMessage } from "../../lib/chatWorkspaceState";
 import { ChatMessageBubble } from "./ChatMessageBubble";
+import { ChatAgentAvatar } from "./ChatAgentAvatar";
 import { ChatNoInstancesEmptyState, ChatMessagesLoadingState, ChatWelcomeEmptyState } from "./ChatEmptyStates";
 import { ChatReadinessBanner } from "./ChatReadinessBanner";
 import type { ChatToolStep } from "./ChatToolProgress";
@@ -182,7 +183,7 @@ export function ChatMessagesPanel({
       ) : messages.length === 0 && !detachedRunMessage ? (
         <ChatWelcomeEmptyState selectedInstance={selectedInstance} loadingInstances={loadingInstances} onUsePrompt={onUsePrompt} />
       ) : (
-        <div className="space-y-4 max-w-4xl mx-auto">
+        <div className="mx-auto w-full max-w-5xl space-y-4 2xl:max-w-6xl">
           {nextCursorSeq !== null && (
             <div className="flex justify-center my-4">
               <button
@@ -217,6 +218,7 @@ export function ChatMessagesPanel({
               onDownloadInstanceFilePath={onDownloadInstanceFilePath}
               generatedArtifacts={generatedArtifacts}
               fallbackModelLabel={fallbackModelLabel}
+              agentInstance={selectedInstance}
               instanceId={selectedId}
               onMessageFeedbackChange={onMessageFeedbackChange}
               runExecutionState={msg.role === "assistant" && messageIndex === runAssistantIndex ? runExecutionState : null}
@@ -241,6 +243,7 @@ export function ChatMessagesPanel({
               onDownloadInstanceFilePath={onDownloadInstanceFilePath}
               generatedArtifacts={generatedArtifacts}
               fallbackModelLabel={fallbackModelLabel}
+              agentInstance={selectedInstance}
               instanceId={selectedId}
               runExecutionState={runExecutionState}
               runMetrics={runMetrics}
@@ -252,8 +255,9 @@ export function ChatMessagesPanel({
 
           {shouldShowLegacyLoading && (
             <div className="flex gap-3.5 justify-start animate-pulse">
-              <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center shrink-0 dark:bg-indigo-500/15 dark:text-indigo-300 dark:border-indigo-400/30">
-                <LoaderCircle className="w-4 h-4 animate-spin" />
+              <div className="relative h-8 w-8 shrink-0">
+                <ChatAgentAvatar instance={selectedInstance} />
+                <LoaderCircle className="absolute -bottom-1 -right-1 h-3.5 w-3.5 animate-spin rounded-full bg-surface p-0.5 text-indigo-600" />
               </div>
               <div className="bg-surface/95 border border-outline/80 rounded-2xl rounded-tl-md px-4 py-3 text-[14px] leading-6 flex items-center gap-2 text-content-muted shadow-xs">
                 <div className="flex space-x-1">

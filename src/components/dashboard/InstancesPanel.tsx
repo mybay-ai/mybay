@@ -3,6 +3,7 @@ import { LayoutGrid, List, Plus, Search, X, RefreshCw, SlidersHorizontal, Trash2
 import { AgentInstance, User as UserType } from "../../types";
 import { Button, cn } from "../ui";
 import { InstanceGrid } from "./InstanceGrid";
+import { AssistantInstanceGrid } from "./AssistantInstanceGrid";
 import { InstanceTable } from "./InstanceTable";
 import { MobileInstanceList } from "./MobileInstanceList";
 import { useNavigate } from "react-router-dom";
@@ -18,15 +19,15 @@ interface InstancesPanelProps {
   setViewMode: (mode: 'grid' | 'table') => void;
   activeLogs: string | null;
   setActiveLogs: (id: string | null) => void;
-  detailTab: 'logs' | 'files' | 'context' | 'diagnostics';
-  setDetailTab: (tab: 'logs' | 'files' | 'context' | 'diagnostics') => void;
+  detailTab: 'logs' | 'files' | 'context' | 'diagnostics' | 'collaboration';
+  setDetailTab: (tab: 'logs' | 'files' | 'context' | 'diagnostics' | 'collaboration') => void;
   currentUser: UserType;
   copiedId: string | null;
   handleExportConfig: (e: React.MouseEvent, id: string, name: string) => void;
   handleDelete: (id: string, e?: React.MouseEvent) => void;
   handleArchive: (id: string, e?: React.MouseEvent) => void;
   handleRestore: (id: string, e?: React.MouseEvent) => void;
-  handleInstanceAction: (id: string, action: string) => void;
+  handleInstanceAction: (id: string, action: string, requireConfirm?: boolean, confirmMsg?: string) => void;
   handleCopyUrl: (e: React.MouseEvent, url: string, instId: string) => void;
   handleOpenLink: (e: React.MouseEvent, inst: AgentInstance) => void;
   fetchInstances: () => void;
@@ -87,6 +88,7 @@ export function InstancesPanel({
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 8;
   const [selectedInstanceIds, setSelectedInstanceIds] = useState<Set<string>>(new Set());
+  const [bulkMode, setBulkMode] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [bulkDeleteProgress, setBulkDeleteProgress] = useState({ current: 0, total: 0 });
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -253,7 +255,7 @@ export function InstancesPanel({
       {/* Search and Action Control Bar */}
       {instances.length > 0 && (
         <div className="bg-surface-muted/50 border border-outline/50 p-2 rounded-xl shadow-xs transition-all">
-          <div className="flex flex-col lg:flex-row gap-2.5 items-stretch lg:items-center justify-between">
+          <div className="flex flex-col gap-2.5 items-stretch justify-between xl:flex-row xl:items-center">
             {/* Search Bar Block */}
             <div className="relative flex-1 min-w-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-content-muted" />
@@ -317,28 +319,47 @@ export function InstancesPanel({
                 <button
                   onClick={() => setViewMode('grid')}
                   className={cn(
-                    "p-1 rounded-md text-[13px] font-semibold transition-colors duration-150 cursor-pointer",
+                    "flex items-center gap-1.5 rounded-lg px-2 py-1 text-[13px] font-semibold transition-colors duration-150 cursor-pointer",
                     viewMode === 'grid'
                       ? "bg-surface shadow-xs text-content border border-outline/40"
                       : "text-content-muted hover:text-content-secondary"
                   )}
                   title={t("view_mode_grid")}
+                  aria-pressed={viewMode === 'grid'}
                 >
                   <LayoutGrid className="w-3.5 h-3.5" />
+                  <span>{t("agent_view_mode")}</span>
                 </button>
                 <button
-                  onClick={() => setViewMode('table')}
+                  onClick={() => { setViewMode('table'); setBulkMode(false); setSelectedInstanceIds(new Set()); }}
                   className={cn(
-                    "p-1 rounded-md text-[13px] font-semibold transition-colors duration-150 cursor-pointer",
+                    "flex items-center gap-1.5 rounded-lg px-2 py-1 text-[13px] font-semibold transition-colors duration-150 cursor-pointer",
                     viewMode === 'table'
                       ? "bg-surface shadow-xs text-content border border-outline/40"
                       : "text-content-muted hover:text-content-secondary"
                   )}
                   title={t("view_mode_table")}
+                  aria-pressed={viewMode === 'table'}
                 >
                   <List className="w-3.5 h-3.5" />
+                  <span>{t("agent_management_mode")}</span>
                 </button>
               </div>
+
+              {viewMode === 'grid' && (
+                <Button
+                  variant="outline"
+                  disabled={isBulkDeleting}
+                  aria-pressed={bulkMode}
+                  onClick={() => {
+                    setBulkMode((current) => !current);
+                    setSelectedInstanceIds(new Set());
+                  }}
+                  className="h-9 rounded-xl px-3 text-xs"
+                >
+                  {t(bulkMode ? "agent_finish_bulk" : "agent_bulk_manage")}
+                </Button>
+              )}
 
               {/* Backup Archive Preview Button */}
               <Button
@@ -376,9 +397,9 @@ export function InstancesPanel({
       )}
 
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="animate-pulse flex flex-col p-4 md:p-6 bg-surface rounded-2xl shadow-card border border-outline/50">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <div key={i} className="flex min-h-[292px] animate-pulse flex-col rounded-2xl border border-outline/50 bg-surface p-5 shadow-xs">
               <div className="flex justify-between items-start mb-4">
                 <div className="flex gap-4">
                   <div className="w-1.5 h-12 bg-surface-muted rounded-full" />
@@ -447,7 +468,8 @@ export function InstancesPanel({
       ) : (
         <>
           {viewMode === 'grid' ? (
-            <InstanceGrid 
+            <AssistantInstanceGrid
+              bulkMode={bulkMode}
               instances={paginatedInstances}
               viewMode={viewMode}
               activeLogs={activeLogs}

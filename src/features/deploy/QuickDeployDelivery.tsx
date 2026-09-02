@@ -6,6 +6,7 @@ import { api } from "../../lib/api";
 import { InstanceReadinessNotice } from "../../components/instance-runtime/InstanceReadinessNotice";
 import { deriveQuickDeployReadiness, type QuickReadinessStage } from "./quickDeployReadiness";
 import { quickDeployProgressPercent, shouldContinueQuickDeployPolling, shouldProbeQuickDeployChat } from "./quickDeployDeliveryState";
+import { getQuickDeployStatusTranslationKey } from "./quickDeployStatusLabel";
 
 interface QuickDeployDeliveryProps {
   created: any;
@@ -128,6 +129,8 @@ export function QuickDeployDelivery({ created, onInstanceUpdated, onOpenChat, on
   const progress = quickDeployProgressPercent(deployment?.progress);
   const runtimeReason = readiness.runtime.reason ? String(readiness.runtime.reason) : "";
   const chatReason = readiness.chat.reason ? String(readiness.chat.reason) : "";
+  const runtimeReasonKey = getQuickDeployStatusTranslationKey(runtimeReason);
+  const runtimeReasonLabel = runtimeReasonKey ? t(runtimeReasonKey) : runtimeReason;
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-10">
@@ -146,7 +149,7 @@ export function QuickDeployDelivery({ created, onInstanceUpdated, onOpenChat, on
       </Card>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
-        <div className={`rounded-2xl border p-5 ${toneClass(readiness.runtime.tone)}`}><div className="flex items-center gap-3"><StageIcon tone={readiness.runtime.tone} /><div><p className="font-bold text-content">{t("quickDeploy.delivery.runtimeTitle")}</p><p className="mt-1 text-xs text-content-muted">{t(`quickDeploy.delivery.tones.${readiness.runtime.tone}`)}</p></div></div>{runtimeReason && <p className="mt-3 break-words font-mono text-xs text-content-muted">{runtimeReason}</p>}</div>
+        <div className={`rounded-2xl border p-5 ${toneClass(readiness.runtime.tone)}`}><div className="flex items-center gap-3"><StageIcon tone={readiness.runtime.tone} /><div><p className="font-bold text-content">{t("quickDeploy.delivery.runtimeTitle")}</p><p className="mt-1 text-xs text-content-muted">{t(`quickDeploy.delivery.tones.${readiness.runtime.tone}`)}</p></div></div>{runtimeReasonLabel && <p className="mt-3 break-words font-mono text-xs text-content-muted">{runtimeReasonLabel}</p>}</div>
         <div className={`rounded-2xl border p-5 ${toneClass(readiness.chat.tone)}`}><div className="flex items-center gap-3"><StageIcon tone={readiness.chat.tone} /><div><p className="font-bold text-content">{t("quickDeploy.delivery.chatTitle")}</p><p className="mt-1 text-xs text-content-muted">{t(`quickDeploy.delivery.tones.${readiness.chat.tone}`)}</p></div></div>{chatReason && <p className="mt-3 break-words text-xs text-content-muted">{chatReason}</p>}</div>
       </div>
 

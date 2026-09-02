@@ -16,12 +16,28 @@ export type QuickDeployModelStrategy =
       isCustomModel?: boolean;
     };
 
+export type QuickDeployChannel = "web" | "telegram" | "feishu" | "weixin";
+
 export interface QuickDeployDraft {
   schemaVersion: 1;
   runtimeType: "hermes";
   entrypoint: "web";
   name: string;
   purpose: string;
+  channel: QuickDeployChannel;
+  telegramBotToken?: string;
+  telegramAllowedUsers?: string;
+  telegramAllowedChats?: string;
+  feishuAppId?: string;
+  feishuAppSecret?: string;
+  feishuRegion?: "feishu" | "lark";
+  feishuAllowedUsers?: string;
+  feishuAllowedChats?: string;
+  weixinAccountId?: string;
+  weixinToken?: string;
+  weixinBaseUrl?: string;
+  weixinAllowedUsers?: string;
+  weixinAllowedChats?: string;
   dashboardUsername: string;
   dashboardPassword: string;
   modelStrategy: QuickDeployModelStrategy;
@@ -33,6 +49,7 @@ export type QuickDeployValidationCode =
   | "unsupportedSchemaVersion"
   | "unsupportedRuntime"
   | "unsupportedEntrypoint"
+  | "unsupportedChannel"
   | "nameRequired"
   | "dashboardUsernameRequired"
   | "dashboardPasswordTooShort"
@@ -43,6 +60,9 @@ export type QuickDeployValidationCode =
   | "savedCredentialRequired"
   | "oauthCredentialRequired"
   | "apiKeyRequired"
+  | "telegramBotTokenRequired"
+  | "feishuCredentialsRequired"
+  | "weixinCredentialsRequired"
   | "permissionConfirmationRequired"
   | "skillRequiresAdvancedConfiguration";
 

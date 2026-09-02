@@ -10,7 +10,7 @@ import { ContainerStats } from "../ContainerStats";
 interface MobileInstanceListProps {
   instances: AgentInstance[];
   setActiveLogs: (id: string | null) => void;
-  setDetailTab: (tab: 'logs' | 'files' | 'context' | 'diagnostics') => void;
+  setDetailTab: (tab: 'logs' | 'files' | 'context' | 'diagnostics' | 'collaboration') => void;
   setMobileMenuOpenInstance: (inst: AgentInstance) => void;
   currentUser: UserType;
   handleCopyUrl: (e: React.MouseEvent, url: string, instId: string) => void;

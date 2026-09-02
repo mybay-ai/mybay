@@ -26,9 +26,6 @@ export class RuntimeRegistry {
   public getAdapter(runtimeType: AgentRuntimeType = "hermes"): AgentRuntimeAdapter {
     const adapter = this.adapters.get(runtimeType);
     if (!adapter) {
-      // Fallback to hermes adapter if requested type isn't registered
-      const hermesAdapter = this.adapters.get("hermes");
-      if (hermesAdapter) return hermesAdapter;
       throw new Error(`Runtime adapter for '${runtimeType}' is not registered`);
     }
     return adapter;

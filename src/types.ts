@@ -50,6 +50,9 @@ export interface AgentInstance {
     allowMode?: string;
     templateName?: string | null;
     storageExceeded?: boolean;
+    a2aEnabled?: boolean;
+    a2aAgentName?: string | null;
+    a2aPeerCount?: number;
     telegramAllowedUsers?: string;
     discordAllowedGuilds?: string;
     feishuAppId?: string;

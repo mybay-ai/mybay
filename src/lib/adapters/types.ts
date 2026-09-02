@@ -1,4 +1,6 @@
-export type AgentRuntimeType = 'hermes' | 'pi' | 'openclaw' | 'custom_docker';
+import type { RuntimeManifest as CatalogRuntimeManifest, RuntimeType } from "../../../shared/runtimeCatalog";
+
+export type AgentRuntimeType = RuntimeType;
 
 export interface RuntimeStatus {
   instanceId: string;
@@ -58,42 +60,7 @@ export interface DeploymentResult {
   error?: string;
 }
 
-export interface RuntimeManifest {
-  name: string;
-  displayName: string;
-  version: string;
-  runtime: {
-    type: AgentRuntimeType;
-    image: string;
-    internalPort: number;
-  };
-  health: {
-    endpoint: string;
-    intervalSeconds: number;
-    timeoutSeconds: number;
-  };
-  storage: {
-    dataPath: string;
-    configPath: string;
-  };
-  capabilities: {
-    chat: boolean;
-    fileUpload: boolean;
-    scheduledTasks: boolean;
-    browser: boolean;
-    shell: boolean;
-    imChannels: string[];
-  };
-  resources: {
-    minimumMemory: string;
-    recommendedMemory: string;
-    minimumCpu: number;
-  };
-  backup?: {
-    includePaths: string[];
-    excludePatterns?: string[];
-  };
-}
+export type RuntimeManifest = CatalogRuntimeManifest;
 
 export interface AgentRuntimeAdapter {
   readonly runtimeType: AgentRuntimeType;

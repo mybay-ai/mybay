@@ -28,6 +28,7 @@ type ChatInputBarProps = {
   onRemoveAttachment?: (id: string) => void;
   isUploading?: boolean;
   creatingConversation?: boolean;
+  loadingConversations?: boolean;
   attachmentConfig: ChatAttachmentConfig;
   input: string;
   sending: boolean;
@@ -85,6 +86,7 @@ export function ChatInputBar({
   onRemoveAttachment,
   isUploading,
   creatingConversation = false,
+  loadingConversations = false,
   attachmentConfig
 }: ChatInputBarProps) {
   const { t } = useTranslation(["dashboard", "common"]);
@@ -96,6 +98,10 @@ export function ChatInputBar({
   const composerText = serializeLongTextDraft(longTextComposer?.blocks || [], input);
   const composerCharacters = countChatMessageCharacters(composerText.trim());
   const messageTooLong = composerCharacters > MAX_CHAT_USER_MESSAGE_CHARS;
+  const conversationUnavailable = creatingConversation || loadingConversations;
+  const conversationUnavailableMessage = t(loadingConversations
+    ? "dashboard:chatWorkspace.loadingConversations"
+    : "dashboard:chatWorkspace.creatingConversation");
 
 
   useEffect(() => {
@@ -130,7 +136,7 @@ export function ChatInputBar({
     if (shouldIgnoreComposerKeyDown(e)) {
       return;
     }
-    if (e.key === "Enter" && !e.shiftKey && (!isChatReady || isUploading || creatingConversation || messageTooLong)) {
+    if (e.key === "Enter" && !e.shiftKey && (!isChatReady || isUploading || conversationUnavailable || messageTooLong)) {
       e.preventDefault();
       return;
     }
@@ -414,16 +420,16 @@ export function ChatInputBar({
             </span>
             <button
               type="submit"
-              disabled={!composerText.trim() || messageTooLong || !isChatReady || isUploading || creatingConversation || agentModeBlocked}
+              disabled={!composerText.trim() || messageTooLong || !isChatReady || isUploading || conversationUnavailable || agentModeBlocked}
               className="h-8 w-8 bg-indigo-600 hover:bg-indigo-700 disabled:bg-outline disabled:text-content-muted text-white rounded-lg transition-all inline-flex items-center justify-center shadow-sm shadow-indigo-200/70 dark:bg-indigo-600 dark:hover:bg-indigo-500 dark:shadow-none"
-              title={creatingConversation ? t("dashboard:chatWorkspace.creatingConversation") : agentModeBlocked ? agentUnavailableMessage : sending ? t("dashboard:chatWorkspace.interruptAndSendTitle") : t("dashboard:chatWorkspace.sendBtnTitle")}
-              aria-label={creatingConversation ? t("dashboard:chatWorkspace.creatingConversation") : agentModeBlocked ? agentUnavailableMessage : sending ? t("dashboard:chatWorkspace.interruptAndSendTitle") : t("dashboard:chatWorkspace.sendBtnTitle")}
+              title={conversationUnavailable ? conversationUnavailableMessage : agentModeBlocked ? agentUnavailableMessage : sending ? t("dashboard:chatWorkspace.interruptAndSendTitle") : t("dashboard:chatWorkspace.sendBtnTitle")}
+              aria-label={conversationUnavailable ? conversationUnavailableMessage : agentModeBlocked ? agentUnavailableMessage : sending ? t("dashboard:chatWorkspace.interruptAndSendTitle") : t("dashboard:chatWorkspace.sendBtnTitle")}
             >
               <Send className="w-4 h-4" />
             </button>
           </div>
         </div>
-        {creatingConversation && <p role="status" className="mt-2 px-2 text-xs text-content-muted">{t("dashboard:chatWorkspace.creatingConversation")}</p>}
+        {conversationUnavailable && <p role="status" className="mt-2 px-2 text-xs text-content-muted">{conversationUnavailableMessage}</p>}
         {messageTooLong && <p role="alert" className="mt-2 px-2 text-xs text-red-600 dark:text-red-400">{t("dashboard:chatWorkspace.messageTooLong", { max: MAX_CHAT_USER_MESSAGE_CHARS.toLocaleString() })}</p>}
         {agentModeBlocked && <p role="status" className="mt-2 px-2 text-xs text-amber-700 dark:text-amber-300">{agentUnavailableMessage}</p>}
         <div className={`mt-1.5 items-center gap-3 px-2 text-[11px] text-content-muted ${mobileKeyboardOpen ? "hidden" : "hidden md:flex"}`}>

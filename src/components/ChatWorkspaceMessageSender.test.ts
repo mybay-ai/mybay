@@ -53,3 +53,27 @@ it("keeps the draft and never submits to the old conversation during creation", 
   expect(setMessages).not.toHaveBeenCalled();
   expect(showToast).toHaveBeenCalled();
 });
+
+it("keeps the draft and never creates an empty conversation while history is restoring", async () => {
+  vi.mocked(api.post).mockClear();
+  const setInput = vi.fn(), setMessages = vi.fn(), showToast = vi.fn();
+  await createChatWorkspaceMessageSender({
+    loadingConversations: true,
+    conversationCreationInFlightRef: { current: false },
+    uploadInFlightRef: { current: false },
+    isUploading: false,
+    pendingAttachments: [],
+    input: "keep restored draft",
+    selectedId: "instance-1",
+    selectedConversationId: null,
+    selectedConversationIdRef: { current: null },
+    setInput,
+    setMessages,
+    showToast,
+    t: (key: string) => key,
+  })();
+  expect(api.post).not.toHaveBeenCalled();
+  expect(setInput).not.toHaveBeenCalled();
+  expect(setMessages).not.toHaveBeenCalled();
+  expect(showToast).toHaveBeenCalledWith("dashboard:chatWorkspace.loadingConversations", "warning");
+});
