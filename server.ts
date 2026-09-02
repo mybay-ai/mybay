@@ -942,7 +942,8 @@ async function startServer() {
 startServer().catch((error: unknown) => {
   const message = error instanceof Error ? error.message : "Unknown startup failure.";
   console.error(`[Startup] ${message}`);
-  process.exitCode = 1;
+  closeLocalDatabase();
+  process.exit(1);
 });
 
 
