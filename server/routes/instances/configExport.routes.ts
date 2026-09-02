@@ -43,6 +43,7 @@ import {
   resolveProviderCredentialSelection,
 } from "../../services/instanceConfig/instanceConfigRoutePolicy";
 import { createRuntimeConfigRoutes } from "./config/runtimeConfig.routes";
+import { buildConfigArchiveSections } from "../../utils/configArchiveSections";
 
 export function createConfigExportRoutes(deps: RouterDependencies) {
   const router = Router();
@@ -284,13 +285,8 @@ export function createConfigExportRoutes(deps: RouterDependencies) {
         platform: "MyBay",
         archive_version: 1,
         redacted: true,
-        included_sections: ["manifest", "config", "business-config", "template-inputs"]
+        included_sections: buildConfigArchiveSections(filesToPack.map((file) => file.archivePath))
       };
-
-      if (filesToPack.length > 0) {
-        manifest.included_sections.push("uploads");
-        manifest.included_sections.push("outputs");
-      }
 
       const safeName = (instance.name || "instance").replace(/[^a-zA-Z0-9_-]/g, "_");
       const filename = `mybay-agent-backup-${safeName}-${instance.id}.zip`;

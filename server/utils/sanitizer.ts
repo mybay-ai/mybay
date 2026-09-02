@@ -292,6 +292,9 @@ export function sanitizeInstance(instance: any, mode: 'list' | 'detail' = 'detai
       templateName: config.templateName || null,
       storageExceeded: !!config.storageExceeded,
       skills: config.skills || [],
+      a2aEnabled: config.a2aEnabled === true,
+      a2aAgentName: config.a2aAgentName || null,
+      a2aPeerCount: Array.isArray(config.a2aPeerIds) ? config.a2aPeerIds.length : 0,
       
       // CONFIG CHECKS (Safe summary for status panel)
       configChecks: {

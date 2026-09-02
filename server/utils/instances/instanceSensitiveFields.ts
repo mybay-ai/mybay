@@ -6,5 +6,6 @@ export const instanceSensitiveFields = [
   'dingtalkRobotSecret', 'wechatAppSecret', 'wechatMpAppSecret', 
   'wecomAppSecret', 'weixinToken', 'webhookSecret',
   'skillTavilyApiKey', 'skillSerperApiKey', 'skillGithubToken', 
-  'hermesApiKey', 'chatApiKey', 'hermesDashboardAuthSecret', 'dashboardAuthSecret'
+  'hermesApiKey', 'chatApiKey', 'hermesDashboardAuthSecret', 'dashboardAuthSecret',
+  'a2aBearerToken'
 ];

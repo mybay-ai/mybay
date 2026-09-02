@@ -13,6 +13,9 @@ import { docker } from "../../routes/instances/index"; // Wait, circular depende
 
 export const isSensitiveFile = (filename: string) => {
   const sensitivePatterns = [
+    // Hidden files and directories commonly contain credentials, runtime
+    // metadata, or package-manager state. They are not product artifacts.
+    /^\./,
     /^\.mybay-upload-/i,
     /^\.env/i,
     /\.key$/i,
@@ -23,14 +26,16 @@ export const isSensitiveFile = (filename: string) => {
     /api_key/i,
     /credential/i,
     /password/i,
-    /^config\.yaml$/i,
-    /^mybay\.config\.yaml$/i,
+    /^config\.ya?ml(?:\.bak(?:[-.].*)?)?$/i,
+    /^mybay\.config\.ya?ml(?:\.bak(?:[-.].*)?)?$/i,
     /^mybay\.instance\.yaml$/i,
     /^mybay\.template\.yaml$/i,
     /^mybay\.system\.md$/i,
     /^soul\.md$/i,
-    /\.sqlite$/i,
-    /\.db$/i,
+    /^auth\.(?:json|lock)$/i,
+    /^spawn-ledger\.json$/i,
+    /^(?:backup|backups|home|log|logs|pairing|session|sessions|state)$/i,
+    /\.(?:sqlite|db)(?:-(?:wal|shm|journal))?$/i,
     /^\.git/i
   ];
   return sensitivePatterns.some(pattern => pattern.test(filename));

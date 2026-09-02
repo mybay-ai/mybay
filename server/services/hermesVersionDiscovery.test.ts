@@ -39,6 +39,26 @@ describe("Hermes version discovery", () => {
     expect(updateAllVersionsLatestFlag).toHaveBeenCalledWith("v0.20.1");
   });
 
+  it("persists the stable capability matrix for the latest release", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(new Response(JSON.stringify([
+      { tag_name: "v2026.8.31", prerelease: false, published_at: "2026-08-31T19:29:49Z" },
+    ]), { status: 200 }));
+
+    await discoverHermesVersions(fetchImpl as any);
+
+    expect(upsertMyBayVersion).toHaveBeenCalledWith(expect.objectContaining({
+      version: "v2026.8.31",
+      capabilities: expect.arrayContaining([
+        "a2a",
+        "bot_mode",
+        "peer_dm",
+        "group_rooms",
+        "cron_continuity",
+        "subagent_steering",
+      ]),
+    }));
+  });
+
   it("does not change local metadata when the upstream request fails", async () => {
     await expect(discoverHermesVersions(vi.fn().mockRejectedValue(new Error("offline")) as any)).rejects.toMatchObject({ code: "VERSION_DISCOVERY_FAILED" });
     expect(upsertMyBayVersion).not.toHaveBeenCalled();

@@ -13,6 +13,7 @@ import type {
 } from "../../contracts";
 import { defineRuntimeCapabilities } from "../../contracts";
 import { PI_RUNTIME_RELEASE_CODE } from "../../../utils/runtimeReleaseBoundary";
+import { PI_RUNTIME_DEFINITION } from "../../../../shared/runtimeCatalog";
 
 function previewOnlyError(): Error {
   return new Error(PI_RUNTIME_RELEASE_CODE);
@@ -76,18 +77,13 @@ class PiPreviewExecutionProvider implements RuntimeRunExecutionProvider {
   }
 }
 
-export const PI_RUNTIME_CAPABILITIES = defineRuntimeCapabilities({
-  conversation: { modes: [] },
-  cancellation: { supported: false },
-  terminal: { observation: "unsupported" },
-  interactions: { approvals: false, questions: false },
-});
+export const PI_RUNTIME_CAPABILITIES = defineRuntimeCapabilities(PI_RUNTIME_DEFINITION.lifecycle);
 
 export const piRuntimeDriver: RuntimeDriver = Object.freeze({
-  runtimeType: "pi",
-  displayName: "Pi",
-  providerKey: "pi-preview",
-  contractVersion: 1,
+  runtimeType: PI_RUNTIME_DEFINITION.runtime.type,
+  displayName: PI_RUNTIME_DEFINITION.displayName,
+  providerKey: PI_RUNTIME_DEFINITION.providerKey,
+  contractVersion: PI_RUNTIME_DEFINITION.contractVersion,
   capabilities: PI_RUNTIME_CAPABILITIES,
   preparation: Object.freeze(new PiPreviewPreparationProvider()),
   events: Object.freeze(new PiPreviewEventProvider()),

@@ -25,10 +25,12 @@ import credentialsRouter from "./server/routes/credentials";
 import oauthProvidersRouter from "./server/routes/oauthProviders";
 import { createInstancesRouter } from "./server/routes/instances";
 import { createDeploymentsRouter } from "./server/routes/deployments";
+import runtimesRouter from "./server/routes/runtimes";
 import instanceSessionAuthRouter, { handleSessionComplete } from "./server/routes/instanceSessionAuth";
 import webhooksRouter from "./server/routes/webhooks";
 import { startLocalDeployWorker } from "./server/workers/deployWorker";
 import { setupSocketLogger } from "./server/sockets/logger";
+import { setupChatRunControl } from "./server/sockets/chatRunControl";
 import { setupChatRealtime } from "./server/services/chatRealtime";
 import { dbAdapter } from "./server/db";
 import { loadPersistedLocalResourcePolicy } from "./server/services/localResourcePolicy";
@@ -281,6 +283,7 @@ async function startServer() {
   // Socket IO runtime logs streaming
   setupSocketLogger(io);
   setupChatRealtime(io);
+  setupChatRunControl(io);
 
   // Prewarm progress is streamed to the authenticated management UI.
   prewarmManager.setSocketIO(io);
@@ -316,6 +319,7 @@ async function startServer() {
   app.use("/api/credentials", protectedApiLimiter, authenticateToken, credentialsRouter);
   app.use("/api/oauth/providers", protectedApiLimiter, authenticateToken, oauthProvidersRouter);
   app.use("/api/deployments", protectedApiLimiter, createDeploymentsRouter());
+  app.use("/api/runtimes", protectedApiLimiter, authenticateToken, runtimesRouter);
   app.use("/api/instances", protectedApiLimiter, (req, res, next) => {
     if (isAuthorizedHtmlPreviewAssetRequest(req.method, req.path, req.headers.cookie)) return next();
     return authenticateToken(req, res, next);

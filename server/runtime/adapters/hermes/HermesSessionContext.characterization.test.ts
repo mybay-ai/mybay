@@ -66,19 +66,26 @@ describe("Hermes session context characterization", () => {
     expect(external.bindConversationSessionId).not.toHaveBeenCalled();
   });
 
-  it("uses current input only for an existing session when history deduplication is enabled", () => {
+  it("bridges prior messages for a short follow-up in an existing session", () => {
     const payload = preparation.buildRunPayload({
-      userContent: "question",
-      agentAttachmentContext: "attachment context",
+      userContent: "1",
       sessionBinding: { sessionId: "native-session", state: "existing" },
-      historyMessages: [{ role: "assistant", content: "old answer" }],
+      historyMessages: [
+        { role: "user", content: "你能帮我做个 PPT 吗？" },
+        { role: "assistant", content: "请选择：1. PPT 演示文稿 2. 单文件网页" },
+      ],
       deduplicateHistoryEnabled: true,
       reasoningEffort: "deep",
       systemPolicy: "managed policy"
     });
 
     expect(payload).toEqual({
-      input: "question\n\nattachment context",
+      input: [
+        { role: "system", content: expect.stringContaining("managed policy") },
+        { role: "user", content: "你能帮我做个 PPT 吗？" },
+        { role: "assistant", content: "请选择：1. PPT 演示文稿 2. 单文件网页" },
+        { role: "user", content: "1" },
+      ],
       instructions: expect.stringContaining("managed policy"),
       session_id: "native-session",
       model_options: {
@@ -87,14 +94,38 @@ describe("Hermes session context characterization", () => {
       }
     });
     expect(payload.instructions).toContain(HERMES_CONVERSATION_EFFICIENCY_POLICY);
+    expect(payload.instructions).toContain("不要连续改写关键词重试");
+    expect(payload.instructions).toContain("浏览器控制不可用或首次调用失败时");
   });
 
-  it("filters the current message and builds ordered full history for fallback sessions", () => {
+  it("keeps current-only input for an existing session with no prior messages", () => {
+    const payload = preparation.buildRunPayload({
+      userContent: "first message",
+      agentAttachmentContext: "attachment context",
+      sessionBinding: { sessionId: "native-session", state: "existing" },
+      historyMessages: [],
+      deduplicateHistoryEnabled: true,
+      reasoningEffort: "balanced",
+      systemPolicy: "managed policy",
+    });
+
+    expect(payload).toEqual({
+      input: "first message\n\nattachment context",
+      instructions: expect.stringContaining("managed policy"),
+      session_id: "native-session",
+      model_options: {
+        reasoning_effort: "medium",
+        reasoning: { enabled: true, effort: "medium" },
+      },
+    });
+  });
+
+  it.each(["created", "fallback"] as const)("filters the current message and builds ordered full history for %s sessions", (state) => {
     const payload = preparation.buildRunPayload({
       userContent: "current question",
       currentUserMessageId: "message-current",
       currentRequestId: "request-current",
-      sessionBinding: { sessionId: "fallback-session", state: "fallback" },
+      sessionBinding: { sessionId: `${state}-session`, state },
       historyMessages: [
         { id: "message-old", role: "assistant", content: "old answer" },
         { id: "message-current", role: "user", content: "duplicate by id" },
@@ -112,10 +143,11 @@ describe("Hermes session context characterization", () => {
         { role: "user", content: "current question" }
       ],
       instructions: expect.stringContaining("managed policy"),
-      session_id: "fallback-session",
+      session_id: `${state}-session`,
       model_options: {
-        reasoning_effort: "low",
-        reasoning: { enabled: true, effort: "low" }
+        reasoning_effort: "none",
+        reasoning: { enabled: false },
+        fast: true,
       }
     });
     expect(payload.instructions).toBe((payload.input as Array<{ role: string; content: string }>)[0].content);

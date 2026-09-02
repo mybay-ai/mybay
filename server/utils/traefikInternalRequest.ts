@@ -2,7 +2,7 @@ import http from "node:http";
 import https from "node:https";
 import { URL } from "node:url";
 import { parseTraefikEnv } from "../infrastructure/traefik/traefikConfig";
-import { resolveLocalInstanceTarget } from "./localInstanceTarget";
+import { invalidateLocalInstanceTarget, resolveLocalInstanceTarget } from "./localInstanceTarget";
 
 export interface TraefikRequestOptions {
   instanceId: string;
@@ -167,6 +167,7 @@ export async function requestTraefikInternal(options: TraefikRequestOptions): Pr
     const safeResolve = (result: TraefikRequestResult) => {
       if (resolved) return;
       resolved = true;
+      if (isLocal && result.statusCode === 0) invalidateLocalInstanceTarget(instanceId);
       resolve(result);
     };
 

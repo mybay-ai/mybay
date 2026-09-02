@@ -1,0 +1,164 @@
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import {
+  evaluateRuntimeCertification,
+  RUNTIME_CERTIFICATION_REQUIREMENTS,
+  type RuntimeCertificationEvidenceBundle,
+  type RuntimeCertificationReport,
+} from "../shared/runtimeCertification";
+import { RUNTIME_DEFINITIONS, type RuntimeDefinition } from "../shared/runtimeCatalog";
+
+const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const writeOutputs = process.argv.includes("--write");
+const strict = process.argv.includes("--strict");
+const errors: string[] = [];
+const requirementIds: ReadonlySet<string> = new Set(RUNTIME_CERTIFICATION_REQUIREMENTS.map(({ id }) => id));
+
+interface PublishedRuntimeCertification extends RuntimeCertificationReport {
+  readonly evidenceFile: string | null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function validateEvidenceReference(reference: string, checkIndex: number): void {
+  if (/^https?:\/\//i.test(reference)) return;
+  const referencedPath = reference.split("#", 1)[0];
+  const absolutePath = path.resolve(projectRoot, referencedPath);
+  const relativePath = path.relative(projectRoot, absolutePath);
+  if (!referencedPath || relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
+    throw new Error(`check ${checkIndex} evidence reference escapes the project root`);
+  }
+  if (!fs.existsSync(absolutePath)) {
+    throw new Error(`check ${checkIndex} evidence reference is missing: ${reference}`);
+  }
+}
+
+function parseEvidence(relativePath: string): RuntimeCertificationEvidenceBundle | undefined {
+  const absolutePath = path.join(projectRoot, relativePath);
+  if (!fs.existsSync(absolutePath)) return undefined;
+  try {
+    const value: unknown = JSON.parse(fs.readFileSync(absolutePath, "utf8"));
+    if (!isRecord(value) || value.schemaVersion !== 1 || !isRecord(value.runtime) || !Array.isArray(value.checks)) {
+      throw new Error("root, runtime, or checks structure is invalid");
+    }
+    if (typeof value.runtime.type !== "string"
+      || typeof value.runtime.providerKey !== "string"
+      || !Number.isSafeInteger(value.runtime.contractVersion)) {
+      throw new Error("runtime binding is invalid");
+    }
+    for (const [index, check] of value.checks.entries()) {
+      if (!isRecord(check)
+        || typeof check.requirementId !== "string"
+        || !requirementIds.has(check.requirementId)
+        || !["passed", "failed"].includes(String(check.status))
+        || !["contract", "runtime", "e2e"].includes(String(check.scope))
+        || typeof check.observedAt !== "string"
+        || (check.validUntil !== undefined && typeof check.validUntil !== "string")
+        || typeof check.environment !== "string"
+        || (check.command !== undefined && typeof check.command !== "string")
+        || !Array.isArray(check.evidenceRefs)
+        || check.evidenceRefs.some((reference) => typeof reference !== "string")
+        || (check.note !== undefined && typeof check.note !== "string")) {
+        throw new Error(`check ${index} is invalid`);
+      }
+      for (const reference of check.evidenceRefs as string[]) {
+        validateEvidenceReference(reference, index);
+      }
+    }
+    return value as unknown as RuntimeCertificationEvidenceBundle;
+  } catch (error: any) {
+    errors.push(`${relativePath}: ${error?.message || "invalid certification evidence"}`);
+    return undefined;
+  }
+}
+
+function publishedReport(definition: RuntimeDefinition): PublishedRuntimeCertification {
+  const relativeEvidencePath = `certification/evidence/${definition.runtime.type}.certification.json`;
+  const evidenceExists = fs.existsSync(path.join(projectRoot, relativeEvidencePath));
+  const report = evaluateRuntimeCertification(
+    definition,
+    evidenceExists ? parseEvidence(relativeEvidencePath) : undefined,
+  );
+  return {
+    ...report,
+    evidenceFile: evidenceExists ? relativeEvidencePath : null,
+  };
+}
+
+const reports = RUNTIME_DEFINITIONS.map(publishedReport);
+
+function publicDocument(): string {
+  return `${JSON.stringify({
+    schemaVersion: 1,
+    generatedFrom: [
+      "shared/runtimeCatalog.ts",
+      "shared/runtimeCertification.ts",
+      "certification/evidence/*.certification.json",
+    ],
+    requirements: RUNTIME_CERTIFICATION_REQUIREMENTS,
+    runtimes: reports,
+  }, null, 2)}\n`;
+}
+
+function certificationDocument(): string {
+  const runtimeRows = reports.map((report) =>
+    `| ${report.runtimeType} | ${report.declaredLevel} | ${report.verifiedLevel} | ${report.publicationStatus} | ${report.evidenceFile ?? "none"} |`);
+  const requirementRows = RUNTIME_CERTIFICATION_REQUIREMENTS.map((requirement) =>
+    `| ${requirement.level} | ${requirement.id} | ${requirement.title} | ${requirement.minimumEvidenceScope} |`);
+  return [
+    "# MyBay Runtime Certification",
+    "",
+    "<!-- Generated by scripts/runtime-certification.ts. Do not edit by hand. -->",
+    "",
+    "A declared certification level is a release target. A verified level is granted only by an evidence bundle that satisfies every requirement in that level and every lower level. Contract tests and capability declarations are admission checks; they do not count as live Runtime or product E2E evidence.",
+    "",
+    "## Current status",
+    "",
+    "| Runtime | Declared level | Verified level | Publication status | Evidence bundle |",
+    "| --- | --- | --- | --- | --- |",
+    ...runtimeRows,
+    "",
+    "## Certification ladder",
+    "",
+    "| Level | Requirement ID | Check | Minimum evidence scope |",
+    "| --- | --- | --- | --- |",
+    ...requirementRows,
+    "",
+    "Evidence bundles live at `certification/evidence/<runtime-type>.certification.json` and must validate against `public/schemas/mybay.runtime-certification-evidence.schema.json`. Evidence references should point to retained logs, reports, screenshots, or other reviewable artifacts; secrets and credentials must never be committed.",
+    "",
+    "Run `npm run runtime:certification` to validate and display the current report. Run `npm run runtime:certify` as the strict release gate; it fails while a Runtime's declared level is not fully verified.",
+    "",
+  ].join("\n");
+}
+
+function checkOrWrite(relativePath: string, expected: string): void {
+  const target = path.join(projectRoot, relativePath);
+  if (writeOutputs) {
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, expected, "utf8");
+    return;
+  }
+  if (!fs.existsSync(target)) {
+    errors.push(`${relativePath}: generated artifact is missing`);
+    return;
+  }
+  const actual = fs.readFileSync(target, "utf8").replace(/\r\n/g, "\n");
+  if (actual !== expected.replace(/\r\n/g, "\n")) {
+    errors.push(`${relativePath}: generated artifact is stale; run npm run runtime:build`);
+  }
+}
+
+checkOrWrite("public/certification/runtime-certification.json", publicDocument());
+checkOrWrite("docs/runtime-certification.md", certificationDocument());
+
+for (const report of reports) {
+  console.log(`[runtime:certification] runtime=${report.runtimeType} declared=${report.declaredLevel} verified=${report.verifiedLevel} status=${report.publicationStatus}`);
+  if (strict && report.declaredLevel !== "spec-only" && report.publicationStatus !== "verified") {
+    errors.push(`${report.runtimeType}: declared ${report.declaredLevel} is not verified`);
+  }
+}
+for (const error of errors) console.error(`[runtime:certification:error] ${error}`);
+if (errors.length > 0) process.exitCode = 1;

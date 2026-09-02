@@ -24,6 +24,7 @@ import {
   INSTANCE_OPERATION_IN_PROGRESS,
   instanceOperationCoordinator,
 } from "../../services/instances/instanceOperationCoordinator";
+import { buildUpgradePreflight } from "../../services/instances/upgradePreflightService";
 
 function respondIfInstanceOperationActive(res: Response, instanceIds: string[]): boolean {
   for (const instanceId of instanceIds) {
@@ -39,6 +40,13 @@ function respondIfInstanceOperationActive(res: Response, instanceIds: string[]):
     return true;
   }
   return false;
+}
+
+function normalizeArchitecture(value: unknown): string {
+  const architecture = String(value || "").trim().toLowerCase();
+  if (["amd64", "x86_64", "x64"].includes(architecture)) return "amd64";
+  if (["arm64", "aarch64"].includes(architecture)) return "arm64";
+  return architecture;
 }
 
 export function createVersionsRoutes(deps: RouterDependencies) {
@@ -68,6 +76,65 @@ export function createVersionsRoutes(deps: RouterDependencies) {
       res.json(mapped);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.post("/upgrade-preflight", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const instanceIds = Array.isArray(req.body?.instanceIds) ? req.body.instanceIds : [];
+      const tag = String(req.body?.tag || "").trim();
+      if (!instanceIds.length || !tag) return res.status(400).json({ error: "INVALID_PREFLIGHT_REQUEST" });
+      const { validateUpgradeTag } = require("../../upgradeManager");
+      const dockerInfo: any = await docker.info().catch(() => null);
+      const reports = [];
+
+      for (const instanceId of instanceIds) {
+        const instance: any = await dbAdapter.getInstanceById(instanceId);
+        const privileged = req.user.role === "admin" || req.user.role === "super_admin";
+        if (!instance || (instance.user_id !== req.user.id && instance.owner_id !== req.user.id && !privileged)) {
+          return res.status(instance ? 403 : 404).json({ error: instance ? "FORBIDDEN" : "INSTANCE_NOT_FOUND" });
+        }
+        let configValid = true;
+        try { JSON.parse(typeof instance.config_json === "string" ? instance.config_json : JSON.stringify(instance.config_json || {})); } catch { configValid = false; }
+        const validation = await validateUpgradeTag(instanceId, tag);
+        const resolvedTag = validation.resolvedTag || tag;
+        const versions = await dbAdapter.getMyBayVersions();
+        const version = versions.find((item: any) => [item.version, item.image_tag, item.tag].includes(resolvedTag));
+        const targetImage = `${version?.image || instance.agent_image || process.env.MY_BAY_IMAGE || "nousresearch/hermes-agent"}:${version?.image_tag || version?.tag || resolvedTag}`;
+        const imageInspect: any = await docker.getImage(targetImage).inspect().catch(() => null);
+        const context = buildDeploymentContext(instance);
+        const containerInspect: any = await docker.getContainer(context.dashboardContainerName).inspect().catch(() => null);
+        const localDataPath = path.join(process.cwd(), "data", "instances", instanceId);
+        const dataPath = fs.existsSync(instance.data_volume_path || "") ? instance.data_volume_path : localDataPath;
+        let disk: { totalBytes: number; freeBytes: number } | null = null;
+        try {
+          const stats = fs.statfsSync(fs.existsSync(dataPath) ? dataPath : process.cwd());
+          disk = { totalBytes: Number(stats.blocks) * Number(stats.bsize), freeBytes: Number(stats.bavail) * Number(stats.bsize) };
+        } catch {}
+        reports.push(buildUpgradePreflight({
+          instance,
+          targetTag: resolvedTag,
+          targetCompatible: validation.success === true,
+          activeOperation: instanceOperationCoordinator.getActive(instanceId)?.operation || null,
+          disk,
+          configValid,
+          dataDirectoryExists: fs.existsSync(dataPath),
+          currentContainerRunning: containerInspect?.State?.Running === true,
+          targetImageCached: !!imageInspect,
+          architectureCompatible: imageInspect?.Architecture && dockerInfo?.Architecture
+            ? normalizeArchitecture(imageInspect.Architecture) === normalizeArchitecture(dockerInfo.Architecture)
+            : null,
+        }));
+      }
+      const summary = {
+        passed: reports.reduce((sum, report) => sum + report.summary.passed, 0),
+        warnings: reports.reduce((sum, report) => sum + report.summary.warnings, 0),
+        blockers: reports.reduce((sum, report) => sum + report.summary.blockers, 0),
+      };
+      res.setHeader("Cache-Control", "no-store");
+      return res.json({ allowed: summary.blockers === 0, tag, reports, summary });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message || "UPGRADE_PREFLIGHT_FAILED" });
     }
   });
 

@@ -1,0 +1,182 @@
+{
+  "schemaVersion": 1,
+  "artifactType": "runtime-beta-core-live-evidence",
+  "generatedAt": "2026-09-02T15:12:56.677Z",
+  "sanitization": {
+    "identifiers": "SHA-256 only",
+    "promptsAndResponses": "omitted; only expected harmless fact matches and file metadata are retained",
+    "credentials": "not collected",
+    "database": "parameterized read-only queries against isolated test-Agent rows"
+  },
+  "environment": {
+    "host": "Windows with Docker Desktop",
+    "application": "MyBay OSS 0.1.26 on localhost",
+    "runtime": {
+      "type": "hermes",
+      "providerKey": "hermes-core",
+      "contractVersion": 1,
+      "image": "nousresearch/hermes-agent:v2026.8.27"
+    },
+    "instanceRef": "sha256:8439695264f8e6c69df1c2bbf3f419b18a6beb0106cae7023521a35b30916f0a"
+  },
+  "observations": {
+    "sessionRecovery": {
+      "observedAt": "2026-09-02T14:09:23.501Z",
+      "result": "passed",
+      "conversationRef": "sha256:f50f1bb9b5e3f8bc9883abf0fda9a14b1900f8916046d514f5ef5eb7df2ba2bb",
+      "nativeSessionRefBeforeReload": "sha256:113f8ef9e5abf34e5614874733c7065a6bffccf92f3685433e5c6003e0c5279c",
+      "nativeSessionRefAfterReload": "sha256:113f8ef9e5abf34e5614874733c7065a6bffccf92f3685433e5c6003e0c5279c",
+      "nativeSessionPersisted": true,
+      "browserReloadCompleted": true,
+      "historyRestoredAfterReload": true,
+      "harmlessFactsMatched": true,
+      "storeRun": {
+        "runRef": "sha256:d80619d8516c2dc54ee94d142607728dd23423c0e59e0275b546ae41081d1d02",
+        "requestRef": "sha256:836a311cdeefbc096ea614e748b7a3ea12582ea89e611627e5b2f752a000b4ef",
+        "startedAt": "2026-09-02T14:08:02.593Z",
+        "completedAt": "2026-09-02T14:08:09.401Z",
+        "terminalStatus": "completed"
+      },
+      "recallRun": {
+        "runRef": "sha256:3f5a10d95fbf7e133d442670738735a967d59adcdbb0bd7aeae874782a07a5d4",
+        "requestRef": "sha256:c2ae5a3fa10bac83bc29803424f58da259de4d0855e8821a4d625b06871cb5d0",
+        "startedAt": "2026-09-02T14:09:17.822Z",
+        "completedAt": "2026-09-02T14:09:23.501Z",
+        "terminalStatus": "completed"
+      },
+      "restoreRaceRemediation": {
+        "preFixEmptyConversationObserved": true,
+        "loadingGuardAddedToComposerAndSender": true,
+        "draftPreservedByRegressionTest": true,
+        "postDeployConversationCountStableAcrossReload": true
+      }
+    },
+    "fileArtifact": {
+      "observedAt": "2026-09-02T14:18:28.481Z",
+      "result": "passed",
+      "conversationRef": "sha256:b3f25cd29a491e2c3bf073e037efedc0bf1c82ceff207c37e79a4a6eb9eba9fe",
+      "nativeSessionRef": "sha256:c26eb504b4203c647936e5b206f1d47b7bbfd62734717468ff9c9ad41e8c88d7",
+      "runRef": "sha256:ad32b31924cd43f8e1b27ef8bbbf1d958dd6cc5d2022e7b7697582b0558a42ce",
+      "requestRef": "sha256:dd2b489addb4dab22cf778362e8976177a1b09a4d84bb9399abacd893c0de597",
+      "startedAt": "2026-09-02T14:18:16.252Z",
+      "completedAt": "2026-09-02T14:18:28.481Z",
+      "terminalStatus": "completed",
+      "persistedEventSequence": 61,
+      "file": {
+        "path": "mybay-file-check-20260902.txt",
+        "beforeRun": "absent",
+        "afterRun": "present",
+        "sizeBytes": 46,
+        "sha256": "1c8f7f7376ac9439c3432f9ca78f656de86f15cedbf39375f1e3035aca330317",
+        "capturedChangeKind": "added"
+      },
+      "browser": {
+        "chatArtifactReady": true,
+        "chatPreviewMatched": true,
+        "previewMatchedAfterReload": true,
+        "fileCenterListed": true,
+        "fileCenterPreviewMatched": true
+      },
+      "isolation": {
+        "otherInstanceWorkspacesChecked": 4,
+        "targetAbsentFromOtherInstanceWorkspaces": 4
+      }
+    },
+    "usageReporting": {
+      "observedAt": "2026-09-02T14:18:28.481Z",
+      "result": "passed",
+      "runRef": "sha256:ad32b31924cd43f8e1b27ef8bbbf1d958dd6cc5d2022e7b7697582b0558a42ce",
+      "terminalStatus": "completed",
+      "attribution": {
+        "persistedOnRun": true,
+        "persistedOnAssistantMessage": true,
+        "source": "runtime_terminal",
+        "counter": "snapshot",
+        "scopeReportedByUpstream": "unknown",
+        "limitationShownInUi": "Unknown scope is not represented as per-run incremental usage"
+      },
+      "usage": {
+        "inputTokens": 23444,
+        "outputTokens": 338,
+        "totalTokens": 23782,
+        "cacheReadTokens": null,
+        "cacheWriteTokens": null,
+        "modelCalls": null,
+        "reportedModel": null,
+        "configuredModelShownSeparately": true
+      },
+      "browser": {
+        "summaryVisible": true,
+        "detailDialogVisible": true,
+        "sourceAndScopeVisible": true,
+        "persistedAfterReload": true
+      }
+    },
+    "toolEvents": {
+      "observedAt": "2026-09-02T14:18:20.104Z",
+      "result": "passed",
+      "runRef": "sha256:ad32b31924cd43f8e1b27ef8bbbf1d958dd6cc5d2022e7b7697582b0558a42ce",
+      "stepRef": "sha256:5c509597a01e59cee65373af60d32ebf0d45f88b45b042f9ceec67795095f970",
+      "eventSequence": {
+        "started": 8,
+        "completed": 9
+      },
+      "stableIdentifierAcrossLifecycle": true,
+      "toolCategory": "file",
+      "stepType": "file_read",
+      "startedStatus": "running",
+      "terminalStatus": "completed",
+      "fileEvidenceConfirmed": true,
+      "browser": {
+        "executionSummaryVisible": true,
+        "completedFileStepVisible": true,
+        "terminalOutcomeVisible": true,
+        "persistedAfterReload": true
+      }
+    },
+    "restartRecovery": {
+      "observedAt": "2026-09-02T15:12:11.073Z",
+      "result": "passed",
+      "operation": "controlled Docker restart of the isolated test Runtime container",
+      "container": {
+        "containerRefBefore": "sha256:7195787f490ac8214d0cd8c0b960c8ab8dd64ab0ba3a5d51506e589bfebd7594",
+        "containerRefAfter": "sha256:7195787f490ac8214d0cd8c0b960c8ab8dd64ab0ba3a5d51506e589bfebd7594",
+        "identityPreserved": true,
+        "startedAtBefore": "2026-09-02T06:41:24.748895575Z",
+        "startedAtAfter": "2026-09-02T15:04:37.456640950Z",
+        "runningAfterRestart": true,
+        "runtimeHealthStatus": 200,
+        "runtimeVersion": "0.20.6"
+      },
+      "persistedState": {
+        "conversationRef": "sha256:f50f1bb9b5e3f8bc9883abf0fda9a14b1900f8916046d514f5ef5eb7df2ba2bb",
+        "nativeSessionRefBefore": "sha256:113f8ef9e5abf34e5614874733c7065a6bffccf92f3685433e5c6003e0c5279c",
+        "nativeSessionRefAfter": "sha256:113f8ef9e5abf34e5614874733c7065a6bffccf92f3685433e5c6003e0c5279c",
+        "nativeSessionPreserved": true,
+        "filePath": "mybay-file-check-20260902.txt",
+        "fileSha256Before": "1c8f7f7376ac9439c3432f9ca78f656de86f15cedbf39375f1e3035aca330317",
+        "fileSha256After": "1c8f7f7376ac9439c3432f9ca78f656de86f15cedbf39375f1e3035aca330317",
+        "filePreserved": true
+      },
+      "postRestartRun": {
+        "runRef": "sha256:38549cae26b1e19537881916f37086eb065d61300d68d060f7fe39b66588fecd",
+        "requestRef": "sha256:3d8a74e11d5a8a624ded32023ca4c6c378441b6be94178057901ad4192f848e1",
+        "upstreamRunRef": "sha256:ae4186bdb308d4f2cd8e472da75dcffd0d0fa545d3d5de3be6d806cf743294a8",
+        "startedAt": "2026-09-02T15:11:55.376Z",
+        "completedAt": "2026-09-02T15:12:11.073Z",
+        "terminalStatus": "completed",
+        "totalTokens": 12636
+      },
+      "browser": {
+        "originalConversationRestored": true,
+        "postRestartTaskSubmitted": true,
+        "harmlessFactsMatched": true,
+        "answerObserved": "fruit=pomelo; number=47"
+      },
+      "isolation": {
+        "otherAgentContainersRestarted": 0,
+        "controlPanelRecreatedDuringRuntimeRestart": false
+      }
+    }
+  }
+}

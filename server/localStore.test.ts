@@ -90,6 +90,53 @@ describe("local SQLite store", () => {
     ]);
   });
 
+  it("does not rewrite untouched rows during a scoped collection update", () => {
+    mutateStore((store) => {
+      store.chatRuns.push(
+        { id: "run-protected", status: "queued" },
+        { id: "run-changing", status: "queued" },
+      );
+    });
+    const observer = new DatabaseSync(sqlitePath);
+    observer.exec(`CREATE TRIGGER reject_protected_run_delete
+      BEFORE DELETE ON chatRuns WHEN OLD.id = 'run-protected'
+      BEGIN SELECT RAISE(ABORT, 'untouched row was rewritten'); END;`);
+    observer.exec(`CREATE TRIGGER reject_protected_run_update
+      BEFORE UPDATE ON chatRuns WHEN OLD.id = 'run-protected'
+      BEGIN SELECT RAISE(ABORT, 'untouched row was rewritten'); END;`);
+    observer.close();
+
+    mutateStoreCollections(["chatRuns"] as const, (store) => {
+      store.chatRuns.find((run) => run.id === "run-changing").status = "running";
+    });
+
+    expect(readStoreCollections(["chatRuns"] as const).chatRuns).toEqual([
+      { id: "run-protected", status: "queued" },
+      { id: "run-changing", status: "running" },
+    ]);
+  });
+
+  it("preserves explicit row reordering through the scoped fallback", () => {
+    mutateStore((store) => {
+      store.chatRuns.push(
+        { id: "run-a", status: "queued" },
+        { id: "run-b", status: "queued" },
+        { id: "run-c", status: "queued" },
+      );
+    });
+
+    mutateStoreCollections(["chatRuns"] as const, (store) => {
+      store.chatRuns = [store.chatRuns[2], store.chatRuns[0], store.chatRuns[1]];
+    });
+    closeLocalDatabase();
+
+    expect(readStoreCollections(["chatRuns"] as const).chatRuns.map((run) => run.id)).toEqual([
+      "run-c",
+      "run-a",
+      "run-b",
+    ]);
+  });
+
   it("rolls back a failed selected-collection transaction", () => {
     mutateStore((store) => {
       store.chatRuns.push({ id: "run-rollback", status: "queued" });

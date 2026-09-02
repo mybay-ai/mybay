@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createRunHermesSessionContextController } from "./HermesSessionContext";
+import { buildHermesSessionTitle, createRunHermesSessionContextController } from "./HermesSessionContext";
 
 function createHarness(conversation: { session_id?: unknown; title?: string } | null) {
   const requestRuns = vi.fn(async () => ({
@@ -22,6 +22,16 @@ function createHarness(conversation: { session_id?: unknown; title?: string } | 
 }
 
 describe("HermesSessionContext", () => {
+  it("keeps native session titles unique even when display titles repeat", () => {
+    const repeatedTitle = "相同的会话标题".repeat(20);
+    const first = buildHermesSessionTitle(repeatedTitle, "conversation-1");
+    const second = buildHermesSessionTitle(repeatedTitle, "conversation-2");
+
+    expect(first).not.toBe(second);
+    expect(first.endsWith(" [conversation-1]")).toBe(true);
+    expect(Array.from(first)).toHaveLength(100);
+  });
+
   it("returns a trimmed existing native session without creating another", async () => {
     const { controller, requestRuns } = createHarness({ session_id: "  native-session  " });
 
@@ -53,7 +63,7 @@ describe("HermesSessionContext", () => {
       conversation_id: "conversation-1"
     })).resolves.toEqual({ sessionId: "created-session", state: "created" });
     expect(requestRuns).toHaveBeenCalledWith(expect.objectContaining({
-      body: { title: "Conversation title" }
+      body: { title: "Conversation title [conversation-1]" }
     }));
     expect(bindConversationSessionId).toHaveBeenCalledWith("conversation-1", "created-session");
   });

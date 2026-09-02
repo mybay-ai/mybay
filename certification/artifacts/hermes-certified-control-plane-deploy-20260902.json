@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "artifactType": "runtime-certified-control-plane-deploy-live-evidence",
+  "generatedAt": "2026-09-02T15:43:15.947Z",
+  "sanitization": {
+    "identifiers": "SHA-256 only",
+    "credentials": "not collected",
+    "database": "parameterized read-only queries against the isolated test-Agent row",
+    "logs": "only deployment lifecycle fields without configuration payloads were retained"
+  },
+  "environment": {
+    "host": "Windows with Docker Desktop",
+    "application": "MyBay OSS 0.1.26 on localhost",
+    "runtime": {
+      "type": "hermes",
+      "providerKey": "hermes-core",
+      "contractVersion": 1,
+      "image": "nousresearch/hermes-agent:v2026.8.27"
+    },
+    "instanceRef": "sha256:8439695264f8e6c69df1c2bbf3f419b18a6beb0106cae7023521a35b30916f0a"
+  },
+  "observations": {
+    "controlPlaneDeploy": {
+      "observedAt": "2026-09-02T15:43:15.947Z",
+      "result": "passed",
+      "productPath": "MyBay Agent instance center -> isolated test Agent -> Redeploy -> Confirm",
+      "browserStatusTransition": [
+        "running",
+        "deploying",
+        "running"
+      ],
+      "deploymentLifecycle": {
+        "inputValidatedAt": "2026-09-02T15:40:09.849Z",
+        "configurationWrittenAt": "2026-09-02T15:40:12.478Z",
+        "imageReadyAt": "2026-09-02T15:40:17.453Z",
+        "containerStartedAt": "2026-09-02T15:40:25.763Z",
+        "chatReadyAt": "2026-09-02T15:40:50.533Z",
+        "inputValidationEventRef": "sha256:055804e26dec03ab0b6a3f0730a8077c053225d5d5beaef117d2a4ef25dd138b",
+        "containerLaunchEventRef": "sha256:5f98f0513576ccacf911bd9e633bab6254fc02b185c999c94cf8f10a36a98997",
+        "healthEventRef": "sha256:0f06663039780e497e68950c881d8633415b824f38a859832266ea7b3d7f0bd8"
+      },
+      "container": {
+        "previousContainerRef": "sha256:7195787f490ac8214d0cd8c0b960c8ab8dd64ab0ba3a5d51506e589bfebd7594",
+        "deployedContainerRef": "sha256:efda06003f652f7f511dfdf07a4ccff6cc325bd9cab1fb2c68cf70f40dd27e2f",
+        "identityChanged": true,
+        "running": true,
+        "oomKilled": false,
+        "exitCode": 0
+      },
+      "health": {
+        "controlPlaneHttpStatus": 200,
+        "runtimeHttpStatus": 200,
+        "instanceStatus": "running",
+        "instanceHealthStatus": "healthy",
+        "physicalStatus": "running",
+        "deploymentError": null,
+        "browserReportedRuntimeAndChatApiReady": true,
+        "browserReportedModelReady": true,
+        "browserReportedPhysicalStateSynchronized": true,
+        "environmentAndConfigurationRulesPassed": true,
+        "localDirectModeGatewayMarkedNotApplicable": true
+      },
+      "persistence": {
+        "mountPreserved": true,
+        "testFilePath": "mybay-file-check-20260902.txt",
+        "sizeBytesBefore": 46,
+        "sizeBytesAfter": 46,
+        "sha256Before": "1c8f7f7376ac9439c3432f9ca78f656de86f15cedbf39375f1e3035aca330317",
+        "sha256After": "1c8f7f7376ac9439c3432f9ca78f656de86f15cedbf39375f1e3035aca330317"
+      },
+      "isolation": {
+        "target": "isolated test Agent only",
+        "otherAgentContainersRedeployed": 0,
+        "controlPlaneRecreatedDuringAgentDeployment": false
+      }
+    }
+  }
+}

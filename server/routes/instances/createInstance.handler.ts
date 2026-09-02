@@ -459,7 +459,7 @@ export function createInstanceHandler(deps: RouterDependencies) {
         'feishuAppSecret', 'qqBotSecret', 'whatsappAccessToken', 'slackBotToken',
         'slackSigningSecret', 'slackAppToken', 'dingtalkAppSecret', 'dingtalkRobotSecret',
         'wechatAppSecret', 'wechatMpAppSecret', 'wecomAppSecret', 'weixinToken', 'webhookSecret', 'skillTavilyApiKey', 'skillSerperApiKey',
-        'skillGithubToken',
+        'skillGithubToken', 'a2aBearerToken',
         'wecomToken', 'wecomEncodingAesKey', 'wechatMpToken', 'wechatMpEncodingAesKey',
         'hermesApiKey', 'chatApiKey', 'hermesDashboardAuthSecret', 'dashboardAuthSecret'
       ];

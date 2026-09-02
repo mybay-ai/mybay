@@ -8,10 +8,12 @@
     "name",
     "displayName",
     "version",
+    "release",
     "runtime",
     "health",
     "storage",
-    "capabilities"
+    "capabilities",
+    "lifecycle"
   ],
   "properties": {
     "specVersion": {
@@ -36,14 +38,29 @@
       "type": "string",
       "description": "Brief description of the agent runtime capabilities"
     },
+    "release": {
+      "type": "object",
+      "required": ["supportStatus", "certificationLevel", "deploymentSupported"],
+      "properties": {
+        "supportStatus": {
+          "type": "string",
+          "enum": ["available", "spec-only"]
+        },
+        "certificationLevel": {
+          "type": "string",
+          "enum": ["spec-only", "experimental", "beta", "certified"]
+        },
+        "deploymentSupported": { "type": "boolean" }
+      }
+    },
     "runtime": {
       "type": "object",
       "required": ["type", "image", "internalPort"],
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["hermes", "pi", "openclaw", "custom_docker"],
-          "description": "Runtime archetype identifier"
+          "pattern": "^[a-z0-9][a-z0-9._-]{0,79}$",
+          "description": "Open runtime identifier registered by a matching Runtime Driver"
         },
         "image": {
           "type": "string",
@@ -127,6 +144,46 @@
         "imChannels": {
           "type": "array",
           "items": { "type": "string" }
+        }
+      }
+    },
+    "lifecycle": {
+      "type": "object",
+      "required": ["conversation", "cancellation", "terminal", "interactions"],
+      "properties": {
+        "conversation": {
+          "type": "object",
+          "required": ["modes"],
+          "properties": {
+            "modes": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": { "type": "string", "enum": ["streaming", "batch"] }
+            }
+          }
+        },
+        "cancellation": {
+          "type": "object",
+          "required": ["supported"],
+          "properties": {
+            "supported": { "type": "boolean" },
+            "granularity": { "type": "string", "enum": ["run", "turn"] }
+          }
+        },
+        "terminal": {
+          "type": "object",
+          "required": ["observation"],
+          "properties": {
+            "observation": { "type": "string", "enum": ["status", "events", "unsupported"] }
+          }
+        },
+        "interactions": {
+          "type": "object",
+          "required": ["approvals", "questions"],
+          "properties": {
+            "approvals": { "type": "boolean" },
+            "questions": { "type": "boolean" }
+          }
         }
       }
     },

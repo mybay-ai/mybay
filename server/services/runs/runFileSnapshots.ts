@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
-import { execFile } from "node:child_process";
+import { execFile, spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { safeLocalEvidencePath, type LocalFileChange } from "../../../shared/localRunFileEvidence";
 import type { FileDiffResponse, LocalRunFileDiffs } from "../../../shared/localRunFileDiff";
 import { containsSecretContent, isBlockedExportFileName } from "../instances/instanceFileLeakGuard";
@@ -112,20 +112,126 @@ function wasMissing(baseline: Baseline, relative: string): boolean {
 }
 
 export type RunFileSnapshotObservation = { runId: string; phase: "before" | "after" | "clear"; available: boolean; files: number; directories?: number };
+type SnapshotWorkerResponse = { id: string; ok: boolean; value?: unknown };
+type PendingSnapshotWorkerRequest = { resolve: (value: unknown) => void; timer: ReturnType<typeof setTimeout> };
+const SNAPSHOT_WORKER_TIMEOUT_MS = 5000;
+const SNAPSHOT_WORKER_MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
+let persistentSnapshotWorker: ChildProcessWithoutNullStreams | null = null;
+let persistentSnapshotWorkerBuffer = Buffer.alloc(0);
+let persistentSnapshotWorkerSequence = 0;
+const pendingSnapshotWorkerRequests = new Map<string, PendingSnapshotWorkerRequest>();
+
+export function decodeSnapshotWorkerResponse(line: string): SnapshotWorkerResponse | undefined {
+  if (!line || Buffer.byteLength(line) > SNAPSHOT_WORKER_MAX_RESPONSE_BYTES) return undefined;
+  try {
+    const parsed = JSON.parse(line) as Partial<SnapshotWorkerResponse>;
+    if (!/^snapshot-\d+$/.test(String(parsed.id || "")) || typeof parsed.ok !== "boolean") return undefined;
+    return { id: String(parsed.id), ok: parsed.ok, ...(parsed.ok ? { value: parsed.value } : {}) };
+  } catch {
+    return undefined;
+  }
+}
+
+function settleSnapshotWorkerRequest(response: SnapshotWorkerResponse): void {
+  const pending = pendingSnapshotWorkerRequests.get(response.id);
+  if (!pending) return;
+  pendingSnapshotWorkerRequests.delete(response.id);
+  clearTimeout(pending.timer);
+  pending.resolve(response.ok ? response.value : undefined);
+}
+
+function failPersistentSnapshotWorker(worker: ChildProcessWithoutNullStreams): void {
+  if (persistentSnapshotWorker !== worker) return;
+  persistentSnapshotWorker = null;
+  persistentSnapshotWorkerBuffer = Buffer.alloc(0);
+  for (const pending of pendingSnapshotWorkerRequests.values()) {
+    clearTimeout(pending.timer);
+    pending.resolve(undefined);
+  }
+  pendingSnapshotWorkerRequests.clear();
+  if (!worker.killed) worker.kill();
+}
+
+function ensurePersistentSnapshotWorker(): ChildProcessWithoutNullStreams | null {
+  if (persistentSnapshotWorker && !persistentSnapshotWorker.killed) return persistentSnapshotWorker;
+  try {
+    const worker = spawn(process.execPath, [path.resolve("dist/run-file-snapshot-worker.cjs"), "--server"], {
+      windowsHide: true,
+      stdio: ["pipe", "pipe", "ignore"],
+    });
+    persistentSnapshotWorker = worker;
+    persistentSnapshotWorkerBuffer = Buffer.alloc(0);
+    worker.stdout.on("data", (chunk: Buffer) => {
+      if (persistentSnapshotWorker !== worker) return;
+      persistentSnapshotWorkerBuffer = Buffer.concat([persistentSnapshotWorkerBuffer, chunk]);
+      let newline = persistentSnapshotWorkerBuffer.indexOf(0x0a);
+      while (newline >= 0) {
+        const line = persistentSnapshotWorkerBuffer.subarray(0, newline);
+        persistentSnapshotWorkerBuffer = persistentSnapshotWorkerBuffer.subarray(newline + 1);
+        if (line.length > SNAPSHOT_WORKER_MAX_RESPONSE_BYTES) {
+          failPersistentSnapshotWorker(worker);
+          return;
+        }
+        const response = decodeSnapshotWorkerResponse(line.toString("utf8"));
+        if (!response) {
+          failPersistentSnapshotWorker(worker);
+          return;
+        }
+        settleSnapshotWorkerRequest(response);
+        newline = persistentSnapshotWorkerBuffer.indexOf(0x0a);
+      }
+      if (persistentSnapshotWorkerBuffer.length > SNAPSHOT_WORKER_MAX_RESPONSE_BYTES) {
+        failPersistentSnapshotWorker(worker);
+      }
+    });
+    worker.once("error", () => failPersistentSnapshotWorker(worker));
+    worker.once("exit", () => failPersistentSnapshotWorker(worker));
+    return worker;
+  } catch {
+    return null;
+  }
+}
+
+function requestPersistentSnapshotWorker(mode: "before" | "after", root: string, paths: string[]): Promise<unknown> {
+  const worker = ensurePersistentSnapshotWorker();
+  if (!worker?.stdin.writable) return Promise.resolve(undefined);
+  const id = `snapshot-${++persistentSnapshotWorkerSequence}`;
+  return new Promise(resolve => {
+    const timer = setTimeout(() => {
+      pendingSnapshotWorkerRequests.delete(id);
+      resolve(undefined);
+    }, SNAPSHOT_WORKER_TIMEOUT_MS);
+    timer.unref?.();
+    pendingSnapshotWorkerRequests.set(id, { resolve, timer });
+    worker.stdin.write(`${JSON.stringify({ id, mode, root, paths })}\n`, error => {
+      if (!error) return;
+      const pending = pendingSnapshotWorkerRequests.get(id);
+      if (!pending) return;
+      pendingSnapshotWorkerRequests.delete(id);
+      clearTimeout(pending.timer);
+      pending.resolve(undefined);
+    });
+  });
+}
+
 /** Separate process: control-plane storage scans can saturate Node's shared fs thread pool.
  * Its pipe is private, bounded, never logged; a timeout discards the optional snapshot. */
 async function snapshotWorker(mode: "before" | "after", root: string, paths: string[], workerPath?: string): Promise<unknown> {
+  if (!workerPath && process.env.NODE_ENV === "production") {
+    return requestPersistentSnapshotWorker(mode, root, paths);
+  }
   const args = workerPath ? [workerPath] : process.env.NODE_ENV === "production"
     ? [path.resolve("dist/run-file-snapshot-worker.cjs")]
     : ["--import", "tsx", path.resolve("server/services/runs/runFileSnapshotWorker.ts")];
   return new Promise(resolve => execFile(process.execPath, [...args, mode, root, JSON.stringify(paths)],
-    { timeout: 5000, maxBuffer: 2 * 1024 * 1024, windowsHide: true }, (error, stdout) => {
+    { timeout: SNAPSHOT_WORKER_TIMEOUT_MS, maxBuffer: SNAPSHOT_WORKER_MAX_RESPONSE_BYTES, windowsHide: true }, (error, stdout) => {
       if (error) { resolve(undefined); return; }
       try { resolve(JSON.parse(stdout)); } catch { resolve(undefined); }
     }));
 }
 
 export function createRunFileSnapshots(observe?: (event: RunFileSnapshotObservation) => void, workerPath?: string) {
+  if (!workerPath && process.env.NODE_ENV === "production") ensurePersistentSnapshotWorker();
   const report = (event: RunFileSnapshotObservation) => { try { observe?.(event); } catch { /* Diagnostics never change run execution. */ } };
   const baselines = new Map<string, Promise<Baseline | undefined>>();
   const finished = new Map<string, Promise<LocalRunFileDiffs | undefined>>();

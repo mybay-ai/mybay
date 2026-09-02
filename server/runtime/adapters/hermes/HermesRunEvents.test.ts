@@ -53,6 +53,27 @@ describe("HermesRunEventProvider", () => {
     expect(step.status).toBe("completed");
   });
 
+  it("retains one stable step id from tool start through its terminal outcome", () => {
+    const { interpreter, events } = createHarness();
+    interpreter.handle(
+      { id: "run-1" },
+      { event: "tool.started", tool: "write_file", path: "/opt/data/result.txt", timestamp: 1_700_000_000 },
+    );
+    interpreter.handle(
+      { id: "run-1" },
+      { event: "tool.completed", tool: "write_file", path: "/opt/data/result.txt", timestamp: 1_700_000_001 },
+    );
+
+    const [started, completed] = events.map((event) => JSON.parse(event.data));
+    expect(started).toMatchObject({ id: "step-uuid-1", status: "running", tool_name: "file" });
+    expect(completed).toMatchObject({
+      id: "step-uuid-1",
+      status: "completed",
+      tool_name: "file",
+      metadata: { file_path: "result.txt", file_evidence_confirmed: true },
+    });
+  });
+
   it("defaults invalid approval identifiers and choices", () => {
     const { interpreter, events } = createHarness();
     interpreter.handle(

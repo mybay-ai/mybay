@@ -19,6 +19,7 @@ import { createVersionsRoutes } from "./versions.routes";
 import { createChatRoutes } from "./chat.routes";
 import { createChatFilesRoutes } from "./chatFiles.routes";
 import { createEventsRoutes } from "./events.routes";
+import { createA2ARoutes } from "./a2a.routes";
 import templateFilesRouter from "./templateFiles.routes";
 import { checkAccessBridgeCompatibility } from "./helpers";
 
@@ -57,6 +58,7 @@ export function createInstancesRouter(io: SocketIOServer) {
   router.use(createLifecycleRoutes(deps));
   router.use(createActionsRoutes(deps));
   router.use(createEventsRoutes({ docker }));
+  router.use(createA2ARoutes());
   router.use(createFilesRoutes(deps));
   router.use(createConfigRoutes(deps));
   router.use(createTemplatesRoutes(deps));

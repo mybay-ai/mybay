@@ -7,6 +7,51 @@ from urllib.request import Request, build_opener, ProxyHandler, HTTPRedirectHand
 from urllib.error import HTTPError, URLError
 
 
+def _web_extract_has_usable_result(result):
+    """Recognize Hermes 0.20.x web_extract success payloads.
+
+    Each result entry always contains an ``error`` key. Hermes' generic
+    detector therefore treats even ``error: null`` plus non-empty content as
+    a failed tool call. Keep the compatibility rule narrow: only override the
+    detector when at least one page has usable content and no page-level error.
+    """
+    if not isinstance(result, str):
+        return False
+    try:
+        payload = json.loads(result)
+    except (TypeError, ValueError):
+        return False
+    entries = payload.get("results") if isinstance(payload, dict) else None
+    if not isinstance(entries, list):
+        return False
+    return any(
+        isinstance(entry, dict)
+        and isinstance(entry.get("content"), str)
+        and bool(entry["content"].strip())
+        and not entry.get("error")
+        for entry in entries
+    )
+
+
+def _install_web_extract_failure_compat():
+    """Patch the Hermes 0.20.x progress classifier without hiding real errors."""
+    try:
+        from agent import tool_executor
+    except Exception:
+        return
+    current = getattr(tool_executor, "_detect_tool_failure", None)
+    if not callable(current) or getattr(current, "_mybay_web_extract_compat", False):
+        return
+
+    def detect_tool_failure(tool_name, result):
+        if tool_name == "web_extract" and _web_extract_has_usable_result(result):
+            return False, ""
+        return current(tool_name, result)
+
+    detect_tool_failure._mybay_web_extract_compat = True
+    tool_executor._detect_tool_failure = detect_tool_failure
+
+
 class NoRedirect(HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         return None
@@ -73,6 +118,7 @@ def ask_user(args, **kwargs):
 
 
 def register(ctx):
+    _install_web_extract_failure_compat()
     if not Path(__file__).with_name("bridge.json").is_file():
         return
     ctx.register_tool(name="ask_user", toolset="oss_local_questions", handler=ask_user, schema={

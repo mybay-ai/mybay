@@ -13,6 +13,8 @@ import { generateHermesDashboardPasswordHash } from "./utils/hermesDashboardAuth
 import { ensureEncryptedDashboardAuthSecret } from "./utils/dashboardAuthSecret";
 import { buildDeploymentContext } from "./deploymentContext";
 import { writePhysicalConfigs, DEFAULT_AGENT_MAX_TURNS, DEFAULT_AGENT_GATEWAY_TIMEOUT, DEFAULT_AGENT_RESTART_DRAIN_TIMEOUT } from "./configWriter";
+import { connectContainerToA2ANetwork } from "./services/a2aNetwork";
+import { hydrateA2ARuntimePeers } from "./services/a2aRuntimeConfig";
 import { runInstanceHealthChecks } from "./healthCheck";
 import { rebuildProxyConfig } from "./proxy/nginx";
 import { getTraefikLabels } from "./proxy/traefik";
@@ -216,6 +218,14 @@ export async function recreateInstance(
     Labels: options.dashboardLabels,
     HostConfig: hostConfig
   });
+
+  if (options.config?.a2aEnabled === true) {
+    await connectContainerToA2ANetwork(docker, dashboard.id);
+    io.emit(`deploy_log_${instanceId}`, {
+      timestamp: new Date().toISOString(),
+      message: "[A2A] 已连接内部 Agent 协作网络；未创建公网端口映射。"
+    });
+  }
 
   // Write new container_id and container_name to DB immediately to avoid delay or mis-reconciliation
   await dbAdapter.updateInstancePhysicalState(instanceId, {
@@ -871,6 +881,7 @@ export async function executeDeployment(instance: any, io: SocketIOServer, updat
   let hermesModelConfigResult: any = null;
 
   try {
+    await hydrateA2ARuntimePeers(instanceId, config);
     const configResult = writePhysicalConfigs(instanceId, config);
     generatedEnvMap = configResult.finalEnvMap;
     hermesModelConfigResult = configResult.hermesModelConfigResult;

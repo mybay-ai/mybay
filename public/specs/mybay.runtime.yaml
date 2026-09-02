@@ -1,36 +1,36 @@
-# MyBay Agent Runtime Manifest Example (Hermes Agent)
-specVersion: "1.0.0"
-name: "hermes-agent"
-displayName: "Hermes Agent"
-version: "2026.8.0"
-description: "Hermes Agent runtime with built-in multi-channel messaging and python execution toolset."
-
+# Generated from shared/runtimeCatalog.ts. Do not edit by hand.
+specVersion: 1.0.0
+name: hermes-agent
+displayName: Hermes Agent
+version: latest
+description: Hermes Agent runtime supported by the current MyBay Open Source preview.
+release:
+  supportStatus: available
+  certificationLevel: certified
+  deploymentSupported: true
 runtime:
-  type: "hermes"
-  image: "ghcr.io/nousresearch/hermes-agent"
-  tag: "latest"
+  type: hermes
+  image: nousresearch/hermes-agent
+  tag: latest
   internalPort: 9119
   environmentVariables:
-    - name: "HERMES_API_KEY"
-      description: "Authentication token for internal REST endpoints"
+    - name: HERMES_API_KEY
+      description: Authentication token for internal REST endpoints
       required: true
       sensitive: true
-    - name: "OPENAI_API_KEY"
-      description: "Default model provider API key"
+    - name: OPENAI_API_KEY
+      description: Default model provider API key
       required: true
       sensitive: true
-
 health:
-  endpoint: "/health"
+  endpoint: /health
   intervalSeconds: 30
   timeoutSeconds: 10
   expectedStatusCode: 200
-
 storage:
-  dataPath: "/opt/data"
-  configPath: "/opt/hermes/config"
-  volumeNamePrefix: "mybay-hermes-data"
-
+  dataPath: /opt/data
+  configPath: /opt/hermes/config
+  volumeNamePrefix: mybay-hermes-data
 capabilities:
   chat: true
   fileUpload: true
@@ -38,23 +38,34 @@ capabilities:
   browser: true
   shell: true
   imChannels:
-    - "web"
-    - "telegram"
-    - "feishu"
-    - "weixin"
-    - "slack"
-    - "webhook"
-    - "api"
-
+    - web
+    - telegram
+    - feishu
+    - weixin
+    - slack
+    - webhook
+    - api
+lifecycle:
+  conversation:
+    modes:
+      - streaming
+      - batch
+  cancellation:
+    supported: true
+    granularity: run
+  terminal:
+    observation: status
+  interactions:
+    approvals: true
+    questions: false
 resources:
-  minimumMemory: "512Mi"
-  recommendedMemory: "1Gi"
+  minimumMemory: 512Mi
+  recommendedMemory: 1Gi
   minimumCpu: 0.5
-
 backup:
   includePaths:
-    - "/opt/data"
-    - "/opt/hermes/config"
+    - /opt/data
+    - /opt/hermes/config
   excludePatterns:
-    - "*.log"
-    - "tmp/*"
+    - '*.log'
+    - tmp/*

@@ -1,4 +1,5 @@
 import { decrypt } from "./crypto";
+import { buildA2ARuntimeEnv } from "./services/a2aRuntimeConfig";
 
 export function buildChannelRuntimeEnv(config: any): { [key: string]: string } {
   const env: { [key: string]: string } = {};
@@ -158,6 +159,8 @@ export function buildChannelRuntimeEnv(config: any): { [key: string]: string } {
 
   env.AGENT_NAME = config.name || '';
   env.SYSTEM_PROMPT = config.agentPrompt || '';
+
+  Object.assign(env, buildA2ARuntimeEnv(config));
 
   return env;
 }

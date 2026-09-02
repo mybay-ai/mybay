@@ -249,6 +249,51 @@ function writeCollectionToDb(db: DatabaseSync, collection: CollectionName, rows:
   });
 }
 
+function writeCollectionChangesToDb(db: DatabaseSync, collection: CollectionName, rows: any[]) {
+  const desiredRows = rows.map((row: any) => ({
+    id: String(row?.id || row?.key || ""),
+    data: JSON.stringify(row),
+  }));
+  const desiredIds = desiredRows.map((row) => row.id);
+  const desiredIdSet = new Set(desiredIds);
+  if (desiredIds.some((id) => !id) || desiredIdSet.size !== desiredIds.length) {
+    writeCollectionToDb(db, collection, rows);
+    return;
+  }
+
+  const existingRows = db.prepare(`SELECT id, data FROM ${quoteIdentifier(collection)} ORDER BY rowid`).all() as Array<{ id: string; data: string }>;
+  const existingById = new Map(existingRows.map((row) => [row.id, row.data]));
+  const existingIdSet = new Set(existingById.keys());
+  const survivingExistingOrder = existingRows.map((row) => row.id).filter((id) => desiredIdSet.has(id));
+  const desiredExistingOrder = desiredIds.filter((id) => existingIdSet.has(id));
+  const lastExistingIndex = desiredIds.reduce((last, id, index) => existingIdSet.has(id) ? index : last, -1);
+  const insertsBeforeExistingRows = desiredIds.slice(0, Math.max(0, lastExistingIndex)).some((id) => !existingIdSet.has(id));
+  const preservesStoredOrder = survivingExistingOrder.length === desiredExistingOrder.length
+    && survivingExistingOrder.every((id, index) => id === desiredExistingOrder[index]);
+
+  // Row order is observable through readRows(). Reordering or inserting into
+  // the middle therefore keeps the legacy full-rewrite behavior. The common
+  // Run lifecycle path only updates existing rows and appends new ones, so it
+  // can avoid rewriting every historical message and Run.
+  if (!preservesStoredOrder || insertsBeforeExistingRows) {
+    writeCollectionToDb(db, collection, rows);
+    return;
+  }
+
+  const remove = db.prepare(`DELETE FROM ${quoteIdentifier(collection)} WHERE id = ?`);
+  for (const existing of existingRows) {
+    if (!desiredIdSet.has(existing.id)) remove.run(existing.id);
+  }
+
+  const update = db.prepare(`UPDATE ${quoteIdentifier(collection)} SET data = ? WHERE id = ?`);
+  const insert = db.prepare(`INSERT INTO ${quoteIdentifier(collection)} (id, data) VALUES (?, ?)`);
+  for (const desired of desiredRows) {
+    const existingData = existingById.get(desired.id);
+    if (existingData === undefined) insert.run(desired.id, desired.data);
+    else if (existingData !== desired.data) update.run(desired.data, desired.id);
+  }
+}
+
 function applySchemaMigrations(db: DatabaseSync) {
   const row = db.prepare("SELECT value FROM localMetadata WHERE key = ?").get("schema_version") as { value?: string } | undefined;
   let version = Number(row?.value || 0);
@@ -469,7 +514,7 @@ export function mutateStoreCollections<K extends CollectionName, T>(
     }
     const result = fn(data);
     for (const collection of collections) {
-      writeCollectionToDb(db, collection, data[collection] as any[]);
+      writeCollectionChangesToDb(db, collection, data[collection] as any[]);
     }
     db.exec("COMMIT");
     return result;

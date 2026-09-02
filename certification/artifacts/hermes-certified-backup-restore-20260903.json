@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "artifactType": "runtime-certified-backup-restore-live-evidence",
+  "generatedAt": "2026-09-02T17:11:09.202Z",
+  "sanitization": {
+    "identifiers": "Source Agent, restored clone, and container identifiers are represented by SHA-256 references only",
+    "credentials": "Credential values, cookies, tokens, passwords, encryption material, and private configuration values were not collected",
+    "filesystem": "Only the supported archive sections plus one harmless output path, size, and SHA-256 were retained",
+    "archive": "The backup ZIP itself is not committed; only its size, checksum, structural validation, and declared redaction boundary are recorded"
+  },
+  "environment": {
+    "host": "Windows with Docker Desktop",
+    "application": "MyBay OSS 0.1.26 on localhost",
+    "runtime": {
+      "type": "hermes",
+      "providerKey": "hermes-core",
+      "contractVersion": 1
+    },
+    "sourceInstanceRef": "sha256:8439695264f8e6c69df1c2bbf3f419b18a6beb0106cae7023521a35b30916f0a",
+    "sourceContainerRef": "sha256:a11a00fb41bb8789c5fe734b7a0e0c44d271f8babefdd8f3cb3e2bfc71654bfe",
+    "sourceVersion": "v2026.8.27",
+    "sourceHostPort": 10103
+  },
+  "observations": {
+    "backupRestore": {
+      "observedAt": "2026-09-02T17:09:41.000Z",
+      "result": "passed",
+      "productPath": "MyBay UI -> isolated test Agent -> export redacted backup -> import backup preview -> clone as stopped instance -> bind saved provider credential and set a new access password -> initial deployment -> instance file center preview",
+      "backup": {
+        "exportedAt": "2026-09-02T16:51:20.092Z",
+        "archiveVersion": 1,
+        "sizeBytes": 5900,
+        "sha256": "4d563f1a04a2ca69117ed44104bf47b14da8cdccc7f9c1b42f7d3e9fae8b8af2",
+        "entryCount": 6,
+        "unsafeEntryCount": 0,
+        "declaredSections": [
+          "manifest",
+          "config",
+          "business-config",
+          "template-inputs",
+          "outputs"
+        ],
+        "redacted": true,
+        "excluded": {
+          "sessions": true,
+          "database": true,
+          "dotEnv": true,
+          "credentialsAndKeys": true
+        }
+      },
+      "importPreview": {
+        "valid": true,
+        "sourceNameMatched": true,
+        "archiveVersionMatched": true,
+        "redactionWarningDisplayed": true,
+        "outputSectionDetected": true
+      },
+      "restoredClone": {
+        "createdAt": "2026-09-02T16:53:02.096Z",
+        "instanceRef": "sha256:be364a2ba1d25a54abd32cc078b53a1890cfdaf0e95d10456f900994bea7ee1e",
+        "containerRef": "sha256:7dff312aabcd0fa5de9671a0bb061d175d63efaaca9a2b0f96389966aee5099e",
+        "initialState": "stopped",
+        "runtimeVersion": "v2026.8.31",
+        "hostPort": 10105,
+        "loopbackBinding": "127.0.0.1:10105 -> 9119/tcp",
+        "containerState": "running",
+        "providerCredentialRebound": true,
+        "newAccessPasswordRequired": true,
+        "credentiallessA2ADisabled": true,
+        "productUiState": "running; instance and chat API ready"
+      },
+      "runtimeDataVerification": {
+        "artifact": {
+          "path": "outputs/presentations/data-report-preview/index.html",
+          "sourceSizeBytes": 10540,
+          "restoredSizeBytes": 10540,
+          "sourceSha256": "4e141c75acb9ce6207aaf21062c65417c9f77da8acca6a5f5d95c3919c2b2fd9",
+          "restoredSha256": "4e141c75acb9ce6207aaf21062c65417c9f77da8acca6a5f5d95c3919c2b2fd9",
+          "hashMatched": true,
+          "browserFileCenterVisible": true,
+          "isolatedHtmlPreviewRendered": true,
+          "renderedHeading": "上月数据报表"
+        },
+        "sourceStateUnchanged": {
+          "containerStillRunning": true,
+          "hostPort": 10103,
+          "conversations": 5,
+          "messages": 40,
+          "runs": 19,
+          "nativeSessionBindings": 4
+        },
+        "excludedStateNotRestored": {
+          "conversations": 0,
+          "messages": 0,
+          "runs": 0,
+          "nativeSessionBindings": 0
+        }
+      },
+      "cleanup": {
+        "requestedAt": "2026-09-02T17:09:42.029Z",
+        "temporaryCloneContainerRemoved": true,
+        "temporaryCloneDataDirectoryRemoved": true,
+        "controlPlaneTombstoneStatus": "deleted",
+        "productListMatchCountAfterRefresh": 0,
+        "sourceAgentRemoved": false,
+        "downloadedRedactedBackupRetained": true
+      }
+    }
+  },
+  "implementationRepairsValidatedDuringAcceptance": [
+    "Made the management action sheet available at intermediate viewport widths so backup export is reachable.",
+    "Declared uploads and outputs in the manifest only when corresponding archive entries exist.",
+    "Kept generated Blob URLs alive long enough for embedded Chromium download handoff.",
+    "Allowed owned containerless stopped or failed instances to save configuration and enter initial deployment without weakening existing-container identity checks.",
+    "Allocated restored clones a non-conflicting host port and disabled restored A2A when its excluded bearer token is unavailable."
+  ],
+  "boundary": "This evidence covers a real supported MyBay product-path redacted Agent backup, structural preview, isolated clone restore, required credential reconfiguration, first deployment, byte-for-byte Runtime output verification in the browser file center, source-state preservation, and cleanup. By design, credentials, passwords, conversations, run history, and native Sessions are excluded from this Agent backup and were not claimed as restored. This does not claim the remaining credentialed browser-to-Runtime real-e2e Certified gate."
+}

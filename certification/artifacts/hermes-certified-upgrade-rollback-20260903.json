@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 1,
+  "artifactType": "runtime-certified-upgrade-rollback-live-evidence",
+  "generatedAt": "2026-09-02T16:28:57.980Z",
+  "sanitization": {
+    "identifiers": "Instance, container, conversation, run, and native Session identifiers are represented by SHA-256 references only",
+    "credentials": "Values, cookies, tokens, passwords, and encryption material were not collected",
+    "filesystem": "Only one pre-existing harmless artifact name, size, and SHA-256 were retained",
+    "logs": "Only action counts, timestamps, phases, versions, and terminal outcomes were retained"
+  },
+  "environment": {
+    "host": "Windows with Docker Desktop",
+    "application": "MyBay OSS 0.1.26 on localhost",
+    "runtime": {
+      "type": "hermes",
+      "providerKey": "hermes-core",
+      "contractVersion": 1
+    },
+    "instanceRef": "sha256:8439695264f8e6c69df1c2bbf3f419b18a6beb0106cae7023521a35b30916f0a",
+    "hostPort": 10103,
+    "upgradePath": "v2026.8.27 -> v2026.8.31",
+    "rollbackPath": "v2026.8.31 -> v2026.8.27",
+    "images": {
+      "v2026.8.27": {
+        "reference": "nousresearch/hermes-agent:v2026.8.27",
+        "contentRef": "sha256:e0df6adebddf29b91112aefc999d4aaf6846c9eb544faca5672a16a13590ff79",
+        "architecture": "linux/amd64"
+      },
+      "v2026.8.31": {
+        "reference": "nousresearch/hermes-agent:v2026.8.31",
+        "contentRef": "sha256:64923faeae267792bf9bf87fe3b4c4869e35004e360c7df01730ad801b74d524",
+        "architecture": "linux/amd64"
+      }
+    }
+  },
+  "baseline": {
+    "observedAt": "2026-09-02T16:25:01.798Z",
+    "version": "v2026.8.27",
+    "containerRef": "sha256:a2449173fe5372ddb8111a76d6d5ce28af50e15cbe02797564b85742e123b877",
+    "containerState": "running",
+    "runtimeHealthHttpStatus": 200,
+    "runtimeReportedVersion": "0.20.6",
+    "persistedState": {
+      "conversations": 5,
+      "messages": 40,
+      "runs": 19,
+      "nativeSessionBindings": [
+        "sha256:113f8ef9e5abf34e5614874733c7065a6bffccf92f3685433e5c6003e0c5279c",
+        "sha256:6a88aba924bb7906c1adb565dc7611e6af47835e81f7eee81724b97fc1cc2187",
+        "sha256:a30c73a9ce6f5c04ff1b29ffa5eaeb5af9e68a17577442a9dd9a873ba0ec6e2e",
+        "sha256:c26eb504b4203c647936e5b206f1d47b7bbfd62734717468ff9c9ad41e8c88d7"
+      ],
+      "artifact": {
+        "name": "mybay-file-check-20260902.txt",
+        "sizeBytes": 46,
+        "sha256": "1c8f7f7376ac9439c3432f9ca78f656de86f15cedbf39375f1e3035aca330317"
+      }
+    }
+  },
+  "observations": {
+    "upgrade": {
+      "observedAt": "2026-09-02T16:26:04.399Z",
+      "result": "passed",
+      "productPath": "MyBay UI -> Agent version repository -> isolated test Agent -> schedule v2026.8.31 -> server preflight -> confirm upgrade",
+      "preflight": {
+        "passed": 9,
+        "warnings": 2,
+        "blockers": 0,
+        "targetImageCached": true,
+        "architectureCompatible": true,
+        "dataDirectoryAvailable": true,
+        "rollbackConditionAvailable": true
+      },
+      "progress": {
+        "startedAt": "2026-09-02T16:25:03.043Z",
+        "completedAt": "2026-09-02T16:26:04.399Z",
+        "auditEvents": 20,
+        "terminalPhase": "completed",
+        "terminalStatus": "success"
+      },
+      "runtime": {
+        "version": "v2026.8.31",
+        "containerRef": "sha256:971d06362f13c895076bbe242a8fca213c6569d3b03a403aa9cd0c170354a7ba",
+        "containerChanged": true,
+        "controlPlaneContainerIdMatchesDocker": true,
+        "containerState": "running",
+        "runtimeHealthHttpStatus": 200,
+        "runtimeReportedVersion": "0.21.0",
+        "chatReadinessPassed": true,
+        "productUiState": "upgrade completed"
+      },
+      "statePreservation": {
+        "conversationCount": 5,
+        "messageCount": 40,
+        "runCount": 19,
+        "nativeSessionBindingsUnchanged": true,
+        "artifactHashUnchanged": true,
+        "supportedStatePreserved": true
+      }
+    },
+    "rollback": {
+      "observedAt": "2026-09-02T16:28:11.741Z",
+      "result": "passed",
+      "productPath": "MyBay UI -> Agent version repository -> isolated test Agent -> rollback -> confirm v2026.8.27",
+      "progress": {
+        "startedAt": "2026-09-02T16:27:04.344Z",
+        "completedAt": "2026-09-02T16:28:11.741Z",
+        "auditEvents": 20,
+        "terminalPhase": "rolled_back",
+        "terminalStatus": "success"
+      },
+      "runtime": {
+        "version": "v2026.8.27",
+        "previousVersionRecorded": "v2026.8.31",
+        "containerRef": "sha256:a11a00fb41bb8789c5fe734b7a0e0c44d271f8babefdd8f3cb3e2bfc71654bfe",
+        "containerChanged": true,
+        "controlPlaneContainerIdMatchesDocker": true,
+        "containerState": "running",
+        "runtimeHealthHttpStatus": 200,
+        "runtimeReportedVersion": "0.20.6",
+        "chatReadinessPassed": true,
+        "productUiState": "rolled back"
+      },
+      "stateRecovery": {
+        "conversationCount": 5,
+        "messageCount": 40,
+        "runCount": 19,
+        "nativeSessionBindingsUnchanged": true,
+        "artifactHashUnchanged": true,
+        "serviceRestored": true
+      }
+    }
+  },
+  "boundary": "This evidence covers a real supported MyBay product-path upgrade and direct rollback of one isolated local Hermes Runtime, including container replacement, health and chat-readiness checks, and preservation of supported persisted state. It does not claim backup/restore or the remaining full real-E2E Certified gate."
+}

@@ -78,7 +78,7 @@ describe("runs reconciler timer lifecycle", () => {
       owner_id: "owner-1",
       user_id: "owner-1",
     } as any);
-    const listMessages = vi.spyOn(chatRepo, "listMessages");
+    const getMessage = vi.spyOn(chatRepo, "getMessage");
     const finish = vi.spyOn(chatRepo, "finishChatRun").mockResolvedValue({
       status: "success",
       assistant_message_id: "assistant-1",
@@ -94,7 +94,7 @@ describe("runs reconciler timer lifecycle", () => {
       last_event_seq: 0,
     }, new Set());
 
-    expect(listMessages).not.toHaveBeenCalled();
+    expect(getMessage).not.toHaveBeenCalled();
     expect(finish).toHaveBeenCalledWith(expect.objectContaining({
       runId: "run-foreign",
       status: "failed",

@@ -6,6 +6,7 @@ import type {
   RuntimeDriver,
   RuntimeType,
 } from "./contracts";
+import { getRuntimeDefinition, type RuntimeDefinition } from "../../shared/runtimeCatalog";
 
 export class UnsupportedRuntimeTypeError extends Error {
   public readonly code = "UNSUPPORTED_RUNTIME_TYPE";
@@ -68,6 +69,16 @@ export class RuntimeRegistry {
 
   public listProviderKeys(): string[] {
     return [...this.driversByProviderKey.keys()];
+  }
+
+  public listRuntimeDefinitions(): RuntimeDefinition[] {
+    return [...this.drivers.values()].map((driver) => {
+      const definition = getRuntimeDefinition(driver.runtimeType);
+      if (definition.providerKey !== driver.providerKey || definition.contractVersion !== driver.contractVersion) {
+        throw new Error(`Runtime catalog binding drift detected: ${driver.runtimeType}`);
+      }
+      return definition;
+    });
   }
 
   public resolveRuntimeType(value: unknown): RuntimeType {
