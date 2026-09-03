@@ -1057,39 +1057,39 @@
   "changelog": {
     "title": "MyBay Open Source Changelog",
     "subtitle": "Only capabilities released and verified in the MyBay Open Source.",
-    "timelineTip": "Stable Release",
+    "timelineTip": "Release Candidate",
     "releases": [
       {
-        "version": "v0.1.26",
-        "date": "2026.09.01",
-        "badge": "STABLE",
-        "summary": "MyBay Open Source v0.1.26 hardens instance files, dark responsive layouts, and local Agent question handling.",
+        "version": "v0.1.27-rc.1",
+        "date": "2026.09.03",
+        "badge": "RC",
+        "summary": "MyBay Open Source v0.1.27-rc.1 establishes the Runtime standard, certifies Hermes operations, and adds guided Windows delivery.",
         "sections": [
           {
-            "title": "Instance file center",
+            "title": "Runtime standard and certification",
             "type": "feature",
             "items": [
-              "Add secure allowlisted uploads with quota checks, progress, cancellation, retry, and duplicate protection.",
-              "Preview text, images, and PDFs locally, with explicit external-open and download actions for other formats.",
-              "Improve instance switching, stale-request isolation, search, filtering, sorting, usage feedback, and responsive layouts."
+              "Add a shared Runtime specification, adapter contracts, capability catalog, certification ladder, and generated public manifests.",
+              "Certify Hermes with retained evidence for install, task execution, streaming, cancellation, recovery, artifacts, usage, tools, deployment, security, upgrade, rollback, and backup/restore.",
+              "Keep declared capabilities separate from verified evidence, with Hermes marked Certified and Pi kept at spec-only."
             ]
           },
           {
-            "title": "Agent conversations",
+            "title": "Agent operations and collaboration",
             "type": "feature",
             "items": [
-              "Show persisted provider and model evidence with compact token, timing, and cache details on desktop and mobile.",
-              "Inspect, install, and repair the local structured-question bridge with precise health status and bounded probes.",
-              "Recover pending questions after refresh, expire them when a run stops, and prevent duplicate or late answers."
+              "Improve chat streaming, stop and retry recovery, status localization, run evidence, and workspace file feedback.",
+              "Surface Runtime readiness, deployment progress, upgrade preflight, diagnostics, and safe redeploy actions in the console.",
+              "Add observable A2A collaboration flows with persisted lifecycle and failure evidence."
             ]
           },
           {
-            "title": "Dark and responsive interface",
+            "title": "Guided Windows delivery",
             "type": "feature",
             "items": [
-              "Replace fixed light surfaces and low-contrast text across instance, version, documentation, and legal views.",
-              "Improve mobile instance actions, file workflows, usage details, and deploy navigation in dark appearance.",
-              "Add theme guardrails and accessibility status announcements for critical asynchronous states."
+              "Provide a download, extract, and double-click installation flow with prerequisite checks and restart continuation.",
+              "Add diagnostics, logs, Stop, Repair, and data-preserving Uninstall launchers for novice operators.",
+              "Pin the prebuilt control-panel image and validate clean source and Windows release archives in CI."
             ]
           }
         ]

@@ -12,7 +12,7 @@ Deploy and operate multiple isolated Hermes Agent instances on infrastructure yo
 
 Languages: [English](./README.md) | [简体中文](./README.zh-CN.md)
 
-> **Release status: `v0.1.26`.** Public interfaces, runtime adapters, deployment details, and upgrade behavior may still change during the 0.x series.
+> **Release candidate: `v0.1.27-rc.1`.** Public interfaces, runtime adapters, deployment details, and upgrade behavior may still change during the 0.x series.
 
 Runtime availability and declared capabilities are generated from the shared catalog in the [Runtime Capability Matrix](./docs/runtime-capability-matrix.md). Evidence-backed certification is reported separately in [MyBay Runtime Certification](./docs/runtime-certification.md), so a registered adapter or capability declaration is never presented as proof of real Runtime or product E2E behavior.
 
