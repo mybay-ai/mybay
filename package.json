@@ -1,6 +1,6 @@
 {
     "name": "mybay-local",
-    "version": "0.1.27-rc.2",
+    "version": "0.1.27",
     "description": "A local-first, self-hosted control plane for managing Hermes Agent instances.",
     "license": "AGPL-3.0-only",
     "repository": {

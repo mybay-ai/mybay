@@ -28,6 +28,34 @@ describe("Qwen Hermes runtime mapping", () => {
 });
 
 describe("Hermes provider compatibility", () => {
+  it.each([
+    {
+      provider: "anthropic",
+      model: "claude-fable-5.1",
+      apiKey: "sk-test-anthropic",
+      hermesProvider: "anthropic",
+      apiKeyEnvName: "ANTHROPIC_API_KEY"
+    },
+    {
+      provider: "openrouter",
+      model: "openai/gpt-6-astra",
+      apiKey: "sk-test-openrouter",
+      hermesProvider: "openrouter",
+      apiKeyEnvName: "OPENROUTER_API_KEY"
+    }
+  ])("passes $model through the $provider deployment config", ({ provider, model, apiKey, hermesProvider, apiKeyEnvName }) => {
+    const result = buildHermesModelConfig({ provider, model, apiKey });
+
+    expect(result.hermesProvider).toBe(hermesProvider);
+    expect(result.apiKeyEnvName).toBe(apiKeyEnvName);
+    expect(result.envVars).toMatchObject({
+      HERMES_MODEL_PROVIDER: hermesProvider,
+      HERMES_MODEL: model,
+      [apiKeyEnvName]: apiKey
+    });
+    expect(result.configYaml.model).toMatchObject({ provider: hermesProvider, default: model });
+  });
+
   it("maps Together AI to the provider id supported by the runtime image", () => {
     expect(resolveHermesProvider("together")).toBe("togetherai");
     expect(VALID_HERMES_PROVIDERS.has(resolveHermesProvider("together"))).toBe(true);

@@ -147,7 +147,7 @@ export function ChatComposerControls({
         {attachmentCount > 0 && <span aria-hidden="true" className="absolute -right-0.5 -top-0.5 min-w-3.5 rounded-full bg-indigo-600 px-0.5 text-center text-[9px] font-semibold leading-3.5 text-white">{attachmentCount}</span>}
       </button>
     </div>
-    <div data-chat-composer-options className="chat-composer-options min-w-0 flex-1">
+    <div data-chat-composer-options className="chat-composer-options min-w-[5.5rem] flex-auto">
       <button ref={settingsRef} type="button" onClick={() => toggle('settings')}
         className="inline-flex h-10 max-w-full items-center gap-1 rounded-lg border border-outline bg-surface-muted px-1.5 text-xs font-semibold text-content-secondary transition-colors hover:bg-surface-muted hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 md:h-8"
         aria-label={summary} title={`${summary} — ${activeMode.desc}`} aria-haspopup="dialog" aria-expanded={open === 'settings'} aria-controls={open === 'settings' ? `${id}-panel` : undefined}>

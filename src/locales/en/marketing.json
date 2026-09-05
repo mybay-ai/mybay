@@ -1057,13 +1057,13 @@
   "changelog": {
     "title": "MyBay Open Source Changelog",
     "subtitle": "Only capabilities released and verified in the MyBay Open Source.",
-    "timelineTip": "Release Candidate",
+    "timelineTip": "Stable release",
     "releases": [
       {
-        "version": "v0.1.27-rc.2",
+        "version": "v0.1.27",
         "date": "2026.09.05",
-        "badge": "RC",
-        "summary": "MyBay Open Source v0.1.27-rc.2 closes the A2A collaboration workflow, adds persistent multi-Agent rooms, and refines chat and Windows startup UX.",
+        "badge": "Stable",
+        "summary": "MyBay Open Source v0.1.27 closes the A2A collaboration workflow, adds persistent multi-Agent rooms, expands current Hermes model choices, and refines chat and Windows startup UX.",
         "sections": [
           {
             "title": "A2A collaboration closure",
@@ -1080,7 +1080,17 @@
             "items": [
               "Add slash commands and @Agent suggestions, attachment previews, safer file and URL rendering, and paginated conversation search.",
               "Improve Markdown rhythm, responsive composer controls, code blocks, localized run durations, and group-run summaries.",
-              "Refine instance details and activity navigation so collaboration results and failures remain easy to inspect."
+              "Refine instance details and activity navigation so collaboration results and failures remain easy to inspect.",
+              "Keep the collaboration-room control and its setup panel visible across narrow, split-pane, and mobile layouts."
+            ]
+          },
+          {
+            "title": "Hermes model choices",
+            "type": "feature",
+            "items": [
+              "Add Claude Fable 5.1 to the Anthropic and OpenRouter model lists.",
+              "Add the GPT Astra, Astra Fast, Astra Flex, Astra Pro, Astra Pro Fast, and Astra Pro Flex routes available through OpenRouter.",
+              "Keep ChatGPT OAuth model availability tied to live account discovery instead of promising unsupported static models."
             ]
           },
           {

@@ -38,3 +38,25 @@ describe("provider display grouping", () => {
     expect(withoutOAuth).not.toContain("xai-oauth");
   });
 });
+
+describe("Hermes model catalog compatibility", () => {
+  it("offers Fable 5.1 through Anthropic and OpenRouter", () => {
+    expect(providerRegistry.anthropic.models).toContain("claude-fable-5.1");
+    expect(providerRegistry.openrouter.models).toContain("anthropic/claude-fable-5.1");
+  });
+
+  it("offers the Astra family through OpenRouter", () => {
+    expect(providerRegistry.openrouter.models).toEqual(expect.arrayContaining([
+      "openai/gpt-6-astra",
+      "openai/gpt-6-astra-fast",
+      "openai/gpt-6-astra-flex",
+      "openai/gpt-6-astra-pro",
+      "openai/gpt-6-astra-pro-fast",
+      "openai/gpt-6-astra-pro-flex"
+    ]));
+  });
+
+  it("keeps Codex OAuth models limited to its runtime fallback catalog", () => {
+    expect(providerRegistry["openai-codex"].models).not.toContain("gpt-6-astra");
+  });
+});
