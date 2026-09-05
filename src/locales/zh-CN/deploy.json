@@ -712,7 +712,7 @@
                                       "title":  "启用技能与能力",
                                       "description":  "为 Agent 配置系统级技能。请谨慎启用高风险能力，敏感操作会被记录。",
                                       "piManagedTitle":  "Pi Runtime 使用自身工具集",
-                                      "piManagedDescription":  "Pi Runtime Beta 使用自身 RPC 工具集，暂不加载 Hermes 技能与插件；文件操作会通过运行时能力契约记录。",
+                                      "piManagedDescription":  "Pi Runtime Beta 使用自身 RPC 工具集，支持聊天附件、持久化工作区和生成文件追踪；暂不加载 Hermes 技能与插件。",
                                       "hideAdvanced":  "收起高风险安全设置",
                                       "showAdvanced":  "展开高风险安全能力",
                                       "credentialsTitle":  "高级能力凭据设置",
@@ -799,7 +799,7 @@
                        },
                        "channel":  {
                                        "restricted":  "本地配置已禁用此渠道。",
-                                       "piWebOnly":  "Pi Runtime Beta 当前支持 Web 控制台对话和持久化文件。",
+                                       "piWebOnly":  "Pi Runtime Beta 当前支持 Web 控制台对话、聊天附件、持久化工作区和生成文件。",
                                        "title":  "Agent 对话与消息渠道",
                                        "description":  "绑定 Agent 使用的消息渠道，用于对话、任务通知和指令执行。",
                                        "hideGuide":  "隐藏配置指南",

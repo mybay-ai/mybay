@@ -1,6 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { assistantText, cancelActiveRun, normalizePiEvent, normalizePrompt, normalizeReasoningEffort, safeToolMetadata } from "./server.mjs";
+import { PI_BRIDGE_FEATURES, assistantText, cancelActiveRun, normalizePiEvent, normalizePrompt, normalizeReasoningEffort, safeToolMetadata } from "./server.mjs";
+
+test("advertises the managed attachment and generated-file contract", () => {
+  assert.equal(PI_BRIDGE_FEATURES.chat_attachments, true);
+  assert.equal(PI_BRIDGE_FEATURES.persisted_workspace, true);
+  assert.equal(PI_BRIDGE_FEATURES.generated_file_evidence, true);
+  assert.equal(PI_BRIDGE_FEATURES.session_resources, false);
+});
 
 test("normalizes MyBay reasoning levels for Pi", () => {
   assert.equal(normalizeReasoningEffort({ reasoning_effort: "none" }), "off");

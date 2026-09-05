@@ -86,6 +86,27 @@ describe("generated artifacts", () => {
     expect(artifacts).toEqual([]);
   });
 
+  it("keeps chat uploads out of generated artifacts so their original filename remains authoritative", () => {
+    const artifacts = extractGeneratedArtifacts([{
+      id: "assistant-upload",
+      role: "assistant",
+      content: "Read /opt/data/chat_uploads/chat-1/stored-uuid.txt and created /opt/data/outputs/result.txt",
+      status: "completed",
+      metadata: {
+        run_id: "run-upload",
+        file_evidence: {
+          version: 1,
+          runId: "run-upload",
+          changes: [
+            { path: "chat_uploads/chat-1/stored-uuid.txt", kind: "referenced" },
+            { path: "outputs/result.txt", kind: "added" },
+          ],
+        },
+      },
+    }], null);
+    expect(artifacts.map(artifact => artifact.path)).toEqual(["outputs/result.txt"]);
+  });
+
   it("rejects host paths and deduplicates repeated generated paths", () => {
     const artifacts = extractGeneratedArtifacts([{
       id: "assistant-1",

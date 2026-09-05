@@ -229,7 +229,7 @@ export const PI_RUNTIME_DEFINITION = freezeRuntimeDefinition({
   },
   capabilities: {
     chat: true,
-    fileUpload: false,
+    fileUpload: true,
     scheduledTasks: false,
     browser: false,
     shell: true,

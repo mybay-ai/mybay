@@ -63,6 +63,10 @@ function getArtifactName(filePath: string) {
   return filePath.split("/").filter(Boolean).pop() || filePath;
 }
 
+function isConversationUploadPath(filePath: string) {
+  return filePath === "chat_uploads" || filePath.startsWith("chat_uploads/");
+}
+
 export function extractGeneratedArtifacts(
   messages: ChatMessage[],
   activeRunId: string | null
@@ -84,11 +88,14 @@ export function extractGeneratedArtifacts(
       GENERATED_FILE_PATH_PATTERN.lastIndex = 0;
       for (const match of (message.content || "").matchAll(GENERATED_FILE_PATH_PATTERN)) {
         const filePath = normalizeGeneratedInstanceFilePath(match[0]);
-        if (filePath && !candidatePaths.includes(filePath)) candidatePaths.push(filePath);
+        if (filePath && !isConversationUploadPath(filePath) && !candidatePaths.includes(filePath)) candidatePaths.push(filePath);
       }
     }
     for (const change of evidenceChanges) {
-      if (!candidatePaths.includes(change.path)) candidatePaths.push(change.path);
+      // Chat uploads are already rendered through conversation-file metadata,
+      // which preserves the user's original filename. They are input evidence,
+      // not generated artifacts, and must never expose the UUID storage name.
+      if (!isConversationUploadPath(change.path) && !candidatePaths.includes(change.path)) candidatePaths.push(change.path);
     }
 
     for (const filePath of candidatePaths) {

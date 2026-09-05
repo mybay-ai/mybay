@@ -28,6 +28,20 @@ const MAX_RUNS = 200;
 const runs = new Map();
 const sessions = new Map();
 
+export const PI_BRIDGE_FEATURES = Object.freeze({
+  run_submission: true,
+  run_status: true,
+  run_events_sse: true,
+  run_stop: true,
+  tool_progress_events: true,
+  chat_attachments: true,
+  persisted_workspace: true,
+  generated_file_evidence: true,
+  approval_events: false,
+  run_approval_response: false,
+  session_resources: false,
+});
+
 export function normalizeReasoningEffort(modelOptions = {}) {
   const value = String(modelOptions?.reasoning_effort || modelOptions?.reasoning?.effort || "medium").toLowerCase();
   if (["off", "minimal", "low", "medium", "high", "xhigh", "max"].includes(value)) return value;
@@ -394,7 +408,7 @@ async function handleRequest(request, response) {
   if (request.method === "GET" && url.pathname === "/v1/capabilities") {
     return json(response, 200, {
       runtime: "pi",
-      features: { run_submission: true, run_status: true, run_events_sse: true, run_stop: true, tool_progress_events: true, approval_events: false, run_approval_response: false, session_resources: false },
+      features: PI_BRIDGE_FEATURES,
       endpoints: { sessions: "/api/sessions", runs: "/v1/runs" },
     });
   }

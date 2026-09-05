@@ -357,7 +357,7 @@ export function createInstanceHandler(deps: RouterDependencies) {
           return res.status(400).json({ code: "PI_WEB_CHANNEL_ONLY", error: "Pi Runtime Beta currently supports the Web channel only." });
         }
         if ((data.skills || []).length > 0 || data.template_id || data.blueprint_id) {
-          return res.status(400).json({ code: "PI_BASIC_CHAT_ONLY", error: "Pi Runtime Beta currently supports Web chat and persisted files without MyBay skills, templates, or blueprints." });
+          return res.status(400).json({ code: "PI_BASIC_CHAT_ONLY", error: "Pi Runtime Beta supports Web chat, attachments, and persisted workspace files without MyBay skills, templates, or blueprints." });
         }
         data.channel = "web";
         data.enableDashboard = false;

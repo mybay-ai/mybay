@@ -19,7 +19,7 @@ describe("runtime catalog route", () => {
     });
     expect(pi.capabilities).toMatchObject({
       chat: true,
-      fileUpload: false,
+      fileUpload: true,
       scheduledTasks: false,
       browser: false,
       shell: true,

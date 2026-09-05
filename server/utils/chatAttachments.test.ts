@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildChatAttachmentMetadata, getAttachmentDisplayName, isChatAttachmentDeleted } from "./chatAttachments";
+import { buildAgentAttachmentContextForPrompt, buildChatAttachmentMetadata, getAttachmentDisplayName, isChatAttachmentDeleted } from "./chatAttachments";
 
 describe("chat attachment message metadata", () => {
   it("stores an immutable display snapshot alongside attachment ids", () => {
@@ -32,5 +32,19 @@ describe("chat attachment message metadata", () => {
   it("repairs a legacy mojibake display name before it reaches chat metadata", () => {
     const original_name = Buffer.from("8月3日.mp4", "utf8").toString("latin1");
     expect(getAttachmentDisplayName({ original_name, filename: "stored.mp4" })).toBe("8月3日.mp4");
+  });
+
+  it("exposes only the mounted instance path and safe metadata to an Agent Runtime", () => {
+    const context = buildAgentAttachmentContextForPrompt([{
+      conversation_id: "chat-1",
+      original_name: "report.txt",
+      filename: "stored-1.txt",
+      mime_type: "text/plain",
+      size: 42,
+      storage_path: "C:/host/private/data/instances/agent/chat_uploads/chat-1/stored-1.txt",
+    }]);
+    expect(context).toContain("/opt/data/chat_uploads/chat-1/stored-1.txt");
+    expect(context).toContain("report.txt");
+    expect(context).not.toContain("C:/host/private");
   });
 });

@@ -34,6 +34,21 @@ describe("PiRuntimeDriver experimental boundary", () => {
     });
   });
 
+  it("passes mounted chat attachments to Pi with their container paths", () => {
+    const controller = piRuntimeDriver.preparation.createController(dependencies());
+    expect(controller.buildRunPayload({
+      userContent: "Summarize the attachment",
+      reasoningEffort: "balanced",
+      systemPolicy: "system policy",
+      agentAttachmentContext: "1. report.txt\n   - path: /opt/data/chat_uploads/chat-1/stored.txt",
+      sessionBinding: { sessionId: "pi-session-1234", state: "existing" },
+      historyMessages: [],
+    } as any)).toMatchObject({
+      input: expect.stringContaining("/opt/data/chat_uploads/chat-1/stored.txt"),
+      session_id: "pi-session-1234",
+    });
+  });
+
   it("terminalizes accidental batch execution without contacting the runtime", async () => {
     const completeRun = vi.fn(async () => true);
     const controller = piRuntimeDriver.execution.createController({

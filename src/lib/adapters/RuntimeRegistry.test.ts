@@ -13,7 +13,7 @@ describe("client RuntimeRegistry", () => {
     });
     expect(runtimes[1].manifest.capabilities).toMatchObject({
       chat: true,
-      fileUpload: false,
+      fileUpload: true,
       browser: false,
       shell: true,
       imChannels: ["web"],
