@@ -711,6 +711,8 @@
                                       "confirm":  "确认启用",
                                       "title":  "启用技能与能力",
                                       "description":  "为 Agent 配置系统级技能。请谨慎启用高风险能力，敏感操作会被记录。",
+                                      "piManagedTitle":  "Pi Runtime 使用自身工具集",
+                                      "piManagedDescription":  "当前实验版由 Pi RPC 运行时管理工具能力，暂不加载 Hermes 技能与插件。后续通过运行时能力清单开放兼容工具。",
                                       "hideAdvanced":  "收起高风险安全设置",
                                       "showAdvanced":  "展开高风险安全能力",
                                       "credentialsTitle":  "高级能力凭据设置",
@@ -797,6 +799,7 @@
                        },
                        "channel":  {
                                        "restricted":  "本地配置已禁用此渠道。",
+                                       "piWebOnly":  "Pi Runtime 实验版当前仅支持 Web 控制台对话。",
                                        "title":  "Agent 对话与消息渠道",
                                        "description":  "绑定 Agent 使用的消息渠道，用于对话、任务通知和指令执行。",
                                        "hideGuide":  "隐藏配置指南",
@@ -1255,12 +1258,12 @@
                                             "runtimeType":  "Agent 运行时类型",
                                             "hermesBadge":  "标准 / 全功能",
                                             "hermesDescription":  "经典全功能运行时，包含 9119 控制接口、Python 执行器和多种消息渠道。",
-                                            "piBadge":  "实验预览 / 即将推出",
-                                            "piDescription":  "Pi Agent 当前仅提供接入规范，尚未实现部署；请改用 Hermes Agent。",
+                                            "piBadge":  "实验版 / Web 对话",
+                                            "piDescription":  "基于官方 Pi RPC 的隔离运行时，当前支持 Web 流式对话、会话恢复、工具进度与停止。",
                                             "runtimeLoading":  "正在加载已验证的运行时能力…",
                                             "runtimeLoadError":  "无法验证运行时能力。为避免创建不受支持的运行时，部署选择已关闭。",
                                             "runtimeUnavailable":  "运行时不可用",
-                                            "runtimeSpecOnly":  "仅提供规范 | 已禁用部署"
+                                            "runtimeSpecOnly":  "实验功能未启用"
                                         },
                        "preflight":  {
                                          "localRuntime":  "本地运行环境",

@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "runtime": {
+    "type": "pi",
+    "providerKey": "pi-rpc",
+    "contractVersion": 1
+  },
+  "checks": [
+    {
+      "requirementId": "runtime-install",
+      "status": "passed",
+      "scope": "runtime",
+      "observedAt": "2026-09-05T11:34:53.844Z",
+      "environment": "Windows + Docker Desktop; MyBay OSS local branch; Pi bridge 0.1.0-experimental; Pi coding agent 0.85.0",
+      "evidenceRefs": [
+        "certification/artifacts/pi-experimental-20260905.json#observations.runtimeInstall"
+      ],
+      "note": "MyBay built and deployed its packaged Pi Runtime image, authenticated its health and capability endpoints, and retained a healthy chat-ready state through background reconciliation."
+    },
+    {
+      "requirementId": "task-submit",
+      "status": "passed",
+      "scope": "runtime",
+      "observedAt": "2026-09-05T11:25:26.756Z",
+      "environment": "Windows + Docker Desktop; MyBay OSS local branch; Pi bridge 0.1.0-experimental; Pi coding agent 0.85.0",
+      "evidenceRefs": [
+        "certification/artifacts/pi-experimental-20260905.json#observations.taskSubmit"
+      ],
+      "note": "An authenticated Agent-mode browser task reached the Pi RPC Runtime, persisted its upstream binding, completed, and returned the expected deterministic marker with terminal usage."
+    },
+    {
+      "requirementId": "streaming-output",
+      "status": "passed",
+      "scope": "runtime",
+      "observedAt": "2026-09-05T11:26:00.644Z",
+      "environment": "Windows + Docker Desktop; MyBay OSS local branch; Pi bridge 0.1.0-experimental; Pi coding agent 0.85.0",
+      "evidenceRefs": [
+        "certification/artifacts/pi-experimental-20260905.json#observations.streamingOutput"
+      ],
+      "note": "Two Pi runs produced ordered Runtime event sequences and persisted non-empty output; the browser restored the results and native session context after reload."
+    },
+    {
+      "requirementId": "cancellation",
+      "status": "passed",
+      "scope": "runtime",
+      "observedAt": "2026-09-05T11:26:21.118Z",
+      "environment": "Windows + Docker Desktop; MyBay OSS local branch; Pi bridge 0.1.0-experimental; Pi coding agent 0.85.0",
+      "evidenceRefs": [
+        "certification/artifacts/pi-experimental-20260905.json#observations.cancellation"
+      ],
+      "note": "The product stop action cancelled an active Pi run, persisted cancelled/CANCELLED_UPSTREAM, and retained the stopped state after browser reload."
+    }
+  ]
+}

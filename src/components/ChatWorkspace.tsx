@@ -1416,6 +1416,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
               isChatReady={isChatReady}
               hasActiveConversation={Boolean(selectedConversationId)}
               selectedChannel={selectedInstance?.configSummary?.channel || "web"}
+              runtimeType={selectedInstance?.runtime_type}
               selectedInstanceName={selectedInstance?.name}
               runMetrics={selectedRunMetrics}
               chatMode={chatMode}

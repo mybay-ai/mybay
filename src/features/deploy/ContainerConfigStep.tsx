@@ -28,6 +28,7 @@ export function ContainerConfigStep({
   const isTemplateDeployment = !!(data.template_id || data.template_slug || data.blueprint_id || data.blueprint_slug || activeBlueprint);
   const [showAdvanced, setShowAdvanced] = useState(!isTemplateDeployment);
   const canEditAgentImage = currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
+  const isPiRuntime = data.runtime_type === "pi";
 
   const selectedVersion = versions.find(v => {
     if (v.image_tag === data.imageTag || v.tag === data.imageTag || v.version === data.imageTag) return true;
@@ -82,10 +83,10 @@ export function ContainerConfigStep({
             onChange={(e: any) => {
               if (canEditAgentImage) update("image", e.target.value);
             }}
-            disabled={!canEditAgentImage}
-            readOnly={!canEditAgentImage}
-            aria-readonly={!canEditAgentImage}
-            className={`h-10 font-mono text-[13px] border-slate-200 dark:border-slate-700 ${canEditAgentImage ? "text-blue-600 dark:text-blue-400 bg-surface-muted" : "text-content-muted bg-surface-muted cursor-not-allowed select-none"}`}
+            disabled={!canEditAgentImage || isPiRuntime}
+            readOnly={!canEditAgentImage || isPiRuntime}
+            aria-readonly={!canEditAgentImage || isPiRuntime}
+            className={`h-10 font-mono text-[13px] border-slate-200 dark:border-slate-700 ${canEditAgentImage && !isPiRuntime ? "text-blue-600 dark:text-blue-400 bg-surface-muted" : "text-content-muted bg-surface-muted cursor-not-allowed select-none"}`}
             placeholder={t("wizardCopy.container.imagePlaceholder")}
           />
           {!canEditAgentImage && (
@@ -100,10 +101,13 @@ export function ContainerConfigStep({
             <select
               value={data.imageTag || "latest"}
               onChange={(e) => update("imageTag", e.target.value)}
+              disabled={isPiRuntime}
               className="w-full flex h-10 rounded-lg border border-outline bg-surface px-3 py-2 text-[13px] font-bold text-content shadow-sm focus:border-blue-500 appearance-none outline-none"
             >
-              <option value="latest">{t("container_config.latest_option")}</option>
-              {versions.map(v => {
+              {isPiRuntime
+                ? <option value="0.1.0-experimental">0.1.0-experimental</option>
+                : <option value="latest">{t("container_config.latest_option")}</option>}
+              {!isPiRuntime && versions.map(v => {
                 const isFeishu = v.capabilities?.includes("feishu") || v.feishu_capable === true;
                 return (
                   <option key={v.tag || v.version} value={v.image_tag || v.tag}>
@@ -195,7 +199,7 @@ export function ContainerConfigStep({
               </p>
               <div className="pt-2 flex items-center gap-2">
                  <span className="px-2 py-0.5 bg-surface border border-blue-100 dark:border-slate-600 text-[11px] text-blue-600 dark:text-blue-200 font-bold rounded-md">
-                   {t("container_config.internal_port_badge")}
+                    {isPiRuntime ? "8080 (Pi Runtime)" : t("container_config.internal_port_badge")}
                  </span>
                  <span className="px-2 py-0.5 bg-blue-600 text-white text-[11px] font-bold rounded-md animate-pulse">
                    {t("container_config.allocating_badge")}

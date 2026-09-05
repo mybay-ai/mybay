@@ -6,7 +6,9 @@ coverage/
 /data/
 /public/docs/
 release/
-/runtime/
+/runtime/*
+!/runtime/pi-bridge/
+!/runtime/pi-bridge/**
 /secrets/
 .DS_Store
 *.log

@@ -695,6 +695,11 @@ export function InstanceInfoStep({ data, update, updateTemplateInput, applyTempl
                       update("runtime_type", runtimeType);
                       update("image", definition.runtime.image);
                       update("imageTag", definition.runtime.tag);
+                      if (runtimeType === "pi") {
+                        update("channel", "web");
+                        update("enableDashboard", false);
+                        update("skills", []);
+                      }
                     }}
                     className={`p-3.5 rounded-xl border text-left transition-all relative ${
                       !deployable

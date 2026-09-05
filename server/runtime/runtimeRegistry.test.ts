@@ -14,7 +14,7 @@ describe("server RuntimeRegistry", () => {
   it("registers the truthful Hermes execution boundary", () => {
     expect(runtimeRegistry.listRuntimeTypes()).toEqual(["hermes", "pi"]);
     expect(runtimeRegistry.get("hermes")).toBe(hermesRuntimeDriver);
-    expect(runtimeRegistry.listProviderKeys()).toEqual(["hermes-core", "pi-preview"]);
+    expect(runtimeRegistry.listProviderKeys()).toEqual(["hermes-core", "pi-rpc"]);
     expect(runtimeRegistry.get().runs.request).toBeTypeOf("function");
     expect(runtimeRegistry.get().runs.streamEvents).toBeTypeOf("function");
     expect(runtimeRegistry.get().preparation.createController).toBeTypeOf("function");
@@ -36,23 +36,20 @@ describe("server RuntimeRegistry", () => {
     }
   });
 
-  it("registers Pi as an explicit preview-only execution boundary", async () => {
+  it("registers Pi as an experimental streaming execution boundary", () => {
     expect(runtimeRegistry.get("pi")).toBe(piRuntimeDriver);
     expect(runtimeRegistry.createBindingForInstance({ runtime_type: "pi" })).toEqual({
       runtimeType: "pi",
-      providerKey: "pi-preview",
+      providerKey: "pi-rpc",
       contractVersion: 1,
     });
     expect(piRuntimeDriver.capabilities).toMatchObject({
-      conversation: { modes: [] },
-      cancellation: { supported: false },
-      terminal: { observation: "unsupported" },
+      conversation: { modes: ["streaming"] },
+      cancellation: { supported: true, granularity: "run" },
+      terminal: { observation: "events" },
     });
-    await expect(piRuntimeDriver.runs.request({
-      instanceId: "preview",
-      method: "POST",
-      path: "/v1/runs",
-    })).resolves.toEqual({ ok: false, statusCode: 501, error: "PI_RUNTIME_PREVIEW_ONLY" });
+    expect(piRuntimeDriver.runs.request).toBeTypeOf("function");
+    expect(piRuntimeDriver.runs.streamEvents).toBeTypeOf("function");
   });
 
   it("creates and resolves an immutable persisted Run Binding", () => {

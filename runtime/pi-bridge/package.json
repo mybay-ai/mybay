@@ -1,0 +1,16 @@
+{
+  "name": "@mybay/pi-runtime-bridge",
+  "version": "0.1.0-experimental",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test server.test.mjs"
+  },
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "0.85.0"
+  }
+}

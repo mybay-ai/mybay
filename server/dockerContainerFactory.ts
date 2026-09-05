@@ -35,6 +35,7 @@ import { assertRuntimeSatisfiesSkillPolicy, createRuntimeSecurityManifest } from
 import { resolveHermesProvider, VALID_HERMES_PROVIDERS } from "./providerEnv";
 import { getDockerProfile, getResourceLimits } from "./services/docker/dockerResourcePolicy";
 import { ensureLocalFeishuRuntimeImage, requiresLocalFeishuRuntime } from "./services/localFeishuRuntime";
+import { ensureLocalPiRuntimeImage } from "./services/localPiRuntime";
 import {
   connectControlPlaneToNetwork,
   connectTraefikToNetwork,
@@ -42,6 +43,15 @@ import {
 } from "./services/docker/dockerNetworkManager";
 
 export async function ensureFrontendBuilt(docker: any, baseImage: string, instanceId: string, io: SocketIOServer, config?: any): Promise<string> {
+  if (String(config?.runtime_type || "hermes").trim().toLowerCase() === "pi") {
+    return ensureLocalPiRuntimeImage({
+      dockerClient: docker,
+      onLog: (message) => io.emit(`deploy_log_${instanceId}`, {
+        timestamp: new Date().toISOString(),
+        message: `[Pi Runtime] ${message}`,
+      }),
+    });
+  }
   if (requiresLocalFeishuRuntime(config)) {
     const lastSlash = baseImage.lastIndexOf("/");
     const lastColon = baseImage.lastIndexOf(":");
@@ -240,6 +250,8 @@ export function createDashboardContainer(
     Labels?: any;
     HostConfig: any;
     User?: string;
+    RuntimeType?: string;
+    Cmd?: string[];
   }
 ): Promise<any> {
   const runtimeType = "mybay-agent-runtime";
@@ -267,16 +279,16 @@ export function createDashboardContainer(
       }
     }
 
+    const isPiRuntime = options.RuntimeType === "pi";
     dockerInstance.createContainer({
       Image: options.Image,
       name: options.name,
-      Cmd: ["gateway", "run"], // Restore critical execution command
+      ...(options.Cmd ? { Cmd: options.Cmd } : isPiRuntime ? {} : { Cmd: ["gateway", "run"] }),
       Env: options.Env,
       Labels: options.Labels,
       ExposedPorts: {
         [`${targetPort}/tcp`]: {},
-        "8642/tcp": {},
-        "8644/tcp": {}
+        ...(!isPiRuntime ? { "8642/tcp": {}, "8644/tcp": {} } : {}),
       },
       HostConfig: options.HostConfig,
       User: options.User !== undefined ? options.User : profile.User

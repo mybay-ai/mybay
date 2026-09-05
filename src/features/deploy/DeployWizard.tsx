@@ -100,6 +100,14 @@ export function DeployWizard({
     limitsMem: "1024MB",
     ...initialData,
   });
+  const isPiRuntime = String(data.runtime_type || "hermes").toLowerCase() === "pi";
+  const isChannelAllowedForRuntime = (channel: any) => (
+    isChannelAllowedByPlan(channel)
+    && (!isPiRuntime || channel === "web" || channel === "none")
+  );
+  const channelRestrictionMessage = isPiRuntime
+    ? t("wizardCopy.channel.piWebOnly")
+    : planChannelRestrictionMessage;
 
   const trustPermissionFingerprint = JSON.stringify({
     provider: data.provider,
@@ -358,12 +366,12 @@ export function DeployWizard({
   };
 
   const handleChannelChange = (id: string) => {
-    if (!isChannelAllowedByPlan(id)) {
+    if (!isChannelAllowedForRuntime(id)) {
       setTestResults((tr: any) => ({
         ...tr,
         channel: {
           loading: false,
-          result: { success: false, error: planChannelRestrictionMessage }
+          result: { success: false, error: channelRestrictionMessage }
         }
       }));
       return;
@@ -418,10 +426,10 @@ export function DeployWizard({
   };
 
   const update = (k: keyof SetupFormData, v: any) => {
-    if (k === "channel" && !isChannelAllowedByPlan(v)) {
+    if (k === "channel" && !isChannelAllowedForRuntime(v)) {
       setTestResults((tr: any) => ({
         ...tr,
-        channel: { loading: false, result: { success: false, error: planChannelRestrictionMessage } }
+        channel: { loading: false, result: { success: false, error: channelRestrictionMessage } }
       }));
       return;
     }
@@ -469,10 +477,10 @@ export function DeployWizard({
   };
 
   useEffect(() => {
-    if (!isChannelAllowedByPlan(data.channel)) {
+    if (!isChannelAllowedForRuntime(data.channel)) {
       handleChannelChange("web");
     }
-  }, [externalChannelsAllowed, data.channel]);
+  }, [externalChannelsAllowed, data.channel, data.runtime_type]);
 
   const submit = async () => {
     if (quota.entitlementsReady && !quota.canCreateInstance) {
@@ -480,8 +488,8 @@ export function DeployWizard({
       return;
     }
 
-    if (!isChannelAllowedByPlan(data.channel)) {
-      setSubmitError(planChannelRestrictionMessage);
+    if (!isChannelAllowedForRuntime(data.channel)) {
+      setSubmitError(channelRestrictionMessage);
       return;
     }
     setLoading(true);
@@ -733,8 +741,9 @@ export function DeployWizard({
             onViewGuide={onViewGuide}
             versions={versions}
             handleChannelChange={handleChannelChange}
-            isChannelAllowed={isChannelAllowedByPlan}
+            isChannelAllowed={isChannelAllowedForRuntime}
             externalChannelsAllowed={externalChannelsAllowed}
+            channelRestrictionMessage={channelRestrictionMessage}
           />
         );
       case 5:
@@ -745,6 +754,7 @@ export function DeployWizard({
             testSkill={testSkill} 
             testResults={testResults} 
             currentUser={currentUser}
+            runtimeType={data.runtime_type}
           />
         );
       case 6:

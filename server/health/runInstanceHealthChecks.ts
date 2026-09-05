@@ -45,9 +45,65 @@ import {
   setActiveInstanceHealthCheck,
   updateInstanceHealthStatus,
 } from "./healthCheckCoordinator";
+import { probePiRuntimeReadiness } from "../runtime/adapters/pi/PiRuntimeReadiness";
 
 const docker = new Docker();
 export { clearInstanceHealthCheckCache } from "./healthCheckCoordinator";
+
+async function runPiRuntimeHealthChecks(options: {
+  instanceId: string;
+  containerName: string;
+  internalPort: number;
+  hostPort: number;
+  config: any;
+  instance: any;
+  io: SocketIOServer;
+  updateInstanceStatusStmt: any;
+}) {
+  const { instanceId, containerName, internalPort, instance, io, updateInstanceStatusStmt } = options;
+  const isTestEnv = process.env.NODE_ENV === "test" || process.env.VITEST === "true";
+  for (let attempt = 0; attempt < 30; attempt++) {
+    const state = await getContainerState(containerName);
+    const portListening = state.Running && await checkContainerPortListening(containerName, internalPort);
+    const readiness = portListening ? await probePiRuntimeReadiness(instance) : null;
+    const ready = readiness?.gateway_ready === true;
+    if (ready) {
+      const checkedAt = new Date().toISOString();
+      await dbAdapter.updateInstanceVersionInfo(instanceId, {
+        health_status: "healthy",
+        ready_at: checkedAt,
+        last_health_check_at: checkedAt,
+        deployment_error: null,
+        metadata: {
+          ...(instance?.metadata || {}),
+          gateway_status: "running",
+          gateway_ready: true,
+          chat_ready: true,
+          runtime_type: "pi",
+          runtime_transport: "rpc-jsonl",
+          gateway_checked_at: checkedAt,
+        },
+      }).catch(() => {});
+      await deploymentEventsRepo.create({
+        instance_id: instanceId,
+        owner_id: instance?.owner_id || instance?.user_id,
+        step: "health_ready",
+        status: "success",
+        message: "Pi Runtime 容器、内部端口与鉴权能力接口均已就绪",
+      }).catch(() => {});
+      await updateInstanceStatusStmt.run({ status: "running", id: instanceId });
+      io.emit(`deploy_status_${instanceId}`, "running");
+      io.emit(`deploy_log_${instanceId}`, { timestamp: checkedAt, message: "[Pi Runtime] 实验底座已就绪，可开始 Web 对话。" });
+      return;
+    }
+    if (!state.Running && (state.Status === "exited" || state.Dead || state.OOMKilled)) break;
+    await new Promise(resolve => setTimeout(resolve, isTestEnv ? 10 : 3000));
+  }
+  const error = "Pi Runtime did not expose its authenticated capability endpoint before the readiness deadline.";
+  await dbAdapter.updateInstanceVersionInfo(instanceId, { health_status: "unhealthy", deployment_error: error, error_message: error }).catch(() => {});
+  await updateInstanceStatusStmt.run({ status: "unhealthy", id: instanceId, deployment_error: error, error_message: error });
+  io.emit(`deploy_status_${instanceId}`, "unhealthy");
+}
 
 export async function runInstanceHealthChecks(instanceId: string, gatewayHostPort: number, containerPort: number, subdomain: string, io: SocketIOServer, updateInstanceStatusStmt: any, triggerSource: string = "unknown") {
   const activeHealthCheck = getActiveInstanceHealthCheck(instanceId);
@@ -131,6 +187,19 @@ export async function runInstanceHealthChecks(instanceId: string, gatewayHostPor
   const internal_web_port = ctx.internal_web_port;
   const host_port = ctx.host_port || gatewayHostPort || 15929;
   const dashboardAccessEnabled = ctx.enableDashboard !== false;
+
+  if (String(configObj.runtime_type || instance?.runtime_type || "hermes").trim().toLowerCase() === "pi") {
+    return runPiRuntimeHealthChecks({
+      instanceId,
+      containerName: dashboardContainerName,
+      internalPort: internal_web_port,
+      hostPort: host_port,
+      config: configObj,
+      instance,
+      io,
+      updateInstanceStatusStmt,
+    });
+  }
 
   const isTestEnv = process.env.NODE_ENV === "test" || process.env.VITEST === "true" || process.env.MYBAY_RUN_DB_INTEGRATION_TESTS === "true";
   await new Promise(r => setTimeout(r, isTestEnv ? 10 : 4000));

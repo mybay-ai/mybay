@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "artifactType": "runtime-experimental-live-evidence",
+  "generatedAt": "2026-09-05T11:35:00.000Z",
+  "sanitization": {
+    "identifiers": "omitted",
+    "promptsAndResponses": "omitted; deterministic marker match and character counts only",
+    "credentials": "not collected",
+    "database": "parameterized read-only queries limited to the disposable Pi acceptance instance"
+  },
+  "environment": {
+    "host": "Windows with Docker Desktop",
+    "application": "MyBay OSS local branch on localhost",
+    "controlPanelHealthStatus": 200,
+    "runtime": {
+      "type": "pi",
+      "providerKey": "pi-rpc",
+      "contractVersion": 1,
+      "bridgeVersion": "0.1.0-experimental",
+      "agentVersion": "0.85.0",
+      "image": "mybay/pi-runtime:0.1.0-experimental",
+      "containerStatus": "running",
+      "healthStatus": "healthy",
+      "chatReady": true
+    }
+  },
+  "observations": {
+    "runtimeInstall": {
+      "observedAt": "2026-09-05T11:34:53.844Z",
+      "result": "passed",
+      "details": {
+        "imageBuiltFromPackagedBridge": true,
+        "managedContainerRunning": true,
+        "authenticatedHealthAndCapabilitiesReady": true,
+        "reconcilerRetainedHealthyState": true,
+        "publishedPort": "loopback-only"
+      }
+    },
+    "taskSubmit": {
+      "observedAt": "2026-09-05T11:25:26.756Z",
+      "result": "passed",
+      "details": {
+        "productPath": "authenticated browser Agent mode",
+        "runtimeType": "pi",
+        "upstreamRunBindingPersisted": true,
+        "terminalStatus": "completed",
+        "deterministicMarkerMatched": true,
+        "responseCharacterCount": 11,
+        "terminalUsageTokens": 3069
+      }
+    },
+    "streamingOutput": {
+      "observedAt": "2026-09-05T11:26:00.644Z",
+      "result": "passed",
+      "details": {
+        "browserObservedActiveState": true,
+        "orderedEventSequenceCounts": [17, 24],
+        "persistedOutputCharacterCounts": [11, 23],
+        "terminalStatuses": ["completed", "completed"],
+        "reloadRestoredResults": true,
+        "nativeSessionContextRetained": true
+      }
+    },
+    "cancellation": {
+      "observedAt": "2026-09-05T11:26:21.118Z",
+      "result": "passed",
+      "details": {
+        "stopRequestedThroughProductUi": true,
+        "upstreamRunBindingPersisted": true,
+        "terminalStatus": "cancelled",
+        "terminalErrorCode": "CANCELLED_UPSTREAM",
+        "orderedEventSequenceCount": 10,
+        "reloadRetainedStoppedState": true
+      }
+    }
+  }
+}

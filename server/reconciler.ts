@@ -533,11 +533,13 @@ export async function startReconciler(intervalMs: number = 60000, options: Recon
                       // Run background gateway status check & metadata sync
                       let enabledChannels: string[] = [];
                       let currentAllowMode = "";
+                      let runtimeType = "hermes";
                       try {
                         const configObj = typeof instance.config_json === "string"
                           ? JSON.parse(instance.config_json || "{}")
                           : (instance.config_json || {});
                         currentAllowMode = configObj.allowMode || "";
+                        runtimeType = String(configObj.runtime_type || instance.runtime_type || "hermes").trim().toLowerCase();
                         if (Array.isArray(configObj.channel)) {
                           enabledChannels = configObj.channel.map((c: string) => c.toLowerCase());
                         } else if (typeof configObj.channel === 'string') {
@@ -558,7 +560,9 @@ export async function startReconciler(intervalMs: number = 60000, options: Recon
                       }
 
                       const containerObj = docker.getContainer(containerName);
-                    const probeRes = await probeGatewayReadiness(containerObj, instance.id, logs, enabledChannels);
+                    const probeRes = runtimeType === "pi"
+                      ? await (await import("./runtime/adapters/pi/PiRuntimeReadiness")).probePiRuntimeReadiness(instance)
+                      : await probeGatewayReadiness(containerObj, instance.id, logs, enabledChannels);
 
                     // Merge and persist to DB
                     const currentInstance = await dbAdapter.getInstanceById(instance.id).catch(() => null);

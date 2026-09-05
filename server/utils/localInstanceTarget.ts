@@ -27,7 +27,14 @@ async function inspectLocalInstanceTarget(instanceId: string): Promise<LocalInst
   ]);
 
   if (agentResult.status === "rejected") throw agentResult.reason;
-  const networks = agentResult.value.NetworkSettings?.Networks || {};
+  const agentInspect = agentResult.value;
+  const networks = agentInspect.NetworkSettings?.Networks || {};
+  const labels = agentInspect.Config?.Labels || {};
+  const exposedPorts = agentInspect.Config?.ExposedPorts || {};
+  const runtimePort = labels["com.mybay.pi.runtime"] === "true"
+    || (exposedPorts["8080/tcp"] && !exposedPorts["8642/tcp"])
+    ? 8080
+    : 8642;
   const networkName = "mybay-net-" + instanceId;
   const preferred = networks[networkName];
   const address = preferred?.IPAddress || Object.values(networks).find((item: any) => item?.IPAddress)?.IPAddress;
@@ -52,14 +59,14 @@ async function inspectLocalInstanceTarget(instanceId: string): Promise<LocalInst
     }
     // Docker DNS keeps the container name stable across IP changes and avoids
     // repeating two daemon inspections on every Agent API request.
-    return { hostname: containerName, port: 8642, protocol: "http:" };
+    return { hostname: containerName, port: runtimePort, protocol: "http:" };
   }
 
   const controlPlaneError: any = controlPlaneResult.reason;
   if (controlPlaneError?.statusCode !== 404) throw controlPlaneError;
   // Development process running directly on the host: preserve the existing
   // bridge-address fallback because Docker DNS is unavailable there.
-  return { hostname: address, port: 8642, protocol: "http:" };
+  return { hostname: address, port: runtimePort, protocol: "http:" };
 }
 
 export async function resolveLocalInstanceTarget(instanceId: string): Promise<LocalInstanceTarget> {

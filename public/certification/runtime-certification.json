@@ -434,14 +434,194 @@
     },
     {
       "runtimeType": "pi",
-      "providerKey": "pi-preview",
+      "providerKey": "pi-rpc",
       "contractVersion": 1,
-      "declaredLevel": "spec-only",
-      "verifiedLevel": "spec-only",
-      "publicationStatus": "spec-only",
-      "requirements": [],
+      "declaredLevel": "experimental",
+      "verifiedLevel": "experimental",
+      "publicationStatus": "verified",
+      "requirements": [
+        {
+          "id": "runtime-install",
+          "level": "experimental",
+          "title": "Runtime installation",
+          "description": "Install or initialize the Runtime in a real Runtime environment.",
+          "minimumEvidenceScope": "runtime",
+          "status": "passed",
+          "detail": "Evidence satisfies this requirement.",
+          "evidence": {
+            "requirementId": "runtime-install",
+            "status": "passed",
+            "scope": "runtime",
+            "observedAt": "2026-09-05T11:34:53.844Z",
+            "environment": "Windows + Docker Desktop; MyBay OSS local branch; Pi bridge 0.1.0-experimental; Pi coding agent 0.85.0",
+            "evidenceRefs": [
+              "certification/artifacts/pi-experimental-20260905.json#observations.runtimeInstall"
+            ],
+            "note": "MyBay built and deployed its packaged Pi Runtime image, authenticated its health and capability endpoints, and retained a healthy chat-ready state through background reconciliation."
+          }
+        },
+        {
+          "id": "task-submit",
+          "level": "experimental",
+          "title": "Task submission",
+          "description": "Submit a real task and receive a Runtime-owned run identifier.",
+          "minimumEvidenceScope": "runtime",
+          "status": "passed",
+          "detail": "Evidence satisfies this requirement.",
+          "evidence": {
+            "requirementId": "task-submit",
+            "status": "passed",
+            "scope": "runtime",
+            "observedAt": "2026-09-05T11:25:26.756Z",
+            "environment": "Windows + Docker Desktop; MyBay OSS local branch; Pi bridge 0.1.0-experimental; Pi coding agent 0.85.0",
+            "evidenceRefs": [
+              "certification/artifacts/pi-experimental-20260905.json#observations.taskSubmit"
+            ],
+            "note": "An authenticated Agent-mode browser task reached the Pi RPC Runtime, persisted its upstream binding, completed, and returned the expected deterministic marker with terminal usage."
+          }
+        },
+        {
+          "id": "streaming-output",
+          "level": "experimental",
+          "title": "Streaming output",
+          "description": "Observe non-empty incremental output from a real Runtime run.",
+          "minimumEvidenceScope": "runtime",
+          "status": "passed",
+          "detail": "Evidence satisfies this requirement.",
+          "evidence": {
+            "requirementId": "streaming-output",
+            "status": "passed",
+            "scope": "runtime",
+            "observedAt": "2026-09-05T11:26:00.644Z",
+            "environment": "Windows + Docker Desktop; MyBay OSS local branch; Pi bridge 0.1.0-experimental; Pi coding agent 0.85.0",
+            "evidenceRefs": [
+              "certification/artifacts/pi-experimental-20260905.json#observations.streamingOutput"
+            ],
+            "note": "Two Pi runs produced ordered Runtime event sequences and persisted non-empty output; the browser restored the results and native session context after reload."
+          }
+        },
+        {
+          "id": "cancellation",
+          "level": "experimental",
+          "title": "Cancellation",
+          "description": "Stop an active Runtime run and observe a terminal cancelled state.",
+          "minimumEvidenceScope": "runtime",
+          "status": "passed",
+          "detail": "Evidence satisfies this requirement.",
+          "evidence": {
+            "requirementId": "cancellation",
+            "status": "passed",
+            "scope": "runtime",
+            "observedAt": "2026-09-05T11:26:21.118Z",
+            "environment": "Windows + Docker Desktop; MyBay OSS local branch; Pi bridge 0.1.0-experimental; Pi coding agent 0.85.0",
+            "evidenceRefs": [
+              "certification/artifacts/pi-experimental-20260905.json#observations.cancellation"
+            ],
+            "note": "The product stop action cancelled an active Pi run, persisted cancelled/CANCELLED_UPSTREAM, and retained the stopped state after browser reload."
+          }
+        },
+        {
+          "id": "session-recovery",
+          "level": "beta",
+          "title": "Session recovery",
+          "description": "Resume a persisted native session without losing conversation continuity.",
+          "minimumEvidenceScope": "runtime",
+          "status": "missing",
+          "detail": "No evidence was supplied."
+        },
+        {
+          "id": "file-artifact",
+          "level": "beta",
+          "title": "File artifact",
+          "description": "Create, persist, and retrieve a file artifact produced by the Runtime.",
+          "minimumEvidenceScope": "runtime",
+          "status": "missing",
+          "detail": "No evidence was supplied."
+        },
+        {
+          "id": "usage-reporting",
+          "level": "beta",
+          "title": "Usage reporting",
+          "description": "Persist attributable usage evidence for a completed Runtime run.",
+          "minimumEvidenceScope": "runtime",
+          "status": "missing",
+          "detail": "No evidence was supplied."
+        },
+        {
+          "id": "tool-events",
+          "level": "beta",
+          "title": "Tool events",
+          "description": "Observe tool lifecycle events with stable identifiers and terminal outcomes.",
+          "minimumEvidenceScope": "runtime",
+          "status": "missing",
+          "detail": "No evidence was supplied."
+        },
+        {
+          "id": "restart-recovery",
+          "level": "beta",
+          "title": "Restart recovery",
+          "description": "Recover persisted Runtime state after a controlled process restart.",
+          "minimumEvidenceScope": "runtime",
+          "status": "missing",
+          "detail": "No evidence was supplied."
+        },
+        {
+          "id": "control-plane-deploy",
+          "level": "certified",
+          "title": "Control-plane deployment",
+          "description": "Deploy through the supported MyBay product path and pass health checks.",
+          "minimumEvidenceScope": "e2e",
+          "status": "missing",
+          "detail": "No evidence was supplied."
+        },
+        {
+          "id": "upgrade",
+          "level": "certified",
+          "title": "Upgrade",
+          "description": "Upgrade a deployed Runtime while preserving supported state.",
+          "minimumEvidenceScope": "e2e",
+          "status": "missing",
+          "detail": "No evidence was supplied."
+        },
+        {
+          "id": "rollback",
+          "level": "certified",
+          "title": "Rollback",
+          "description": "Roll back a failed or incompatible upgrade and restore service.",
+          "minimumEvidenceScope": "e2e",
+          "status": "missing",
+          "detail": "No evidence was supplied."
+        },
+        {
+          "id": "security",
+          "level": "certified",
+          "title": "Security controls",
+          "description": "Verify authentication, isolation, secret handling, and privileged capability guards.",
+          "minimumEvidenceScope": "e2e",
+          "status": "missing",
+          "detail": "No evidence was supplied."
+        },
+        {
+          "id": "backup-restore",
+          "level": "certified",
+          "title": "Backup and restore",
+          "description": "Restore a supported backup and verify Runtime data through the product path.",
+          "minimumEvidenceScope": "e2e",
+          "status": "missing",
+          "detail": "No evidence was supplied."
+        },
+        {
+          "id": "real-e2e",
+          "level": "certified",
+          "title": "Real end-to-end acceptance",
+          "description": "Complete a credentialed browser-to-Runtime task on a supported target platform.",
+          "minimumEvidenceScope": "e2e",
+          "status": "missing",
+          "detail": "No evidence was supplied."
+        }
+      ],
       "errors": [],
-      "evidenceFile": null
+      "evidenceFile": "certification/evidence/pi.certification.json"
     }
   ]
 }

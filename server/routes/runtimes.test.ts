@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { buildRuntimeCatalogResponse } from "./runtimes";
 
 describe("runtime catalog route", () => {
-  it("returns the registered Runtime definitions without advertising Pi capabilities", async () => {
-    const response = buildRuntimeCatalogResponse();
+  it("advertises Pi capabilities but keeps experimental deployment disabled by default", async () => {
+    const response = buildRuntimeCatalogResponse(false);
     expect(response.schemaVersion).toBe(1);
     expect(response.runtimes.map((runtime) => runtime.runtime.type)).toEqual(["hermes", "pi"]);
 
@@ -13,18 +13,19 @@ describe("runtime catalog route", () => {
 
     const pi = response.runtimes[1];
     expect(pi.release).toEqual({
-      supportStatus: "spec-only",
-      certificationLevel: "spec-only",
+      supportStatus: "available",
+      certificationLevel: "experimental",
       deploymentSupported: false,
     });
     expect(pi.capabilities).toMatchObject({
-      chat: false,
+      chat: true,
       fileUpload: false,
       scheduledTasks: false,
       browser: false,
-      shell: false,
-      imChannels: [],
+      shell: true,
+      imChannels: ["web"],
     });
-    expect(pi.lifecycle.conversation.modes).toEqual([]);
+    expect(pi.lifecycle.conversation.modes).toEqual(["streaming"]);
+    expect(buildRuntimeCatalogResponse(true).runtimes[1].release.deploymentSupported).toBe(true);
   });
 });

@@ -7,4 +7,4 @@ Runtime-declared capabilities describe the integration contract. They do not pro
 | Runtime | Type | Support status | Declared certification | Deployable | Conversation modes | Cancellation | Declared capabilities | Channels |
 | --- | --- | --- | --- | ---: | --- | ---: | --- | --- |
 | Hermes Agent | hermes | available | certified | yes | streaming, batch | yes | chat, file-upload, scheduled-tasks, browser, shell | web, telegram, feishu, weixin, slack, webhook, api |
-| Pi Agent | pi | spec-only | spec-only | no | none | no | none | none |
+| Pi Agent | pi | available | experimental | yes | streaming | yes | chat, shell | web |

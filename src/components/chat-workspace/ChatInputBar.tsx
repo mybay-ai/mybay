@@ -49,6 +49,7 @@ type ChatInputBarProps = {
   stopPending?: boolean;
   isChatReady: boolean;
   selectedChannel: string;
+  runtimeType?: string;
   selectedInstanceName?: string;
   runMetrics?: ChatRunMetrics | null;
   hasActiveConversation?: boolean;
@@ -83,6 +84,7 @@ export function ChatInputBar({
   stopPending = false,
   isChatReady,
   selectedChannel,
+  runtimeType,
   selectedInstanceName,
   runMetrics = null,
   hasActiveConversation = true,
@@ -215,7 +217,9 @@ export function ChatInputBar({
     ? (isCompactInput
       ? t("dashboard:chatWorkspace.notReadyPlaceholderMobile")
       : (selectedChannel === "web" || selectedChannel === "none"
-        ? t("dashboard:chatWorkspace.webOnlyNotReadyTooltip")
+        ? t(String(runtimeType || "").toLowerCase() === "pi"
+          ? "dashboard:chatWorkspace.piNotReadyTooltip"
+          : "dashboard:chatWorkspace.webOnlyNotReadyTooltip")
         : t("dashboard:chatWorkspace.externalNotReadyTooltip")))
     : (sending
       ? t(isCompactInput ? "dashboard:chatWorkspace.sendWhileRunningPlaceholderMobile" : "dashboard:chatWorkspace.sendWhileRunningPlaceholder")

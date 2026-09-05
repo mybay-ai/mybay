@@ -259,9 +259,9 @@ data/
 ## Runtime support status
 
 - **Hermes Agent:** The supported runtime for the current preview create and lifecycle flow.
-- **Pi Agent:** Specification only. The UI cannot submit Pi deployments, and the API rejects `runtime_type=pi` with `PI_RUNTIME_PREVIEW_ONLY`. The included adapter and manifest are contract references, not a production support claim.
+- **Pi Agent:** Experimental Web-chat runtime behind `MYBAY_ENABLE_PI_RUNTIME=true`. It uses an isolated local bridge over Pi RPC and supports streaming, session recovery, tool progress, and stop; files, schedules, external channels, A2A, templates, and blueprints remain disabled until certified.
 
-The full Pi backend deployment path is planned for a future release.
+Pi is disabled by default. Once enabled, its first deployment builds a pinned local image from the context packaged with the control plane. It remains experimental and should not replace the production-certified Hermes runtime.
 
 ---
 ## Architecture
@@ -272,7 +272,7 @@ flowchart TD
   C --> S[(SQLite)]
   C --> D[Docker Engine]
   C --> T[Traefik - server mode]
-  D --> R[Hermes Agent Runtime Container]
+  D --> R[Hermes or Pi Agent Runtime Container]
   R --> A[Runtime API and UI]
   R --> M[Model Providers]
 ```
@@ -300,12 +300,12 @@ See [ROADMAP.md](./ROADMAP.md) for completed work and the focused next milestone
 
 ## Agent Runtime Specification (`mybay.runtime.yaml`)
 
-MyBay includes an extensible **Agent Runtime Specification** for future runtime integrations. Hermes Agent is the currently supported runtime; the Pi manifest is an experimental reference only:
+MyBay includes an extensible **Agent Runtime Specification** for additional open-source runtimes. Hermes Agent is certified; Pi Agent now has an experimental deployment and Web-chat path:
 
 - **JSON Schema Validation**: `/public/schemas/mybay.runtime.schema.json`
 - **Example Runtimes**:
   - Hermes Agent: `/public/specs/mybay.runtime.yaml`
-  - Pi Agent specification-only reference: `/public/specs/pi.runtime.yaml`
+  - Pi Agent experimental runtime manifest: `/public/specs/pi.runtime.yaml`
 
 With the `mybay.runtime.yaml` manifest, developers can declare container ports, health check endpoints, data volume mounts, and supported IM channels (Feishu, Telegram, Discord, Slack, etc.).
 

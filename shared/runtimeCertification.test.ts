@@ -76,12 +76,11 @@ describe("Runtime certification evaluator", () => {
     expect(report.requirements[0]).toMatchObject({ status: "invalid" });
   });
 
-  it("keeps specification-only Runtimes outside the executable certification ladder", () => {
+  it("keeps an experimental Runtime pending until live evidence is supplied", () => {
     expect(evaluateRuntimeCertification(PI_RUNTIME_DEFINITION, undefined, { now })).toMatchObject({
-      declaredLevel: "spec-only",
-      verifiedLevel: "spec-only",
-      publicationStatus: "spec-only",
-      requirements: [],
+      declaredLevel: "experimental",
+      verifiedLevel: "unverified",
+      publicationStatus: "pending",
     });
   });
 });
