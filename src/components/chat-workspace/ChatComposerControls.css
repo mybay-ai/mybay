@@ -10,6 +10,7 @@
 .chat-composer-mode-icon,
 .chat-composer-effort-summary,
 .chat-composer-action-label,
+.chat-composer-group-label,
 .chat-composer-status-label,
 .chat-composer-shortcut {
   display: none;
@@ -34,5 +35,6 @@
 }
 
 @container chat-composer-toolbar (min-width: 720px) {
+  .chat-composer-group-label { display: inline; }
   .chat-composer-shortcut { display: inline-flex; }
 }

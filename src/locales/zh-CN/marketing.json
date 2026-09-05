@@ -1057,13 +1057,13 @@
   "changelog": {
     "title": "麦贝开源版更新日志",
     "subtitle": "仅记录麦贝开源版已经发布并经过验证的能力。",
-    "timelineTip": "发布候选版",
+    "timelineTip": "正式版",
     "releases": [
       {
-        "version": "v0.1.27-rc.2",
+        "version": "v0.1.27",
         "date": "2026.09.05",
-        "badge": "候选版",
-        "summary": "麦贝开源版 v0.1.27-rc.2 闭环 A2A 协作流程，增加持久化多 Agent 房间，并优化聊天与 Windows 启动体验。",
+        "badge": "正式版",
+        "summary": "麦贝开源版 v0.1.27 闭环 A2A 协作流程，增加持久化多 Agent 房间与新版 Hermes 模型选项，并优化聊天和 Windows 启动体验。",
         "sections": [
           {
             "title": "A2A 协作闭环",
@@ -1080,7 +1080,17 @@
             "items": [
               "增加斜杠命令和 @Agent 建议、附件预览、更安全的文件与链接渲染，以及可翻页的会话搜索。",
               "优化 Markdown 阅读节奏、响应式输入控件、代码块、运行时长本地化和群组运行摘要。",
-              "优化实例详情和活动定位，使协作结果与失败原因更容易检查。"
+              "优化实例详情和活动定位，使协作结果与失败原因更容易检查。",
+              "确保协作房间控件和配置面板在窄屏、分栏与移动端布局中完整可见。"
+            ]
+          },
+          {
+            "title": "Hermes 模型选项",
+            "type": "feature",
+            "items": [
+              "在 Anthropic 和 OpenRouter 模型列表中增加 Claude Fable 5.1。",
+              "增加 OpenRouter 提供的 GPT Astra、Astra Fast、Astra Flex、Astra Pro、Astra Pro Fast 和 Astra Pro Flex 路由。",
+              "ChatGPT OAuth 继续依据账号实时发现模型，不静态承诺账号尚未开放的模型。"
             ]
           },
           {

@@ -15,7 +15,7 @@ Use this checklist to prove the real “download, extract, double-click, restart
 
 Sample failure cases should cover disabled virtualization, GHCR DNS/TLS/image failures, Windows-container mode, port 3000 contention, and low disk space.
 
-Never attach `.env`, API keys, administrator passwords, or screenshots containing secrets. Automated checks do not close the product gates. Publish `v0.1.27-rc.2` only after the install, product, restart, and preservation paths pass on the clean VM.
+Never attach `.env`, API keys, administrator passwords, or screenshots containing secrets. Automated checks do not close the product gates. Publish `v0.1.27` only after the install, product, restart, and preservation paths pass on the clean VM.
 
 ## Experimental low-memory acceptance
 

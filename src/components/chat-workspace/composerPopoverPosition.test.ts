@@ -28,4 +28,16 @@ describe('composer popover placement', () => {
     expect(result.top + result.maxHeight).toBeLessThanOrEqual(288);
     expect(result.maxHeight).toBeLessThan(350);
   });
+  it.each([320, 375, 390, 430])('right-aligns a collaboration menu within a %ipx mobile viewport', width => {
+    const result = positionComposerPopover(
+      { left: width - 70, right: width - 30, top: 700, bottom: 740 },
+      { left: 0, top: 0, width, height: 844 },
+      460,
+      { align: 'end', maxWidth: 352, maxHeight: 520 },
+    );
+    expect(result.width).toBe(Math.min(352, width - 24));
+    expect(result.left).toBeGreaterThanOrEqual(12);
+    expect(result.left + result.width).toBeLessThanOrEqual(width - 12);
+    expect(result.top + 460).toBeLessThanOrEqual(692);
+  });
 });
