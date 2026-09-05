@@ -60,12 +60,15 @@ export async function hydrateA2ARuntimePeers(instanceId: string, config: any): P
     } catch {
       continue;
     }
-    if (peerConfig.a2aEnabled !== true || !peerConfig.a2aBearerToken) continue;
+    const managedRuntimePeer = String(peer.runtime_type || "hermes").trim().toLowerCase() === "pi"
+      && String(peer.status || "").trim().toLowerCase() === "running"
+      && a2aTrackingEnabled(instanceId);
+    if (!managedRuntimePeer && (peerConfig.a2aEnabled !== true || !peerConfig.a2aBearerToken)) continue;
     resolved.push({
       instanceId: peerId,
       name: normalizeA2AAgentName(peerConfig.a2aAgentName, peer.name || peerId),
-      url: a2aTrackingEnabled(instanceId) ? a2aRelayUrl(instanceId, peerId) : getA2AInternalUrl(peerId),
-      encryptedToken: a2aTrackingEnabled(instanceId) ? encrypt(a2aRelayToken(instanceId)) : peerConfig.a2aBearerToken,
+      url: managedRuntimePeer || a2aTrackingEnabled(instanceId) ? a2aRelayUrl(instanceId, peerId) : getA2AInternalUrl(peerId),
+      encryptedToken: managedRuntimePeer || a2aTrackingEnabled(instanceId) ? encrypt(a2aRelayToken(instanceId)) : peerConfig.a2aBearerToken,
       capabilities: peerCapabilities[peerId] || [],
     });
   }

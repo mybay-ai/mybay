@@ -1,9 +1,14 @@
 import express from 'express';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-const state = vi.hoisted(() => ({ getInstance: vi.fn(), send: vi.fn(), store: { chatRuns: [] as any[], a2aTaskLinks: [] as any[] } }));
+const state = vi.hoisted(() => ({ getInstance: vi.fn(), send: vi.fn(), managedSend: vi.fn(), managed: false, store: { chatRuns: [] as any[], a2aTaskLinks: [] as any[] } }));
 vi.mock('../db', () => ({ dbAdapter: { getInstanceById: state.getInstance } }));
 vi.mock('../crypto', () => ({ decrypt: () => 'test-peer-secret' }));
 vi.mock('../services/a2aTrackedTransport', () => ({ trackedA2ASend: state.send }));
+vi.mock('../services/managedRuntimeA2A', () => ({
+  isManagedRuntimeA2APeer: () => state.managed,
+  isNativeA2APeer: (_peer: any, config: any) => config?.a2aEnabled === true,
+  sendManagedRuntimeA2A: state.managedSend,
+}));
 vi.mock('../localStore', () => ({ readStoreCollections: () => state.store }));
 import { a2aRelayToken } from '../services/a2aRelayConfig';
 import { createA2ARelayRouter } from './a2aRelay';
@@ -14,6 +19,8 @@ beforeEach(() => {
   state.send.mockResolvedValue({ jsonrpc: '2.0', id: 'task-one', result: { task: { id: 'remote-one' } } });
   state.store.chatRuns = [];
   state.store.a2aTaskLinks = [];
+  state.managed = false;
+  state.managedSend.mockResolvedValue(new Response());
 });
 afterEach(() => { vi.unstubAllEnvs(); vi.clearAllMocks(); });
 async function serve(test: (url: string) => Promise<void>) {
@@ -57,6 +64,22 @@ it('accepts only the configured peer and returns no peer secret in discovery', a
     expect((await fetch(url,{method:'POST',headers:headers(),body:JSON.stringify(body)})).status).toBe(200);
     expect(state.send).toHaveBeenCalledTimes(1);
     expect(state.send.mock.calls[0][0]).toMatchObject({instanceId:'caller',peerId:'peer',body});
+  });
+});
+it('dispatches a configured Pi peer through the managed Runtime transport without its own A2A secret', async () => {
+  state.managed = true;
+  state.getInstance.mockImplementation(async id => id === 'caller'
+    ? { id, user_id: 'owner', config_json: JSON.stringify({ a2aEnabled: true, a2aPeerIds: ['peer'], a2aBearerToken: 'encrypted' }) }
+    : { id, user_id: 'owner', name: 'Pi reviewer', status: 'running', runtime_type: 'pi', config_json: '{}' });
+  state.send.mockImplementation(async ({ send, body: requestBody }) => {
+    await send(requestBody);
+    return { jsonrpc: '2.0', id: requestBody.id, result: { task: { id: 'pi-run' } } };
+  });
+  await serve(async url => {
+    const card = await (await fetch(url + '/.well-known/agent-card.json', { headers: headers() })).json();
+    expect(card).toMatchObject({ name: 'Pi reviewer', description: 'MyBay managed Runtime collaboration peer' });
+    expect((await fetch(url, { method: 'POST', headers: headers(), body: JSON.stringify(body) })).status).toBe(200);
+    expect(state.managedSend).toHaveBeenCalledWith(expect.objectContaining({ id: 'peer', runtime_type: 'pi' }), expect.objectContaining({ id: 'task-one' }));
   });
 });
 it('enforces the snapshotted collaboration-room member and round policy before dispatch', async () => {

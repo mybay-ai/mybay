@@ -112,6 +112,9 @@ describe("Interactive Agent POST /runs integration", () => {
   });
   afterEach(() => {
     delete process.env.MYBAY_ASYNC_CHAT_RUNS_ENABLED;
+    delete process.env.MYBAY_A2A_TASK_TRACKING;
+    delete process.env.MYBAY_INTERNAL_ROUTING_SECRET;
+    delete process.env.MYBAY_A2A_TRACKED_INSTANCES;
     vi.clearAllMocks();
   });
 
@@ -237,6 +240,55 @@ describe("Interactive Agent POST /runs integration", () => {
         groupCollaboration: expect.objectContaining({ mode: "group", leader: { id: instanceId, name: "主持" }, peers: [{ id: peerId, name: "研究" }], maxRounds: 1 }),
       }));
       expect(beginChatRun.mock.calls.at(-1)?.[0].groupCollaboration.contextId).toMatch(/^ctx-mybay-room-[a-f0-9]+$/);
+    } finally { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); }
+  });
+
+  it("accepts a running Pi Runtime as a managed collaboration-room member", async () => {
+    process.env.MYBAY_ASYNC_CHAT_RUNS_ENABLED = "true";
+    process.env.MYBAY_A2A_TASK_TRACKING = "true";
+    process.env.MYBAY_INTERNAL_ROUTING_SECRET = "test-relay-secret";
+    process.env.MYBAY_A2A_TRACKED_INSTANCES = instanceId;
+    const peerId = "77777777-7777-4777-8777-777777777777";
+    getInstanceById.mockResolvedValue({ id: instanceId, name: "主持", user_id: userId, owner_id: userId, config_json: JSON.stringify({ a2aEnabled: true, a2aPeerIds: [peerId] }) });
+    getInstances.mockResolvedValue([{
+      id: peerId, name: "Pi 审核", user_id: userId, owner_id: userId, status: "running",
+      runtime_type: "pi", runtime_provider_key: "pi-rpc", runtime_contract_version: 1, config_json: "{}",
+    }]);
+    getConversationForOwnerAndInstance.mockResolvedValue({ id: conversationId, user_id: userId, instance_id: instanceId, collaboration: { mode: "group", peerIds: [peerId], maxRounds: 1 } });
+    probeCapabilities.mockResolvedValue("supported");
+    beginChatRun.mockResolvedValue({ status: "success", user_message_id: "44444444-4444-4444-8444-444444444444", sequence_no: 1 });
+    const app = express(); app.use(express.json());
+    const router = express.Router(); registerRunRoutes(router); app.use("/api/instances", router);
+    const server = app.listen(0);
+    try {
+      await new Promise<void>(resolve => server.once("listening", resolve));
+      const response = await fetch(`http://127.0.0.1:${(server.address() as any).port}/api/instances/${instanceId}/runs`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ conversationId, content: "一起审核", requestId: "pi-group-request" }) });
+      expect(response.status).toBe(202);
+      expect(beginChatRun).toHaveBeenCalledWith(expect.objectContaining({
+        groupCollaboration: expect.objectContaining({ peers: [{ id: peerId, name: "Pi 审核" }] }),
+      }));
+    } finally { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); }
+  });
+
+  it("rejects a Pi collaboration-room member outside the tracked caller scope", async () => {
+    process.env.MYBAY_ASYNC_CHAT_RUNS_ENABLED = "true";
+    const peerId = "77777777-7777-4777-8777-777777777777";
+    getInstanceById.mockResolvedValue({ id: instanceId, name: "主持", user_id: userId, owner_id: userId, config_json: JSON.stringify({ a2aEnabled: true, a2aPeerIds: [peerId] }) });
+    getInstances.mockResolvedValue([{
+      id: peerId, name: "Pi 审核", user_id: userId, owner_id: userId, status: "running",
+      runtime_type: "pi", runtime_provider_key: "pi-rpc", runtime_contract_version: 1, config_json: "{}",
+    }]);
+    getConversationForOwnerAndInstance.mockResolvedValue({ id: conversationId, user_id: userId, instance_id: instanceId, collaboration: { mode: "group", peerIds: [peerId], maxRounds: 1 } });
+    probeCapabilities.mockResolvedValue("supported");
+    const app = express(); app.use(express.json());
+    const router = express.Router(); registerRunRoutes(router); app.use("/api/instances", router);
+    const server = app.listen(0);
+    try {
+      await new Promise<void>(resolve => server.once("listening", resolve));
+      const response = await fetch(`http://127.0.0.1:${(server.address() as any).port}/api/instances/${instanceId}/runs`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ conversationId, content: "越界协作", requestId: "pi-untracked-request" }) });
+      expect(response.status).toBe(409);
+      await expect(response.json()).resolves.toMatchObject({ success: false, error: "GROUP_ROOM_MEMBER_UNAVAILABLE" });
+      expect(beginChatRun).not.toHaveBeenCalled();
     } finally { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); }
   });
 

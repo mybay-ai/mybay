@@ -101,6 +101,41 @@ describe("A2A instance control-plane routes", () => {
     });
   });
 
+  it("exposes a running certified Pi Runtime as a managed collaboration peer", async () => {
+    vi.stubEnv("MYBAY_A2A_TASK_TRACKING", "true");
+    vi.stubEnv("MYBAY_INTERNAL_ROUTING_SECRET", "test-relay-secret");
+    vi.stubEnv("MYBAY_A2A_TRACKED_INSTANCES", "agent-1");
+    state.getInstances.mockResolvedValue([{
+      id: "pi-peer", name: "Pi reviewer", user_id: "owner", status: "running",
+      runtime_type: "pi", runtime_provider_key: "pi-rpc", runtime_contract_version: 1,
+      agent_image_tag: "0.1.0-beta", config_json: "{}",
+    }]);
+    try {
+      await withServer(async baseUrl => {
+        const response = await fetch(`${baseUrl}/agent-1/a2a`, { headers: { "x-test-user": "owner" } });
+        expect(response.status).toBe(200);
+        expect((await response.json()).peers).toEqual([expect.objectContaining({
+          id: "pi-peer", supported: true, enabled: true, transport: "mybay_runtime", runtimeType: "pi",
+        })]);
+      });
+    } finally { vi.unstubAllEnvs(); }
+  });
+
+  it("does not expose managed Pi collaboration outside the tracked caller scope", async () => {
+    state.getInstances.mockResolvedValue([{
+      id: "pi-peer", name: "Pi reviewer", user_id: "owner", status: "running",
+      runtime_type: "pi", runtime_provider_key: "pi-rpc", runtime_contract_version: 1,
+      agent_image_tag: "0.1.0-beta", config_json: "{}",
+    }]);
+    await withServer(async baseUrl => {
+      const response = await fetch(`${baseUrl}/agent-1/a2a`, { headers: { "x-test-user": "owner" } });
+      expect(response.status).toBe(200);
+      expect((await response.json()).peers).toEqual([expect.objectContaining({
+        id: "pi-peer", supported: false, enabled: false,
+      })]);
+    });
+  });
+
   it("authorizes the bounded, secret-free activity feed", async () => {
     await withServer(async (baseUrl) => {
       expect((await fetch(`${baseUrl}/agent-1/a2a/activity`)).status).toBe(401);

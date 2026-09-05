@@ -40,6 +40,8 @@ import { dbAdapter } from "../../../db";
 import { decrypt } from "../../../crypto";
 import { readStoreCollections } from "../../../localStore";
 import { cancelMappedA2AGroupTasks } from "../../../services/a2aTaskCancel";
+import { cancelManagedRuntimeA2ATask, isManagedRuntimeA2APeer, isNativeA2APeer } from "../../../services/managedRuntimeA2A";
+import { a2aTrackingEnabled } from "../../../services/a2aRelayConfig";
 
 async function cancelRunGroupTasks(run: any, instance: any, req: AuthenticatedRequest) {
   const group = readChatGroupRun(run?.group_collaboration);
@@ -60,7 +62,9 @@ async function cancelRunGroupTasks(run: any, instance: any, req: AuthenticatedRe
       const peer: any = peers.get(peerId);
       let peerConfig: any = {};
       try { peerConfig = typeof peer?.config_json === "string" ? JSON.parse(peer.config_json) : (peer?.config_json || {}); } catch {}
-      if (!peer || peerConfig.a2aEnabled !== true || !peerConfig.a2aBearerToken) throw Error("A2A_CANCEL_UNCONFIRMED");
+      const managed = a2aTrackingEnabled(String(instance.id)) && isManagedRuntimeA2APeer(peer);
+      if (!peer || (!managed && (peerConfig.a2aEnabled !== true || !peerConfig.a2aBearerToken))) throw Error("A2A_CANCEL_UNCONFIRMED");
+      if (managed) return cancelManagedRuntimeA2ATask(peer, group.contextId, remoteTaskId);
       const rpcId = crypto.randomUUID();
       const response = await fetch(getA2AInternalUrl(peerId), {
         method: "POST",
@@ -289,7 +293,8 @@ export function registerRunRoutes(router: Router) {
           let peerConfig: any = {};
           try { peerConfig = typeof peer.config_json === "string" ? JSON.parse(peer.config_json) : (peer.config_json || {}); } catch {}
           const peerVersion = String(peer.resolved_version || peer.agent_image_tag || peer.agent_version || "");
-          if (peerConfig.a2aEnabled !== true || !supportsA2AByVersion(peerVersion, peer.capabilities)) return [];
+          const managed = a2aTrackingEnabled(id) && isManagedRuntimeA2APeer(peer);
+          if (!managed && !isNativeA2APeer(peer, peerConfig, supportsA2AByVersion(peerVersion, peer.capabilities))) return [];
           return [{ id: String(peer.id), name: normalizeA2AAgentName(peer.name, peerConfig.a2aAgentName || peer.id) }];
         });
         if (peers.length !== groupConfig.peerIds.length) {

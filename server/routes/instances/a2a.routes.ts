@@ -26,6 +26,13 @@ import { probeA2AAgentCard } from "../../services/a2aProbe";
 import { applyA2ARemoteTaskEvidence, groupA2AOrchestrations, readA2AActivities } from "../../services/a2aActivity";
 import { docker } from "../../lib/docker";
 import { probeA2ATools } from "../../services/a2aToolProbe";
+import { a2aTrackingEnabled } from "../../services/a2aRelayConfig";
+import {
+  cancelManagedRuntimeA2ATask,
+  isManagedRuntimeA2APeer,
+  probeManagedRuntimeA2APeer,
+  readManagedRuntimeA2ATask,
+} from "../../services/managedRuntimeA2A";
 
 function parseConfig(instance: any): any {
   try {
@@ -114,12 +121,15 @@ async function buildA2AView(instance: any, req: AuthenticatedRequest) {
     .map((item: any) => {
       const peerConfig = parseConfig(item);
       const version = resolveVersion(item);
+      const managed = a2aTrackingEnabled(String(instance.id)) && isManagedRuntimeA2APeer(item);
       return {
         id: item.id,
         name: normalizeA2AAgentName(item.name, peerConfig.a2aAgentName || item.id),
         version,
-        supported: supportsA2AByVersion(version, item.capabilities),
-        enabled: peerConfig.a2aEnabled === true,
+        supported: managed || supportsA2AByVersion(version, item.capabilities),
+        enabled: managed || peerConfig.a2aEnabled === true,
+        transport: managed ? "mybay_runtime" : "a2a",
+        runtimeType: String(item.runtime_type || "hermes").trim().toLowerCase(),
         status: item.status,
         capabilities: configuredPeerCapabilities[item.id] || [],
       };
@@ -167,11 +177,13 @@ export function createA2ARoutes() {
     const peer: any = available.find((item: any) => String(item.id) === source.peerId);
     if (!config.a2aEnabled || !normalizeA2APeerIds(config.a2aPeerIds, instance.id).includes(source.peerId) || !peer || !isSelectablePeer(peer) || getOwnerId(peer) !== getOwnerId(instance)) return res.status(403).json({ code: 'FORBIDDEN' });
     const peerConfig = parseConfig(peer);
+    const managed = a2aTrackingEnabled(String(instance.id)) && isManagedRuntimeA2APeer(peer);
     const transport = getStoredPeerTransport(peer);
     const link = getA2ATaskLink(String(instance.id), source.peerId, source.taskId);
-    if (!transport || !peerConfig.a2aEnabled || !peerConfig.a2aBearerToken || !link?.remoteTaskId || link.contextId !== source.contextId) return res.status(409).json({ code: 'A2A_CANCEL_UNCONFIRMED' });
+    if (!transport || (!managed && (!peerConfig.a2aEnabled || !peerConfig.a2aBearerToken)) || !link?.remoteTaskId || link.contextId !== source.contextId) return res.status(409).json({ code: 'A2A_CANCEL_UNCONFIRMED' });
     try {
       await cancelA2ATask(link, async remoteId => {
+        if (managed) return cancelManagedRuntimeA2ATask(peer, link.contextId, remoteId);
         const id = crypto.randomUUID();
         const response = await fetch(transport.url, { method: 'POST', redirect: 'error', signal: AbortSignal.timeout(5000), headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${decrypt(peerConfig.a2aBearerToken)}` }, body: JSON.stringify({ jsonrpc: '2.0', id, method: 'CancelTask', params: { id: remoteId } }) });
         if (!response.ok || !response.body) throw Error('A2A_CANCEL_UNCONFIRMED');
@@ -213,17 +225,18 @@ export function createA2ARoutes() {
       const peer = available.find((item: any) => item.id === peerId && getOwnerId(item) === getOwnerId(instance) && isSelectablePeer(item));
       if (!peer) return { id: peerId, state: "unknown", setupIssue: "unavailable" };
       const peerConfig = parseConfig(peer);
-      const peerApplicationState = await getApplicationState(peer);
-      const live = peerConfig.a2aEnabled === true ? await probeA2AAgentCard(peerId) : { state: "disabled" };
+      const managed = a2aTrackingEnabled(String(instance.id)) && isManagedRuntimeA2APeer(peer);
+      const peerApplicationState = managed ? "applied" : await getApplicationState(peer);
+      const live = managed ? await probeManagedRuntimeA2APeer(peer) : peerConfig.a2aEnabled === true ? await probeA2AAgentCard(peerId) : { state: "disabled" };
       // Older deployments can be fully live without the revision marker added
       // by newer control planes. A successful protocol probe is authoritative
       // for that legacy case; an explicit pending revision still requires apply.
-      const setupIssue = !supportsA2AByVersion(resolveVersion(peer), peer.capabilities) ? "unsupported"
-        : peerConfig.a2aEnabled !== true ? "disabled"
+      const setupIssue = !managed && !supportsA2AByVersion(resolveVersion(peer), peer.capabilities) ? "unsupported"
+        : !managed && peerConfig.a2aEnabled !== true ? "disabled"
         : peerApplicationState === "pending" ? "pending"
         : peer.status !== "running" ? "not_running"
         : peerApplicationState === "unknown" && live.state !== "ready" ? "unknown" : null;
-      return { id: peerId, ...live, enabled: peerConfig.a2aEnabled === true, applicationState: peerApplicationState, setupIssue };
+      return { id: peerId, ...live, enabled: managed || peerConfig.a2aEnabled === true, applicationState: peerApplicationState, setupIssue };
     }));
     return res.json({ ...ownStatus, peers, applicationState, toolState, generatedAt: new Date().toISOString() });
   }));
@@ -255,10 +268,13 @@ export function createA2ARoutes() {
     const refreshLink = async (currentLink: any) => {
       const peer = peers.find((row: any) => row.id === currentLink.peerId);
       const peerConfig = peer ? parseConfig(peer) : null;
+      const managed = a2aTrackingEnabled(String(instance.id)) && isManagedRuntimeA2APeer(peer);
       const transport = getStoredPeerTransport(peer);
-      if (!transport || !peerConfig?.a2aEnabled || !peerConfig.a2aBearerToken) return currentLink;
+      if (!transport || (!managed && (!peerConfig?.a2aEnabled || !peerConfig.a2aBearerToken))) return currentLink;
       try {
-        return await refreshMappedA2ATask(currentLink, remoteId => readRemoteA2ATask(transport.url, peerConfig.a2aBearerToken, remoteId));
+        return await refreshMappedA2ATask(currentLink, remoteId => managed
+          ? readManagedRuntimeA2ATask(peer, currentLink.contextId, remoteId)
+          : readRemoteA2ATask(transport.url, peerConfig.a2aBearerToken, remoteId));
       } catch (error: any) {
         const notFound = error.message === "A2A_TASK_NOT_FOUND";
         const diskResult = notFound ? readA2ADiskResult(currentLink) : undefined;
