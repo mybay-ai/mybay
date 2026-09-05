@@ -435,3 +435,34 @@ export function groupA2AOrchestrations(activities: A2AActivity[]): A2AOrchestrat
     }];
   }).sort((left, right) => right.startedAt.localeCompare(left.startedAt));
 }
+
+export type A2ARemoteTaskEvidence = {
+  remoteState?: string;
+  recordState?: string;
+  result?: string;
+  updatedAt?: string;
+};
+
+export function applyA2ARemoteTaskEvidence(
+  activity: A2AActivity,
+  evidence: A2ARemoteTaskEvidence | null | undefined,
+): A2AActivity {
+  if (activity.direction !== "outbound" || !evidence?.remoteState) return activity;
+  const state = evidence.remoteState.replace(/^TASK_STATE_/, "").toLowerCase().replaceAll("_", "-");
+  const status: A2AActivityStatus | null = state === "completed"
+    ? "completed"
+    : ["canceled", "cancelled"].includes(state)
+      ? "cancelled"
+      : ["failed", "rejected"].includes(state)
+        ? "failed"
+        : null;
+  if (!status || evidence.recordState !== "finished") return activity;
+  const completedAt = activity.completedAt || evidence.updatedAt || new Date().toISOString();
+  return {
+    ...activity,
+    status,
+    completedAt,
+    durationMs: Math.max(0, new Date(completedAt).getTime() - new Date(activity.startedAt).getTime()),
+    result: status === "completed" && evidence.result ? evidence.result : activity.result,
+  };
+}

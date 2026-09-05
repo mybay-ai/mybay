@@ -1,4 +1,4 @@
-import { getA2ATaskLink, a2aTaskResultText, updateA2ATaskLink } from '../../services/a2aTaskLinks';
+import { getA2ATaskLink, a2aTaskResultText, selectA2ATaskLinksForRefresh, updateA2ATaskLink } from '../../services/a2aTaskLinks';
 import { readA2ADiskResult } from '../../services/a2aDiskResult';
 import { cancelA2ATask } from '../../services/a2aTaskCancel';
 import { readStoreCollections } from "../../localStore";
@@ -23,7 +23,7 @@ import {
 } from "../../../shared/a2aConfig";
 import { ensureA2ABearerToken } from "../../services/a2aRuntimeConfig";
 import { probeA2AAgentCard } from "../../services/a2aProbe";
-import { groupA2AOrchestrations, readA2AActivities } from "../../services/a2aActivity";
+import { applyA2ARemoteTaskEvidence, groupA2AOrchestrations, readA2AActivities } from "../../services/a2aActivity";
 import { docker } from "../../lib/docker";
 import { probeA2ATools } from "../../services/a2aToolProbe";
 
@@ -57,6 +57,37 @@ function getStoredPeerTransport(peer: any): { peerId: string; url: string } | nu
   const peerId = String(peer?.id || "").trim();
   if (normalizeA2APeerIds([peerId])[0] !== peerId) return null;
   return { peerId, url: getA2AInternalUrl(peerId) };
+}
+
+async function readRemoteA2ATask(url: string, encryptedToken: string, remoteId: string) {
+  const rpcId = crypto.randomUUID();
+  const response = await fetch(url, {
+    method: "POST",
+    redirect: "error",
+    signal: AbortSignal.timeout(5000),
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${decrypt(encryptedToken)}` },
+    body: JSON.stringify({ jsonrpc: "2.0", id: rpcId, method: "GetTask", params: { id: remoteId, historyLength: 0 } }),
+  });
+  if (!response.ok || !response.body) throw Error("A2A_RESULT_UNAVAILABLE");
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let bytes = 0;
+  try {
+    while (true) {
+      const next = await reader.read();
+      if (next.done) break;
+      bytes += next.value.length;
+      if (bytes > 2 * 1024 * 1024) throw Error("A2A_RESPONSE_LIMIT");
+      chunks.push(next.value);
+    }
+  } finally {
+    await reader.cancel().catch(() => {});
+    reader.releaseLock();
+  }
+  const rpc = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  if (rpc.id !== rpcId) throw Error("A2A_RESULT_UNAVAILABLE");
+  if (rpc.error) throw Error(rpc.error.code === -32001 ? "A2A_TASK_NOT_FOUND" : "A2A_RESULT_UNAVAILABLE");
+  return rpc.result?.task || rpc.result;
 }
 
 function safeA2ARoute(
@@ -221,36 +252,40 @@ export function createA2ARoutes() {
     }));
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 12));
     const activities = readA2AActivities({ instanceId: String(instance.id), includeAll: true, peerNames, peerIpToId, trustedPeerIds: [...trustedPeerIds] });
+    const refreshLink = async (currentLink: any) => {
+      const peer = peers.find((row: any) => row.id === currentLink.peerId);
+      const peerConfig = peer ? parseConfig(peer) : null;
+      const transport = getStoredPeerTransport(peer);
+      if (!transport || !peerConfig?.a2aEnabled || !peerConfig.a2aBearerToken) return currentLink;
+      try {
+        return await refreshMappedA2ATask(currentLink, remoteId => readRemoteA2ATask(transport.url, peerConfig.a2aBearerToken, remoteId));
+      } catch (error: any) {
+        const notFound = error.message === "A2A_TASK_NOT_FOUND";
+        const diskResult = notFound ? readA2ADiskResult(currentLink) : undefined;
+        return updateA2ATaskLink(currentLink.id, {
+          lookupState: diskResult ? "disk_reply" : notFound ? "not_found" : "unavailable",
+          checkedAt: new Date().toISOString(),
+          diskResult,
+        });
+      }
+    };
+    const visibleTasks = new Set(activities.slice(0, limit).map(activity => `${activity.peerId || ""}\n${activity.taskId}\n${activity.contextId}`));
+    const refreshBefore = Date.now() - 10_000;
+    const pendingLinks = selectA2ATaskLinksForRefresh({
+      links: readStoreCollections(["a2aTaskLinks"]).a2aTaskLinks,
+      instanceId: String(instance.id),
+      trustedPeerIds,
+      visibleTasks,
+      refreshBefore,
+    });
+    await Promise.allSettled(pendingLinks.map(refreshLink));
     const hasSource = ['taskId', 'contextId', 'peerId'].some(key => req.query[key] !== undefined);
     const source = readA2ARecoverySource(req.query);
     if (hasSource && !source) return res.status(400).json({ code: "INVALID_REQUEST" });
     const recoveryEvidence = source ? resolveA2ARecoveryEvidence(source, activities) : null;
     let link = source ? getA2ATaskLink(String(instance.id), source.peerId, source.taskId) : undefined;
     if (source && link?.remoteTaskId && link.contextId === source.contextId && req.query.refreshRemote === '1' && trustedPeerIds.has(source.peerId)) {
-      const peer = peers.find((row: any) => row.id === source.peerId);
-      const peerConfig = peer ? parseConfig(peer) : null;
-      const transport = getStoredPeerTransport(peer);
-      if (transport && peerConfig?.a2aEnabled && peerConfig.a2aBearerToken) {
-        try {
-          link = await refreshMappedA2ATask(link, async remoteId => {
-            const rpcId = crypto.randomUUID();
-            const response = await fetch(transport.url, { method: 'POST', redirect: 'error', signal: AbortSignal.timeout(5000), headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${decrypt(peerConfig.a2aBearerToken)}` }, body: JSON.stringify({ jsonrpc: '2.0', id: rpcId, method: 'GetTask', params: { id: remoteId, historyLength: 0 } }) });
-            if (!response.ok || !response.body) throw Error('A2A_RESULT_UNAVAILABLE');
-            const reader = response.body.getReader(); const chunks: Uint8Array[] = []; let bytes = 0;
-            try { while (true) { const next = await reader.read(); if (next.done) break; bytes += next.value.length; if (bytes > 2 * 1024 * 1024) throw Error('A2A_RESPONSE_LIMIT'); chunks.push(next.value); } }
-            finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
-            const rpc = JSON.parse(Buffer.concat(chunks).toString('utf8'));
-            if (rpc.id !== rpcId) throw Error('A2A_RESULT_UNAVAILABLE');
-            if (rpc.error) throw Error(rpc.error.code === -32001 ? 'A2A_TASK_NOT_FOUND' : 'A2A_RESULT_UNAVAILABLE');
-            return rpc.result?.task || rpc.result;
-          });
-        } catch (error: any) {
-          const notFound = error.message === 'A2A_TASK_NOT_FOUND';
-          const diskResult = notFound ? readA2ADiskResult(link) : undefined;
-          link = updateA2ATaskLink(link.id, { lookupState: diskResult ? 'disk_reply' : notFound ? 'not_found' : 'unavailable', checkedAt: new Date().toISOString(), diskResult });
-          // Preserve the last remote status; a disk reply is not a TaskStore terminal state.
-        }
-      }
+      link = await refreshLink(link);
     }
     if (recoveryEvidence && link?.remoteTaskId && link.contextId === source!.contextId) recoveryEvidence.remoteMapping = {
       remoteTaskId: link.remoteTaskId, remoteState: link.remoteState || 'unknown', recordState: link.state, updatedAt: link.updatedAt, result: a2aTaskResultText(link.task), lookupState: link.lookupState, checkedAt: link.checkedAt, diskResult: link.diskResult,
@@ -261,10 +296,14 @@ export function createA2ARoutes() {
       return saved?.remoteTaskId ? { remoteTaskId: saved.remoteTaskId, remoteState: saved.remoteState || "unknown", recordState: saved.state, updatedAt: saved.updatedAt, result: a2aTaskResultText(saved.task), lookupState: saved.lookupState, checkedAt: saved.checkedAt, diskResult: saved.diskResult } : null;
     };
     const recoveryRuns = activityStore.chatRuns.filter(run => run.instance_id === instance.id && run.user_id === ownerId && run.a2a_recovery_source);
+    const enrichedActivities = activities.map(activity => {
+      const remoteMapping = mappingFor(activity);
+      return { ...applyA2ARemoteTaskEvidence(activity, remoteMapping), remoteMapping };
+    });
     return res.json({
       ...(recoveryEvidence ? { recoveryEvidence } : {}),
-      activities: activities.slice(0, limit).map(activity => ({ ...activity, remoteMapping: mappingFor(activity), recoveryAttempts: recoveryRuns.filter(run => sameA2ARecoverySource(run.a2a_recovery_source, { contextId: activity.contextId, taskId: activity.taskId, peerId: activity.peerId || "" })).sort((a,b) => String(b.created_at).localeCompare(String(a.created_at))).slice(0,3).map(run => ({ runId: run.id, status: run.status, createdAt: run.created_at })) })),
-      orchestrations: groupA2AOrchestrations(activities).slice(0, limit),
+      activities: enrichedActivities.slice(0, limit).map(activity => ({ ...activity, recoveryAttempts: recoveryRuns.filter(run => sameA2ARecoverySource(run.a2a_recovery_source, { contextId: activity.contextId, taskId: activity.taskId, peerId: activity.peerId || "" })).sort((a,b) => String(b.created_at).localeCompare(String(a.created_at))).slice(0,3).map(run => ({ runId: run.id, status: run.status, createdAt: run.created_at })) })),
+      orchestrations: groupA2AOrchestrations(enrichedActivities).slice(0, limit),
       total: activities.length,
       hasMore: activities.length > limit && limit < 100,
       generatedAt: new Date().toISOString(),
