@@ -1,6 +1,7 @@
 import { a2aRecoveryTaskPolicy } from "../../shared/a2aRecovery";
 import { chatGroupSystemPolicy } from "../../shared/chatCollaboration";
 import { mergeLocalFileChanges } from "../../shared/localRunFileEvidence";
+import { confirmFileChangesWithSnapshots } from "./runs/runFileEvidence";
 import { createLocalTimelineCollector } from "../../shared/localRunTimeline";
 import { createRunFileSnapshots } from "./runs/runFileSnapshots";
 import { summarizeRunContextAssembly } from "./runs/runContextObservability";
@@ -481,10 +482,11 @@ export async function completeRun(
     }
   }
 
-  const fileChanges = mergeLocalFileChanges(
+  const reportedFileChanges = mergeLocalFileChanges(
     [...runtimeRunEventControllers.values()].flatMap(controller => [...(controller.get(runId)?.completedFileSteps?.values() || [])]),
   );
-  const fileDiffs = await runFileSnapshots.after(runId, String(run?.conversation_id || ""), fileChanges);
+  const fileDiffs = await runFileSnapshots.after(runId, String(run?.conversation_id || ""), reportedFileChanges);
+  const fileChanges = confirmFileChangesWithSnapshots(reportedFileChanges, fileDiffs);
   const terminalized = await terminalizeRun({
     runId,
     finalStatus,
