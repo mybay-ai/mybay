@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canRefreshGeneratedArtifact, selectMessageGeneratedArtifacts } from "./ChatGeneratedArtifactCards";
+import { canRefreshGeneratedArtifact, formatGeneratedArtifactSize, selectMessageGeneratedArtifacts } from "./ChatGeneratedArtifactCards";
 import type { GeneratedArtifact } from "./generatedArtifacts";
 
 const artifacts: GeneratedArtifact[] = [
@@ -21,5 +21,12 @@ describe("chat generated artifact cards", () => {
     expect(canRefreshGeneratedArtifact({ status: "failed" })).toBe(true);
     expect(canRefreshGeneratedArtifact({ status: "ready" })).toBe(false);
     expect(canRefreshGeneratedArtifact({ status: "checking" })).toBe(false);
+  });
+
+  it("formats bounded file sizes for the audit details", () => {
+    expect(formatGeneratedArtifactSize(47)).toBe("47 B");
+    expect(formatGeneratedArtifactSize(1536)).toBe("1.5 KB");
+    expect(formatGeneratedArtifactSize(2 * 1024 * 1024)).toBe("2.0 MB");
+    expect(formatGeneratedArtifactSize(null)).toBeNull();
   });
 });

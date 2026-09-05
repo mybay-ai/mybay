@@ -17,6 +17,7 @@ export type GeneratedArtifact = {
   size?: number | null;
   mimeType?: string | null;
   updatedAt?: string | null;
+  checkedAt?: string | null;
   error?: string | null;
   previewStatus?: GeneratedArtifactPreviewStatus | null;
   previewError?: string | null;
