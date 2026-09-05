@@ -3,6 +3,7 @@ import { AlertCircle, Check, ChevronDown, Clock3, ExternalLink, Search, Sparkles
 import { useTranslation } from "react-i18next";
 import type { ChatRunMetrics } from "./useChatRuns";
 import { isTerminalRunStatus, parseTimeMs, shouldScheduleAutoCollapse } from "./runUiLifecycle";
+import { formatLocalizedDuration } from "./localizedDuration";
 
 export type ChatToolStepStatus = "running" | "completed" | "failed";
 export type ChatToolStepType = "web_search" | "file_read" | "tool_call" | "model_reasoning" | "final";
@@ -11,6 +12,7 @@ export interface ChatToolStep {
   id: string;
   name: string;
   status: ChatToolStepStatus;
+  completionInferred?: boolean;
   stepType?: ChatToolStepType;
   title?: string;
   safe_summary?: string;
@@ -83,14 +85,6 @@ function compactDetail(value: string, maxLength = 96): string {
 }
 
 
-function formatDuration(value?: number | null): string {
-  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return "-";
-  if (value < 1000) return `${Math.round(value)}ms`;
-  const seconds = value / 1000;
-  if (seconds < 60) return `${seconds.toFixed(seconds >= 10 ? 0 : 1)}s`;
-  return `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s`;
-}
-
 function getStepDuration(step: ChatToolStep, now: number): number | null {
   if (typeof step.startedAt !== "number" || !Number.isFinite(step.startedAt)) return null;
   const end = typeof step.completedAt === "number" && Number.isFinite(step.completedAt) ? step.completedAt : now;
@@ -98,6 +92,7 @@ function getStepDuration(step: ChatToolStep, now: number): number | null {
 }
 export function ChatToolProgress({ toolSteps, agentName, runMetrics = null }: ChatToolProgressProps) {
   const { t } = useTranslation("dashboard");
+  const formatDuration = (value?: number | null) => formatLocalizedDuration(value, unit => t(`chatWorkspace.timelineDurationUnits.${unit}`), { fractionalSeconds: true }) || "-";
   const [showDetails, setShowDetails] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [now, setNow] = useState(() => Date.now());

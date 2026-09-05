@@ -1,3 +1,7 @@
+import { sameA2ARecoverySource, type A2ARecoverySource } from "../../shared/a2aRecovery";
+import type { ConversationSearchResult, ConversationSearchPage } from '../../shared/conversationSearch';
+import { searchPageContext, paginateSearchResults } from '../utils/conversationSearchPagination';
+export type { ConversationSearchResult } from '../../shared/conversationSearch';
 import { placeConversation, type ConversationPlacement } from "../../shared/localConversationPlacement";
 import { readLocalRunUsage, type LocalRunUsage } from "../../shared/localRunUsage";
 import { readLocalModelEvidence, type LocalModelEvidence } from "../../shared/localModelEvidence";
@@ -5,13 +9,13 @@ import { settleRunQuestions } from "../../shared/localRunQuestions";
 import { readLocalFileEvidence, type LocalFileEvidence } from "../../shared/localRunFileEvidence";
 import { readLocalRunTimeline, type LocalRunTimeline } from "../../shared/localRunTimeline";
 import type { LocalRunFileDiffs } from "../../shared/localRunFileDiff";
+import type { ChatGroupConfig, ChatGroupRun } from "../../shared/chatCollaboration";
 import { pruneRunFileDiffs, validateRunFileDiffs } from "../services/runs/runFileSnapshots";
 import { randomUUID } from "crypto";
 import {
   mutateStore,
   mutateStoreCollections,
   nowIso,
-  readStore,
   readStoreCollections,
 } from "../localStore";
 import {
@@ -40,6 +44,7 @@ export interface Conversation {
   last_message_at?: string | null;
   created_at: string;
   updated_at: string;
+  collaboration?: ChatGroupConfig | null;
 }
 
 export interface ChatProject {
@@ -100,6 +105,7 @@ function normalizeClaimedRun(row: any) {
     runtime_type: row.runtime_type,
     runtime_provider_key: row.runtime_provider_key,
     runtime_contract_version: row.runtime_contract_version,
+    group_collaboration: row.group_collaboration || null,
   };
 }
 
@@ -109,17 +115,7 @@ function touchConversation(data: any, conversationId: string, updates: any = {})
   return conv;
 }
 
-export interface ConversationSearchResult {
-  conversation_id: string;
-  conversation_title: string;
-  project_id: string | null;
-  matched_field: "title" | "message";
-  message_id: string | null;
-  message_role: string | null;
-  sequence_no: number | null;
-  snippet: string;
-  matched_at: string;
-}
+
 
 const UNORDERED_CONVERSATION_SORT = Number.MAX_SAFE_INTEGER;
 
@@ -173,13 +169,13 @@ function buildSearchSnippet(value: string, normalizedQuery: string, maxLength = 
 
 export const chatRepo = {
   async listProjects(userId: string, instanceId: string): Promise<ChatProject[]> {
-    return readStore().chatProjects
+    return readStoreCollections(["chatProjects"] as const).chatProjects
       .filter((p) => p.user_id === userId && p.instance_id === instanceId && !p.is_archived)
       .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0) || String(b.updated_at || "").localeCompare(String(a.updated_at || "")));
   },
 
   async getProject(userId: string, instanceId: string, projectId: string): Promise<ChatProject | null> {
-    return readStore().chatProjects.find((p) => p.id === projectId && p.user_id === userId && p.instance_id === instanceId) || null;
+    return readStoreCollections(["chatProjects"] as const).chatProjects.find((p) => p.id === projectId && p.user_id === userId && p.instance_id === instanceId) || null;
   },
 
   async createProject(userId: string, instanceId: string, name: string): Promise<ChatProject> {
@@ -242,7 +238,7 @@ export const chatRepo = {
   },
 
   async listConversations(userId: string, instanceId: string, limit = 20, cursor?: string): Promise<Conversation[]> {
-    let rows = readStore().conversations.filter((c) => c.user_id === userId && c.instance_id === instanceId);
+    let rows = readStoreCollections(["conversations"] as const).conversations.filter((c) => c.user_id === userId && c.instance_id === instanceId);
     rows.sort(compareConversationOrder);
     if (cursor) {
       rows = rows.filter((conversation) => isConversationAfterCursor(conversation, cursor));
@@ -251,10 +247,15 @@ export const chatRepo = {
   },
 
   async searchConversations(userId: string, instanceId: string, query: string, limit = 30): Promise<ConversationSearchResult[]> {
-    const normalizedQuery = String(query || "").trim().toLocaleLowerCase();
-    if (!normalizedQuery) return [];
+    return (await chatRepo.searchConversationPage(userId, instanceId, query, limit)).results;
+  },
 
-    const store = readStore();
+  async searchConversationPage(userId: string, instanceId: string, query: string, limit = 30, cursor?: string): Promise<ConversationSearchPage> {
+    const normalizedQuery = String(query || "").trim().toLocaleLowerCase();
+    if (!normalizedQuery) return { results: [], nextCursor: null };
+    const context = searchPageContext(userId, instanceId, normalizedQuery, cursor);
+
+    const store = readStoreCollections(["conversations", "chatMessages"] as const);
     const conversations = store.conversations.filter((conversation) => conversation.user_id === userId && conversation.instance_id === instanceId);
     const byConversationId = new Map(conversations.map((conversation) => [conversation.id, conversation]));
     const ranked: Array<ConversationSearchResult & { score: number }> = [];
@@ -272,7 +273,8 @@ export const chatRepo = {
           message_role: null,
           sequence_no: null,
           snippet: buildSearchSnippet(title, normalizedQuery),
-          matched_at: conversation.updated_at,
+          // New messages must not move an existing title hit across page boundaries.
+          matched_at: conversation.created_at,
           score: normalizedTitle === normalizedQuery ? 400 : normalizedTitle.startsWith(normalizedQuery) ? 350 : 300
         });
       }
@@ -292,15 +294,12 @@ export const chatRepo = {
         message_role: message.role || null,
         sequence_no: Number(message.sequence_no || 0),
         snippet: buildSearchSnippet(content, normalizedQuery),
-        matched_at: message.created_at || conversation.updated_at,
+        matched_at: message.created_at || conversation.created_at,
         score: 200
       });
     }
 
-    return ranked
-      .sort((a, b) => b.score - a.score || String(b.matched_at || "").localeCompare(String(a.matched_at || "")) || Number(b.sequence_no || 0) - Number(a.sequence_no || 0))
-      .slice(0, Math.max(1, Math.min(50, limit)))
-      .map(({ score: _score, ...result }) => result);
+    return paginateSearchResults(ranked, limit, context);
   },
 
   async placeConversation(userId: string, instanceId: string, placement: ConversationPlacement): Promise<Conversation[]> {
@@ -338,11 +337,11 @@ export const chatRepo = {
   },
 
   async getConversation(userId: string, conversationId: string): Promise<Conversation | null> {
-    return readStore().conversations.find((c) => c.id === conversationId && c.user_id === userId) || null;
+    return readStoreCollections(["conversations"] as const).conversations.find((c) => c.id === conversationId && c.user_id === userId) || null;
   },
 
   async getConversationForOwnerAndInstance(userId: string, instanceId: string, conversationId: string): Promise<Conversation | null> {
-    return readStore().conversations.find((c) => c.id === conversationId && c.user_id === userId && c.instance_id === instanceId) || null;
+    return readStoreCollections(["conversations"] as const).conversations.find((c) => c.id === conversationId && c.user_id === userId && c.instance_id === instanceId) || null;
   },
 
   async deleteConversation(userId: string, conversationId: string): Promise<void> {
@@ -375,6 +374,15 @@ export const chatRepo = {
       if (Object.prototype.hasOwnProperty.call(updates, "sortOrder") && updates.sortOrder !== undefined && updates.sortOrder !== null) patch.sort_order = updates.sortOrder;
       Object.assign(conv, patch);
       return conv;
+    });
+  },
+
+  async updateConversationCollaboration(userId: string, conversationId: string, collaboration: ChatGroupConfig | null): Promise<Conversation> {
+    return mutateStoreCollections(["conversations"] as const, (data) => {
+      const conversation = data.conversations.find((row: any) => row.id === conversationId && row.user_id === userId);
+      if (!conversation) throw new Error("CONVERSATION_NOT_FOUND");
+      Object.assign(conversation, { collaboration, updated_at: nowIso() });
+      return conversation;
     });
   },
 
@@ -486,22 +494,25 @@ export const chatRepo = {
     });
   },
 
-  async beginChatRun(params: { conversationId: string; userId: string; instanceId: string; content: string; requestId: string; runId: string; reasoningEffort?: "fast" | "balanced" | "deep"; runtimeBinding?: RuntimeBinding; modelEvidence?: LocalModelEvidence | null; initialLease?: { reconcilerId: string; leaseSeconds: number } | null; }): Promise<{ status: string; user_message_id: string | null; sequence_no: number | null; run_id?: string | null; run_status?: string | null }> {
+  async beginChatRun(params: { groupCollaboration?: ChatGroupRun | null; a2aRecoveryFingerprint?: string; a2aRecoverySource?: A2ARecoverySource; conversationId: string; userId: string; instanceId: string; content: string; requestId: string; runId: string; reasoningEffort?: "fast" | "balanced" | "deep"; runtimeBinding?: RuntimeBinding; modelEvidence?: LocalModelEvidence | null; initialLease?: { reconcilerId: string; leaseSeconds: number } | null; }): Promise<{ status: string; user_message_id: string | null; sequence_no: number | null; run_id?: string | null; run_status?: string | null; request_id?: string | null }> {
     return mutateStoreCollections(["conversations", "chatMessages", "chatRuns"] as const, (data) => {
       const conv = data.conversations.find((c: any) => c.id === params.conversationId && c.user_id === params.userId && c.instance_id === params.instanceId);
       if (!conv) throw new Error("CONVERSATION_NOT_FOUND_OR_ACCESS_DENIED");
 
-      const duplicateRequest = data.chatRuns.find((r: any) => r.user_id === params.userId && r.instance_id === params.instanceId && r.request_id === params.requestId);
+      const duplicateRequest = data.chatRuns.find((r: any) => r.user_id === params.userId && r.instance_id === params.instanceId && (r.request_id === params.requestId || (sameA2ARecoverySource(r.a2a_recovery_source, params.a2aRecoverySource) && r.a2a_recovery_fingerprint === params.a2aRecoveryFingerprint && r.conversation_id === params.conversationId && data.chatMessages.some((m: any) => m.id === r.user_message_id && m.content === params.content))));
       if (duplicateRequest) {
         const originalMessage = data.chatMessages.find((message: any) => message.id === duplicateRequest.user_message_id);
         const isExactReplay = duplicateRequest.conversation_id === params.conversationId
-          && originalMessage?.content === params.content;
+          && originalMessage?.content === params.content
+          && (!params.a2aRecoverySource || duplicateRequest.a2a_recovery_fingerprint === params.a2aRecoveryFingerprint)
+          && ((!params.a2aRecoverySource && !duplicateRequest.a2a_recovery_source) || sameA2ARecoverySource(duplicateRequest.a2a_recovery_source, params.a2aRecoverySource));
         return {
           status: isExactReplay ? "IDEMPOTENT_REPLAY" : "DUPLICATE_REQUEST_ID",
           user_message_id: duplicateRequest.user_message_id || null,
           sequence_no: originalMessage?.sequence_no ?? null,
           run_id: duplicateRequest.id,
           run_status: duplicateRequest.status || null,
+          request_id: duplicateRequest.request_id || null,
         };
       }
       const duplicateRun = data.chatRuns.find((r: any) => r.id === params.runId);
@@ -523,10 +534,10 @@ export const chatRepo = {
       const initialLeaseExpiresAt = initialLeaseOwner
         ? new Date(Date.now() + initialLeaseSeconds * 1000).toISOString()
         : null;
-      const userMessage = { id: randomUUID(), conversation_id: params.conversationId, instance_id: params.instanceId, role: "user", content: params.content, status: "pending", sequence_no: nextSequence(data.chatMessages, params.conversationId), request_id: params.requestId, error_code: null, usage_prompt_tokens: null, usage_completion_tokens: null, usage_total_tokens: null, duration_ms: null, metadata: { run_id: params.runId }, created_at: now, updated_at: now };
+      const userMessage = { id: randomUUID(), conversation_id: params.conversationId, instance_id: params.instanceId, role: "user", content: params.content, status: "pending", sequence_no: nextSequence(data.chatMessages, params.conversationId), request_id: params.requestId, error_code: null, usage_prompt_tokens: null, usage_completion_tokens: null, usage_total_tokens: null, duration_ms: null, metadata: { run_id: params.runId, ...(params.a2aRecoverySource ? { a2a_recovery_source: params.a2aRecoverySource } : {}), ...(params.groupCollaboration ? { group_collaboration: params.groupCollaboration } : {}) }, created_at: now, updated_at: now };
       data.chatMessages.push(userMessage);
       const modelEvidence = readLocalModelEvidence(params.modelEvidence);
-      data.chatRuns.push({ id: params.runId, conversation_id: params.conversationId, user_id: params.userId, instance_id: params.instanceId, user_message_id: userMessage.id, status: "queued", upstream_run_id: null, dispatch_attempts: 0, request_id: params.requestId, partial_output: null, error_code: null, last_event_seq: 0, stop_attempts: 0, stop_requested_at: null, reconciled_by: initialLeaseOwner || null, lease_expires_at: initialLeaseExpiresAt, reasoning_effort: params.reasoningEffort || "balanced", runtime_type: runtimeBinding.runtimeType, runtime_provider_key: runtimeBinding.providerKey, runtime_contract_version: runtimeBinding.contractVersion, ...(modelEvidence ? { model_evidence: modelEvidence } : {}), created_at: now, updated_at: now, started_at: null, completed_at: null, last_observed_at: null });
+      data.chatRuns.push({ ...(params.groupCollaboration ? { group_collaboration: params.groupCollaboration } : {}), ...(params.a2aRecoverySource ? { a2a_recovery_source: params.a2aRecoverySource, a2a_recovery_fingerprint: params.a2aRecoveryFingerprint } : {}), id: params.runId, conversation_id: params.conversationId, user_id: params.userId, instance_id: params.instanceId, user_message_id: userMessage.id, status: "queued", upstream_run_id: null, dispatch_attempts: 0, request_id: params.requestId, partial_output: null, error_code: null, last_event_seq: 0, stop_attempts: 0, stop_requested_at: null, reconciled_by: initialLeaseOwner || null, lease_expires_at: initialLeaseExpiresAt, reasoning_effort: params.reasoningEffort || "balanced", runtime_type: runtimeBinding.runtimeType, runtime_provider_key: runtimeBinding.providerKey, runtime_contract_version: runtimeBinding.contractVersion, ...(modelEvidence ? { model_evidence: modelEvidence } : {}), created_at: now, updated_at: now, started_at: null, completed_at: null, last_observed_at: null });
       Object.assign(conv, { updated_at: now, last_message_at: now });
       return { status: "success", user_message_id: userMessage.id, sequence_no: userMessage.sequence_no };
     });
@@ -636,6 +647,8 @@ export const chatRepo = {
       if (usageEvidence) Object.assign(assistant.metadata, { usage_evidence: usageEvidence });
       const modelEvidence = readLocalModelEvidence(run.model_evidence);
       if (modelEvidence) Object.assign(assistant.metadata, { model_evidence: modelEvidence });
+      if (run.a2a_recovery_source) Object.assign(assistant.metadata, { a2a_recovery_source: run.a2a_recovery_source });
+      if (run.group_collaboration) Object.assign(assistant.metadata, { group_collaboration: run.group_collaboration });
       data.chatMessages.push(assistant);
       if (timeline) Object.assign(assistant.metadata, { run_timeline: { ...timeline, status: params.status } });
       const userMessage = data.chatMessages.find((m: any) => m.id === run.user_message_id);
@@ -670,7 +683,7 @@ export const chatRepo = {
 
   async listFeedbackByMessageIds(userId: string, messageIds: string[]): Promise<Record<string, string>> {
     const set = new Set(messageIds);
-    return Object.fromEntries(readStore().chatMessageFeedback.filter((f) => f.user_id === userId && set.has(f.message_id)).map((f) => [f.message_id, f.rating]));
+    return Object.fromEntries(readStoreCollections(["chatMessageFeedback"] as const).chatMessageFeedback.filter((f) => f.user_id === userId && set.has(f.message_id)).map((f) => [f.message_id, f.rating]));
   },
 
   async getActiveRunForConversation(userId: string, instanceId: string, conversationId: string): Promise<any | null> {

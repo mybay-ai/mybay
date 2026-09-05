@@ -26,7 +26,5 @@ describe("interleaved run message rendering", () => {
     expect(html.indexOf("safe.html")).toBeLessThan(html.indexOf("FinalResponse."));
     expect(html).not.toContain("DO_NOT_RENDER");
     expect(html).toContain('aria-expanded="true"');
-    expect(html).toContain("sm:max-w-[92%]");
-    expect(html).toContain("2xl:max-w-[94%]");
   });
 });

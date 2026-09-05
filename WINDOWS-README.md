@@ -2,6 +2,8 @@
 
 This package is for 64-bit Windows 10/11 computers. MyBay does not require Git, Node.js, npm, or OpenSSL, but running Agents requires Docker Desktop with a Linux-container backend.
 
+The MyBay launcher allows startup attempts with at least **4 GB of host RAM**. Below 4 GB it stops; from 4 GB up to (but not including) 8 GB it warns and continues; 8 GB or more meets the normal memory baseline. **Docker Desktop for Windows officially requires 8 GB**, so permitting the launcher to continue does not guarantee Docker installation or stable operation. The 4 GB path is experimental and has not been certified on a real low-memory host. Start with one Agent and avoid concurrent or memory-heavy tasks. This change does not reduce existing Agent resource limits.
+
 ## First start
 
 1. Extract the package to a normal local directory such as `C:\MyBay`. Avoid OneDrive-synchronized directories.

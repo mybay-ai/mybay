@@ -75,7 +75,8 @@ describe("Hermes Agent tool policy", () => {
       auth: { type: "bearer", token: "peer-secret" },
       capabilities: ["research", "review"],
     });
-    expect(parsed.platform_toolsets).toBeUndefined();
+    expect(parsed.toolsets).toContain("a2a");
+    expect(parsed.platform_toolsets.api_server).toEqual(["hermes-api-server", "a2a"]);
   });
 
   it("keeps the bundled A2A platform plugin enabled across generated config rewrites", () => {

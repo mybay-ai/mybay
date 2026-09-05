@@ -26,11 +26,15 @@ export function resolveWorkspaceAssistantResult(
     };
   }
 
-  const message = [...messages].reverse().find(item => item.role === "assistant" && item.content?.trim());
+  // A newly queued run must not borrow an earlier answer before its state arrives.
+  const message = [...messages].reverse().find(item => item.role === "assistant" &&
+    (activeRunId ? (item.metadata?.runId === activeRunId || item.metadata?.run_id === activeRunId) :
+      Boolean(item.content?.trim() || item.metadata?.runId || item.metadata?.run_id)));
   return {
     message,
     content: message?.content || "",
-    runId: typeof message?.metadata?.runId === "string" ? message.metadata.runId : null,
+    runId: activeRunId || (typeof message?.metadata?.runId === "string" ? message.metadata.runId :
+      typeof message?.metadata?.run_id === "string" ? message.metadata.run_id : null),
     live: false
   };
 }

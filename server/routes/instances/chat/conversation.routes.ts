@@ -1,3 +1,4 @@
+import { InvalidSearchCursor } from "../../../utils/conversationSearchPagination";
 import { Router, Response } from "express";
 import { AuthenticatedRequest, authenticateToken } from "../../../middlewares/auth";
 import { chatRepo, encodeConversationCursor } from "../../../repositories/chatRepo";
@@ -6,6 +7,8 @@ import { deleteConversationAttachmentDirectory } from "../../../services/chatAtt
 import { isValidInstanceId, isValidUUID } from "./validators";
 import { conversationSearchLimiter, conversationWriteLimiter } from "./conversationLimiters";
 import { resolveConversationAuthority, resolveInstanceAuthority } from "../../../services/instances/resourceAuthorityService";
+import { readChatGroupConfig } from "../../../../shared/chatCollaboration";
+import { normalizeA2APeerIds } from "../../../../shared/a2aConfig";
 
 export function registerConversationRoutes(router: Router) {
 
@@ -188,9 +191,11 @@ export function registerConversationRoutes(router: Router) {
     try {
       const access = await assertInstanceAccess(id, req.user.id);
       if (!access.ok) return res.status(access.status).json({ success: false, error: access.error });
-      const results = await chatRepo.searchConversations(req.user.id, id, query, limit);
-      return res.json({ success: true, results });
+      if (req.query.cursor !== undefined && typeof req.query.cursor !== 'string') return res.status(400).json({ success: false, error: 'INVALID_SEARCH_CURSOR' });
+      const page = await chatRepo.searchConversationPage(req.user.id, id, query, limit, req.query.cursor as string | undefined);
+      return res.json({ success: true, ...page });
     } catch (err: any) {
+      if (err instanceof InvalidSearchCursor) return res.status(400).json({ success: false, error: "INVALID_SEARCH_CURSOR" });
       console.error("[Search Conversations Error]", err);
       return res.status(500).json({ success: false, error: "INTERNAL_ERROR" });
     }
@@ -298,7 +303,7 @@ export function registerConversationRoutes(router: Router) {
   // ======================================================================
   router.patch("/:id/conversations/:conversationId", authenticateToken, conversationWriteLimiter, async (req: AuthenticatedRequest, res: Response) => {
     const { id, conversationId } = req.params;
-    const { title, projectId, pinned } = req.body || {};
+    const { title, projectId, pinned, collaboration } = req.body || {};
 
     if (!isValidInstanceId(id) || !isValidUUID(conversationId)) {
       return res.status(400).json({ success: false, error: "INVALID_REQUEST" });
@@ -307,8 +312,9 @@ export function registerConversationRoutes(router: Router) {
     const hasTitle = typeof title === "string";
     const hasProjectId = Object.prototype.hasOwnProperty.call(req.body || {}, "projectId");
     const hasPinned = typeof pinned === "boolean";
+    const hasCollaboration = Object.prototype.hasOwnProperty.call(req.body || {}, "collaboration");
 
-    if (!hasTitle && !hasProjectId && !hasPinned) {
+    if (!hasTitle && !hasProjectId && !hasPinned && !hasCollaboration) {
       return res.status(400).json({ success: false, error: "INVALID_REQUEST" });
     }
 
@@ -353,6 +359,21 @@ export function registerConversationRoutes(router: Router) {
           projectId: safeProjectId,
           pinnedAt: hasPinned ? (pinned ? new Date().toISOString() : null) : undefined
         });
+      }
+
+      if (hasCollaboration) {
+        if (collaboration === null) {
+          updated = await chatRepo.updateConversationCollaboration(req.user.id, conversationId, null);
+        } else {
+          const group = readChatGroupConfig(collaboration);
+          let instanceConfig: any = {};
+          try { instanceConfig = typeof access.instance.config_json === "string" ? JSON.parse(access.instance.config_json) : (access.instance.config_json || {}); } catch {}
+          const trustedPeerIds = new Set(normalizeA2APeerIds(instanceConfig.a2aPeerIds, id));
+          if (!group || instanceConfig.a2aEnabled !== true || group.peerIds.some(peerId => !trustedPeerIds.has(peerId))) {
+            return res.status(400).json({ success: false, error: "INVALID_GROUP_COLLABORATION" });
+          }
+          updated = await chatRepo.updateConversationCollaboration(req.user.id, conversationId, group);
+        }
       }
 
       return res.json({ success: true, conversation: updated });

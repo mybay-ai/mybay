@@ -9,7 +9,8 @@ import { sanitizeChatDisplayContent } from "../../lib/chatProtocolSanitizer";
 import { WorkspaceDebugTab, WorkspaceFilesTab, WorkspacePreviewTab, WorkspaceResultTab, WorkspaceStepsTab } from "./workspace-panel-tabs";
 import { resolveRunDurationMs } from "./run/runDuration";
 import type { RunExecutionState } from "./run/runTypes";
-import { resolveWorkspaceAssistantResult } from "./run/runResultSource";
+import { resolveWorkspaceRunSource } from "./run/workspaceRunSource";
+import { extractChatUrls } from "./chatUrlBoundary";
 import { getRunStatusI18nKey, getToolStatusI18nKey, isTerminalRunDisplayStatus, resolveRunDisplayStatus, resolveToolDisplayStatus, type ToolDisplayStatus } from "./run/runStatusSemantics";
 
 export type WorkspaceTab = "result" | "steps" | "files" | "preview" | "debug";
@@ -101,23 +102,7 @@ const tabIcons: Record<WorkspaceTab, typeof Sparkles> = {
   debug: Bug
 };
 
-const URL_PATTERN = /(?:https?:\/\/|www\.)[^\s<>()]+/gi;
-
-const extractUrlsFromText = (content: string) => {
-  const seen = new Set<string>();
-  const urls: string[] = [];
-  for (const match of content.matchAll(URL_PATTERN)) {
-    const rawUrl = match[0].replace(/(?:[*_`]+|[\])}>),.;:!?，。；：！？]+)+$/gu, "");
-    const normalizedUrl = rawUrl.startsWith("www.") ? "https://" + rawUrl : rawUrl;
-    if (!seen.has(normalizedUrl)) {
-      seen.add(normalizedUrl);
-      urls.push(normalizedUrl);
-    }
-  }
-  return urls;
-};
-
-export function ChatWorkspacePanel({ selectedId, selectedConversationId, selectedInstance, messages, toolSteps, activeRunId, runExecutionState = null, runMetrics = null, approvalRequests = [], runCapabilities, onRespondToApproval, variant = "desktop", activeTab: controlledActiveTab, onActiveTabChange, conversationFiles = [], conversationFilePreview = null, generatedArtifacts = [], onRefreshGeneratedArtifacts, onPreviewGeneratedArtifact, onDownloadGeneratedArtifact, onDeleteConversationFile, onDownloadConversationFile, onOpenConversationFile, onPreviewConversationFile, onClearConversationFilePreview }: ChatWorkspacePanelProps) {
+export function ChatWorkspacePanel({ selectedId, selectedConversationId, selectedInstance, messages, toolSteps: incomingToolSteps, activeRunId, runExecutionState: incomingExecution = null, runMetrics: incomingMetrics = null, approvalRequests = [], runCapabilities, onRespondToApproval, variant = "desktop", activeTab: controlledActiveTab, onActiveTabChange, conversationFiles = [], conversationFilePreview = null, generatedArtifacts = [], onRefreshGeneratedArtifacts, onPreviewGeneratedArtifact, onDownloadGeneratedArtifact, onDeleteConversationFile, onDownloadConversationFile, onOpenConversationFile, onPreviewConversationFile, onClearConversationFilePreview }: ChatWorkspacePanelProps) {
   const { t } = useTranslation(["dashboard", "common"]);
   const [internalActiveTab, setInternalActiveTab] = useState<WorkspaceTab>("result");
   const activeTab = controlledActiveTab ?? internalActiveTab;
@@ -137,6 +122,12 @@ export function ChatWorkspacePanel({ selectedId, selectedConversationId, selecte
     }
   }, [conversationFilePreview]);
 
+  const source = useMemo(() => resolveWorkspaceRunSource({
+    messages, conversationId: selectedConversationId ?? null, activeRunId,
+    execution: incomingExecution, metrics: incomingMetrics, toolSteps: incomingToolSteps,
+  }), [messages, selectedConversationId, activeRunId, incomingExecution, incomingMetrics, incomingToolSteps]);
+  const { execution: runExecutionState, metrics: runMetrics, toolSteps, result: assistantResult } = source;
+
   const runDisplayStatus = resolveRunDisplayStatus({
     activeRunId,
     executionRunId: runExecutionState?.runId,
@@ -155,25 +146,21 @@ export function ChatWorkspacePanel({ selectedId, selectedConversationId, selecte
     return () => window.clearInterval(timerId);
   }, [activeRunId, runIsActive]);
 
-  const assistantResult = useMemo(
-    () => resolveWorkspaceAssistantResult(messages, runExecutionState, activeRunId),
-    [activeRunId, messages, runExecutionState]
-  );
-  const latestAssistantMessage = assistantResult.message;
   const latestAssistantContent = sanitizeChatDisplayContent(
     assistantResult.content,
     t("dashboard:chatWorkspace.toolCallProtocolHidden")
   );
 
-  const getTimelineDisplayStatus = (step: ChatToolStep): ToolDisplayStatus => resolveToolDisplayStatus(step.status, runDisplayStatus);
+  const getTimelineDisplayStatus = (step: ChatToolStep): ToolDisplayStatus => resolveToolDisplayStatus(step.status, runDisplayStatus, step.completionInferred);
   const completedToolCount = toolSteps.filter((step) => getTimelineDisplayStatus(step) === "completed").length;
   const failedToolCount = toolSteps.filter((step) => getTimelineDisplayStatus(step) === "failed").length;
   const hasActiveRunWithoutSteps = Boolean(activeRunId && toolSteps.length === 0);
   const runningToolCount = toolSteps.filter((step) => getTimelineDisplayStatus(step) === "running").length;
-  const resolvedDurationMs = resolveRunDurationMs({
+  const archivedWithoutDuration = !runIsActive && runExecutionState?.timelinePartial !== undefined && runMetrics.durationMs == null;
+  const resolvedDurationMs = archivedWithoutDuration ? null : resolveRunDurationMs({
     metrics: runMetrics,
     startCandidates: toolSteps.map(step => step.startedAt),
-    completedCandidates: toolSteps.map(step => step.completedAt),
+    completedCandidates: toolSteps.filter(step => !step.completionInferred).map(step => step.completedAt),
     active: runIsActive,
     nowMs: durationNowMs
   });
@@ -183,7 +170,7 @@ export function ChatWorkspacePanel({ selectedId, selectedConversationId, selecte
     durationMs: resolvedDurationMs
   };
   const totalToolCallCount = toolSteps.filter((step) => step.stepType !== "model_reasoning" && step.stepType !== "final").length;
-  const latestAssistantUrls = useMemo(() => extractUrlsFromText(latestAssistantContent).slice(0, 3), [latestAssistantContent]);
+  const latestAssistantUrls = useMemo(() => extractChatUrls(latestAssistantContent).slice(0, 3), [latestAssistantContent]);
   const resultSummaryVisible = toolSteps.length > 0 || conversationFiles.length > 0 || generatedArtifacts.length > 0 || latestAssistantUrls.length > 0;
   const instanceName = selectedInstance?.name?.trim() || t("dashboard:chatWorkspace.agentFallbackName");
   const pendingApproval = approvalRequests.find((item) => item.status === "pending");
@@ -365,6 +352,8 @@ export function ChatWorkspacePanel({ selectedId, selectedConversationId, selecte
       </div>
 
       <div className={"flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-3 [-webkit-overflow-scrolling:touch] " + (variant === "mobile" ? "p-3" : "p-3.5")}>
+        {runExecutionState?.timelinePartial && (activeTab === 'result' || activeTab === 'steps') &&
+          <p className="text-[12px] text-content-muted">{t('dashboard:chatWorkspace.timelinePartialNotice')}</p>}
         {activeTab === "result" && (
           <WorkspaceResultTab
             t={t}
@@ -380,7 +369,6 @@ export function ChatWorkspacePanel({ selectedId, selectedConversationId, selecte
             conversationFiles={conversationFiles}
             generatedArtifacts={generatedArtifacts}
             latestAssistantUrls={latestAssistantUrls}
-            latestAssistantMessage={latestAssistantMessage}
             latestAssistantContent={latestAssistantContent}
             onOpenConversationFile={onOpenConversationFile}
             onDownloadConversationFile={onDownloadConversationFile}

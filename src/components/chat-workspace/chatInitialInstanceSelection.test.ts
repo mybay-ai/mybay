@@ -9,9 +9,9 @@ describe("initial chat instance selection", () => {
     expect(resolveInitialChatInstanceId(instances, readiness, null, "preferred")).toBe("preferred");
     expect(resolveInitialChatInstanceId(instances, readiness, "first", "preferred")).toBe("first");
   });
-  it("falls back when a saved instance is removed or not ready", () => {
+  it("falls back only when a saved instance is removed and retains unready history", () => {
     expect(resolveInitialChatInstanceId(instances, { first: { ready: true } } as any, null, "missing")).toBe("first");
-    expect(resolveInitialChatInstanceId(instances, { first: { ready: true } } as any, null, "preferred")).toBe("first");
+    expect(resolveInitialChatInstanceId(instances, { first: { ready: true } } as any, null, "preferred")).toBe("preferred");
   });
   it("selects a requested ready instance after quick deployment", () => {
     expect(resolveInitialChatInstanceId(instances, {
@@ -20,11 +20,11 @@ describe("initial chat instance selection", () => {
     } as any, "preferred")).toBe("preferred");
   });
 
-  it("falls back to the first ready instance when the requested one is unavailable", () => {
+  it("keeps an explicit instance selection while readiness is unavailable", () => {
     expect(resolveInitialChatInstanceId(instances, {
       first: { ready: true },
       preferred: { ready: false },
-    } as any, "preferred")).toBe("first");
+    } as any, "preferred")).toBe("preferred");
   });
 
   it("falls back to the first instance when none are chat-ready", () => {

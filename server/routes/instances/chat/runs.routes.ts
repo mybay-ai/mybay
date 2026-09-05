@@ -1,3 +1,5 @@
+import { readA2ARecoverySource } from "../../../../shared/a2aRecovery";
+import { readA2AActivities } from "../../../services/a2aActivity";
 import { NextFunction, Router, Response } from "express";
 import * as crypto from "crypto";
 import { AuthenticatedRequest, authenticateToken } from "../../../middlewares/auth";
@@ -32,6 +34,9 @@ import { getStoredFileDiff } from "../../../services/runs/runFileSnapshots";
 import { isQuestionBridgeInstalling } from "../../../services/runs/questionBridgeInstaller";
 import { createConfiguredModelEvidence } from "../../../../shared/localModelEvidence";
 import { DEFAULT_RUN_LEASE_POLICY } from "../../../services/runs/runLease";
+import { createChatGroupRun, readChatGroupConfig } from "../../../../shared/chatCollaboration";
+import { normalizeA2AAgentName, normalizeA2APeerIds, supportsA2AByVersion } from "../../../../shared/a2aConfig";
+import { dbAdapter } from "../../../db";
 
 export function requireInteractiveRunsEnabled(_req: AuthenticatedRequest, res: Response, next: NextFunction) {
   if (!isInteractiveRunsEnabled()) {
@@ -210,7 +215,40 @@ export function registerRunRoutes(router: Router) {
         });
       }
 
+      const recoverySource = readA2ARecoverySource(req.body.a2aRecoverySource);
+      if (req.body.a2aRecoverySource != null) {
+        const sourceActivity = recoverySource && readA2AActivities({ instanceId: id, includeAll: true }).find(a => a.contextId === recoverySource.contextId && a.taskId === recoverySource.taskId && a.peerId === recoverySource.peerId && a.direction === "outbound");
+        if (!sourceActivity || !config.a2aEnabled || !Array.isArray(config.a2aPeerIds) || !config.a2aPeerIds.includes(recoverySource!.peerId)) return res.status(400).json({ success: false, error: "INVALID_REQUEST" });
+      }
       const runId = crypto.randomUUID();
+      const groupConfig = readChatGroupConfig(conversationAuthority.conversation.collaboration);
+      let groupCollaboration = null;
+      if (groupConfig) {
+        const trustedPeerIds = new Set(normalizeA2APeerIds(config.a2aPeerIds, id));
+        if (config.a2aEnabled !== true || groupConfig.peerIds.some(peerId => !trustedPeerIds.has(peerId))) {
+          return res.status(409).json({ success: false, error: "GROUP_ROOM_CONFIGURATION_STALE" });
+        }
+        const availableInstances = await dbAdapter.getInstances(req.user.id, req.user.role);
+        const peers = groupConfig.peerIds.flatMap(peerId => {
+          const peer: any = availableInstances.find((candidate: any) => candidate.id === peerId);
+          if (!peer) return [];
+          let peerConfig: any = {};
+          try { peerConfig = typeof peer.config_json === "string" ? JSON.parse(peer.config_json) : (peer.config_json || {}); } catch {}
+          const peerVersion = String(peer.resolved_version || peer.agent_image_tag || peer.agent_version || "");
+          if (peerConfig.a2aEnabled !== true || !supportsA2AByVersion(peerVersion, peer.capabilities)) return [];
+          return [{ id: String(peer.id), name: normalizeA2AAgentName(peer.name, peerConfig.a2aAgentName || peer.id) }];
+        });
+        if (peers.length !== groupConfig.peerIds.length) {
+          return res.status(409).json({ success: false, error: "GROUP_ROOM_MEMBER_UNAVAILABLE" });
+        }
+        groupCollaboration = createChatGroupRun({
+          runId,
+          leader: { id, name: normalizeA2AAgentName(instance.name, config.a2aAgentName || id) },
+          peers,
+          maxRounds: groupConfig.maxRounds,
+        });
+        if (!groupCollaboration) return res.status(409).json({ success: false, error: "GROUP_ROOM_CONFIGURATION_STALE" });
+      }
 
       // Authorization/attachment checks above await I/O. Recheck at the commit
       // boundary so an install started during those awaits cannot restart a new Run.
@@ -219,6 +257,8 @@ export function registerRunRoutes(router: Router) {
       primedSnapshotRunId = runId;
       const persistStartedAt = Date.now();
       const beginResult = await chatRepo.beginChatRun({
+        ...(groupCollaboration ? { groupCollaboration } : {}),
+        ...(recoverySource ? { a2aRecoverySource: recoverySource, a2aRecoveryFingerprint: crypto.createHash("sha256").update(JSON.stringify({ content: content.trim(), attachmentIds: validatedFiles.map(file => file.id).sort(), reasoningEffort: normalizedReasoningEffort })).digest("hex") } : {}),
         conversationId,
         userId: req.user.id,
         instanceId: id,
@@ -255,6 +295,7 @@ export function registerRunRoutes(router: Router) {
         return res.status(200).json({
           success: true,
           replayed: true,
+          requestId: beginResult.request_id,
           runId: beginResult.run_id,
           status: beginResult.run_status || "queued",
           userMessageId: beginResult.user_message_id,

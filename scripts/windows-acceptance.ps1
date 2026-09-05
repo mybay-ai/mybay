@@ -7,6 +7,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "windows-preflight.ps1")
 
 if ([string]::IsNullOrWhiteSpace($ProjectRoot)) {
     $ProjectRoot = Split-Path -Parent $PSScriptRoot
@@ -78,8 +79,11 @@ if ($SkipRuntimeChecks) {
         $build = [int]$os.BuildNumber
         $supported = $build -ge 19045
         Add-AcceptanceResult "Windows version" $(if ($supported) { "PASS" } else { "FAIL" }) "$($os.Caption), build $build"
-        $memoryGb = [Math]::Round(($os.TotalVisibleMemorySize * 1KB) / 1GB, 1)
-        Add-AcceptanceResult "Memory" $(if ($memoryGb -ge 8) { "PASS" } else { "FAIL" }) "$memoryGb GB"
+        # Use the same physical-memory measurement and thresholds as startup.
+        $computerMemory = Get-CimInstance Win32_ComputerSystem
+        $memoryGb = [Math]::Round(([double](Get-MyBayOptionalPropertyValue $computerMemory "TotalPhysicalMemory" 0) / 1GB), 1)
+        $memory = Get-MyBayWindowsMemoryAssessment $memoryGb
+        Add-AcceptanceResult "Memory" $memory.Status $memory.Details
     } catch {
         Add-AcceptanceResult "Windows version" "FAIL" $_.Exception.Message
     }

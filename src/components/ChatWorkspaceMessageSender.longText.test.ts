@@ -38,6 +38,37 @@ function fixture(overrides: Record<string, unknown> = {}, initialMessages: ChatM
 describe("long-text sender integration", () => {
   afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); vi.mocked(api.post).mockReset(); });
 
+  it.each(['queued','running','stopping'])('resumes a replayed %s recovery under its original request identity', async status => {
+    const refresh = vi.fn(async()=>{});
+    const existing: ChatMessage = {id:'saved-answer',role:'assistant',content:'Partial response',status:'pending',conversation_id:'conversation-1',request_id:'original-request',metadata:{runId:'old-run'}};
+    const f = fixture({chatMode:'agent',pendingLongTexts:[],pendingAttachments:[],refreshAuthoritativeHistory:refresh,createChatRunWithRetry:vi.fn(async()=>({success:true,replayed:true,runId:'old-run',requestId:'original-request',status}))},[existing]);
+    await f.send();
+    expect(f.messages()).toEqual([existing]);
+    expect(f.context.initializeRunExecution).toHaveBeenCalledWith(expect.objectContaining({runId:'old-run',requestId:'original-request',status}));
+    expect(f.context.streamActiveRun).toHaveBeenCalledWith('old-run','instance-1','conversation-1');
+    expect(refresh).toHaveBeenCalledWith('instance-1','conversation-1');
+    expect(f.context.optimisticChatContextRef.current).toBeNull();
+  });
+
+  it.each([true, false])("attaches recovery provenance only to the unmodified draft (%s)", async unchanged => {
+    const source = {contextId:'ctx-test',taskId:'task-test',peerId:'peer-test'};
+    const f = fixture({chatMode:'agent',input:unchanged ? 'Review original' : 'Edited task',pendingLongTexts:[],pendingAttachments:[],a2aRecoveryDraftRef:{current:{a2aRetryInstanceId:'instance-1',a2aRetryDraft:'Review original',a2aRecoverySource:source}}});
+    await f.send();
+    expect((f.context.createChatRunWithRetry.mock.calls[0][1] as any).a2aRecoverySource).toEqual(unchanged ? source : undefined);
+    expect(f.messages().find(message => message.role === 'assistant')?.metadata?.a2a_recovery_source).toEqual(unchanged ? source : undefined);
+  });
+
+  it("reloads persisted history without a pending duplicate when a completed recovery run is reused", async () => {
+    const refresh = vi.fn();
+    const f = fixture({chatMode:'agent',pendingLongTexts:[],pendingAttachments:[],refreshAuthoritativeHistory:refresh,createChatRunWithRetry:vi.fn(async()=>({success:true,replayed:true,runId:'old-run',status:'completed'}))});
+    await f.send();
+    expect(f.messages()).toEqual([]);
+    expect(f.context.streamActiveRun).not.toHaveBeenCalled();
+    expect(f.context.initializeRunExecution).not.toHaveBeenCalled();
+    expect(refresh).toHaveBeenCalledWith('instance-1','conversation-1');
+    expect(f.context.setSending).toHaveBeenLastCalledWith(false);
+  });
+
   it.each(["quick", "assist", "agent"])("sends full ordered text, not card IDs, through %s", async chatMode => {
     vi.useFakeTimers();
     vi.mocked(api.post).mockResolvedValue({ success: true, message: "ok" });

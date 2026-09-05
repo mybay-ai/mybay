@@ -37,6 +37,17 @@ function setup() {
 describe("conversation selection request races", () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
+  it("restores the conversation without waiting for slow project labels", async () => {
+    const projects = deferred<any>();
+    vi.mocked(api.get).mockImplementation(path => path.endsWith('conversation-projects')
+      ? projects.promise : Promise.resolve({ success: true, conversations: [{ id: 'saved' }] }));
+    const { hook, options } = setup();
+    options.getRememberedConversationId.mockReturnValue('saved');
+    await hook.loadConversationsForSelectedInstance('agent-a', 1);
+    expect(options.selectConversationId).toHaveBeenCalledWith('saved');
+    projects.resolve({ success: true, projects: [] });
+  });
+
   it("discards the first A response after A -> B -> A, even if the instance ID matches again", async () => {
     const oldList = deferred<any>();
     vi.mocked(api.get).mockImplementation(path => path.endsWith("conversation-projects")

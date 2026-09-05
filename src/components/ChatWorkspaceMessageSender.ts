@@ -61,6 +61,7 @@ export function createChatWorkspaceMessageSender(context: any) {
     selectConversationId,
     maybeRenameDefaultConversation,
     createChatRunWithRetry,
+    a2aRecoveryDraftRef,
     reasoningEffort,
     setActiveRunId,
     setActiveRunConversationId,
@@ -319,10 +320,15 @@ export function createChatWorkspaceMessageSender(context: any) {
         // necessarily released its slot. Keep one request identity while the
         // transport retries that bounded cancellation window.
         const submittedAt = Date.now();
+        const recoveryDraft = a2aRecoveryDraftRef?.current;
+        const recoverySource = recoveryDraft?.a2aRetryInstanceId === selectedId
+          && recoveryDraft?.a2aRetryDraft === userMsg.trim()
+          ? recoveryDraft.a2aRecoverySource : undefined;
         const runRes = await createChatRunWithRetry(selectedId, {
           conversationId: activeConvId,
           content: userMsg,
           requestId,
+          ...(recoverySource ? { a2aRecoverySource: recoverySource } : {}),
           reasoningEffort,
           attachmentIds: attachmentsForSend.map(a => a.id)
         }, true, () => shouldAcceptChatResponse(
@@ -338,6 +344,45 @@ export function createChatWorkspaceMessageSender(context: any) {
         }
 
         if (runRes && runRes.success && runRes.runId) {
+          if (runRes.replayed && !["queued", "running", "stopping"].includes(runRes.status)) {
+            // A completed recovery check was reused. Reload its persisted messages
+            // instead of adding a new pending answer for a run that already ended.
+            setMessages(prev => prev.filter(message => !optimisticUserMessageIds.includes(message.id) && message.id !== tempAssistantMsgId));
+            optimisticChatContextRef.current = null;
+            if (!usesAttachmentOverride) setPendingAttachments([]);
+            chatSuccess = true;
+            return;
+          }
+          if (runRes.replayed && runRes.requestId) {
+            const canonicalRequestId = runRes.requestId;
+            const resumedAssistantId = `${runRes.runId}-resumed-answer`;
+            asyncRunAccepted = true;
+            if (!usesAttachmentOverride) setPendingAttachments([]);
+            optimisticChatContextRef.current = null;
+            setActiveRunId(runRes.runId);
+            setActiveRunConversationId(activeConvId);
+            initializeRunExecution({
+              runId: runRes.runId, conversationId: activeConvId,
+              requestId: canonicalRequestId, assistantMessageId: resumedAssistantId,
+              status: runRes.status,
+            });
+            setRunMetrics({ runId: runRes.runId, status: runRes.status });
+            setMessages(prev => {
+              const retained = prev.filter(message => !optimisticUserMessageIds.includes(message.id) && message.id !== tempAssistantMsgId);
+              const existing = retained.some(message => message.role === "assistant" && (message.metadata?.runId === runRes.runId || message.request_id === canonicalRequestId));
+              return existing ? retained : [...retained, {
+                id: resumedAssistantId, role: "assistant", content: "", status: "pending",
+                request_id: canonicalRequestId, conversation_id: activeConvId,
+                metadata: { runId: runRes.runId, requestId: canonicalRequestId, ...(recoverySource ? { a2a_recovery_source: recoverySource } : {}) },
+              }];
+            });
+            await refreshAuthoritativeHistory(initialSelectedId, activeConvId);
+            void streamActiveRun(runRes.runId, initialSelectedId, activeConvId).catch(err => {
+              console.warn("[streamActiveRun] Recovery replay stream failed:", err);
+            });
+            chatSuccess = true;
+            return;
+          }
           const acceptedAt = Date.now();
           asyncRunAccepted = true;
           if (!usesAttachmentOverride) setPendingAttachments([]);
@@ -368,7 +413,7 @@ export function createChatWorkspaceMessageSender(context: any) {
             status: "pending",
             request_id: requestId,
             conversation_id: activeConvId,
-            metadata: { runId: runRes.runId, requestId }
+            metadata: { runId: runRes.runId, requestId, ...(recoverySource ? { a2a_recovery_source: recoverySource } : {}) }
           };
           if (optimisticChatContextRef.current?.requestId === requestId) {
             optimisticChatContextRef.current = {

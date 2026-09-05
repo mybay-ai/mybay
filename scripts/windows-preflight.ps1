@@ -152,6 +152,21 @@ function Invoke-MyBayElevatedWslAction([string]$ProjectRoot, [ValidateSet("insta
     }
 }
 
+# Shared by startup and diagnostics: this is a MyBay trial threshold,
+# not a change to Docker Desktop's official Windows requirements.
+function Get-MyBayWindowsMemoryAssessment([double]$MemoryGB) {
+    if ([double]::IsNaN($MemoryGB) -or [double]::IsInfinity($MemoryGB) -or $MemoryGB -le 0) {
+        return [pscustomobject]@{ Status = "FAIL"; Details = "Unable to determine host physical memory. Check Windows hardware reporting and retry." }
+    }
+    if ($MemoryGB -lt 4) {
+        return [pscustomobject]@{ Status = "FAIL"; Details = "Only $MemoryGB GB of host memory was detected. The MyBay launcher requires at least 4 GB; 8 GB or more is recommended." }
+    }
+    if ($MemoryGB -lt 8) {
+        return [pscustomobject]@{ Status = "WARN"; Details = "$MemoryGB GB of host memory detected. Continuing with experimental low-memory support. Docker Desktop officially requires 8 GB on Windows and may refuse installation or run unreliably. Start with one Agent, close other applications, and avoid concurrent or memory-heavy tasks. MyBay has not been certified on a 4 GB host." }
+    }
+    return [pscustomobject]@{ Status = "PASS"; Details = "$MemoryGB GB of host memory detected; meets the 8 GB baseline." }
+}
+
 function Assert-MyBayWindowsHostReady([string]$ProjectRoot, [switch]$InstallPrerequisites, [switch]$DockerAlreadyReady) {
     if (-not (Test-MyBayIsWindows)) { return }
 
@@ -163,9 +178,9 @@ function Assert-MyBayWindowsHostReady([string]$ProjectRoot, [switch]$InstallPrer
     if ($facts.Architecture -notin @("AMD64", "ARM64")) {
         throw "Unsupported Windows architecture: $($facts.Architecture). A 64-bit Windows installation is required."
     }
-    if ($facts.MemoryGB -lt 8) {
-        throw "Only $($facts.MemoryGB) GB of memory was detected. MyBay requires at least 8 GB."
-    }
+    $memory = Get-MyBayWindowsMemoryAssessment $facts.MemoryGB
+    if ($memory.Status -eq "FAIL") { throw $memory.Details }
+    if ($memory.Status -eq "WARN") { Write-Warning $memory.Details }
     if ($null -ne $facts.FreeDiskGB -and $facts.FreeDiskGB -lt 10) {
         throw "Only $($facts.FreeDiskGB) GB of free disk space is available. Free at least 10 GB before installing MyBay."
     }

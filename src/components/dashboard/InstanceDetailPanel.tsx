@@ -5,6 +5,7 @@ import {
   Terminal,
   Folder,
   Briefcase,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Cpu,
@@ -83,6 +84,17 @@ export function InstanceDetailPanel({
   const [copiedField, setCopiedField] = React.useState<string | null>(null);
   const [confirmedFirstLogin, setConfirmedFirstLogin] = React.useState(true);
   const [showPasswordSection, setShowPasswordSection] = React.useState(false);
+  const [overviewOpen, setOverviewOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    setOverviewOpen(false);
+  }, [detailTab]);
+
+  React.useEffect(() => {
+    if (activeLogs && window.location.hash.startsWith("#a2a-activity-")) {
+      setDetailTab("collaboration");
+    }
+  }, [activeLogs, setDetailTab]);
 
   const selectedInstance = instances.find(i => i.id === activeLogs);
 
@@ -93,6 +105,7 @@ export function InstanceDetailPanel({
     setHealthData(null);
     setCredentials(null);
     setShowPasswordSection(false);
+    setOverviewOpen(false);
 
     // Read credentials from sessionStorage for this instance if present
     const storedOneTimeCreds = sessionStorage.getItem("one_time_credentials_instance_" + activeLogs);
@@ -300,8 +313,31 @@ export function InstanceDetailPanel({
           </div>
         </div>
 
-        {/* Operational Overview Statistics Row */}
-        <div className="bg-surface-muted/50 border-b border-slate-200/80 dark:border-slate-800 px-4 md:px-6 py-3.5 grid grid-cols-2 lg:grid-cols-4 gap-3.5 shrink-0 max-h-[160px] overflow-y-auto sm:overflow-visible">
+        {/* Compact overview: keep the workspace tall and reveal details on demand. */}
+        <button
+          type="button"
+          onClick={() => setOverviewOpen((open) => !open)}
+          className="flex w-full shrink-0 items-center justify-between gap-3 border-b border-outline bg-surface-muted/40 px-4 py-2.5 text-left transition-colors hover:bg-control-hover md:px-6"
+          aria-expanded={overviewOpen}
+        >
+          <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-content-muted">
+            <span className="inline-flex items-center gap-1.5 font-semibold text-content-secondary">
+              <Info className="h-3.5 w-3.5 shrink-0 text-indigo-500" />
+              {t("instance_detail_overview")}
+            </span>
+            <span className="truncate font-mono text-content-secondary">{selectedInstance.resolved_version || selectedInstance.agent_version || t("instance_detail_latest_version")}</span>
+            <span className="truncate text-content-secondary">{selectedInstance.model_name || selectedInstance.configSummary?.model || t("instance_detail_default_model")}</span>
+            <span className="truncate text-content-secondary">{selectedInstance.configSummary?.channelLabel || selectedInstance.configSummary?.channel || t("instance_detail_no_active_channel")}</span>
+            <span className="truncate text-content-secondary">{t("instance_detail_cpu_memory", { cpu: getCpuDisplay(selectedInstance), memory: getMemDisplay(selectedInstance) })}</span>
+          </div>
+          <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-semibold text-content-muted">
+            {t(overviewOpen ? "instance_detail_collapse_overview" : "instance_detail_expand_overview")}
+            <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", overviewOpen && "rotate-180")} />
+          </span>
+        </button>
+
+        {overviewOpen && (
+        <div className="bg-surface-muted/50 border-b border-slate-200/80 dark:border-slate-800 px-4 md:px-6 py-3 grid grid-cols-2 lg:grid-cols-4 gap-3 shrink-0 max-h-[160px] overflow-y-auto sm:overflow-visible">
           {/* Card 1: Runtime status */}
           <div className="bg-surface border border-outline/80 p-2.5 rounded-xl flex items-start gap-2.5 shadow-2xs">
             <div className="p-1.5 bg-surface-muted rounded-lg text-indigo-600 dark:text-indigo-400 border border-outline shrink-0">
@@ -366,6 +402,7 @@ export function InstanceDetailPanel({
             </div>
           </div>
         </div>
+        )}
 
         {/* Pre-access Readiness Check & First-time Login Banner Section */}
         {(() => {
@@ -377,6 +414,11 @@ export function InstanceDetailPanel({
             ?? selectedInstance.configSummary?.enableDashboard
             ?? true
           ) !== false;
+          const readinessReady = Boolean(
+            healthData?.dashboard?.online
+            && healthData?.gateway_ready
+            && healthData?.dashboard?.isAuthConfigured
+          );
 
           if (!dashboardAccessEnabled) {
             return (
@@ -395,7 +437,7 @@ export function InstanceDetailPanel({
           }
 
           return (
-            <div className="border-b border-outline px-4 md:px-6 py-3.5 bg-surface-muted/50 shrink-0 flex flex-col gap-3.5 text-left max-h-[300px] overflow-y-auto">
+            <div className="border-b border-outline px-4 md:px-6 py-2.5 bg-surface-muted/50 shrink-0 flex flex-col gap-2.5 text-left max-h-[300px] overflow-y-auto">
 
               {/* 1. 首次登录提示卡片 */}
               {isWeb && !confirmedFirstLogin && (
@@ -486,13 +528,19 @@ export function InstanceDetailPanel({
               )}
 
               {/* 2. 访问面板前检查面板 */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-surface border border-outline p-3.5 rounded-xl shadow-2xs">
-                <div className="flex flex-col gap-1">
-                  <span className="text-[13px] font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                    <ShieldCheck className="w-4 h-4 text-indigo-500 shrink-0" />
-                    {t("instance_detail_readiness_title")}
-                  </span>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-1.5 text-[13px]">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 bg-surface border border-outline px-3 py-2.5 rounded-xl shadow-2xs">
+                <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-4">
+                  {readinessReady ? (
+                    <span className="flex items-center gap-1.5 text-[13px] font-bold text-emerald-700 dark:text-emerald-300">
+                      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+                      {t("instance_detail_all_ready")}
+                    </span>
+                  ) : <>
+                    <span className="text-[13px] font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                      <ShieldCheck className="w-4 h-4 text-indigo-500 shrink-0" />
+                      {t("instance_detail_readiness_title")}
+                    </span>
+                    <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1 text-[12px]">
                     {/* Check 1: Container running */}
                     <div className="flex items-center gap-1.5">
                       {healthData?.dashboard?.online ? (
@@ -528,7 +576,8 @@ export function InstanceDetailPanel({
                         {t("instance_detail_password_status", { status: t(healthData?.dashboard?.isAuthConfigured ? "instance_detail_configured" : "instance_detail_reset_required") })}
                       </span>
                     </div>
-                  </div>
+                    </div>
+                  </>}
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
@@ -692,8 +741,8 @@ export function InstanceDetailPanel({
             <InstanceA2ACollaboration
               instance={selectedInstance}
               onRedeploy={() => handleInstanceAction(selectedInstance.id, "redeploy", true, t("confirm_redeploy"))}
-              onRetryInChat={(draft) => navigate(`${APP_ROUTES.CHAT_WORKSPACE}?instanceId=${encodeURIComponent(selectedInstance.id)}`, {
-                state: { a2aRetryDraft: draft, a2aRetryInstanceId: selectedInstance.id },
+              onRetryInChat={(draft, source) => navigate(`${APP_ROUTES.CHAT_WORKSPACE}?instanceId=${encodeURIComponent(selectedInstance.id)}`, {
+                state: { a2aRetryDraft: draft, a2aRetryInstanceId: selectedInstance.id, a2aRecoverySource: source },
               })}
               onOpenPeer={(peerId) => {
                 if (!instances.some((candidate) => candidate.id === peerId)) {

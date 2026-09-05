@@ -1,3 +1,4 @@
+import { createA2ARelayRouter } from './server/routes/a2aRelay';
 import "dotenv/config";
 import express from "express";
 import { createQuestionBridgeRouter } from "./server/routes/questionBridge.routes";
@@ -225,6 +226,7 @@ async function startServer() {
 
   app.use("/internal/questions", createQuestionBridgeRouter());
   app.use(express.json({ limit: STANDARD_API_JSON_BODY_LIMIT }));
+  app.use('/internal/a2a', createA2ARelayRouter());
   app.use("/uploads", express.static(path.join(process.cwd(), "data", "uploads"), {
     dotfiles: "deny",
     setHeaders: (res) => {

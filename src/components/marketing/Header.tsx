@@ -54,7 +54,7 @@ export function MarketingHeader({ currentUser, authLoading }: { currentUser: any
 
         {/* Desktop Nav - Clean & minimal for OSS console */}
         <div className="hidden md:flex items-center gap-2.5 lg:gap-3 shrink-0">
-          <ThemeModeToggle />
+          <ThemeModeToggle isDarkHero={isDarkHero} />
           <LanguageToggle variant="inline" isDarkHero={isDarkHero} />
           {authLoading ? (
             <div className={`w-32 h-10 rounded-full animate-pulse ${isDarkHero ? 'bg-white/10' : 'bg-slate-200/50'}`} />

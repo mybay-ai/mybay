@@ -1,0 +1,38 @@
+.chat-composer-toolbar {
+  container: chat-composer-toolbar / inline-size;
+}
+
+.chat-composer-options {
+  container: chat-composer-options / inline-size;
+}
+
+.chat-composer-mode-full,
+.chat-composer-mode-icon,
+.chat-composer-effort-summary,
+.chat-composer-action-label,
+.chat-composer-status-label,
+.chat-composer-shortcut {
+  display: none;
+}
+
+@container chat-composer-options (min-width: 110px) {
+  .chat-composer-mode-icon { display: block; }
+  .chat-composer-mode-full { display: inline; }
+  .chat-composer-mode-short { display: none; }
+}
+
+@container chat-composer-options (min-width: 164px) {
+  .chat-composer-effort-summary { display: inline-flex; }
+}
+
+/* Base the density on the composer itself, not the whole three-column page. */
+@container chat-composer-toolbar (min-width: 560px) {
+  .chat-composer-action-label,
+  .chat-composer-status-label { display: inline; }
+  .chat-composer-task-button { width: auto; min-width: 2rem; padding-inline: 0.625rem; }
+  .chat-composer-run-indicator { width: auto; gap: 0.375rem; padding-inline: 0.375rem; }
+}
+
+@container chat-composer-toolbar (min-width: 720px) {
+  .chat-composer-shortcut { display: inline-flex; }
+}

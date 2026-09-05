@@ -1,10 +1,11 @@
 import { Activity, AlertTriangle, Check, CheckCircle2, Clock3, Copy, Download, ExternalLink, FileText, GitBranch, Sparkles } from "lucide-react";
 import type { TFunction } from "i18next";
-import type { ChatMessage } from "../../../lib/chatWorkspaceState";
 import type { ChatApprovalChoice, ChatApprovalRequest, ChatRunMetrics } from "../useChatRuns";
 import type { PendingAttachment } from "../ChatInputBar";
 import type { RunDisplayStatus } from "../run/runStatusSemantics";
 import { getGeneratedArtifactActionPath, isGeneratedArtifactPreviewable, type GeneratedArtifact } from "../generatedArtifacts";
+import { MarkdownChatContent } from '../ChatMessageContent';
+import { formatLocalizedDuration } from '../localizedDuration';
 
 type WorkspaceResultTabProps = {
   t: TFunction;
@@ -20,7 +21,6 @@ type WorkspaceResultTabProps = {
   conversationFiles: PendingAttachment[];
   generatedArtifacts?: GeneratedArtifact[];
   latestAssistantUrls: string[];
-  latestAssistantMessage?: ChatMessage;
   latestAssistantContent: string;
   onOpenConversationFile?: (file: PendingAttachment) => void;
   onDownloadConversationFile?: (file: PendingAttachment) => void;
@@ -49,7 +49,6 @@ export function WorkspaceResultTab({
   conversationFiles,
   generatedArtifacts = [],
   latestAssistantUrls,
-  latestAssistantMessage,
   latestAssistantContent,
   onOpenConversationFile,
   onDownloadConversationFile,
@@ -64,15 +63,8 @@ export function WorkspaceResultTab({
   runStatusLabel
 }: WorkspaceResultTabProps) {
   const formatDuration = (value?: number | null) => {
-    if (typeof value !== "number" || !Number.isFinite(value)) {
-      return t("dashboard:chatWorkspace.metricUnavailable");
-    }
-    if (value < 1000) return `${Math.round(value)} ms`;
-    const seconds = value / 1000;
-    if (seconds < 60) return `${seconds.toFixed(seconds >= 10 ? 0 : 1)} s`;
-    const minutes = Math.floor(seconds / 60);
-    const rest = Math.round(seconds % 60);
-    return `${minutes}m ${rest}s`;
+    return formatLocalizedDuration(value, unit => t(`dashboard:chatWorkspace.timelineDurationUnits.${unit}`), { fractionalSeconds: true })
+      || t("dashboard:chatWorkspace.metricUnavailable");
   };
 
   const formatTokenCount = (value?: number | null) => (
@@ -276,18 +268,19 @@ export function WorkspaceResultTab({
                   </span>
                 )}
               </div>
-              {latestAssistantMessage || latestAssistantContent ? (
-                <p className="max-h-[min(48dvh,32rem)] overflow-y-auto overscroll-contain whitespace-pre-wrap pr-1 text-[14px] leading-6 text-content-secondary [-webkit-overflow-scrolling:touch]">
-                  {latestAssistantContent}
-                </p>
+              {latestAssistantContent.trim() ? (
+                <div className="min-w-0 max-h-[min(48dvh,32rem)] overflow-y-auto overscroll-contain pr-1 text-[14px] leading-5 text-content-secondary [-webkit-overflow-scrolling:touch]">
+                  <MarkdownChatContent content={latestAssistantContent} conversationFiles={conversationFiles}
+                    onOpenConversationFile={onOpenConversationFile} onOpenInstanceFilePath={onPreviewGeneratedArtifact} />
+                </div>
               ) : (
                 <div className="py-6 text-center">
                   <Sparkles className="w-5 h-5 text-indigo-400 mx-auto mb-2" />
                   <p className="text-[13px] font-medium text-content-secondary">
-                    {t("dashboard:chatWorkspace.workspaceResultEmptyTitle")}
+                    {runDisplayStatus === 'stopped' ? runStatusLabel : t("dashboard:chatWorkspace.workspaceResultEmptyTitle")}
                   </p>
                   <p className="text-[13px] leading-5 text-content-muted mt-1">
-                    {t("dashboard:chatWorkspace.workspaceResultEmptyDesc")}
+                    {t(runDisplayStatus === 'stopped' ? "dashboard:chatWorkspace.workspaceStoppedResultEmptyDesc" : "dashboard:chatWorkspace.workspaceResultEmptyDesc")}
                   </p>
                 </div>
               )}

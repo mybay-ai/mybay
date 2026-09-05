@@ -109,14 +109,14 @@ export function useChatConversations({
     if (!isCurrent()) return;
     try {
       setLoadingConversations(true);
-      const [projectsRes, res] = await Promise.all([
-        api.get('/api/instances/' + initialSelectedId + '/conversation-projects', { signal }).catch(() => null),
-        api.get('/api/instances/' + initialSelectedId + '/conversations?limit=20', { signal })
-      ]);
+      // Project labels can arrive later; they must not delay restoring messages.
+      void api.get('/api/instances/' + initialSelectedId + '/conversation-projects', { signal }).then(projectsRes => {
+        if (isCurrent() && projectsRes?.success && Array.isArray(projectsRes.projects)) {
+          setConversationProjects(sortProjectRecords(projectsRes.projects));
+        }
+      }).catch(() => {});
+      const res = await api.get('/api/instances/' + initialSelectedId + '/conversations?limit=20', { signal });
       if (!isCurrent() || selectionRevisionRef.current !== selectionRevision) return;
-      if (projectsRes && projectsRes.success && Array.isArray(projectsRes.projects)) {
-        setConversationProjects(sortProjectRecords(projectsRes.projects));
-      }
       if (res && res.success && Array.isArray(res.conversations)) {
         const restored = await resolveRememberedConversation(sortConversationRecords(res.conversations), getRememberedConversationId(initialSelectedId), async id => {
           const detail = await api.get(`/api/instances/${encodeURIComponent(initialSelectedId)}/conversations/${encodeURIComponent(id)}`, { signal });

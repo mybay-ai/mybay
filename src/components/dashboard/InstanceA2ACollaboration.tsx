@@ -1,17 +1,21 @@
+import type { A2ARecoverySource, resolveA2ARecoveryEvidence } from "../../../shared/a2aRecovery";
+import { A2ATaskEvidence } from '../chat-workspace/A2ARecoveryNotice';
 import React from "react";
+import { latestOutboundActivity } from './a2aLatestActivity';
 import { ArrowDownLeft, ArrowUpRight, Bot, CheckCircle2, Clock3, GitFork, History, Loader2, Network, RefreshCw, RotateCw, Save, ShieldCheck, TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { AgentInstance } from "../../types";
 import { api } from "../../lib/api";
 import { Button, Card, cn } from "../ui";
 import { useFeedback } from "../FeedbackProvider";
-import { isRetryableA2AStatus } from "../chat-workspace/a2aRetryNavigation";
+import { canReviewA2ARecovery, a2aRecoveryReason } from "../chat-workspace/a2aRetryNavigation";
 
 type A2AView = {
   instanceId: string;
   version: string;
   supported: boolean;
   enabled: boolean;
+  applicationState?: "pending" | "applied" | "unknown";
   agentName: string;
   port: number;
   exposure: "internal_only";
@@ -24,6 +28,9 @@ type A2AView = {
 };
 
 type A2AActivity = {
+  remoteMapping?: ReturnType<typeof resolveA2ARecoveryEvidence>['remoteMapping'];
+  recoveryAttempts?: Array<{runId: string; status: string; createdAt: string}>;
+  requestText?: string | null;
   contextId: string;
   taskId: string;
   direction: "inbound" | "outbound";
@@ -38,11 +45,11 @@ type A2AActivity = {
   failureReason: string | null;
 };
 
-type A2AActivityStatus = "completed" | "in_progress" | "connection_failed" | "timed_out" | "agent_offline" | "auth_failed" | "cancelled" | "failed";
+type A2AActivityStatus = "completed" | "in_progress" | "connection_failed" | "timed_out" | "agent_offline" | "auth_failed" | "cancelled" | "failed" | "unknown";
 
 type A2AOrchestration = {
   contextId: string;
-  status: "completed" | "partial" | "failed" | "in_progress";
+  status: "completed" | "partial" | "failed" | "in_progress" | "unknown";
   startedAt: string;
   completedAt: string | null;
   durationMs: number | null;
@@ -50,25 +57,34 @@ type A2AOrchestration = {
   completed: number;
   failed: number;
   inProgress: number;
+  unknown?: number;
+  evidenceIncomplete?: boolean;
   nodes: A2AActivity[];
 };
 
 type A2AStatusView = {
+  toolState?: "ready" | "not_configured" | "disabled" | "missing" | "unknown";
+  applicationState?: "pending" | "applied" | "unknown";
   state: "ready" | "unreachable" | "invalid_card" | "disabled" | "unknown";
-  peers?: Array<{ id: string; state: "ready" | "unreachable" | "invalid_card"; statusCode: number; durationMs: number; error?: string }>;
+  peers?: Array<{ id: string; state: "ready" | "unreachable" | "invalid_card" | "disabled" | "unknown"; enabled?: boolean; setupIssue?: "unavailable" | "unsupported" | "disabled" | "pending" | "not_running" | "unknown" | null; applicationState?: "pending" | "applied" | "unknown"; statusCode?: number; durationMs?: number; error?: string }>;
   generatedAt?: string;
   error?: string;
 };
 
-export function InstanceA2ACollaboration({ instance, onRedeploy, onRetryInChat, onOpenPeer }: { instance: AgentInstance; onRedeploy: () => void; onRetryInChat: (draft: string) => void; onOpenPeer: (peerId: string) => void }) {
+export function InstanceA2ACollaboration({ instance, onRedeploy, onRetryInChat, onOpenPeer }: { instance: AgentInstance; onRedeploy: () => void; onRetryInChat: (draft: string, source?: A2ARecoverySource) => void; onOpenPeer: (peerId: string) => void }) {
   const { t, i18n } = useTranslation("dashboard");
   const { showToast, showAlert, showConfirm } = useFeedback();
   const [view, setView] = React.useState<A2AView | null>(null);
   const [status, setStatus] = React.useState<A2AStatusView | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const [loadError, setLoadError] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [checking, setChecking] = React.useState(false);
   const [activityLoading, setActivityLoading] = React.useState(false);
+  const [activityError, setActivityError] = React.useState(false);
+  const [section, setSection] = React.useState<"configuration" | "activity">("configuration");
+  const [activityFilter, setActivityFilter] = React.useState<"all" | "completed" | "in_progress" | "attention">("all");
+  const [cancellingTask, setCancellingTask] = React.useState<string | null>(null);
   const [activities, setActivities] = React.useState<A2AActivity[]>([]);
   const [orchestrations, setOrchestrations] = React.useState<A2AOrchestration[]>([]);
   const [enabled, setEnabled] = React.useState(false);
@@ -85,10 +101,13 @@ export function InstanceA2ACollaboration({ instance, onRedeploy, onRetryInChat, 
     const targetInstanceId = instance.id;
     const requestId = ++viewRequestIdRef.current;
     setLoading(true);
+    setLoadError(false);
+    setSaving(false);
     try {
       const next = await api.get<A2AView>(`/api/instances/${targetInstanceId}/a2a`);
       if (currentInstanceIdRef.current !== targetInstanceId || viewRequestIdRef.current !== requestId) return;
       setView(next);
+      setLoadError(false);
       setStatus(null);
       setActivities([]);
       setOrchestrations([]);
@@ -98,6 +117,7 @@ export function InstanceA2ACollaboration({ instance, onRedeploy, onRetryInChat, 
       setPeerCapabilities(Object.fromEntries(next.peers.map((peer) => [peer.id, (peer.capabilities || []).join(", ")])));
     } catch (error: any) {
       if (currentInstanceIdRef.current !== targetInstanceId || viewRequestIdRef.current !== requestId) return;
+      setLoadError(true);
       await showAlert({ title: t("a2a.loadFailedTitle"), message: error.message || t("a2a.loadFailed"), type: "error" });
     } finally {
       if (currentInstanceIdRef.current === targetInstanceId && viewRequestIdRef.current === requestId) setLoading(false);
@@ -114,44 +134,78 @@ export function InstanceA2ACollaboration({ instance, onRedeploy, onRetryInChat, 
       setStatus(nextStatus);
     } catch (error: any) {
       if (currentInstanceIdRef.current !== targetInstanceId || statusRequestIdRef.current !== requestId) return;
-      setStatus({ state: "unreachable", error: error.code || "A2A_CONNECT_FAILED" });
+      setStatus({ state: "unknown", applicationState: "unknown", error: error.code || "A2A_CONNECT_FAILED" });
     } finally {
       if (currentInstanceIdRef.current === targetInstanceId && statusRequestIdRef.current === requestId) setChecking(false);
     }
   }, [instance.id]);
 
-  const loadActivity = React.useCallback(async () => {
+  const loadActivity = React.useCallback(async (source?: A2ARecoverySource) => {
     const targetInstanceId = instance.id;
     const requestId = ++activityRequestIdRef.current;
     setActivityLoading(true);
     try {
-      const result = await api.get<{ activities: A2AActivity[]; orchestrations?: A2AOrchestration[] }>(`/api/instances/${targetInstanceId}/a2a/activity?limit=12`);
+      const query = source ? `&${new URLSearchParams({ ...source, refreshRemote: "1" })}` : "";
+      const result = await api.get<{ activities: A2AActivity[]; orchestrations?: A2AOrchestration[] }>(`/api/instances/${targetInstanceId}/a2a/activity?limit=12${query}`);
       if (currentInstanceIdRef.current !== targetInstanceId || activityRequestIdRef.current !== requestId) return;
       setActivities(Array.isArray(result.activities) ? result.activities : []);
+      setActivityError(false);
       setOrchestrations(Array.isArray(result.orchestrations) ? result.orchestrations : []);
     } catch {
       if (currentInstanceIdRef.current !== targetInstanceId || activityRequestIdRef.current !== requestId) return;
       setActivities([]);
       setOrchestrations([]);
+      setActivityError(true);
     } finally {
       if (currentInstanceIdRef.current === targetInstanceId && activityRequestIdRef.current === requestId) setActivityLoading(false);
     }
   }, [instance.id]);
 
   React.useEffect(() => { void load(); }, [load]);
-  React.useEffect(() => { if (view?.enabled) void checkStatus(); else setStatus({ state: "disabled" }); }, [view?.enabled, checkStatus]);
+  React.useEffect(() => {
+    const syncSectionFromHash = () => {
+      const opensActivity = window.location.hash.startsWith("#a2a-activity-");
+      setSection(opensActivity ? "activity" : "configuration");
+      if (opensActivity) setActivityFilter("all");
+    };
+    syncSectionFromHash();
+    window.addEventListener("hashchange", syncSectionFromHash);
+    return () => window.removeEventListener("hashchange", syncSectionFromHash);
+  }, [instance.id]);
+  React.useEffect(() => {
+    if (section !== "activity" || !window.location.hash.startsWith("#a2a-activity-")) return;
+    const targetId = window.location.hash.slice(1);
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById(targetId)?.scrollIntoView({ block: "start" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [section, activities.length]);
+  const cancelTask = async (activity: A2AActivity) => {
+    const target = instance.id;
+    if (!activity.peerId || !(await showConfirm({ title: t('a2a.cancelTaskTitle'), message: t('a2a.cancelTaskDescription'), type: 'danger', confirmText: t('a2a.cancelTask'), cancelText: t('a2a.cancel') }))) return;
+    if (currentInstanceIdRef.current !== target) return;
+    setCancellingTask(activity.taskId);
+    try {
+      await api.post(`/api/instances/${target}/a2a/tasks/cancel`, { contextId: activity.contextId, taskId: activity.taskId, peerId: activity.peerId });
+      if (currentInstanceIdRef.current === target) { showToast(t('a2a.cancelTaskConfirmed'), 'success'); await loadActivity(); }
+    } catch {
+      if (currentInstanceIdRef.current === target) await showAlert({ title: t('a2a.cancelTaskTitle'), message: t('a2a.cancelTaskUnknown'), type: 'error' });
+    } finally { setCancellingTask(null); }
+  };
+  React.useEffect(() => { if (view) void checkStatus(); }, [view, checkStatus]);
   React.useEffect(() => { if (view?.enabled) void loadActivity(); else { setActivities([]); setOrchestrations([]); } }, [view?.enabled, loadActivity]);
   React.useEffect(() => {
-    if (!view?.enabled) return;
+    if (!view) return;
     const timer = window.setInterval(() => {
       if (document.visibilityState !== "visible") return;
       void checkStatus();
-      void loadActivity();
+      if (view.enabled) void loadActivity();
     }, 15_000);
     return () => window.clearInterval(timer);
-  }, [view?.enabled, checkStatus, loadActivity]);
+  }, [view, checkStatus, loadActivity]);
 
-  const save = async () => {
+  const save = async (apply = false) => {
+    const targetInstanceId = instance.id;
     setSaving(true);
     try {
       const result = await api.put(`/api/instances/${instance.id}/a2a`, {
@@ -162,12 +216,17 @@ export function InstanceA2ACollaboration({ instance, onRedeploy, onRetryInChat, 
         rateLimit: view?.rateLimit || 60,
         maxPingPongTurns: view?.maxPingPongTurns || 5,
       });
+      if (currentInstanceIdRef.current !== targetInstanceId) return;
+      ++statusRequestIdRef.current;
+      setStatus(null);
       setView(result.config);
       showToast(t("a2a.savedRedeployRequired"), "success", 5000);
+      if (apply) onRedeploy();
     } catch (error: any) {
+      if (currentInstanceIdRef.current !== targetInstanceId) return;
       await showAlert({ title: t("a2a.saveFailedTitle"), message: error.message || t("a2a.saveFailed"), type: "error", details: error.code });
     } finally {
-      setSaving(false);
+      if (currentInstanceIdRef.current === targetInstanceId) setSaving(false);
     }
   };
 
@@ -180,17 +239,64 @@ export function InstanceA2ACollaboration({ instance, onRedeploy, onRetryInChat, 
       cancelText: t("a2a.cancel"),
     });
     if (!confirmed) return;
+    const targetInstanceId = instance.id;
     try {
       await api.post(`/api/instances/${instance.id}/a2a/rotate-token`);
+      if (currentInstanceIdRef.current !== targetInstanceId) return;
       showToast(t("a2a.rotatedRedeployRequired"), "success", 5000);
       await load();
     } catch (error: any) {
+      if (currentInstanceIdRef.current !== targetInstanceId) return;
       await showAlert({ title: t("a2a.rotateFailedTitle"), message: error.message || t("a2a.rotateFailed"), type: "error" });
     }
   };
 
-  if (loading || view?.instanceId !== instance.id) return <div className="flex flex-1 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-indigo-500" /></div>;
-  if (!view) return null;
+  if (loading || (!loadError && view?.instanceId !== instance.id)) return (
+    <div className="flex flex-1 items-start justify-center bg-surface-muted/50 p-4 pt-8 sm:p-6 sm:pt-10" role="status">
+      <div className="w-full max-w-5xl space-y-4 animate-pulse">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-control-hover" />
+          <div className="space-y-2">
+            <div className="h-4 w-40 rounded bg-control-hover" />
+            <div className="h-3 w-72 max-w-[65vw] rounded bg-control-hover" />
+          </div>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="h-20 rounded-xl border border-outline bg-surface" />
+          <div className="h-20 rounded-xl border border-outline bg-surface" />
+          <div className="h-20 rounded-xl border border-outline bg-surface" />
+        </div>
+        <p className="flex items-center justify-center gap-2 pt-2 text-[13px] text-content-muted">
+          <Loader2 className="h-4 w-4 animate-spin text-indigo-500" />
+          {t("a2a.loadingConfiguration")}
+        </p>
+      </div>
+    </div>
+  );
+  if (loadError || !view) return (
+    <div className="flex flex-1 items-start justify-center bg-surface-muted/50 p-6 pt-12">
+      <Card className="w-full max-w-lg border-amber-200 bg-amber-50/70 p-5 text-center dark:border-amber-900/50 dark:bg-amber-950/20">
+        <TriangleAlert className="mx-auto h-6 w-6 text-amber-600" />
+        <h3 className="mt-3 font-bold text-content">{t("a2a.loadFailedTitle")}</h3>
+        <p className="mt-1 text-sm text-content-muted">{t("a2a.loadFailed")}</p>
+        <Button variant="outline" className="mt-4" onClick={() => void load()}>
+          <RefreshCw className="mr-1.5 h-4 w-4" />{t("a2a.retryLoad")}
+        </Button>
+      </Card>
+    </div>
+  );
+  const applicationState = status?.applicationState || view.applicationState || "unknown";
+  const selectedPeers = view.peers.filter(peer => peerIds.includes(peer.id));
+  const needsAttention = selectedPeers.filter(peer => !status?.peers?.some(item => item.id === peer.id) && (!peer.supported || !peer.enabled || peer.status !== "running"));
+  const activityCounts = {
+    all: activities.length,
+    completed: activities.filter((activity) => activity.status === "completed").length,
+    in_progress: activities.filter((activity) => activity.status === "in_progress").length,
+    attention: activities.filter((activity) => activity.status !== "completed" && activity.status !== "in_progress").length,
+  };
+  const filteredActivities = activities.filter((activity) => activityFilter === "all"
+    || activity.status === activityFilter
+    || (activityFilter === "attention" && activity.status !== "completed" && activity.status !== "in_progress"));
 
   return (
     <div className="flex-1 overflow-y-auto bg-surface-muted/50 p-4 sm:p-6">
@@ -201,8 +307,12 @@ export function InstanceA2ACollaboration({ instance, onRedeploy, onRetryInChat, 
             <p className="mt-1 text-[13px] leading-5 text-content-muted">{t("a2a.subtitle")}</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={checkStatus} disabled={checking || !view.enabled}><RefreshCw className={cn("mr-1.5 h-4 w-4", checking && "animate-spin")} />{t("a2a.checkStatus")}</Button>
-            <Button onClick={onRedeploy} className="bg-indigo-600 text-white"><RotateCw className="mr-1.5 h-4 w-4" />{t("a2a.redeploy")}</Button>
+            <Button variant="outline" onClick={checkStatus} disabled={checking}><RefreshCw className={cn("mr-1.5 h-4 w-4", checking && "animate-spin")} />{t("a2a.checkStatus")}</Button>
+            {section === "configuration" ? (
+              <Button onClick={() => void save(true)} disabled={saving || !view.supported || !agentName.trim()} className="bg-indigo-600 text-white">{saving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <RotateCw className="mr-1.5 h-4 w-4" />}{t(enabled && !view.enabled ? "a2a.enableAndApply" : "a2a.saveAndApply")}</Button>
+            ) : (
+              <Button onClick={() => void loadActivity()} disabled={activityLoading || !view.enabled} className="bg-indigo-600 text-white"><RefreshCw className={cn("mr-1.5 h-4 w-4", activityLoading && "animate-spin")} />{t("a2a.refreshActivity")}</Button>
+            )}
           </div>
         </div>
 
@@ -212,13 +322,28 @@ export function InstanceA2ACollaboration({ instance, onRedeploy, onRetryInChat, 
           </Card>
         ) : (
           <>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <StatusCard label={t("a2a.protocolStatus")} value={view.enabled ? t("a2a.enabled") : t("a2a.disabled")} ready={view.enabled} />
-              <StatusCard label={t("a2a.runtimeStatus")} value={t(`a2a.states.${status?.state || "unknown"}`)} ready={status?.state === "ready"} />
-              <StatusCard label={t("a2a.exposure")} value={t("a2a.internalOnly")} ready />
+            <div className="flex items-center gap-1 rounded-xl border border-outline bg-surface p-1" role="tablist" aria-label={t("a2a.sectionsLabel")}>
+              <button type="button" role="tab" aria-selected={section === "configuration"} onClick={() => setSection("configuration")} className={cn("flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition-colors", section === "configuration" ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300" : "text-content-muted hover:bg-control-hover hover:text-content")}>{t("a2a.configurationSection")}</button>
+              <button type="button" role="tab" aria-selected={section === "activity"} onClick={() => setSection("activity")} className={cn("flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition-colors", section === "activity" ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300" : "text-content-muted hover:bg-control-hover hover:text-content")}>{t("a2a.activitySection")}</button>
             </div>
 
-            <Card className="space-y-4 p-4 sm:p-5">
+            <StatusSummary items={[
+              { label: t("a2a.protocolStatus"), value: view.enabled ? t("a2a.enabled") : t("a2a.disabled"), ready: view.enabled },
+              { label: t("a2a.runtimeStatus"), value: t(`a2a.states.${status?.state || "unknown"}`), ready: status?.state === "ready" },
+              { label: t("a2a.toolCheck"), value: t(`a2a.toolStates.${status?.toolState || "unknown"}`), ready: status?.toolState === "ready" },
+              { label: t("a2a.exposure"), value: t("a2a.internalOnly"), ready: true },
+            ]} />
+
+            {section === "configuration" && <Card className="space-y-3 border-indigo-200 p-4 dark:border-indigo-900" aria-live="polite">
+              <div className="font-semibold text-content">{t(!enabled ? "a2a.guideOff" : applicationState === "applied" && view.enabled ? "a2a.guideApplied" : "a2a.guideOn")}</div>
+              {(!enabled || applicationState !== "applied" || !view.enabled) && <p className="text-sm leading-6 text-content-secondary">{t("a2a.guideSteps")}</p>}
+              <details className="text-xs leading-5 text-content-muted"><summary className="cursor-pointer font-medium text-content-secondary">{t("a2a.viewConfigurationGuide")}</summary><p className="mt-2">{t("a2a.applyScope", { name: instance.name })}</p><p className="mt-1">{t("a2a.discoveryOnly")}</p></details>
+              {applicationState !== "applied" && <p className="text-sm font-medium text-amber-700 dark:text-amber-300">{t(applicationState === "pending" ? "a2a.pendingApply" : "a2a.applicationUnknown")}</p>}
+              {enabled && needsAttention.map(peer => <div key={peer.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-surface-muted p-3 text-sm"><span>{peer.name} · {t(!peer.supported ? "a2a.peerUnsupported" : !peer.enabled ? "a2a.peerNeedsEnable" : "a2a.peerNotRunning")}</span><Button variant="outline" size="sm" onClick={() => onOpenPeer(peer.id)}>{t("a2a.managePeer")}</Button></div>)}
+              {status?.error && <p role="alert" className="text-sm text-amber-700 dark:text-amber-300">{t("a2a.checkFailedHint")}</p>}
+            </Card>}
+
+            {section === "configuration" && <Card className="space-y-4 p-4 sm:p-5">
               <label className="flex items-start justify-between gap-4">
                 <div><div className="font-bold text-content">{t("a2a.enableTitle")}</div><p className="mt-1 text-xs leading-5 text-content-muted">{t("a2a.enableDescription")}</p></div>
                 <input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} className="mt-1 h-5 w-5 accent-indigo-600" />
@@ -228,47 +353,71 @@ export function InstanceA2ACollaboration({ instance, onRedeploy, onRetryInChat, 
                 <div><span className="text-xs font-bold text-content-secondary">{t("a2a.internalEndpoint")}</span><div className="mt-1.5 rounded-xl border border-outline bg-surface-muted px-3 py-2.5 font-mono text-xs text-content-muted">{view.internalUrl}</div></div>
               </div>
               <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 text-xs leading-5 text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-emerald-300"><ShieldCheck className="mr-1.5 inline h-4 w-4" />{t("a2a.securityNotice")}</div>
-            </Card>
+            </Card>}
 
-            <Card className="p-4 sm:p-5">
+            {section === "configuration" && <Card className="p-4 sm:p-5">
               <div className="mb-3"><div className="font-bold text-content">{t("a2a.trustedPeers")}</div><p className="mt-1 text-xs text-content-muted">{t("a2a.trustedPeersDescription")}</p></div>
               {view.peers.length === 0 ? <div className="rounded-xl border border-dashed border-outline p-6 text-center text-sm text-content-muted">{t("a2a.noPeers")}</div> : <div className="grid items-start gap-2 sm:grid-cols-2">{view.peers.map((peer) => {
                 const disabled = !peer.supported;
                 const selected = peerIds.includes(peer.id);
-                const liveState = status?.peers?.find((item) => item.id === peer.id)?.state;
-                return <div key={peer.id} className={cn("rounded-xl border border-outline bg-surface p-3", disabled && "opacity-55")}><label className="flex cursor-pointer items-start gap-3"><input type="checkbox" checked={selected} disabled={disabled} onChange={(event) => setPeerIds((current) => event.target.checked ? [...current, peer.id] : current.filter((id) => id !== peer.id))} className="mt-1 h-4 w-4 accent-indigo-600" /><Bot className="mt-0.5 h-4 w-4 shrink-0 text-violet-500" /><div className="min-w-0"><div className="truncate text-sm font-bold text-content">{peer.name}</div><div className="mt-0.5 flex flex-wrap items-center gap-1 text-[11px] text-content-muted"><span>{peer.version || t("a2a.unknownVersion")} · {t(peer.enabled ? "a2a.peerEnabled" : "a2a.peerNeedsEnable")}</span>{selected && liveState && <span className={cn("inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-semibold", liveState === "ready" ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300")}><span className={cn("h-1.5 w-1.5 rounded-full", liveState === "ready" ? "bg-emerald-500" : "bg-amber-500")} />{t(`a2a.states.${liveState}`)}</span>}</div></div></label>{selected && <label className="mt-3 block border-t border-outline pt-3"><span className="text-[11px] font-bold text-content-secondary">{t("a2a.peerCapabilities")}</span><input value={peerCapabilities[peer.id] || ""} onChange={(event) => setPeerCapabilities((current) => ({ ...current, [peer.id]: event.target.value }))} maxLength={264} placeholder={t("a2a.peerCapabilitiesPlaceholder")} className="mt-1.5 h-9 w-full rounded-lg border border-outline bg-surface-muted px-2.5 text-xs text-content outline-none focus:border-indigo-400" /><span className="mt-1 block text-[10px] leading-4 text-content-muted">{t("a2a.peerCapabilitiesHint")}</span></label>}</div>;
+                const livePeer = status?.peers?.find((item) => item.id === peer.id);
+                const liveState = livePeer?.state;
+                return <div key={peer.id} className={cn("rounded-xl border border-outline bg-surface p-3", disabled && "opacity-55")}><label className="flex cursor-pointer items-start gap-3"><input type="checkbox" checked={selected} disabled={disabled} onChange={(event) => setPeerIds((current) => event.target.checked ? [...current, peer.id] : current.filter((id) => id !== peer.id))} className="mt-1 h-4 w-4 accent-indigo-600" /><Bot className="mt-0.5 h-4 w-4 shrink-0 text-violet-500" /><div className="min-w-0"><div className="truncate text-sm font-bold text-content">{peer.name}</div><div className="mt-0.5 flex flex-wrap items-center gap-1 text-[11px] text-content-muted"><span>{peer.version || t("a2a.unknownVersion")} · {t((livePeer?.enabled ?? peer.enabled) ? "a2a.peerEnabled" : "a2a.peerNeedsEnable")}</span>{selected && liveState && <span className={cn("inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-semibold", liveState === "ready" ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300")}><span className={cn("h-1.5 w-1.5 rounded-full", liveState === "ready" ? "bg-emerald-500" : "bg-amber-500")} />{t(`a2a.states.${liveState}`)}</span>}</div></div></label>{selected && <label className="mt-3 block border-t border-outline pt-3"><span className="text-[11px] font-bold text-content-secondary">{t("a2a.peerCapabilities")}</span><input value={peerCapabilities[peer.id] || ""} onChange={(event) => setPeerCapabilities((current) => ({ ...current, [peer.id]: event.target.value }))} maxLength={264} placeholder={t("a2a.peerCapabilitiesPlaceholder")} className="mt-1.5 h-9 w-full rounded-lg border border-outline bg-surface-muted px-2.5 text-xs text-content outline-none focus:border-indigo-400" /><span className="mt-1 block text-[10px] leading-4 text-content-muted">{t("a2a.peerCapabilitiesHint")}</span></label>}</div>;
               })}</div>}
-            </Card>
+            </Card>}
 
-            {orchestrations.length > 0 && <Card className="p-4 sm:p-5">
-              <div className="mb-3"><div className="flex items-center gap-2 font-bold text-content"><GitFork className="h-4 w-4 text-violet-500" />{t("a2a.orchestrationTimeline")}</div><p className="mt-1 text-xs text-content-muted">{t("a2a.orchestrationTimelineDescription")}</p></div>
+            {section === "activity" && view.enabled && <Card className="space-y-3 p-4 sm:p-5">
+              <div className="font-bold text-content">{t("a2a.verificationTitle")}</div>
+              <p className="text-xs leading-5 text-content-muted">{t("a2a.verificationHint")}</p>
+              <details className="rounded-lg border border-outline bg-surface-muted p-3 text-xs leading-5 text-content-secondary"><summary className="cursor-pointer font-semibold text-content">{t('a2a.deliveryGuaranteeTitle')}</summary><p className="mt-2">{t("a2a.toolCheckHint")}</p><p className="mt-1">{t("a2a.stopScope")}</p><p className="mt-1">{t('a2a.deliveryGuarantee')}</p><p className="mt-1">{t('a2a.restartGuarantee')}</p></details>
+              {!view.peerIds.length && <p className="text-sm text-content-muted">{t("a2a.verificationNoPeers")}</p>}
+              {status?.peers?.map(peer => {
+                const candidate = view.peers.find(item => item.id === peer.id);
+                const latest = latestOutboundActivity(activities, peer.id);
+                const canPrepare = enabled && applicationState === "applied" && status.state === "ready" && status.toolState === "ready" && !peer.setupIssue && peer.applicationState === "applied" && peer.state === "ready";
+                return <div key={peer.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-surface-muted p-3">
+                  <div className="min-w-0 text-sm"><div className="break-all font-medium text-content">{candidate?.name || peer.id}</div><p className="mt-1 text-xs text-content-muted">{t(peer.setupIssue ? `a2a.setupIssues.${peer.setupIssue}` : peer.state === "ready" ? "a2a.readyForTest" : "a2a.serviceNeedsCheck")}</p>
+                    {latest && <p className="mt-2 text-xs text-content-secondary">{t("a2a.latestCall", { status: t(activityStatusLabelKey(latest.status)), time: new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium", timeStyle: "short" }).format(new Date(latest.startedAt)) })} <a className="underline underline-offset-2" href={`#a2a-activity-${latest.taskId}`} onClick={() => { setActivityFilter("all"); setSection("activity"); }}>{t("a2a.viewCallRecord")}</a></p>}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {candidate && <Button variant="outline" size="sm" onClick={() => onOpenPeer(peer.id)}>{t("a2a.managePeer")}</Button>}
+                    <Button variant="outline" size="sm" disabled={!canPrepare} onClick={() => onRetryInChat(t("a2a.verificationDraft", { peerId: peer.id }))}>{t("a2a.prepareVerification")}</Button>
+                  </div>
+                </div>;
+              })}
+            </Card>}
+
+            {section === "activity" && orchestrations.length > 0 && <Card className="p-4 sm:p-5">
+              <div className="mb-3"><div className="flex items-center gap-2 font-bold text-content"><GitFork className="h-4 w-4 text-violet-500" />{t("a2a.orchestrationTimeline")}</div><p className="mt-1 text-xs text-content-muted">{t("a2a.orchestrationTimelineDescription")}</p><p className="mt-1 text-xs text-content-muted">{t("a2a.observedRecordsHint")}</p></div>
               <div className="space-y-3">{orchestrations.map((orchestration) => {
                 const complete = orchestration.status === "completed";
                 const partial = orchestration.status === "partial";
                 const failed = orchestration.status === "failed";
                 const duration = orchestration.durationMs == null ? t("a2a.durationPending") : orchestration.durationMs < 1000 ? `${orchestration.durationMs} ms` : `${(orchestration.durationMs / 1000).toFixed(1)} s`;
                 return <div key={orchestration.contextId} className="rounded-xl border border-violet-200 bg-violet-50/40 p-3.5 dark:border-violet-900/50 dark:bg-violet-950/15">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><div><div className="flex flex-wrap items-center gap-2"><span className="font-mono text-xs font-bold text-content">{orchestration.contextId}</span><span className={cn("rounded-full px-2 py-0.5 text-[10px] font-bold", complete ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300" : failed ? "bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300" : "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300")}>{t(complete ? "a2a.activityCompleted" : partial ? "a2a.orchestrationPartial" : failed ? "a2a.orchestrationFailed" : "a2a.activityInProgress")}</span></div><div className="mt-1 text-[11px] text-content-muted">{t("a2a.orchestrationSummary", { completed: orchestration.completed, failed: orchestration.failed, total: orchestration.total, duration })}</div></div></div>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><div><div className="flex flex-wrap items-center gap-2"><span className="font-mono text-xs font-bold text-content">{orchestration.contextId}</span><span className={cn("rounded-full px-2 py-0.5 text-[10px] font-bold", complete ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300" : failed ? "bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300" : "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300")}>{t(complete ? "a2a.activityCompleted" : partial ? "a2a.orchestrationPartial" : failed ? "a2a.orchestrationFailed" : orchestration.status === "unknown" ? "a2a.activityStatuses.unknown" : "a2a.activityInProgress")}</span></div><div className="mt-1 text-[11px] text-content-muted">{t("a2a.orchestrationSummary", { completed: orchestration.completed, failed: orchestration.failed, total: orchestration.total, duration })}</div></div></div>
                   <div className="mt-3 grid gap-2 sm:grid-cols-2">{orchestration.nodes.map((node, index) => <div key={node.taskId} className="rounded-lg border border-outline bg-surface px-3 py-2"><div className="flex items-center gap-2"><span className={cn("h-2 w-2 shrink-0 rounded-full", activityStatusDotClass(node.status))} /><div className="min-w-0"><div className="truncate text-xs font-bold text-content">{node.peerName}</div><div className="mt-0.5 text-[10px] text-content-muted">{t("a2a.orchestrationNode", { index: index + 1 })} · {t(activityStatusLabelKey(node.status))}</div></div></div>{node.failureReason && <div className="mt-2 line-clamp-2 rounded-md bg-rose-50 px-2 py-1 text-[10px] leading-4 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300">{node.failureReason}</div>}</div>)}</div>
                 </div>;
               })}</div>
             </Card>}
 
-            <Card className="p-4 sm:p-5">
+            {section === "activity" && <Card className="p-4 sm:p-5">
               <div className="mb-3 flex items-start justify-between gap-3">
                 <div><div className="flex items-center gap-2 font-bold text-content"><History className="h-4 w-4 text-violet-500" />{t("a2a.recentActivity")}</div><p className="mt-1 text-xs text-content-muted">{t("a2a.recentActivityDescription")}</p></div>
-                <Button variant="outline" size="sm" onClick={loadActivity} disabled={activityLoading || !view.enabled}><RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", activityLoading && "animate-spin")} />{t("a2a.refreshActivity")}</Button>
               </div>
-              {activityLoading && activities.length === 0 ? (
+              <div className="mb-3 flex flex-wrap gap-2" role="group" aria-label={t("a2a.activityFilterLabel")}>{(["all", "completed", "in_progress", "attention"] as const).map((filter) => <button key={filter} type="button" onClick={() => setActivityFilter(filter)} className={cn("rounded-full border px-3 py-1 text-[11px] font-semibold transition-colors", activityFilter === filter ? "border-indigo-300 bg-indigo-50 text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300" : "border-outline bg-surface text-content-muted hover:bg-control-hover")} aria-pressed={activityFilter === filter}>{t(`a2a.activityFilters.${filter}`)} <span className="ml-1 tabular-nums">{activityCounts[filter]}</span></button>)}</div>
+              {activityError ? <div role="alert" className="rounded-xl border border-outline p-4 text-sm text-amber-700 dark:text-amber-300">{t("a2a.activityLoadFailed")}</div> : activityLoading && activities.length === 0 ? (
                 <div className="flex items-center justify-center py-8 text-content-muted"><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t("a2a.loadingActivity")}</div>
               ) : activities.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-outline p-6 text-center text-sm text-content-muted">{t("a2a.noActivity")}</div>
+              ) : filteredActivities.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-outline p-6 text-center text-sm text-content-muted">{t("a2a.noFilteredActivity")}</div>
               ) : (
-                <div className="space-y-2">{activities.map((activity) => {
+                <div className="space-y-2">{filteredActivities.map((activity) => {
                   const outbound = activity.direction === "outbound";
                   const timestamp = new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium", timeStyle: "short" }).format(new Date(activity.startedAt));
                   const duration = activity.durationMs == null ? t("a2a.durationPending") : activity.durationMs < 1000 ? `${activity.durationMs} ms` : `${(activity.durationMs / 1000).toFixed(1)} s`;
-                  return <div key={`${activity.contextId}-${activity.taskId}`} className="rounded-xl border border-outline bg-surface px-3.5 py-3">
+                  return <div id={`a2a-activity-${activity.taskId}`} key={`${activity.contextId}-${activity.taskId}`} className="scroll-mt-4 rounded-xl border border-outline bg-surface px-3.5 py-3">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex min-w-0 items-center gap-2.5">
                         <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", outbound ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40" : "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40")}>{outbound ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownLeft className="h-4 w-4" />}</span>
@@ -279,16 +428,39 @@ export function InstanceA2ACollaboration({ instance, onRedeploy, onRetryInChat, 
                     {activity.result && <div className="mt-1.5 rounded-lg border border-emerald-100 bg-emerald-50/50 px-3 py-2 text-xs leading-5 text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-300"><span className="font-bold">{t("a2a.resultLabel")} </span>{activity.result}</div>}
                     {activity.failureReason && <div className="mt-1.5 rounded-lg border border-rose-100 bg-rose-50/60 px-3 py-2 text-xs leading-5 text-rose-800 dark:border-rose-900/40 dark:bg-rose-950/20 dark:text-rose-300"><span className="font-bold">{t("a2a.failureLabel")} </span>{activity.failureReason}</div>}
                     {activity.status === "auth_failed" && activity.peerId && <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50/70 p-3 dark:border-amber-900/50 dark:bg-amber-950/20"><div className="flex items-start gap-2"><TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" /><div><div className="text-xs font-bold text-amber-900 dark:text-amber-200">{t("a2a.authRecoveryTitle")}</div><p className="mt-1 text-[11px] leading-5 text-amber-800/90 dark:text-amber-300/90">{t("a2a.authRecoveryDescription", { peer: activity.peerName })}</p></div></div><div className="mt-2 flex flex-wrap justify-end gap-2"><Button variant="outline" size="sm" onClick={() => onOpenPeer(activity.peerId!)}>{t("a2a.managePeer")}</Button><Button variant="outline" size="sm" onClick={onRedeploy}><RotateCw className="mr-1.5 h-3.5 w-3.5" />{t("a2a.redeployCurrent")}</Button></div></div>}
-                    {activity.peerId && isRetryableA2AStatus(activity.status) && <div className="mt-2 flex justify-end"><Button variant="outline" size="sm" onClick={() => onRetryInChat(t("a2a.retryDraft", { peerId: activity.peerId, summary: activity.summary }))}><RotateCw className="mr-1.5 h-3.5 w-3.5" />{t("a2a.retryInChat")}</Button></div>}
+                    {activity.remoteMapping && activity.peerId && <div className="mt-2 rounded-lg bg-surface-muted p-3 text-xs leading-5 text-content-secondary"><A2ATaskEvidence evidence={{ source: { contextId: activity.contextId, taskId: activity.taskId, peerId: activity.peerId }, originalStatus: activity.status, originalFound: true, otherTasks: [], otherTasksTruncated: false, remoteMapping: activity.remoteMapping }} /><Button className="mt-2" variant="outline" size="sm" disabled={activityLoading} onClick={() => void loadActivity({ contextId: activity.contextId, taskId: activity.taskId, peerId: activity.peerId! })}>{t("a2a.checkTaskRecords")}</Button></div>}
+                    {Boolean(activity.recoveryAttempts?.length) && (
+                      <div className="mt-2 rounded-lg bg-surface-muted p-3 text-xs text-content-secondary">
+                        <div className="font-semibold text-content">{t("a2a.recoveryHistoryHint")}</div>
+                        <p className="mt-1 leading-5">{t("a2a.checkScopeHint")}</p>
+                        {activity.recoveryAttempts!.map(attempt => (
+                          <div key={attempt.runId} className="mt-2 border-t border-outline pt-2">
+                            <div>{t(["queued", "running", "stopping", "completed", "failed", "cancelled"].includes(attempt.status) ? 'a2a.recoveryRunStates.' + attempt.status : 'a2a.activityStatuses.unknown')}</div>
+                            <details className="mt-1 text-content-muted">
+                              <summary className="cursor-pointer">{t("a2a.checkRunDetails")}</summary>
+                              <div className="mt-1 break-all font-mono">{attempt.runId}</div>
+                            </details>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {activity.direction === 'outbound' && activity.remoteMapping && activity.remoteMapping.recordState !== 'finished' && !activity.remoteMapping.diskResult && !['not_found','disk_reply'].includes(activity.remoteMapping.lookupState || '') && activity.peerId && view.peerIds.includes(activity.peerId) && <Button className="mt-2" variant="outline" size="sm" disabled={cancellingTask !== null} onClick={() => void cancelTask(activity)}>{t('a2a.cancelTask')}</Button>}
+                    {canReviewA2ARecovery(activity) && <div className="mt-2 space-y-2 rounded-lg border border-outline p-3">
+                      <p className="text-xs leading-5 text-content-secondary">{t('a2a.recoveryReasons.' + a2aRecoveryReason(activity.status))}</p>
+                      {!activity.requestText && <p className="text-xs text-amber-700 dark:text-amber-300">{t("a2a.recoveryMissingRequest")}</p>}
+                      <p className="text-xs text-content-muted">{t("a2a.recoveryDraftHint")}</p>
+                      <div className="flex flex-wrap justify-end gap-2"><Button variant="outline" size="sm" onClick={() => void loadActivity()} disabled={activityLoading}>{t("a2a.refreshActivity")}</Button><Button variant="outline" size="sm" disabled={!view.enabled || !view.peerIds.includes(activity.peerId!) || !view.peers.some(peer => peer.id === activity.peerId) || status?.toolState !== "ready"} onClick={() => onRetryInChat(t("a2a.recoveryDraft", { peerId: activity.peerId, contextId: activity.contextId, taskId: activity.taskId, status: activity.status, request: activity.requestText || t("a2a.recoveryRequestPlaceholder"), summary: activity.requestText ? "" : activity.summary }), { contextId: activity.contextId, taskId: activity.taskId, peerId: activity.peerId! })}><RotateCw className="mr-1.5 h-3.5 w-3.5" />{t("a2a.reviewRecovery")}</Button></div>
+                      {(!view.peerIds.includes(activity.peerId!) || !view.peers.some(peer => peer.id === activity.peerId)) && <p className="text-xs text-content-muted">{t("a2a.recoveryPeerUnavailable")}</p>}
+                    </div>}
                   </div>;
                 })}</div>
               )}
-            </Card>
+            </Card>}
 
-            <div className="flex flex-col-reverse justify-between gap-3 sm:flex-row sm:items-center">
+            {section === "configuration" && <div className="flex flex-col-reverse justify-between gap-3 sm:flex-row sm:items-center">
               <Button variant="outline" onClick={rotateToken} disabled={!view.hasToken}><RotateCw className="mr-1.5 h-4 w-4" />{t("a2a.rotateToken")}</Button>
-              <Button onClick={save} disabled={saving || !agentName.trim()} className="bg-indigo-600 text-white">{saving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Save className="mr-1.5 h-4 w-4" />}{t("a2a.save")}</Button>
-            </div>
+              <Button variant="outline" onClick={() => void save()} disabled={saving || !agentName.trim()}>{saving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Save className="mr-1.5 h-4 w-4" />}{t("a2a.saveOnly")}</Button>
+            </div>}
           </>
         )}
       </div>
@@ -296,8 +468,8 @@ export function InstanceA2ACollaboration({ instance, onRedeploy, onRetryInChat, 
   );
 }
 
-function StatusCard({ label, value, ready }: { label: string; value: string; ready: boolean }) {
-  return <Card className="p-3.5"><div className="flex items-center gap-2">{ready ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <TriangleAlert className="h-4 w-4 text-amber-500" />}<div><div className="text-[10px] font-bold uppercase tracking-wider text-content-muted">{label}</div><div className="mt-0.5 text-sm font-bold text-content">{value}</div></div></div></Card>;
+function StatusSummary({ items }: { items: Array<{ label: string; value: string; ready: boolean }> }) {
+  return <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border border-outline bg-surface px-4 py-3">{items.map((item) => <div key={item.label} className="flex min-w-0 items-center gap-2">{item.ready ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" /> : <TriangleAlert className="h-3.5 w-3.5 shrink-0 text-amber-500" />}<span className="text-[11px] font-semibold text-content-muted">{item.label}</span><span className="truncate text-[12px] font-bold text-content">{item.value}</span></div>)}</div>;
 }
 
 function parseCapabilityText(value: string | undefined): string[] {
@@ -311,7 +483,7 @@ function activityStatusLabelKey(status: A2AActivityStatus): string {
 function activityStatusDotClass(status: A2AActivityStatus): string {
   if (status === "completed") return "bg-emerald-500";
   if (status === "in_progress") return "bg-amber-500 animate-pulse";
-  if (status === "cancelled") return "bg-slate-400";
+  if (status === "cancelled" || status === "unknown") return "bg-slate-400";
   return "bg-rose-500";
 }
 

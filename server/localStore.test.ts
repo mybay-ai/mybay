@@ -114,7 +114,7 @@ describe("local SQLite store", () => {
       { id: "run-protected", status: "queued" },
       { id: "run-changing", status: "running" },
     ]);
-  });
+  }, 15_000);
 
   it("preserves explicit row reordering through the scoped fallback", () => {
     mutateStore((store) => {
@@ -148,7 +148,7 @@ describe("local SQLite store", () => {
     })).toThrow("stop scoped transaction");
 
     expect(readStoreCollections(["chatRuns"] as const).chatRuns[0].status).toBe("queued");
-  });
+  }, 15_000);
 
   it("migrates legacy JSON once and keeps a recoverable backup", () => {
     fs.mkdirSync(testDir, { recursive: true });

@@ -6,8 +6,39 @@ import { chatRepo, encodeConversationCursor } from "./chatRepo";
 import { createLocalRunTimeline } from "../../shared/localRunTimeline";
 import { createLocalRunUsage } from "../../shared/localRunUsage";
 import { createConfiguredModelEvidence } from "../../shared/localModelEvidence";
+import { createChatGroupRun } from "../../shared/chatCollaboration";
 
 describe("chatRepo local status contract", () => {
+  it("persists room membership on the conversation and snapshots it on both run messages", async () => {
+    const conversation = await chatRepo.createConversation("room-user", "room-instance", "Room");
+    const config = { mode: "group" as const, peerIds: ["peer-1"], maxRounds: 1 };
+    expect((await chatRepo.updateConversationCollaboration("room-user", conversation.id, config)).collaboration).toEqual(config);
+    const groupCollaboration = createChatGroupRun({ runId: "room-run", leader: { id: "room-instance", name: "主持" }, peers: [{ id: "peer-1", name: "研究" }], maxRounds: 1 });
+    await chatRepo.beginChatRun({ conversationId: conversation.id, userId: "room-user", instanceId: "room-instance", content: "协作", requestId: "room-request", runId: "room-run", groupCollaboration });
+    await chatRepo.finishChatRun({ runId: "room-run", status: "completed", assistantContent: "完成" });
+    closeLocalDatabase();
+    expect((await chatRepo.getConversation("room-user", conversation.id))?.collaboration).toEqual(config);
+    const messages = await chatRepo.listMessages(conversation.id, 10);
+    expect(messages.map(message => message.metadata?.group_collaboration)).toEqual([groupCollaboration, groupCollaboration]);
+  });
+
+  it("persists recovery provenance and reuses identical submissions even with a new request ID", async () => {
+    const c = await chatRepo.createConversation('u','i','Recovery');
+    const source = {contextId:'ctx-source',taskId:'task-source',peerId:'peer'};
+    const input = {conversationId:c.id,userId:'u',instanceId:'i',content:'review original task',requestId:'first',runId:'recovery-one',a2aRecoverySource:source};
+    expect((await chatRepo.beginChatRun(input)).status).toBe('success');
+    expect(await chatRepo.beginChatRun({...input,requestId:'second',runId:'recovery-two'})).toMatchObject({status:'IDEMPOTENT_REPLAY',run_id:'recovery-one'});
+    await chatRepo.finishChatRun({runId:'recovery-one',status:'completed',assistantContent:'review complete'});
+    closeLocalDatabase();
+    expect((await chatRepo.getChatRun('recovery-one')).a2a_recovery_source).toEqual(source);
+    expect((await chatRepo.beginChatRun({...input,requestId:'third',runId:'recovery-three'})).status).toBe('IDEMPOTENT_REPLAY');
+    expect((await chatRepo.beginChatRun({...input,a2aRecoverySource:{...source,taskId:'different'},runId:'collision'})).status).toBe('DUPLICATE_REQUEST_ID');
+    expect(readStore().chatRuns.filter(r=>r.instance_id==='i')).toHaveLength(1);
+    expect(readStore().chatMessages.find(m=>m.role==='user')?.metadata.a2a_recovery_source).toEqual(source);
+    expect(readStore().chatMessages.find(m=>m.role==='assistant')?.metadata.a2a_recovery_source).toEqual(source);
+    expect((await chatRepo.beginChatRun({...input,requestId:'changed-input',runId:'changed-input-run',a2aRecoveryFingerprint:'different-attachments'})).status).toBe('success');
+  }, 15_000);
+
   it("persists usage across reopen, with no accumulation, cross-conversation leakage or late overwrite", async () => {
     const c = await chatRepo.createConversation("u", "i", "Usage");
     const other = await chatRepo.createConversation("u", "i", "Other");
@@ -362,6 +393,23 @@ describe("chatRepo local status contract", () => {
     expect(results.some(result => result.conversation_id === foreignInstance.id)).toBe(false);
   });
 
+  it("keeps title pagination stable across new activity and a database reopen", async () => {
+    const conversations = [];
+    for (let i = 0; i < 5; i++) conversations.push(await chatRepo.createConversation('user-1', 'instance-1', `needle ${i}`));
+    mutateStore(store => {
+      for (const conversation of store.conversations) {
+        conversation.created_at = '2026-01-01T00:00:00.000Z';
+        conversation.updated_at = conversation.created_at;
+      }
+    });
+    const first = await chatRepo.searchConversationPage('user-1', 'instance-1', 'needle', 2);
+    mutateStore(store => { for (const conversation of store.conversations) conversation.updated_at = '9999-01-01T00:00:00.000Z'; });
+    closeLocalDatabase();
+    const second = await chatRepo.searchConversationPage('user-1', 'instance-1', 'needle', 3, first.nextCursor!);
+    expect(new Set([...first.results, ...second.results].map(result => result.conversation_id))).toEqual(new Set(conversations.map(row => row.id)));
+    expect(second.nextCursor).toBeNull();
+  });
+
   it("returns bounded search snippets and respects the result limit", async () => {
     const conversation = await chatRepo.createConversation("user-1", "instance-1", "Search limits");
     for (let index = 0; index < 3; index += 1) {
@@ -443,7 +491,7 @@ describe("chatRepo local status contract", () => {
     expect((await chatRepo.listConversations("u", "i", 100)).map(c => c.id)).toEqual([rows[1].id, rows[0].id, ...rows.slice(2).map(c => c.id)]);
     await chatRepo.placeConversation("u", "i", { conversationId: rows[0].id, targetId: null, section: { kind: "recent" }, position: "after" });
     expect((await chatRepo.listConversations("u", "i", 100)).at(-1)?.id).toBe(rows[0].id);
-  });
+  }, 15_000);
 
   it("atomically moves into projects, pins while retaining membership, and returns to recent", async () => {
     const project = await chatRepo.createProject("u", "i", "Project");

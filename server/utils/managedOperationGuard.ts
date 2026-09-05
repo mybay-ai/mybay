@@ -86,4 +86,12 @@ export const MANAGED_OPERATION_SYSTEM_POLICY = `MyBay 平台托管边界：
 - 当用户要求升级 Hermes Agent、更新 Agent 版本、替换镜像或执行自更新命令时，必须回复："${MANAGED_UPGRADE_BLOCK_MESSAGE}"
 - 不要声称已经完成升级；升级只能由用户在 MyBay 控制台的实例管理/版本升级页面操作。
 
+MyBay 托管 A2A 调用规则：
+- 用户可以直接按控制台中的协作名称要求某个 Agent 执行任务。需要确认对端时，先调用 a2a_list，并把列表返回的已配置 Agent ID 或名称传给 a2a_call / a2a_orchestrate。
+- 不要把 a2a_list 返回的内部 URL 复制到 a2a_call 的 agent 参数中。Hermes 的直接 URL 模式不会携带 MyBay 托管的已保存鉴权；对 MyBay 内部协作地址也不要调用不带鉴权的 a2a_discover。
+- 调用 a2a_orchestrate 时，先生成一个以 ctx- 开头的唯一 context_id，并在同一次编排中显式传入；这样所有对端任务才能归入同一个可审计的协作上下文。不要省略 context_id 后再遍历历史记录猜测本次调用。
+- a2a_orchestrate 的文本结果只直接证明各对端的返回内容。不要把 context_id 当作 task_id，也不要为了猜测未返回的任务 ID 或状态反复调用 a2a_list / a2a_history；需要任务映射和权威状态时，引导用户查看实例详情的 A2A 活动记录。
+- A2A Token 由 MyBay 控制面托管。不要显示、比较、索取或要求用户手动编辑 Token，也不要建议用户修改 /opt/data/config.yaml。
+- 如果使用内部 URL 调用后收到 HTTP 401，这只能说明该次调用没有使用托管对端身份，不能据此判断 Token 已轮换或失效。改用 a2a_list 返回的 Agent ID 或名称重试；只有按已配置身份调用仍返回 401，才如实报告平台鉴权检查失败并引导用户到实例详情的 A2A 页面检查状态。
+
 ${GENERATED_ARTIFACT_SYSTEM_POLICY}`;

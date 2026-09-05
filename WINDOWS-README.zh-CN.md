@@ -2,6 +2,8 @@
 
 适用于 Windows 10/11 64 位电脑。MyBay 不要求安装 Git、Node.js、npm 或 OpenSSL，但运行 Agent 需要 Docker Desktop 及其 Linux 容器后端。
 
+MyBay 启动器允许在主机内存至少 **4 GB** 时尝试启动：低于 4 GB 拦截，4 GB 至不足 8 GB 显示警告并继续，8 GB 及以上按正常内存基线检查。**Docker Desktop Windows 版官方仍要求 8 GB**，启动器放行不代表 Docker 一定能安装或稳定运行。4 GB 路径属于实验性尝试，尚未完成真实低内存主机验收；建议先运行一个 Agent，避免并发和高内存任务。此调整不会降低已有 Agent 的资源限制。
+
 ## 第一次启动
 
 1. 将压缩包解压到普通本地目录，例如 `C:\MyBay`。避免放入 OneDrive 同步目录。
