@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { assistantText, normalizePiEvent, normalizePrompt, normalizeReasoningEffort, safeToolMetadata } from "./server.mjs";
+import { assistantText, cancelActiveRun, normalizePiEvent, normalizePrompt, normalizeReasoningEffort, safeToolMetadata } from "./server.mjs";
 
 test("normalizes MyBay reasoning levels for Pi", () => {
   assert.equal(normalizeReasoningEffort({ reasoning_effort: "none" }), "off");
@@ -37,4 +37,23 @@ test("exposes only bounded workspace file metadata", () => {
 test("extracts only assistant text blocks", () => {
   assert.equal(assistantText({ role: "assistant", content: [{ type: "thinking", thinking: "hidden" }, { type: "text", text: "visible" }] }), "visible");
   assert.equal(assistantText({ role: "user", content: "no" }), "");
+});
+
+test("cancels a queued run authoritatively before it can start", () => {
+  const signals = [];
+  const state = {
+    pendingRunId: "run-queued",
+    child: { kill: (signal) => { signals.push(signal); return true; }, stdin: { write: () => assert.fail("kill fallback should not run") } },
+  };
+  const run = {
+    id: "run-queued", status: "queued", output: "", error: "", model: "test-model",
+    stopRequested: false, events: [], subscribers: new Set(), startedAtMs: Date.now(), updatedAt: "",
+  };
+  assert.equal(cancelActiveRun(state, run), true);
+  assert.equal(run.status, "cancelled");
+  assert.equal(run.error, "CANCELLED_UPSTREAM");
+  assert.equal(run.stopRequested, true);
+  assert.deepEqual(signals, ["SIGTERM"]);
+  assert.equal(run.events.at(-1).type, "run.cancelled");
+  assert.equal(cancelActiveRun(state, run), false);
 });

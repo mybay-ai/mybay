@@ -78,10 +78,14 @@ export function extractGeneratedArtifacts(
     const evidenceByPath = new Map(evidenceChanges.map(change => [change.path, change]));
     const candidatePaths: string[] = [];
 
-    GENERATED_FILE_PATH_PATTERN.lastIndex = 0;
-    for (const match of (message.content || "").matchAll(GENERATED_FILE_PATH_PATTERN)) {
-      const filePath = normalizeGeneratedInstanceFilePath(match[0]);
-      if (filePath && !candidatePaths.includes(filePath)) candidatePaths.push(filePath);
+    // Group summaries can quote paths created by a peer Runtime. Those paths do
+    // not belong to the host instance; only persisted host evidence is local.
+    if (!message.metadata?.group_collaboration) {
+      GENERATED_FILE_PATH_PATTERN.lastIndex = 0;
+      for (const match of (message.content || "").matchAll(GENERATED_FILE_PATH_PATTERN)) {
+        const filePath = normalizeGeneratedInstanceFilePath(match[0]);
+        if (filePath && !candidatePaths.includes(filePath)) candidatePaths.push(filePath);
+      }
     }
     for (const change of evidenceChanges) {
       if (!candidatePaths.includes(change.path)) candidatePaths.push(change.path);

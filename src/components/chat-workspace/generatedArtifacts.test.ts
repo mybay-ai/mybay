@@ -75,6 +75,17 @@ describe("generated artifacts", () => {
     expect(mergeGeneratedArtifactVerification(artifacts[0], { status: "ready", history: [] }).history).toEqual(artifacts[0].history);
   });
 
+  it("does not attribute a collaboration peer path to the host instance", () => {
+    const artifacts = extractGeneratedArtifacts([{
+      id: "assistant-group",
+      role: "assistant",
+      content: "Peer created /opt/data/workspace/peer-report.txt",
+      status: "completed",
+      metadata: { run_id: "run-group", group_collaboration: { mode: "group", contextId: "ctx-room" } },
+    }], null);
+    expect(artifacts).toEqual([]);
+  });
+
   it("rejects host paths and deduplicates repeated generated paths", () => {
     const artifacts = extractGeneratedArtifacts([{
       id: "assistant-1",

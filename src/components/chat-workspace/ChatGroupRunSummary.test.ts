@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { ChatGroupRun } from "../../../shared/chatCollaboration";
 import { buildA2ATaskRecordUrl } from "../../constants/routes";
-import { formatGroupDuration, groupPollAttemptLimit, shouldPollGroupActivities, type GroupRunActivity } from "./ChatGroupRunSummary";
+import { extractGroupActivityFiles, formatGroupDuration, groupPollAttemptLimit, shouldPollGroupActivities, type GroupRunActivity } from "./ChatGroupRunSummary";
 
 const group = { contextId: "ctx-room", peers: [{ id: "peer-a", name: "A" }, { id: "peer-b", name: "B" }] } as ChatGroupRun;
 const activity = (peerId: string, status: string): GroupRunActivity => ({ contextId: group.contextId, taskId: `task-${peerId}`, peerId, peerName: peerId, status });
@@ -23,6 +23,11 @@ describe("ChatGroupRunSummary helpers", () => {
 
   it("builds a deep link to the exact instance and A2A task", () => {
     expect(buildA2ATaskRecordUrl("instance/1", "task 1")).toBe("/app/instances?id=instance%2F1&tab=collaboration#a2a-activity-task%201");
+  });
+
+  it("extracts bounded safe files from a collaboration member result", () => {
+    expect(extractGroupActivityFiles("Created /opt/data/workspace/report.txt and /etc/passwd; repeated workspace/report.txt"))
+      .toEqual([{ path: "workspace/report.txt", name: "report.txt" }]);
   });
 
   it("allows a short evidence grace period after the host run becomes terminal", () => {

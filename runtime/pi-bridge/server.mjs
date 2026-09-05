@@ -290,6 +290,32 @@ function finishRun(state, run) {
   void persistRun(run);
 }
 
+export function cancelActiveRun(state, run) {
+  if (!["queued", "running"].includes(run.status)) return false;
+  run.stopRequested = true;
+  run.status = "cancelled";
+  run.error = "CANCELLED_UPSTREAM";
+  run.updatedAt = new Date().toISOString();
+  emit(run, {
+    type: "run.cancelled",
+    output: run.output || "",
+    error: run.error,
+    usage: run.usage,
+    model: run.model || MODEL,
+    duration_ms: Date.now() - run.startedAtMs,
+  });
+  if (state?.pendingRunId === run.id) {
+    // A queued prompt can start after an RPC abort acknowledgement. Terminate
+    // the per-session process so cancellation is authoritative at every phase.
+    if (!state.child.kill("SIGTERM")) {
+      state.child.stdin.write(`${JSON.stringify({ id: `stop:${run.id}`, type: "abort" })}\n`);
+    }
+  } else if (state) {
+    state.pendingRunId = null;
+  }
+  return true;
+}
+
 async function restoreRuns() {
   await mkdir(RUN_DIR, { recursive: true });
   await mkdir(SESSION_DIR, { recursive: true });
@@ -387,11 +413,8 @@ async function handleRequest(request, response) {
     if (!run) return json(response, 404, { error: "RUN_NOT_FOUND" });
     if (request.method === "GET" && !match[2]) return json(response, 200, publicRun(run));
     if (request.method === "POST" && match[2] === "stop") {
-      run.stopRequested = true;
-      run.updatedAt = new Date().toISOString();
       const state = sessions.get(run.sessionId);
-      if (state?.pendingRunId === run.id) state.child.stdin.write(`${JSON.stringify({ id: `stop:${run.id}`, type: "abort" })}\n`);
-      else finishRun({ pendingRunId: null }, run);
+      cancelActiveRun(state, run);
       await persistRun(run);
       return json(response, 202, publicRun(run));
     }

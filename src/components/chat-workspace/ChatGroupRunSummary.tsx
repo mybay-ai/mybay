@@ -1,11 +1,12 @@
-import { CheckCircle2, ChevronDown, Clock3, ExternalLink, RefreshCw, RotateCw, Users, XCircle } from "lucide-react";
+import { CheckCircle2, ChevronDown, Clock3, ExternalLink, FileText, RefreshCw, RotateCw, Users, XCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { readChatGroupRun, type ChatGroupRun } from "../../../shared/chatCollaboration";
-import { buildA2ATaskRecordUrl } from "../../constants/routes";
+import { buildA2ATaskRecordUrl, buildInstanceFilesNavigationUrl } from "../../constants/routes";
 import { api } from "../../lib/api";
 import { canReviewA2ARecovery } from "./a2aRetryNavigation";
+import { GENERATED_FILE_PATH_PATTERN, normalizeGeneratedInstanceFilePath } from "./generatedFilePath";
 
 export type GroupRunActivity = {
   contextId: string;
@@ -63,6 +64,17 @@ export function formatGroupDuration(durationMs: number | null | undefined, langu
   if (minutes < 60) return `${Number(minutes.toFixed(minutes < 10 ? 1 : 0))}${zh ? "分钟" : "m"}`;
   const hours = minutes / 60;
   return `${Number(hours.toFixed(hours < 10 ? 1 : 0))}${zh ? "小时" : "h"}`;
+}
+
+export function extractGroupActivityFiles(result: string | null | undefined) {
+  const files = new Map<string, { path: string; name: string }>();
+  GENERATED_FILE_PATH_PATTERN.lastIndex = 0;
+  for (const match of String(result || "").matchAll(GENERATED_FILE_PATH_PATTERN)) {
+    const path = normalizeGeneratedInstanceFilePath(match[0]);
+    if (!path || files.has(path) || files.size >= 8) continue;
+    files.set(path, { path, name: path.split("/").filter(Boolean).pop() || path });
+  }
+  return [...files.values()];
 }
 
 export function ChatGroupRunSummary({ instanceId, value, hostTerminal = false, requestText, onPrepareRecovery, onPrepareMissing }: {
@@ -130,6 +142,7 @@ export function ChatGroupRunSummary({ instanceId, value, hostTerminal = false, r
       <div className="grid gap-1.5 p-2 sm:grid-cols-2">
         {group.peers.map(peer => {
           const activity = byPeer.get(peer.id);
+          const peerFiles = extractGroupActivityFiles(activity?.result);
           const completed = activity?.status === "completed";
           const failed = Boolean(activity && TERMINAL_ACTIVITY_STATUSES.has(activity.status) && !completed);
           const notDispatched = !activity && pollExhausted && hostTerminal && !loadFailed;
@@ -146,6 +159,11 @@ export function ChatGroupRunSummary({ instanceId, value, hostTerminal = false, r
                 {notDispatched && <span className="shrink-0 text-[10px] font-normal text-rose-600 dark:text-rose-300">{t("chatWorkspace.groupRunNotDispatched")}</span>}
               </div>
               <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-content-muted">{activity?.result || activity?.failureReason || t(notDispatched ? "chatWorkspace.groupRunNotDispatchedHint" : activity ? "chatWorkspace.groupRunNoResult" : "chatWorkspace.groupRunNoActivity")}</p>
+              {peerFiles.length > 0 && <div className="mt-1.5 flex flex-wrap gap-1.5">{peerFiles.map(file => (
+                <a key={file.path} href={buildInstanceFilesNavigationUrl(peer.id)} title={file.path} className="inline-flex max-w-full items-center gap-1 rounded-md border border-violet-200 bg-violet-50 px-2 py-1 text-[11px] font-semibold text-violet-700 hover:bg-violet-100 dark:border-violet-400/25 dark:bg-violet-950/20 dark:text-violet-200 dark:hover:bg-violet-950/40">
+                  <FileText className="h-3 w-3 shrink-0" /><span className="truncate">{file.name}</span><span className="sr-only">{t("chatWorkspace.groupRunOpenPeerFile")}</span><ExternalLink className="h-3 w-3 shrink-0" />
+                </a>
+              ))}</div>}
               {activity && (
                 <details className="group mt-1.5 border-t border-outline/60 pt-1.5 text-[11px] text-content-muted">
                   <summary className="flex cursor-pointer list-none items-center gap-1 font-medium text-content-secondary hover:text-content">
