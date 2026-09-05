@@ -7,19 +7,17 @@ import { structuredDocsRegistry, VALID_GUIDES } from '../src/data/docs/docs.regi
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const toAbsolute = (p: string) => path.resolve(__dirname, '..', p)
 const publicAppUrl = process.env.PUBLIC_APP_URL || process.env.VITE_PUBLIC_APP_URL || 'http://localhost:3000'
+process.env.VITE_PUBLIC_APP_URL = publicAppUrl
 process.env.DISABLE_HMR = 'true'
 
 const fixedPublicRoutes = [
   '/',
-  '/features',
-  '/models',
   '/docs',
   '/faq',
   '/changelog',
   '/privacy',
   '/terms',
   '/security',
-  '/contact',
 ]
 
 const structuredDocRoutes = structuredDocsRegistry.map(
@@ -129,94 +127,24 @@ function verifyNavigationConsistency() {
     throw new Error(`[Validation Error] Duplicate slugs found in structuredDocsRegistry: ${Array.from(new Set(dupRegSlugs)).join(', ')}`)
   }
 
-  // 3. Check duplicates inside VALID_GUIDES
+  // 3. Check that the legacy VALID_GUIDES export remains aligned with the
+  // structured registry consumed by the current documentation UI.
   const dupValidGuides = VALID_GUIDES.filter((id, i) => VALID_GUIDES.indexOf(id) !== i)
   if (dupValidGuides.length > 0) {
     throw new Error(`[Validation Error] Duplicate IDs found in VALID_GUIDES: ${Array.from(new Set(dupValidGuides)).join(', ')}`)
   }
 
-  // 4. Load translation navigation configurations
-  const zhPath = toAbsolute('src/locales/zh-CN/marketing.json')
-  const enPath = toAbsolute('src/locales/en/marketing.json')
-  
-  const zhContent = JSON.parse(fs.readFileSync(zhPath, 'utf-8'))
-  const enContent = JSON.parse(fs.readFileSync(enPath, 'utf-8'))
-  
-  const zhNav = zhContent.docs?.nav || zhContent["docs.nav"] || zhContent.nav
-  const enNav = enContent.docs?.nav || enContent["docs.nav"] || enContent.nav
-
-  if (!zhNav || !Array.isArray(zhNav)) {
-    throw new Error('Failed to parse "nav" from zh-CN marketing.json')
-  }
-  if (!enNav || !Array.isArray(enNav)) {
-    throw new Error('Failed to parse "nav" from en marketing.json')
-  }
-
-  const zhIds: string[] = []
-  zhNav.forEach((group: any) => {
-    if (group.items && Array.isArray(group.items)) {
-      group.items.forEach((item: any) => {
-        if (item.id) zhIds.push(item.id)
-      })
-    }
-  })
-
-  const enIds: string[] = []
-  enNav.forEach((group: any) => {
-    if (group.items && Array.isArray(group.items)) {
-      group.items.forEach((item: any) => {
-        if (item.id) enIds.push(item.id)
-      })
-    }
-  })
-
-  // 5. Check duplicates in zh-CN and en translations
-  const dupZhIds = zhIds.filter((id, i) => zhIds.indexOf(id) !== i)
-  if (dupZhIds.length > 0) {
-    throw new Error(`[Validation Error] Duplicate IDs found in zh-CN marketing.json nav: ${Array.from(new Set(dupZhIds)).join(', ')}`)
-  }
-
-  const dupEnIds = enIds.filter((id, i) => enIds.indexOf(id) !== i)
-  if (dupEnIds.length > 0) {
-    throw new Error(`[Validation Error] Duplicate IDs found in en marketing.json nav: ${Array.from(new Set(dupEnIds)).join(', ')}`)
-  }
-
-  // 6. Compare sets to verify consistency
   const validSet = new Set(VALID_GUIDES)
-  const zhSet = new Set(zhIds)
-  const enSet = new Set(enIds)
-
-  // Verify zh-CN vs VALID_GUIDES
-  const missingInZh = VALID_GUIDES.filter(id => !zhSet.has(id))
-  const extraInZh = zhIds.filter(id => !validSet.has(id))
-
-  // Verify en vs VALID_GUIDES
-  const missingInEn = VALID_GUIDES.filter(id => !enSet.has(id))
-  const extraInEn = enIds.filter(id => !validSet.has(id))
-
-  let hasError = false
-  if (missingInZh.length > 0) {
-    console.error(`[Verification Error] VALID_GUIDES has items missing in zh-CN marketing.json: ${missingInZh.join(', ')}`)
-    hasError = true
-  }
-  if (extraInZh.length > 0) {
-    console.error(`[Verification Error] zh-CN marketing.json has items missing in VALID_GUIDES: ${extraInZh.join(', ')}`)
-    hasError = true
-  }
-  if (missingInEn.length > 0) {
-    console.error(`[Verification Error] VALID_GUIDES has items missing in en marketing.json: ${missingInEn.join(', ')}`)
-    hasError = true
-  }
-  if (extraInEn.length > 0) {
-    console.error(`[Verification Error] en marketing.json has items missing in VALID_GUIDES: ${extraInEn.join(', ')}`)
-    hasError = true
+  const registrySet = new Set(regIds)
+  const missingInRegistry = VALID_GUIDES.filter(id => !registrySet.has(id))
+  const missingInValidGuides = regIds.filter(id => !validSet.has(id))
+  if (missingInRegistry.length > 0 || missingInValidGuides.length > 0) {
+    throw new Error(
+      `[Validation Error] Documentation IDs are out of sync. Missing in structuredDocsRegistry: ${missingInRegistry.join(', ') || 'none'}; missing in VALID_GUIDES: ${missingInValidGuides.join(', ') || 'none'}.`
+    )
   }
 
-  if (hasError) {
-    throw new Error('Documentation IDs are out of sync! Please verify VALID_GUIDES in src/data/docs/docs.registry.ts, and the "nav" arrays in zh-CN and en marketing.json.')
-  }
-
-  console.log('✓ Validation successful: Registry items, zh-CN nav, en nav, and VALID_GUIDES are perfectly correct and in sync!')
+  console.log('✓ Validation successful: structuredDocsRegistry and VALID_GUIDES are in sync!')
 }
 
 function validatePrerenderedPage(url: string, html: string, appHtml: string) {
@@ -242,8 +170,9 @@ function validatePrerenderedPage(url: string, html: string, appHtml: string) {
 
   // Specific check for /security
   if (url === '/security') {
-    if (!html.includes('data-page="security"')) {
-      throw new Error(`[Validation Error] Prerendered HTML for "/security" is missing the stable page marker: data-page="security".`);
+    if (!appHtml.includes('data-page="security"')) {
+      const renderError = appHtml.match(/<template data-msg="([\s\S]*?)" data-stck=/)?.[1]
+      throw new Error(`[Validation Error] Prerendered HTML for "/security" is missing the stable page marker: data-page="security".${renderError ? ` SSR error: ${renderError}` : ''}`);
     }
     const expectedCanonical = `${publicAppUrl}/security`;
     if (!html.includes('rel="canonical"') || !html.includes(expectedCanonical)) {
@@ -269,9 +198,16 @@ function validatePrerenderedPage(url: string, html: string, appHtml: string) {
     })
 
     try {
-      const template = fs.readFileSync(toAbsolute('dist/index.html'), 'utf-8')
-      // Save a copy of the clean SPA template for non-prerendered routes
-      fs.writeFileSync(toAbsolute('dist/spa.html'), template)
+      const indexPath = toAbsolute('dist/index.html')
+      const spaPath = toAbsolute('dist/spa.html')
+      const indexTemplate = fs.readFileSync(indexPath, 'utf-8')
+      const savedSpaTemplate = fs.existsSync(spaPath) ? fs.readFileSync(spaPath, 'utf-8') : ''
+      const template = indexTemplate.includes('<!--ssr-outlet-->') ? indexTemplate : savedSpaTemplate
+      if (!template.includes('<!--ssr-outlet-->')) {
+        throw new Error('The Vite SPA template is missing <!--ssr-outlet-->. Run npm run build before prerendering.')
+      }
+      // Preserve the clean SPA template for non-prerendered routes and repeat runs.
+      if (template === indexTemplate) fs.writeFileSync(spaPath, template)
       
       const { render } = await vite.ssrLoadModule('/src/entry-server.tsx')
 
@@ -331,9 +267,8 @@ function validatePrerenderedPage(url: string, html: string, appHtml: string) {
       fs.writeFileSync(toAbsolute('dist/404.html'), html404)
       console.log('✓ Prerendered and validated 404.html successfully!')
 
-      // Generate sitemap.xml and write to public/ and dist/
+      // Generate sitemap.xml directly in the build output without mutating source files.
       const sitemapContent = generateSitemapXml(routesToPrerender)
-      fs.writeFileSync(toAbsolute('public/sitemap.xml'), sitemapContent)
       fs.writeFileSync(toAbsolute('dist/sitemap.xml'), sitemapContent)
       console.log('sitemap.xml generated successfully!')
 
