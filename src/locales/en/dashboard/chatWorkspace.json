@@ -824,5 +824,13 @@
   "groupRoomRequiresAgent": "Collaboration rooms require Agent mode. Leave the group before switching to Direct.",
   "groupRunTitle": "Group run · {{count}} Agents",
   "groupRunNoActivity": "No collaboration call was recorded for this member",
-  "groupRunNoResult": "The collaboration call was recorded without a displayable result"
+  "groupRunNoResult": "The collaboration call was recorded without a displayable result",
+  "groupRunRefreshing": "Updating collaboration status",
+  "groupRunLoadFailed": "Collaboration status is temporarily unavailable. Retrying automatically.",
+  "groupRunDurationPending": "In progress",
+  "groupRunDetails": "View task details",
+  "groupRunTaskId": "Task ID",
+  "groupRunContextId": "Collaboration context",
+  "groupRunDuration": "Duration",
+  "groupRunOpenRecord": "Open task record"
 }

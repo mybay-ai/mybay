@@ -824,5 +824,13 @@
   "groupRoomRequiresAgent": "协作房间需要使用 Agent 模式。退出群聊后才能切换为直接回答。",
   "groupRunTitle": "群聊执行 · {{count}} 位 Agent",
   "groupRunNoActivity": "尚未记录到该成员的协作调用",
-  "groupRunNoResult": "协作调用已记录，暂无可显示结果"
+  "groupRunNoResult": "协作调用已记录，暂无可显示结果",
+  "groupRunRefreshing": "正在更新协作状态",
+  "groupRunLoadFailed": "协作状态暂时无法更新，系统将自动重试。",
+  "groupRunDurationPending": "进行中",
+  "groupRunDetails": "查看任务详情",
+  "groupRunTaskId": "任务 ID",
+  "groupRunContextId": "协作上下文",
+  "groupRunDuration": "耗时",
+  "groupRunOpenRecord": "打开任务记录"
 }

@@ -232,13 +232,15 @@ export function Dashboard({ instances, loading, fetchInstances, socket, currentU
       setActiveLogs(instanceId);
       if (tab === "files") {
         setDetailTab("files");
+      } else if (tab === "collaboration") {
+        setDetailTab("collaboration");
       } else {
         setDetailTab("logs");
       }
       // Clean up search params from the address bar so they don't lingeringly reload
-      navigate(location.pathname, { replace: true });
+      if (tab !== "collaboration") navigate(`${location.pathname}${location.hash}`, { replace: true });
     }
-  }, [location.search, navigate, location.pathname]);
+  }, [location.search, location.hash, navigate, location.pathname]);
   const [editingInstance, setEditingInstance] = useState<AgentInstance | null>(null);
   const [renamingInstance, setRenamingInstance] = useState<AgentInstance | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>(() => {
