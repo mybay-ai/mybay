@@ -63,10 +63,11 @@ type A2AOrchestration = {
 };
 
 type A2AStatusView = {
+  card?: { name?: string };
   toolState?: "ready" | "not_configured" | "disabled" | "missing" | "unknown";
   applicationState?: "pending" | "applied" | "unknown";
   state: "ready" | "unreachable" | "invalid_card" | "disabled" | "unknown";
-  peers?: Array<{ id: string; state: "ready" | "unreachable" | "invalid_card" | "disabled" | "unknown"; enabled?: boolean; setupIssue?: "unavailable" | "unsupported" | "disabled" | "pending" | "not_running" | "unknown" | null; applicationState?: "pending" | "applied" | "unknown"; statusCode?: number; durationMs?: number; error?: string }>;
+  peers?: Array<{ id: string; state: "ready" | "unreachable" | "invalid_card" | "disabled" | "unknown"; card?: { name?: string }; enabled?: boolean; setupIssue?: "unavailable" | "unsupported" | "disabled" | "pending" | "not_running" | "unknown" | null; applicationState?: "pending" | "applied" | "unknown"; statusCode?: number; durationMs?: number; error?: string }>;
   generatedAt?: string;
   error?: string;
 };
@@ -306,6 +307,9 @@ export function InstanceA2ACollaboration({ instance, onRedeploy, onRetryInChat, 
   );
   const applicationState = status?.applicationState || view.applicationState || "unknown";
   const applicationOperational = isA2AApplicationOperational(applicationState, status?.state);
+  const liveAgentName = status?.card?.name?.trim() || "";
+  const savedIdentityApplied = !liveAgentName || liveAgentName === view.agentName.trim();
+  const usesInstanceName = agentName.trim() === instance.name.trim();
   const selectedPeers = view.peers.filter(peer => peerIds.includes(peer.id));
   const needsAttention = selectedPeers.filter(peer => !status?.peers?.some(item => item.id === peer.id) && (!peer.supported || !peer.enabled || peer.status !== "running"));
   const activityCounts = {
@@ -350,6 +354,7 @@ export function InstanceA2ACollaboration({ instance, onRedeploy, onRetryInChat, 
             <StatusSummary items={[
               { label: t("a2a.protocolStatus"), value: view.enabled ? t("a2a.enabled") : t("a2a.disabled"), ready: view.enabled },
               { label: t("a2a.runtimeStatus"), value: t(`a2a.states.${status?.state || "unknown"}`), ready: status?.state === "ready" },
+              { label: t("a2a.liveIdentity"), value: liveAgentName || t("a2a.identityUnknown"), ready: status?.state === "ready" && savedIdentityApplied },
               { label: t("a2a.toolCheck"), value: t(`a2a.toolStates.${status?.toolState || "unknown"}`), ready: status?.toolState === "ready" },
               { label: t("a2a.exposure"), value: t("a2a.internalOnly"), ready: true },
             ]} />
@@ -369,9 +374,11 @@ export function InstanceA2ACollaboration({ instance, onRedeploy, onRetryInChat, 
                 <input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} className="mt-1 h-5 w-5 accent-indigo-600" />
               </label>
               <div className="grid gap-4 sm:grid-cols-2">
-                <label className="block"><span className="text-xs font-bold text-content-secondary">{t("a2a.agentName")}</span><input value={agentName} onChange={(event) => setAgentName(event.target.value)} maxLength={64} className="mt-1.5 h-10 w-full rounded-xl border border-outline bg-surface px-3 text-sm text-content outline-none focus:border-indigo-400" /></label>
+                <label className="block"><span className="text-xs font-bold text-content-secondary">{t("a2a.agentName")}</span><input value={agentName} onChange={(event) => setAgentName(event.target.value)} maxLength={64} className="mt-1.5 h-10 w-full rounded-xl border border-outline bg-surface px-3 text-sm text-content outline-none focus:border-indigo-400" /><span className="mt-1 block text-[11px] leading-4 text-content-muted">{t("a2a.agentNameHint")}</span></label>
                 <div><span className="text-xs font-bold text-content-secondary">{t("a2a.internalEndpoint")}</span><div className="mt-1.5 rounded-xl border border-outline bg-surface-muted px-3 py-2.5 font-mono text-xs text-content-muted">{view.internalUrl}</div></div>
               </div>
+              {!usesInstanceName && <div className="flex flex-col gap-2 rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-xs leading-5 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-200 sm:flex-row sm:items-center sm:justify-between"><span>{t("a2a.instanceNameMismatch", { collaborationName: agentName || t("a2a.identityUnknown"), instanceName: instance.name })}</span><Button variant="outline" size="sm" onClick={() => setAgentName(instance.name)}>{t("a2a.useInstanceName")}</Button></div>}
+              {liveAgentName && !savedIdentityApplied && <div role="status" className="rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-xs leading-5 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-200">{t("a2a.liveIdentityMismatch", { liveName: liveAgentName, savedName: view.agentName })}</div>}
               <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 text-xs leading-5 text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-emerald-300"><ShieldCheck className="mr-1.5 inline h-4 w-4" />{t("a2a.securityNotice")}</div>
             </Card>}
 
@@ -382,7 +389,7 @@ export function InstanceA2ACollaboration({ instance, onRedeploy, onRetryInChat, 
                 const selected = peerIds.includes(peer.id);
                 const livePeer = status?.peers?.find((item) => item.id === peer.id);
                 const liveState = livePeer?.state;
-                return <div key={peer.id} className={cn("rounded-xl border border-outline bg-surface p-3", disabled && "opacity-55")}><label className="flex cursor-pointer items-start gap-3"><input type="checkbox" checked={selected} disabled={disabled} onChange={(event) => setPeerIds((current) => event.target.checked ? [...current, peer.id] : current.filter((id) => id !== peer.id))} className="mt-1 h-4 w-4 accent-indigo-600" /><Bot className="mt-0.5 h-4 w-4 shrink-0 text-violet-500" /><div className="min-w-0"><div className="truncate text-sm font-bold text-content">{peer.name}</div><div className="mt-0.5 flex flex-wrap items-center gap-1 text-[11px] text-content-muted"><span>{peer.version || t("a2a.unknownVersion")} · {t((livePeer?.enabled ?? peer.enabled) ? "a2a.peerEnabled" : "a2a.peerNeedsEnable")}</span>{selected && liveState && <span className={cn("inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-semibold", liveState === "ready" ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300")}><span className={cn("h-1.5 w-1.5 rounded-full", liveState === "ready" ? "bg-emerald-500" : "bg-amber-500")} />{t(`a2a.states.${liveState}`)}</span>}</div></div></label>{selected && <label className="mt-3 block border-t border-outline pt-3"><span className="text-[11px] font-bold text-content-secondary">{t("a2a.peerCapabilities")}</span><input value={peerCapabilities[peer.id] || ""} onChange={(event) => setPeerCapabilities((current) => ({ ...current, [peer.id]: event.target.value }))} maxLength={264} placeholder={t("a2a.peerCapabilitiesPlaceholder")} className="mt-1.5 h-9 w-full rounded-lg border border-outline bg-surface-muted px-2.5 text-xs text-content outline-none focus:border-indigo-400" /><span className="mt-1 block text-[10px] leading-4 text-content-muted">{t("a2a.peerCapabilitiesHint")}</span></label>}</div>;
+                return <div key={peer.id} className={cn("rounded-xl border border-outline bg-surface p-3", disabled && "opacity-55")}><label className="flex cursor-pointer items-start gap-3"><input type="checkbox" checked={selected} disabled={disabled} onChange={(event) => setPeerIds((current) => event.target.checked ? [...current, peer.id] : current.filter((id) => id !== peer.id))} className="mt-1 h-4 w-4 accent-indigo-600" /><Bot className="mt-0.5 h-4 w-4 shrink-0 text-violet-500" /><div className="min-w-0"><div className="truncate text-sm font-bold text-content">{peer.name}</div><div className="mt-0.5 flex flex-wrap items-center gap-1 text-[11px] text-content-muted"><span>{peer.version || t("a2a.unknownVersion")} · {t((livePeer?.enabled ?? peer.enabled) ? "a2a.peerEnabled" : "a2a.peerNeedsEnable")}</span>{selected && liveState && <span className={cn("inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-semibold", liveState === "ready" ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300")}><span className={cn("h-1.5 w-1.5 rounded-full", liveState === "ready" ? "bg-emerald-500" : "bg-amber-500")} />{t(`a2a.states.${liveState}`)}</span>}</div>{selected && livePeer?.card?.name && livePeer.card.name !== peer.name && <div className="mt-1 truncate text-[10px] text-amber-700 dark:text-amber-300">{t("a2a.peerLiveIdentity", { name: livePeer.card.name })}</div>}</div></label>{selected && <label className="mt-3 block border-t border-outline pt-3"><span className="text-[11px] font-bold text-content-secondary">{t("a2a.peerCapabilities")}</span><input value={peerCapabilities[peer.id] || ""} onChange={(event) => setPeerCapabilities((current) => ({ ...current, [peer.id]: event.target.value }))} maxLength={264} placeholder={t("a2a.peerCapabilitiesPlaceholder")} className="mt-1.5 h-9 w-full rounded-lg border border-outline bg-surface-muted px-2.5 text-xs text-content outline-none focus:border-indigo-400" /><span className="mt-1 block text-[10px] leading-4 text-content-muted">{t("a2a.peerCapabilitiesHint")}</span></label>}</div>;
               })}</div>}
             </Card>}
 
