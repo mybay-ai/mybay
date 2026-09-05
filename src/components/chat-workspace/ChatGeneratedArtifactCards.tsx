@@ -1,4 +1,4 @@
-import { Download, ExternalLink, FileText, LoaderCircle, TriangleAlert } from "lucide-react";
+import { Download, ExternalLink, FileText, LoaderCircle, RefreshCw, TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { getGeneratedArtifactActionPath, isGeneratedArtifactPreviewable, type GeneratedArtifact } from "./generatedArtifacts";
 
@@ -15,14 +15,20 @@ export function selectMessageGeneratedArtifacts(
   });
 }
 
+export function canRefreshGeneratedArtifact(artifact: Pick<GeneratedArtifact, "status">) {
+  return artifact.status === "missing" || artifact.status === "failed";
+}
+
 export function ChatGeneratedArtifactCards({
   artifacts,
   onPreview,
   onDownload,
+  onRefresh,
 }: {
   artifacts: GeneratedArtifact[];
   onPreview?: (path: string) => void;
   onDownload?: (path: string) => void;
+  onRefresh?: () => void;
 }) {
   const { t } = useTranslation("dashboard");
   if (artifacts.length === 0) return null;
@@ -40,10 +46,12 @@ export function ChatGeneratedArtifactCards({
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[12px] font-semibold text-content" title={artifact.path}>{artifact.name}</p>
                 <p className="truncate text-[10px] text-content-muted">{t(`chatWorkspace.workspaceGeneratedArtifactStatus_${artifact.status}`)}</p>
+                <p className="truncate text-[10px] text-content-muted" title={artifact.runId || undefined}>{artifact.runId ? t("chatWorkspace.messageGeneratedFileRunSource", { runId: artifact.runId.slice(0, 8) }) : t("chatWorkspace.messageGeneratedFileConversationSource")}</p>
               </div>
               <div className="flex shrink-0 items-center gap-0.5">
                 {onPreview && <button type="button" disabled={!previewable} onClick={() => onPreview(getGeneratedArtifactActionPath(artifact))} className="rounded-md p-1.5 text-content-muted hover:bg-surface hover:text-indigo-600 disabled:opacity-30" title={t("chatWorkspace.workspacePreviewFile")}><ExternalLink className="h-3.5 w-3.5" /></button>}
                 {onDownload && <button type="button" disabled={!previewable} onClick={() => onDownload(getGeneratedArtifactActionPath(artifact))} className="rounded-md p-1.5 text-content-muted hover:bg-surface hover:text-emerald-600 disabled:opacity-30" title={t("chatWorkspace.runResultSummaryDownloadFile")}><Download className="h-3.5 w-3.5" /></button>}
+                {onRefresh && canRefreshGeneratedArtifact(artifact) && <button type="button" onClick={onRefresh} className="rounded-md p-1.5 text-content-muted hover:bg-surface hover:text-amber-600" title={t("chatWorkspace.workspaceGeneratedArtifactRefresh")} aria-label={t("chatWorkspace.workspaceGeneratedArtifactRefresh")}><RefreshCw className="h-3.5 w-3.5" /></button>}
               </div>
             </div>
           );

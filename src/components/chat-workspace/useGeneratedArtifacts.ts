@@ -21,6 +21,10 @@ const VERIFY_RETRY_MS = 1200;
 const MAX_VERIFY_ATTEMPTS = 4;
 const READY_RECHECK_MS = 15_000;
 
+export function isPendingGeneratedArtifactVerification(status: GeneratedArtifact["status"]) {
+  return status === "generating" || status === "checking";
+}
+
 export function useGeneratedArtifacts({
   selectedId,
   selectedConversationId,
@@ -55,7 +59,7 @@ export function useGeneratedArtifacts({
         }] as const;
       } catch (error: any) {
         const missing = error?.status === 404;
-        const shouldRetry = (artifact.status === "generating" || artifact.status === "checking")
+        const shouldRetry = isPendingGeneratedArtifactVerification(artifact.status)
           && attempt < MAX_VERIFY_ATTEMPTS - 1;
         return [artifact.path, {
           status: shouldRetry ? artifact.status : (missing ? "missing" as const : "failed" as const),
@@ -69,7 +73,7 @@ export function useGeneratedArtifacts({
 
     const retryArtifacts = artifacts.filter((artifact) => {
       const result = results.find(([filePath]) => filePath === artifact.path)?.[1];
-      return result?.status === "generating";
+      return Boolean(result && isPendingGeneratedArtifactVerification(result.status));
     });
     if (retryArtifacts.length > 0 && attempt < MAX_VERIFY_ATTEMPTS - 1) {
       window.setTimeout(() => {

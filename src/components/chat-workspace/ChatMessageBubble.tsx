@@ -57,6 +57,7 @@ interface ChatMessageBubbleProps {
   canRespondToApproval?: boolean;
   onRespondToApproval?: (choice: ChatApprovalChoice, approvalId?: string, resolveAll?: boolean) => void | Promise<void>;
   onPrepareGroupRecovery?: (activity: GroupRunActivity) => void;
+  onRefreshGeneratedArtifacts?: () => void;
 }
 
 
@@ -149,7 +150,8 @@ function ChatMessageBubbleBody({
   approvalRequest,
   canRespondToApproval = false,
   onRespondToApproval,
-  onPrepareGroupRecovery
+  onPrepareGroupRecovery,
+  onRefreshGeneratedArtifacts
 }: ChatMessageBubbleProps) {
   const { t } = useTranslation("dashboard");
   const [copied, setCopied] = useState(false);
@@ -267,7 +269,7 @@ function ChatMessageBubbleBody({
           />
         )}
         {isUser && <ChatMessageAttachments attachments={messageAttachments} onOpen={onOpenConversationFile} />}
-        {!isUser && <ChatGeneratedArtifactCards artifacts={messageGeneratedArtifacts} onPreview={onOpenInstanceFilePath} onDownload={onDownloadInstanceFilePath} />}
+        {!isUser && <ChatGeneratedArtifactCards artifacts={messageGeneratedArtifacts} onPreview={onOpenInstanceFilePath} onDownload={onDownloadInstanceFilePath} onRefresh={onRefreshGeneratedArtifacts} />}
         {!isUser && <ChatRunFileChanges instanceId={instanceId} conversationId={selectedConversationId} runId={messageRunId} evidence={message.metadata?.file_evidence} execution={runExecutionState} artifacts={messageGeneratedArtifacts} onOpen={onOpenInstanceFilePath} />}
         {!isUser && displayContent.trim() && (
           <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-outline pt-2 text-content-muted">

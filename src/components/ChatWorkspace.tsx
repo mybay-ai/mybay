@@ -1368,6 +1368,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
               )));
             }}
             onPrepareGroupRecovery={prepareGroupRecovery}
+            onRefreshGeneratedArtifacts={refreshGeneratedArtifacts}
             highlightedMessageId={selectedSearch?.messageId ?? null}
           />
 

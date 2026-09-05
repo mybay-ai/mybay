@@ -608,6 +608,8 @@
   "workspaceGeneratedArtifactStatus_missing": "Missing or deleted",
   "workspaceGeneratedArtifactStatus_failed": "Status check failed",
   "messageGeneratedFiles": "Files referenced in this reply",
+  "messageGeneratedFileRunSource": "From run {{runId}}…",
+  "messageGeneratedFileConversationSource": "From this reply",
   "messageProcessedDuration": "Processed in {{duration}}",
   "localFileChangesSummary": "File changes: {{added}} added · {{modified}} modified · {{deleted}} deleted",
   "localFileChange_added": "Added",

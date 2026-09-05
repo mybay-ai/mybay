@@ -72,6 +72,7 @@ type ChatMessagesPanelProps = {
   onJumpToLatest?: () => void;
   onRevealMessage?: (message: HTMLElement) => void;
   onPrepareGroupRecovery?: (activity: GroupRunActivity) => void;
+  onRefreshGeneratedArtifacts?: () => void;
 };
 
 export function ChatMessagesPanel({
@@ -116,7 +117,8 @@ export function ChatMessagesPanel({
   onDownloadInstanceFilePath,
   generatedArtifacts = EMPTY_GENERATED_ARTIFACTS,
   onMessageFeedbackChange,
-  onPrepareGroupRecovery
+  onPrepareGroupRecovery,
+  onRefreshGeneratedArtifacts
 }: ChatMessagesPanelProps) {
   const { t } = useTranslation(["dashboard", "common"]);
   const runExecutionState = incomingExecution?.conversationId === selectedConversationId ? incomingExecution : null;
@@ -233,6 +235,7 @@ export function ChatMessagesPanel({
               canRespondToApproval={canRespondToApproval}
               onRespondToApproval={onRespondToApproval}
               onPrepareGroupRecovery={onPrepareGroupRecovery}
+              onRefreshGeneratedArtifacts={onRefreshGeneratedArtifacts}
             />
             </div>
           ))}
@@ -258,6 +261,7 @@ export function ChatMessagesPanel({
               canRespondToApproval={canRespondToApproval}
               onRespondToApproval={onRespondToApproval}
               onPrepareGroupRecovery={onPrepareGroupRecovery}
+              onRefreshGeneratedArtifacts={onRefreshGeneratedArtifacts}
             />
           )}
 

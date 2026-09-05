@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { selectMessageGeneratedArtifacts } from "./ChatGeneratedArtifactCards";
+import { canRefreshGeneratedArtifact, selectMessageGeneratedArtifacts } from "./ChatGeneratedArtifactCards";
 import type { GeneratedArtifact } from "./generatedArtifacts";
 
 const artifacts: GeneratedArtifact[] = [
@@ -14,5 +14,12 @@ describe("chat generated artifact cards", () => {
 
   it("recovers detached assistant artifacts by run id", () => {
     expect(selectMessageGeneratedArtifacts(artifacts, "detached", "run-b").map(item => item.path)).toEqual(["outputs/b.pdf"]);
+  });
+
+  it("offers an explicit recheck only after availability verification fails", () => {
+    expect(canRefreshGeneratedArtifact({ status: "missing" })).toBe(true);
+    expect(canRefreshGeneratedArtifact({ status: "failed" })).toBe(true);
+    expect(canRefreshGeneratedArtifact({ status: "ready" })).toBe(false);
+    expect(canRefreshGeneratedArtifact({ status: "checking" })).toBe(false);
   });
 });

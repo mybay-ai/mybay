@@ -608,6 +608,8 @@
   "workspaceGeneratedArtifactStatus_missing": "文件不存在或已被删除",
   "workspaceGeneratedArtifactStatus_failed": "状态检查失败",
   "messageGeneratedFiles": "本条回复引用的文件",
+  "messageGeneratedFileRunSource": "来自运行 {{runId}}…",
+  "messageGeneratedFileConversationSource": "来自本条回复",
   "messageProcessedDuration": "已处理 {{duration}}",
   "localFileChangesSummary": "文件变化：新增 {{added}} · 修改 {{modified}} · 删除 {{deleted}}",
   "localFileChange_added": "新增",
