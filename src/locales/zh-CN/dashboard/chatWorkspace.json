@@ -618,6 +618,8 @@
   "messageGeneratedFileLastError": "最近异常：{{error}}",
   "messageGeneratedFileUnknownTime": "暂无记录",
   "messageGeneratedFileUnknownSize": "未知",
+  "messageGeneratedFileHistory": "持久化运行记录（{{count}}）",
+  "messageGeneratedFileHistoryRun": "运行 {{runId}}…",
   "messageProcessedDuration": "已处理 {{duration}}",
   "localFileChangesSummary": "文件变化：新增 {{added}} · 修改 {{modified}} · 删除 {{deleted}}",
   "localFileChange_added": "新增",

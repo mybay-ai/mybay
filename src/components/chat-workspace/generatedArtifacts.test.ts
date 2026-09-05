@@ -46,6 +46,35 @@ describe("generated artifacts", () => {
     ]);
   });
 
+  it("restores generated files and their mutation history from persisted run evidence", () => {
+    const artifacts = extractGeneratedArtifacts([
+      {
+        id: "assistant-added",
+        role: "assistant",
+        content: "文件已经生成。",
+        status: "completed",
+        created_at: "2026-09-05T08:00:00.000Z",
+        metadata: { run_id: "run-added", file_evidence: { version: 1, runId: "run-added", changes: [{ path: "outputs/report.md", kind: "added" }] } },
+      },
+      {
+        id: "assistant-modified",
+        role: "assistant",
+        content: "内容已经更新。",
+        status: "completed",
+        updated_at: "2026-09-05T09:00:00.000Z",
+        metadata: { run_id: "run-modified", file_evidence: { version: 1, runId: "run-modified", changes: [{ path: "outputs/report.md", kind: "modified" }] } },
+      },
+    ], null);
+
+    expect(artifacts).toHaveLength(1);
+    expect(artifacts[0]).toMatchObject({ path: "outputs/report.md", messageId: "assistant-modified", runId: "run-modified" });
+    expect(artifacts[0].history).toEqual([
+      { kind: "added", messageId: "assistant-added", runId: "run-added", occurredAt: "2026-09-05T08:00:00.000Z" },
+      { kind: "modified", messageId: "assistant-modified", runId: "run-modified", occurredAt: "2026-09-05T09:00:00.000Z" },
+    ]);
+    expect(mergeGeneratedArtifactVerification(artifacts[0], { status: "ready", history: [] }).history).toEqual(artifacts[0].history);
+  });
+
   it("rejects host paths and deduplicates repeated generated paths", () => {
     const artifacts = extractGeneratedArtifacts([{
       id: "assistant-1",

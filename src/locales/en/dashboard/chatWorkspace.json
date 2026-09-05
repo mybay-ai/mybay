@@ -618,6 +618,8 @@
   "messageGeneratedFileLastError": "Latest issue: {{error}}",
   "messageGeneratedFileUnknownTime": "No record",
   "messageGeneratedFileUnknownSize": "Unknown",
+  "messageGeneratedFileHistory": "Persisted run history ({{count}})",
+  "messageGeneratedFileHistoryRun": "Run {{runId}}…",
   "messageProcessedDuration": "Processed in {{duration}}",
   "localFileChangesSummary": "File changes: {{added}} added · {{modified}} modified · {{deleted}} deleted",
   "localFileChange_added": "Added",

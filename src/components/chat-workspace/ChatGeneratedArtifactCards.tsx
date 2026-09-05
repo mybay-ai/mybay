@@ -45,7 +45,10 @@ export function ChatGeneratedArtifactCards({ artifacts, onPreview, onDownload, o
           const pending = artifact.status === "generating" || artifact.status === "checking";
           const expanded = expandedPaths.has(artifact.path);
           const formattedSize = formatGeneratedArtifactSize(artifact.size);
-          const formatTime = (value?: string | null) => value ? new Date(value).toLocaleString(i18n.language) : t("chatWorkspace.messageGeneratedFileUnknownTime");
+          const formatTime = (value?: string | null) => {
+            const parsed = value ? new Date(value) : null;
+            return parsed && Number.isFinite(parsed.getTime()) ? parsed.toLocaleString(i18n.language) : t("chatWorkspace.messageGeneratedFileUnknownTime");
+          };
           const Icon = pending ? LoaderCircle : previewable ? FileText : TriangleAlert;
           return (
             <div key={artifact.path} className="min-w-0 rounded-xl border border-outline bg-surface-muted/65 p-2.5">
@@ -83,6 +86,17 @@ export function ChatGeneratedArtifactCards({ artifacts, onPreview, onDownload, o
                 <span>{t("chatWorkspace.messageGeneratedFileSize", { size: formattedSize || t("chatWorkspace.messageGeneratedFileUnknownSize") })}</span>
                 <span className="truncate" title={artifact.path}>{t("chatWorkspace.messageGeneratedFilePath", { path: artifact.path })}</span>
                 {artifact.error && <span className="break-all text-amber-600 dark:text-amber-400">{t("chatWorkspace.messageGeneratedFileLastError", { error: artifact.error })}</span>}
+                {artifact.history && artifact.history.length > 0 && <div className="mt-1 border-t border-outline pt-2">
+                  <p className="mb-1 font-semibold text-content-secondary">{t("chatWorkspace.messageGeneratedFileHistory", { count: artifact.history.length })}</p>
+                  <ol className="space-y-1">
+                    {[...artifact.history].reverse().map(event => <li key={`${event.messageId}:${event.kind}`} className="flex min-w-0 items-center gap-1.5">
+                      <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${event.kind === "deleted" ? "bg-rose-500" : event.kind === "added" ? "bg-emerald-500" : "bg-indigo-500"}`} />
+                      <span className="shrink-0 font-medium text-content-secondary">{t(`chatWorkspace.localFileChange_${event.kind}`)}</span>
+                      <span className="min-w-0 flex-1 truncate" title={event.runId}>{t("chatWorkspace.messageGeneratedFileHistoryRun", { runId: event.runId.slice(0, 8) })}</span>
+                      <time className="shrink-0">{formatTime(event.occurredAt)}</time>
+                    </li>)}
+                  </ol>
+                </div>}
               </div>}
             </div>
           );

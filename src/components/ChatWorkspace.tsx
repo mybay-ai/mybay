@@ -619,6 +619,8 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
             usage_completion_tokens: m.usage_completion_tokens ?? null,
             usage_total_tokens: m.usage_total_tokens ?? null,
             duration_ms: m.duration_ms ?? null,
+            created_at: m.created_at ?? null,
+            updated_at: m.updated_at ?? null,
             user_feedback: m.user_feedback || undefined
           }));
 
@@ -785,6 +787,8 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
           usage_completion_tokens: m.usage_completion_tokens ?? null,
           usage_total_tokens: m.usage_total_tokens ?? null,
           duration_ms: m.duration_ms ?? null,
+          created_at: m.created_at ?? null,
+          updated_at: m.updated_at ?? null,
           user_feedback: m.user_feedback || undefined
         }));
         
@@ -844,6 +848,8 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
           usage_completion_tokens: m.usage_completion_tokens ?? null,
           usage_total_tokens: m.usage_total_tokens ?? null,
           duration_ms: m.duration_ms ?? null,
+          created_at: m.created_at ?? null,
+          updated_at: m.updated_at ?? null,
           user_feedback: m.user_feedback || undefined
         }));
         const optimisticContext = optimisticChatContextRef.current?.conversationId === convId
