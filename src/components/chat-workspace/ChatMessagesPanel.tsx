@@ -18,6 +18,7 @@ import { selectInlineApproval } from "./run/approvalSelectors";
 import { getRunStatusI18nKey, resolveRunDisplayStatus } from "./run/runStatusSemantics";
 import type { GeneratedArtifact } from "./generatedArtifacts";
 import type { InstanceChatReadinessProbe } from "../../hooks/useLocalInstanceReadiness";
+import type { GroupRunActivity } from "./ChatGroupRunSummary";
 
 const EMPTY_CONVERSATION_FILES: PendingAttachment[] = [];
 const EMPTY_GENERATED_ARTIFACTS: GeneratedArtifact[] = [];
@@ -70,6 +71,7 @@ type ChatMessagesPanelProps = {
   showJumpToLatest?: boolean;
   onJumpToLatest?: () => void;
   onRevealMessage?: (message: HTMLElement) => void;
+  onPrepareGroupRecovery?: (activity: GroupRunActivity) => void;
 };
 
 export function ChatMessagesPanel({
@@ -113,7 +115,8 @@ export function ChatMessagesPanel({
   onOpenInstanceFilePath,
   onDownloadInstanceFilePath,
   generatedArtifacts = EMPTY_GENERATED_ARTIFACTS,
-  onMessageFeedbackChange
+  onMessageFeedbackChange,
+  onPrepareGroupRecovery
 }: ChatMessagesPanelProps) {
   const { t } = useTranslation(["dashboard", "common"]);
   const runExecutionState = incomingExecution?.conversationId === selectedConversationId ? incomingExecution : null;
@@ -229,6 +232,7 @@ export function ChatMessagesPanel({
               approvalRequest={msg.role === "assistant" && messageIndex === runAssistantIndex ? inlineApproval : null}
               canRespondToApproval={canRespondToApproval}
               onRespondToApproval={onRespondToApproval}
+              onPrepareGroupRecovery={onPrepareGroupRecovery}
             />
             </div>
           ))}
@@ -253,6 +257,7 @@ export function ChatMessagesPanel({
               approvalRequest={inlineApproval}
               canRespondToApproval={canRespondToApproval}
               onRespondToApproval={onRespondToApproval}
+              onPrepareGroupRecovery={onPrepareGroupRecovery}
             />
           )}
 

@@ -55,6 +55,7 @@ import { createChatSelectionPersistence } from "./chat-workspace/chatSelectionPe
 import { createChatModePreference, type PreferredChatMode } from "./chat-workspace/chatModePreference";
 import { readA2ARetryNavigationState } from "./chat-workspace/a2aRetryNavigation";
 import type { ChatGroupConfig } from "../../shared/chatCollaboration";
+import type { GroupRunActivity } from "./chat-workspace/ChatGroupRunSummary";
 
 export { generateUUIDv4 } from "./chat-workspace/chatWorkspaceSendPolicy";
 
@@ -149,6 +150,27 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     modePreference.remember(selectedId, "agent");
     navigate(`${location.pathname}${location.search}${location.hash}`, { replace: true, state: null });
   }, [location.hash, location.key, location.pathname, location.search, location.state, modePreference, navigate, selectedId, setInput]);
+
+  const prepareGroupRecovery = useCallback((activity: GroupRunActivity) => {
+    if (!selectedId || !activity.peerId) return;
+    const draft = t("dashboard:a2a.recoveryDraft", {
+      peerId: activity.peerId,
+      contextId: activity.contextId,
+      taskId: activity.taskId,
+      status: activity.status,
+      request: activity.requestText || t("dashboard:a2a.recoveryRequestPlaceholder"),
+      summary: activity.requestText ? "" : activity.summary || "",
+    });
+    a2aRecoveryDraftRef.current = {
+      a2aRetryDraft: draft,
+      a2aRetryInstanceId: selectedId,
+      a2aRecoverySource: { contextId: activity.contextId, taskId: activity.taskId, peerId: activity.peerId },
+    };
+    setInput(draft);
+    setChatMode("agent");
+    modePreference.remember(selectedId, "agent");
+    showToast(t("dashboard:chatWorkspace.groupRunRecoveryPrepared"), "success");
+  }, [modePreference, selectedId, setInput, showToast, t]);
 
   const {
     attachmentConfig,
@@ -1345,6 +1367,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
                 message.id === messageId ? { ...message, user_feedback: feedback } : message
               )));
             }}
+            onPrepareGroupRecovery={prepareGroupRecovery}
             highlightedMessageId={selectedSearch?.messageId ?? null}
           />
 

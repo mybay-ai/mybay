@@ -832,5 +832,7 @@
   "groupRunTaskId": "任务 ID",
   "groupRunContextId": "协作上下文",
   "groupRunDuration": "耗时",
-  "groupRunOpenRecord": "打开任务记录"
+  "groupRunOpenRecord": "打开任务记录",
+  "groupRunRecoveryHint": "不会自动重试；系统会先核对原任务结果和失败条件。",
+  "groupRunRecoveryPrepared": "已生成安全恢复草稿，请核对后再发送。"
 }

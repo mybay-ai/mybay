@@ -1,10 +1,11 @@
-import { CheckCircle2, ChevronDown, Clock3, ExternalLink, RefreshCw, Users, XCircle } from "lucide-react";
+import { CheckCircle2, ChevronDown, Clock3, ExternalLink, RefreshCw, RotateCw, Users, XCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { readChatGroupRun, type ChatGroupRun } from "../../../shared/chatCollaboration";
 import { buildA2ATaskRecordUrl } from "../../constants/routes";
 import { api } from "../../lib/api";
+import { canReviewA2ARecovery } from "./a2aRetryNavigation";
 
 export type GroupRunActivity = {
   contextId: string;
@@ -15,6 +16,8 @@ export type GroupRunActivity = {
   startedAt?: string | null;
   completedAt?: string | null;
   durationMs?: number | null;
+  requestText?: string | null;
+  summary?: string | null;
   result?: string | null;
   failureReason?: string | null;
 };
@@ -50,7 +53,7 @@ export function formatGroupDuration(durationMs: number | null | undefined, langu
   return `${Number(hours.toFixed(hours < 10 ? 1 : 0))}${zh ? "小时" : "h"}`;
 }
 
-export function ChatGroupRunSummary({ instanceId, value }: { instanceId?: string; value: unknown }) {
+export function ChatGroupRunSummary({ instanceId, value, onPrepareRecovery }: { instanceId?: string; value: unknown; onPrepareRecovery?: (activity: GroupRunActivity) => void }) {
   const { t, i18n } = useTranslation("dashboard");
   const group = useMemo(() => readChatGroupRun(value), [value]);
   const [activities, setActivities] = useState<GroupRunActivity[]>([]);
@@ -105,6 +108,7 @@ export function ChatGroupRunSummary({ instanceId, value }: { instanceId?: string
           const activity = byPeer.get(peer.id);
           const completed = activity?.status === "completed";
           const failed = Boolean(activity && TERMINAL_ACTIVITY_STATUSES.has(activity.status) && !completed);
+          const canPrepareRecovery = Boolean(activity && onPrepareRecovery && canReviewA2ARecovery({ direction: "outbound", peerId: activity.peerId, status: activity.status }));
           const StatusIcon = completed ? CheckCircle2 : failed ? XCircle : Clock3;
           const duration = formatGroupDuration(activity?.durationMs, i18n.language, t("chatWorkspace.groupRunDurationPending"));
           return (
@@ -125,7 +129,11 @@ export function ChatGroupRunSummary({ instanceId, value }: { instanceId?: string
                     <div><span className="font-semibold text-content-secondary">{t("chatWorkspace.groupRunContextId")}: </span><span className="break-all font-mono">{activity.contextId}</span></div>
                     <div><span className="font-semibold text-content-secondary">{t("chatWorkspace.groupRunDuration")}: </span>{duration}</div>
                     {(activity.result || activity.failureReason) && <div className={`rounded-md px-2 py-1.5 leading-4 ${activity.failureReason ? "bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300" : "bg-surface-muted text-content-secondary"}`}>{activity.failureReason || activity.result}</div>}
-                    <a className="inline-flex items-center gap-1 font-semibold text-violet-700 hover:underline dark:text-violet-300" href={buildA2ATaskRecordUrl(instanceId, activity.taskId)}>{t("chatWorkspace.groupRunOpenRecord")}<ExternalLink className="h-3 w-3" /></a>
+                    {canPrepareRecovery && <p className="text-amber-700 dark:text-amber-300">{t("chatWorkspace.groupRunRecoveryHint")}</p>}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <a className="inline-flex items-center gap-1 font-semibold text-violet-700 hover:underline dark:text-violet-300" href={buildA2ATaskRecordUrl(instanceId, activity.taskId)}>{t("chatWorkspace.groupRunOpenRecord")}<ExternalLink className="h-3 w-3" /></a>
+                      {canPrepareRecovery && <button type="button" className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 font-semibold text-amber-800 hover:bg-amber-100 dark:border-amber-700/50 dark:bg-amber-950/30 dark:text-amber-200 dark:hover:bg-amber-950/50" onClick={() => onPrepareRecovery?.(activity)}><RotateCw className="h-3 w-3" />{t("a2a.reviewRecovery")}</button>}
+                    </div>
                   </div>
                 </details>
               )}

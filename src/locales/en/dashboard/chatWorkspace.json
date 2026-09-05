@@ -832,5 +832,7 @@
   "groupRunTaskId": "Task ID",
   "groupRunContextId": "Collaboration context",
   "groupRunDuration": "Duration",
-  "groupRunOpenRecord": "Open task record"
+  "groupRunOpenRecord": "Open task record",
+  "groupRunRecoveryHint": "This will not retry automatically. The original result and failure conditions will be checked first.",
+  "groupRunRecoveryPrepared": "A safe recovery draft is ready. Review it before sending."
 }
