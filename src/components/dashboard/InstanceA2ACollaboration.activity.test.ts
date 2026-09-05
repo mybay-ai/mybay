@@ -16,12 +16,15 @@ describe("Instance A2A collaboration activity presentation", () => {
     expect(source).toContain("orchestration.nodes.map");
     expect(source).toContain('t("a2a.peerCapabilities")');
     expect(source).toContain("parseCapabilityText");
-    expect(source).toContain("isRetryableA2AStatus(activity.status)");
-    expect(source).toContain('t("a2a.retryInChat")');
+    expect(source).toContain("canReviewA2ARecovery(activity)");
+    expect(source).toContain('t("a2a.reviewRecovery")');
     expect(source).toContain('activity.status === "auth_failed"');
     expect(source).toContain('t("a2a.authRecoveryTitle")');
     expect(source).toContain("currentInstanceIdRef.current !== targetInstanceId");
     expect(source).toContain("status?.peers?.find");
     expect(source).toContain("15_000");
+    expect(source).toContain('t(\'a2a.deliveryGuarantee\')');
+    expect(source).toContain('t(\'a2a.restartGuarantee\')');
+    expect(source).toContain("/a2a/tasks/cancel");
   });
 });

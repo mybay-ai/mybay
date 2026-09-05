@@ -12,7 +12,7 @@
 
 语言：[English](./README.md) | [简体中文](./README.zh-CN.md)
 
-> **发布候选版：`v0.1.27-rc.1`。** 在 0.x 阶段，公共接口、Runtime Adapter、部署细节与升级行为仍可能调整。
+> **发布候选版：`v0.1.27-rc.2`。** 在 0.x 阶段，公共接口、Runtime Adapter、部署细节与升级行为仍可能调整。
 
 Runtime 可用性和声明能力统一由共享目录生成，详见 [Runtime 能力矩阵](./docs/runtime-capability-matrix.md)。基于证据的认证状态单独发布在 [MyBay Runtime Certification](./docs/runtime-certification.md)，注册 Adapter 或声明能力不会被当成真实 Runtime 或产品 E2E 已通过。
 

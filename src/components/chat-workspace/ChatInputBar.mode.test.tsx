@@ -25,7 +25,7 @@ async function renderMode(state: RunsCapabilityState, mode: "quick" | "agent" = 
 describe("restored Agent mode capability guard", () => {
   it.each(["checking", "disabled", "explicitly_unsupported", "unavailable"] as const)("retains mode/draft and visibly blocks sending when %s", async state => {
     const html = await renderMode(state);
-    expect(html).toContain(en.modeAgent);
+    expect(html).toContain(en.composerAgentShort);
     expect(html).toContain("kept draft");
     expect(html).toContain('type="submit" disabled');
     expect(html).toContain('role="status"');
@@ -45,7 +45,7 @@ describe("restored Agent mode capability guard", () => {
 
   it("keeps an explicitly chosen Quick mode usable when Agent capability is unavailable", async () => {
     const html = await renderMode("unavailable", "quick");
-    expect(html).toContain(en.modeQuick);
+    expect(html).toContain(en.composerDirectShort);
     expect(html).not.toContain('type="submit" disabled');
   });
 

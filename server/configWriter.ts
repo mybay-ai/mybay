@@ -91,6 +91,7 @@ export function buildHermesNativeYamlTemplate(
     .join("\n");
 
   const a2aYaml = buildA2AYamlConfig(config);
+  const outboundA2AEnabled = Boolean(a2aYaml.a2a_agents && Object.keys(a2aYaml.a2a_agents).length);
   const gatewayYaml = yaml.dump(a2aYaml.gateway || {}).trim();
   const a2aAgentsYaml = a2aYaml.a2a_agents
     ? `\na2a_agents:\n${yaml.dump(a2aYaml.a2a_agents).split("\n").filter(Boolean).map((line) => `  ${line}`).join("\n")}\n`
@@ -109,6 +110,7 @@ credential_pool_strategies: {}
 
 toolsets:
   - hermes-cli
+${outboundA2AEnabled ? "  - a2a\n\nplatform_toolsets:\n  api_server:\n    - hermes-api-server\n    - a2a\n" : ""}
 
 agent:
   max_turns: ${DEFAULT_AGENT_MAX_TURNS}

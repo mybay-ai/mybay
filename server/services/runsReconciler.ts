@@ -1,3 +1,5 @@
+import { a2aRecoveryTaskPolicy } from "../../shared/a2aRecovery";
+import { chatGroupSystemPolicy } from "../../shared/chatCollaboration";
 import { mergeLocalFileChanges } from "../../shared/localRunFileEvidence";
 import { createLocalTimelineCollector } from "../../shared/localRunTimeline";
 import { createRunFileSnapshots } from "./runs/runFileSnapshots";
@@ -57,6 +59,14 @@ import {
   assertVerifiedRunCompletionV1,
   verifyRunCompletionV1,
 } from "./runs/runCompletionVerification";
+
+function managedRunSystemPolicy(run: any): string {
+  return [
+    MANAGED_OPERATION_SYSTEM_POLICY,
+    a2aRecoveryTaskPolicy(run?.a2a_recovery_source),
+    chatGroupSystemPolicy(run?.group_collaboration),
+  ].filter(Boolean).join("\n\n");
+}
 import { submitRunWithIdempotentRecovery } from "./runs/runSubmissionRecovery";
 import { publishPendingRuntimeInteractions } from "./runs/runPendingInteractionRecovery";
 import { convergeRunTerminalProbe } from "./runs/runTerminalConvergence";
@@ -660,7 +670,7 @@ export async function processSingleRun(
       }));
       runtimeMessages.unshift({
         role: "system",
-        content: MANAGED_OPERATION_SYSTEM_POLICY
+        content: managedRunSystemPolicy(run)
       });
       const attachmentIds = Array.isArray(userMsg.metadata?.attachmentIds) ? userMsg.metadata.attachmentIds : [];
       let agentAttachmentContext = "";
@@ -707,6 +717,7 @@ export async function processSingleRun(
 
       const payload = runPreparation.buildRunPayload({
         userContent: userMsg.content,
+        systemPolicy: managedRunSystemPolicy(run),
         currentUserMessageId: userMsg.id,
         currentRequestId: userMsg.request_id,
         agentAttachmentContext,
@@ -825,6 +836,7 @@ export async function processSingleRun(
 
           const retryPayload = runPreparation.buildRunPayload({
             userContent: userMsg.content,
+            systemPolicy: managedRunSystemPolicy(run),
             currentUserMessageId: userMsg.id,
             currentRequestId: userMsg.request_id,
             agentAttachmentContext,
@@ -934,6 +946,7 @@ export async function processSingleRun(
           const history = await chatRepo.getLatestCompletedMessagesForContext(run.conversation_id);
           const filteredHistory = filterCurrentRunMessageFromHistory(history, userMsg?.id, userMsg?.request_id);
           const runtimeMessages = filteredHistory.map(h => ({ role: h.role, content: h.content }));
+          if (run.a2a_recovery_source) runtimeMessages.unshift({ role: "system", content: a2aRecoveryTaskPolicy(run.a2a_recovery_source) });
           runtimeMessages.push({
             role: "user",
             content: agentAttachmentContext ? `${userMsg.content}\n\n${agentAttachmentContext}` : userMsg.content
@@ -1045,6 +1058,7 @@ export async function processSingleRun(
               role: h.role,
               content: h.content
             }));
+            if (run.a2a_recovery_source) runtimeMessages.unshift({ role: "system", content: a2aRecoveryTaskPolicy(run.a2a_recovery_source) });
             const attachmentIds = Array.isArray((userMsg as any).metadata?.attachmentIds) ? (userMsg as any).metadata.attachmentIds : [];
             let agentAttachmentContext = "";
             if (attachmentIds.length > 0) {

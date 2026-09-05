@@ -15,7 +15,7 @@ import {
   getIdempotencyRecord,
   getPortReservation,
   listDeploymentTasksCore,
-  mutateStore, mutateStoreCollections, nowIso, paginate, readStore, readStoreCollections,
+  mutateStore, mutateStoreCollections, nowIso, paginate, readStore, readStoreCollections, readSystemSetting, writeSystemSetting,
   releasePortReservation,
   reservePortForInstance,
   renewDeploymentLease,
@@ -259,14 +259,14 @@ export const dbAdapter = {
       return { file: upsertById(data.files, { deleted_at: null, ...file }), created: true };
     });
   },
-  async getFileRecordById(id: string) { return readStore().files.find((f) => f.id === id) || null; },
+  async getFileRecordById(id: string) { return readStoreCollections(["files"]).files.find((f) => f.id === id) || null; },
   async updateFileRecord(id: string, updates: any) { return mutateStore((data) => { const file = data.files.find((f) => f.id === id); if (file) Object.assign(file, updates, { updated_at: nowIso() }); return file || null; }); },
   async deleteFileRecord(id: string) { return mutateStore((data) => { data.files = data.files.filter((f) => f.id !== id); }); },
   async deleteFileRecordsByConversation(instanceId: string, conversationId: string) { return mutateStore((data) => { data.files = data.files.filter((f) => !(f.instance_id === instanceId && f.conversation_id === conversationId)); }); },
-  async listFilesByConversation(instanceId: string, conversationId: string) { return readStore().files.filter((f) => f.instance_id === instanceId && f.conversation_id === conversationId && !f.deleted_at).sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || ""))); },
-  async listPendingDeletedFileRecords(limit = 50) { return readStore().files.filter((f) => f.deleted_at && !f.cleanup_completed_at).sort((a, b) => String(a.deleted_at || "").localeCompare(String(b.deleted_at || ""))).slice(0, Math.max(1, limit)); },
-  async hasActiveFileRecord(instanceId: string, conversationId: string, filename: string) { return readStore().files.some((f) => f.instance_id === instanceId && f.conversation_id === conversationId && f.filename === filename && !f.deleted_at); },
-  async listUnboundFilesByOwner(ownerId: string) { return readStore().files.filter((f) => f.owner_id === ownerId && !f.instance_id); },
+  async listFilesByConversation(instanceId: string, conversationId: string) { return readStoreCollections(["files"]).files.filter((f) => f.instance_id === instanceId && f.conversation_id === conversationId && !f.deleted_at).sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || ""))); },
+  async listPendingDeletedFileRecords(limit = 50) { return readStoreCollections(["files"]).files.filter((f) => f.deleted_at && !f.cleanup_completed_at).sort((a, b) => String(a.deleted_at || "").localeCompare(String(b.deleted_at || ""))).slice(0, Math.max(1, limit)); },
+  async hasActiveFileRecord(instanceId: string, conversationId: string, filename: string) { return readStoreCollections(["files"]).files.some((f) => f.instance_id === instanceId && f.conversation_id === conversationId && f.filename === filename && !f.deleted_at); },
+  async listUnboundFilesByOwner(ownerId: string) { return readStoreCollections(["files"]).files.filter((f) => f.owner_id === ownerId && !f.instance_id); },
   async listLocalTemplates() { return readStore().templates; },
   async upsertLocalTemplate(template: any) { return mutateStore((data) => upsertById(data.templates, template)); },
   async getLocalTemplateById(id: string) { return readStore().templates.find((t) => t.id === id || t.slug === id) || null; },
@@ -323,18 +323,18 @@ export const dbAdapter = {
   async listAllUserResourcePolicies() { return readStore().userResourcePolicies; },
   async upsertUserResourcePolicy(policy: any) { return mutateStore((data) => upsertById(data.userResourcePolicies, policy)); },
 
-  async upsertChannelAuthEvent(event: any) { return mutateStore((data) => upsertById(data.channelAuthEvents, event)); },
-  async getChannelAuthEventsByInstance(instanceId: string) { return readStore().channelAuthEvents.filter((e) => e.instance_id === instanceId); },
-  async getChannelAuthEventById(id: string) { return readStore().channelAuthEvents.find((e) => e.id === id) || null; },
-  async updateChannelAuthEventStatus(id: string, status: string, approvedBy?: string) { return mutateStore((data) => { const event = data.channelAuthEvents.find((e) => e.id === id); if (event) { const now = nowIso(); Object.assign(event, { status, approved_by: approvedBy, approved_at: status === "approved" ? now : event.approved_at || null, updated_at: now }); } return event || null; }); },
-  async deleteChannelAuthEventsByIds(ids: string[]) { return mutateStore((data) => { const idSet = new Set(ids); const before = data.channelAuthEvents.length; data.channelAuthEvents = data.channelAuthEvents.filter((e) => !idSet.has(e.id)); return { changes: before - data.channelAuthEvents.length }; }); },
-  async deleteChannelAuthEventsForInstance(instanceId: string) { return mutateStore((data) => { data.channelAuthEvents = data.channelAuthEvents.filter((e) => e.instance_id !== instanceId); }); },
+  async upsertChannelAuthEvent(event: any) { return mutateStoreCollections(["channelAuthEvents"], (data) => upsertById(data.channelAuthEvents, event)); },
+  async getChannelAuthEventsByInstance(instanceId: string) { return readStoreCollections(["channelAuthEvents"]).channelAuthEvents.filter((e) => e.instance_id === instanceId); },
+  async getChannelAuthEventById(id: string) { return readStoreCollections(["channelAuthEvents"]).channelAuthEvents.find((e) => e.id === id) || null; },
+  async updateChannelAuthEventStatus(id: string, status: string, approvedBy?: string) { return mutateStoreCollections(["channelAuthEvents"], (data) => { const event = data.channelAuthEvents.find((e) => e.id === id); if (event) { const now = nowIso(); Object.assign(event, { status, approved_by: approvedBy, approved_at: status === "approved" ? now : event.approved_at || null, updated_at: now }); } return event || null; }); },
+  async deleteChannelAuthEventsByIds(ids: string[]) { return mutateStoreCollections(["channelAuthEvents"], (data) => { const idSet = new Set(ids); const before = data.channelAuthEvents.length; data.channelAuthEvents = data.channelAuthEvents.filter((e) => !idSet.has(e.id)); return { changes: before - data.channelAuthEvents.length }; }); },
+  async deleteChannelAuthEventsForInstance(instanceId: string) { return mutateStoreCollections(["channelAuthEvents"], (data) => { data.channelAuthEvents = data.channelAuthEvents.filter((e) => e.instance_id !== instanceId); }); },
 
 
-  async getSystemSetting(key: string) { return readStore().systemSettings[key] ?? null; },
-  async setSystemSetting(key: string, value: string) { return mutateStore((data) => { data.systemSettings[key] = value; return { key, value, updated_at: nowIso() }; }); },
-  async getSystemSettingBoolean(key: string, defaultValue = false) { const value = readStore().systemSettings[key]; return value == null ? defaultValue : ["true", "1", "yes"].includes(String(value).toLowerCase()); },
-  async setSystemSettingBoolean(key: string, value: boolean) { return mutateStore((data) => { data.systemSettings[key] = String(value); return { key, value: String(value), updated_at: nowIso() }; }); },
+  async getSystemSetting(key: string) { return readSystemSetting(key); },
+  async setSystemSetting(key: string, value: string) { writeSystemSetting(key, value); return { key, value, updated_at: nowIso() }; },
+  async getSystemSettingBoolean(key: string, defaultValue = false) { const value = readSystemSetting(key); return value == null ? defaultValue : ["true", "1", "yes"].includes(String(value).toLowerCase()); },
+  async setSystemSettingBoolean(key: string, value: boolean) { return this.setSystemSetting(key, String(value)); },
 
   // Compatibility guard while legacy instance records are normalized to local execution.
 

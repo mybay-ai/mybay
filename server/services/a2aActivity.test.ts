@@ -33,7 +33,7 @@ describe("A2A activity reader", () => {
   it("maps a persisted outbound conversation to a friendly peer and duration", () => {
     const { root, instanceRoot } = fixture();
     fs.writeFileSync(path.join(instanceRoot, "a2a_audit.jsonl"), `${JSON.stringify({ ts: 10, direction: "outbound", peer: "agent-2", task_id: "task-1" })}\n`);
-    fs.writeFileSync(path.join(instanceRoot, "a2a_conversations", "ctx-one.jsonl"), [
+    fs.writeFileSync(path.join(instanceRoot, "a2a_conversations", "ctx-mybay-room-run123.jsonl"), [
       JSON.stringify({ ts: 10, role: "user", text: "Check status", task_id: "task-1" }),
       JSON.stringify({ ts: 12.25, role: "agent", text: "Ready", task_id: "task-1" }),
     ].join("\n"));
@@ -43,7 +43,7 @@ describe("A2A activity reader", () => {
       dataRoot: root,
       peerNames: new Map([["agent-2", "Research Agent"]]),
     })).toEqual([expect.objectContaining({
-      contextId: "ctx-one",
+      contextId: "ctx-mybay-room-run123",
       taskId: "task-1",
       direction: "outbound",
       peerId: "agent-2",
@@ -205,7 +205,33 @@ describe("A2A activity reader", () => {
     ]);
   });
 
-  it("marks an unfinished first-mode node as cancelled after a successful terminal tool result", () => {
+  it.each([
+    ["Peer 'agent-2' returned an error: fixture rejected execution", "failed"],
+    ["unrecognized upstream response", "unknown"],
+  ])("does not report ambiguous or RPC error output as success: %s", (output, status) => {
+    const { root, instanceRoot } = fixture();
+    fs.writeFileSync(path.join(instanceRoot, "a2a_audit.jsonl"), JSON.stringify({ ts: 80, direction: "outbound", peer: "agent-2", task_id: "task-auth" }));
+    fs.writeFileSync(path.join(instanceRoot, "a2a_conversations", "ctx-auth.jsonl"), JSON.stringify({ ts: 80, role: "user", text: "Check auth", task_id: "task-auth" }));
+    const db = new DatabaseSync(path.join(instanceRoot, "state.db"));
+    db.exec("CREATE TABLE messages (id INTEGER PRIMARY KEY, role TEXT, content TEXT, tool_call_id TEXT, tool_calls TEXT, tool_name TEXT, timestamp REAL)");
+    const calls = JSON.stringify([{ id: "call-auth", function: { name: "tool_call", arguments: JSON.stringify({ name: "a2a_call", arguments: { agent: "agent-2", message: "Check auth" } }) } }]);
+    db.prepare("INSERT INTO messages VALUES (?, ?, ?, ?, ?, ?, ?)").run(1, "assistant", "", null, calls, null, 80);
+    db.prepare("INSERT INTO messages VALUES (?, ?, ?, ?, ?, ?, ?)").run(2, "tool", output, "call-auth", null, "a2a_call", 81.5);
+    db.close();
+
+    expect(readA2AActivities({ instanceId: "agent-1", dataRoot: root })).toEqual([
+      expect.objectContaining({
+        contextId: "ctx-auth",
+        peerId: "agent-2",
+        status,
+        completedAt: status === "unknown" ? null : "1970-01-01T00:01:21.500Z",
+        result: null,
+        failureReason: status === "unknown" ? null : output,
+      }),
+    ]);
+  });
+
+  it("keeps unfinished first-mode nodes unconfirmed without a remote cancellation acknowledgement", () => {
     const { root, instanceRoot } = fixture();
     fs.writeFileSync(path.join(instanceRoot, "a2a_audit.jsonl"), [
       JSON.stringify({ ts: 70, direction: "outbound", peer: "agent-2", task_id: "task-ok" }),
@@ -224,6 +250,48 @@ describe("A2A activity reader", () => {
     db.close();
 
     const activities = readA2AActivities({ instanceId: "agent-1", dataRoot: root });
-    expect(activities).toEqual(expect.arrayContaining([expect.objectContaining({ peerId: "agent-3", status: "cancelled", failureReason: null })]));
+    expect(activities).toEqual(expect.arrayContaining([expect.objectContaining({ peerId: "agent-3", status: "unknown", completedAt: null, failureReason: null })]));
   });
+  it("summarizes all readable nodes before applying the activity page limit", () => {
+    const { root, instanceRoot } = fixture();
+    const audit: string[] = [], rows: string[] = [];
+    for (let i = 0; i < 13; i++) {
+      const task = 'task-' + i;
+      audit.push(JSON.stringify({ ts: 100+i, direction: 'outbound', peer: 'peer-'+i, task_id: task }));
+      rows.push(JSON.stringify({ ts: 100+i, role: 'user', text: 'work', task_id: task }));
+      if (i > 0) rows.push(JSON.stringify({ ts: 120+i, role: 'agent', text: 'done', task_id: task }));
+    }
+    fs.writeFileSync(path.join(instanceRoot, 'a2a_audit.jsonl'), audit.join('\n'));
+    fs.writeFileSync(path.join(instanceRoot, 'a2a_conversations', 'ctx-page.jsonl'), rows.join('\n'));
+    const all = readA2AActivities({ instanceId: 'agent-1', dataRoot: root, includeAll: true });
+    expect(all.slice(0, 12).every(node => node.status === 'completed')).toBe(true);
+    expect(groupA2AOrchestrations(all)[0]).toMatchObject({ total: 13, completed: 12, inProgress: 1, status: 'in_progress' });
+    expect(groupA2AOrchestrations(all.map(node => ({...node, evidenceIncomplete: true})))[0]).toMatchObject({ status: 'unknown', completedAt: null });
+  });
+
+  it("does not report full success when the context file has been truncated", () => {
+    const { root, instanceRoot } = fixture();
+    const audits = [1,2].map(i => JSON.stringify({ ts: i, direction: 'outbound', peer: 'peer-'+i, task_id: 'task-'+i }));
+    const rows = [JSON.stringify({ padding: 'x'.repeat(270000) }), ...[1,2].flatMap(i => [
+      JSON.stringify({ ts: i, role: 'user', text: 'work', task_id: 'task-'+i }),
+      JSON.stringify({ ts: i+10, role: 'agent', text: 'done', task_id: 'task-'+i }),
+    ])];
+    fs.writeFileSync(path.join(instanceRoot, 'a2a_audit.jsonl'), audits.join('\n'));
+    fs.writeFileSync(path.join(instanceRoot, 'a2a_conversations', 'ctx-truncated.jsonl'), rows.join('\n'));
+    const activities = readA2AActivities({ instanceId: 'agent-1', dataRoot: root, includeAll: true });
+    expect(activities).toHaveLength(2);
+    expect(groupA2AOrchestrations(activities)[0]).toMatchObject({ status: 'unknown', completed: 2, evidenceIncomplete: true, completedAt: null });
+    expect(groupA2AOrchestrations([{...activities[0], evidenceIncomplete: false, expectedPeers: 3}])[0]).toMatchObject({ status: 'unknown', total: 1 });
+  });
+
+  it('retains the complete bounded request and never replays a truncated summary', () => {
+    const {root,instanceRoot}=fixture();
+    for(const [context,text] of [['bounded','original request '+ 'x'.repeat(600)],['long','x'.repeat(2401)]]) {
+      fs.writeFileSync(path.join(instanceRoot,'a2a_conversations','ctx-'+context+'.jsonl'),JSON.stringify({ts:100,role:'user',text,task_id:'task-'+context}));
+    }
+    const rows=readA2AActivities({instanceId:'agent-1',dataRoot:root});
+    expect(rows.find(r=>r.contextId==='ctx-bounded')?.requestText).toBe('original request '+'x'.repeat(600));
+    expect(rows.find(r=>r.contextId==='ctx-long')?.requestText).toBeNull();
+  });
+
 });

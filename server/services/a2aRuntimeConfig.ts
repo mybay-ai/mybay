@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { dbAdapter } from "../db";
 import { decrypt, encrypt } from "../crypto";
+import { a2aRelayToken, a2aRelayUrl, a2aTrackingEnabled } from './a2aRelayConfig';
 import {
   A2A_INTERNAL_PORT,
   getA2AInternalUrl,
@@ -27,10 +28,12 @@ export function ensureA2ABearerToken(config: any): { encryptedToken: string; gen
 }
 
 export function buildA2ARuntimeEnv(config: any): Record<string, string> {
-  if (config?.a2aEnabled !== true) return {};
+  const revisionEnv: Record<string, string> = typeof config?.a2aRevision === "string" ? { MYBAY_A2A_REVISION: config.a2aRevision } : {};
+  if (config?.a2aEnabled !== true) return revisionEnv;
   const token = config.a2aBearerToken ? decrypt(config.a2aBearerToken) : "";
   if (!token) throw new Error("A2A_TOKEN_REQUIRED");
   return {
+    ...revisionEnv,
     A2A_BEARER_TOKEN: token,
     A2A_HOST: "0.0.0.0",
     A2A_PORT: String(A2A_INTERNAL_PORT),
@@ -61,8 +64,8 @@ export async function hydrateA2ARuntimePeers(instanceId: string, config: any): P
     resolved.push({
       instanceId: peerId,
       name: normalizeA2AAgentName(peerConfig.a2aAgentName, peer.name || peerId),
-      url: getA2AInternalUrl(peerId),
-      encryptedToken: peerConfig.a2aBearerToken,
+      url: a2aTrackingEnabled(instanceId) ? a2aRelayUrl(instanceId, peerId) : getA2AInternalUrl(peerId),
+      encryptedToken: a2aTrackingEnabled(instanceId) ? encrypt(a2aRelayToken(instanceId)) : peerConfig.a2aBearerToken,
       capabilities: peerCapabilities[peerId] || [],
     });
   }

@@ -7,11 +7,12 @@ export function resolveInitialChatInstanceId(
   preferredInstanceId?: string | null,
   rememberedInstanceId?: string | null,
 ) {
+  // Readiness gates new work, not access to a remembered conversation's history.
   const preferred = preferredInstanceId
-    ? instances.find((instance) => instance.id === preferredInstanceId && readiness[instance.id]?.ready)
+    ? instances.find((instance) => instance.id === preferredInstanceId)
     : undefined;
   if (preferred) return preferred.id;
-  const remembered = instances.find(instance => instance.id === rememberedInstanceId && readiness[instance.id]?.ready);
+  const remembered = instances.find(instance => instance.id === rememberedInstanceId);
   if (remembered) return remembered.id;
   return instances.find((instance) => readiness[instance.id]?.ready)?.id || instances[0]?.id || "";
 }

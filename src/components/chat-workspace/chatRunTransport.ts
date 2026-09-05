@@ -1,3 +1,4 @@
+import type { A2ARecoverySource } from "../../../shared/a2aRecovery";
 import { api } from "../../lib/api";
 import type { ChatReasoningEffort } from "./ChatInputBar";
 import { isConcurrencyTakeoverError, isRetryableRunCreationError } from "./chatMessagePolicy";
@@ -18,6 +19,7 @@ export async function createChatRunWithRetry(
   instanceId: string,
   payload: {
     conversationId: string | null;
+    a2aRecoverySource?: A2ARecoverySource;
     content: string;
     requestId: string;
     reasoningEffort?: ChatReasoningEffort;

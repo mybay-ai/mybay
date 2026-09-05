@@ -7,6 +7,8 @@ const state = vi.hoisted(() => ({
   updateInstanceConfig: vi.fn(),
   insertAuditLog: vi.fn(),
   probe: vi.fn(),
+  toolProbe: vi.fn(),
+  inspect: vi.fn(),
 }));
 
 vi.mock("../../db", () => ({ dbAdapter: {
@@ -25,6 +27,8 @@ vi.mock("../../middlewares/auth", () => ({ authenticateToken: (req: any, res: an
   next();
 } }));
 vi.mock("../../services/a2aProbe", () => ({ probeA2AAgentCard: state.probe }));
+vi.mock("../../services/a2aToolProbe", () => ({ probeA2ATools: state.toolProbe }));
+vi.mock("../../lib/docker", () => ({ docker: { getContainer: () => ({ inspect: state.inspect }) } }));
 
 import { createA2ARoutes } from "./a2a.routes";
 
@@ -45,6 +49,8 @@ async function withServer(run: (baseUrl: string) => Promise<void>) {
 describe("A2A instance control-plane routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    state.toolProbe.mockResolvedValue("not_configured");
+    state.inspect.mockResolvedValue({ Config: { Env: [] } });
     state.getInstanceById.mockResolvedValue({
       id: "agent-1",
       name: "Agent One",
@@ -60,6 +66,20 @@ describe("A2A instance control-plane routes", () => {
     state.probe.mockResolvedValue({ state: "ready", statusCode: 200, durationMs: 8 });
   });
 
+  it("distinguishes saved settings from container adoption, including disable and failed inspection", async () => {
+    state.getInstanceById.mockResolvedValue({ id: "agent-1", user_id: "owner", config_json: JSON.stringify({ a2aEnabled: false, a2aRevision: "revision-2" }) });
+    await withServer(async (baseUrl) => {
+      const read = async () => (await fetch(`${baseUrl}/agent-1/a2a/status`, { headers: { "x-test-user": "owner" } })).json();
+      expect(await read()).toMatchObject({ state: "disabled", applicationState: "pending" });
+      state.inspect.mockResolvedValue({ Config: { Env: ["MYBAY_A2A_REVISION=revision-2", "A2A_BEARER_TOKEN=private"] } });
+      const applied = await read();
+      expect(applied).toMatchObject({ applicationState: "applied" });
+      expect(JSON.stringify(applied)).not.toContain("private");
+      state.inspect.mockRejectedValue(new Error("daemon unavailable"));
+      expect(await read()).toMatchObject({ applicationState: "unknown" });
+    });
+  });
+
   it("authorizes before returning a secret-free configuration view", async () => {
     await withServer(async (baseUrl) => {
       expect((await fetch(`${baseUrl}/agent-1/a2a`)).status).toBe(401);
@@ -73,6 +93,14 @@ describe("A2A instance control-plane routes", () => {
     });
   });
 
+  it('uses the current instance name rather than a historical collaboration name', async () => {
+    state.getInstances.mockResolvedValue([{ id: 'agent-2', name: 'Renamed Agent', user_id: 'owner', agent_image_tag: 'v2026.8.31', config_json: JSON.stringify({ a2aEnabled: true, a2aAgentName: 'Old Agent' }) }]);
+    await withServer(async baseUrl => {
+      const response = await fetch(`${baseUrl}/agent-1/a2a`, { headers: { 'x-test-user': 'owner' } });
+      expect((await response.json()).peers[0].name).toBe('Renamed Agent');
+    });
+  });
+
   it("authorizes the bounded, secret-free activity feed", async () => {
     await withServer(async (baseUrl) => {
       expect((await fetch(`${baseUrl}/agent-1/a2a/activity`)).status).toBe(401);
@@ -82,6 +110,18 @@ describe("A2A instance control-plane routes", () => {
       expect(body).toMatchObject({ activities: [], orchestrations: [] });
       expect(body.generatedAt).toEqual(expect.any(String));
       expect(JSON.stringify(body)).not.toContain("token");
+    });
+  });
+
+  it('authorizes exact-task evidence and rejects malformed references without inferring success for missing records', async () => {
+    await withServer(async baseUrl => {
+      const url = `${baseUrl}/agent-1/a2a/activity?contextId=ctx-one&taskId=task-one&peerId=agent-2`;
+      expect((await fetch(url)).status).toBe(401);
+      expect((await fetch(url, { headers: { 'x-test-user': 'other-owner' } })).status).toBe(403);
+      const response = await fetch(url, { headers: { 'x-test-user': 'owner' } });
+      expect(response.status).toBe(200);
+      expect((await response.json()).recoveryEvidence).toMatchObject({ originalFound: false, originalStatus: 'unknown', otherTasks: [], source: { contextId: 'ctx-one', taskId: 'task-one', peerId: 'agent-2' } });
+      expect((await fetch(`${baseUrl}/agent-1/a2a/activity?taskId=../invalid`, { headers: { 'x-test-user': 'owner' } })).status).toBe(400);
     });
   });
 
@@ -98,10 +138,32 @@ describe("A2A instance control-plane routes", () => {
       expect(response.status).toBe(200);
       expect(await response.json()).toMatchObject({
         state: "ready",
+        toolState: "not_configured",
         peers: [{ id: "agent-2", state: "ready", statusCode: 200 }],
         generatedAt: expect.any(String),
       });
       expect(state.probe.mock.calls.map(([id]) => id)).toEqual(["agent-1", "agent-2"]);
+    });
+  });
+
+  it("diagnoses peer prerequisites and never probes inaccessible or disabled peers", async () => {
+    state.getInstanceById.mockResolvedValue({ id: "agent-1", user_id: "owner", config_json: JSON.stringify({ a2aEnabled: true, a2aPeerIds: ["disabled", "pending", "foreign", "missing"] }) });
+    state.getInstances.mockResolvedValue([
+      { id: "disabled", user_id: "owner", agent_image_tag: "v2026.8.31", config_json: "{}" },
+      { id: "pending", user_id: "owner", status: "running", agent_image_tag: "v2026.8.31", config_json: JSON.stringify({ a2aEnabled: true, a2aRevision: "new" }) },
+      { id: "foreign", user_id: "another", config_json: "{}" },
+    ]);
+    await withServer(async baseUrl => {
+      const response = await fetch(baseUrl + "/agent-1/a2a/status", { headers: { "x-test-user": "owner" } });
+      const body = await response.json();
+      expect(body.peers).toEqual([
+        expect.objectContaining({ id: "disabled", state: "disabled", setupIssue: "disabled" }),
+        expect.objectContaining({ id: "pending", state: "ready", setupIssue: "pending", applicationState: "pending" }),
+        { id: "foreign", state: "unknown", setupIssue: "unavailable" },
+        { id: "missing", state: "unknown", setupIssue: "unavailable" },
+      ]);
+      expect(state.probe.mock.calls.map(([id]) => id)).toEqual(["agent-1", "pending"]);
+      expect(state.updateInstanceConfig).not.toHaveBeenCalled();
     });
   });
 

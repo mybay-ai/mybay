@@ -1,0 +1,47 @@
+import express from 'express';
+import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
+import { afterEach, expect, it, vi } from 'vitest';
+const fixture = vi.hoisted(() => ({root:'',instanceId:'11111111-1111-4111-8111-111111111111',source:{contextId:'ctx-source',taskId:'task-source',peerId:'peer'},dispatch:vi.fn(()=>true)}));
+vi.mock('../../../middlewares/auth',()=>({authenticateToken:(req:any,res:any,next:any)=>{if(req.headers['x-test-user']!=='owner')return res.status(401).json({success:false});req.user={id:'owner'};next();}}));
+vi.mock('./limiters',()=>({runsLimiter:(_req:any,_res:any,next:any)=>next()}));
+vi.mock('../../../services/instances/resourceAuthorityService',()=>({resolveInstanceAuthority:async()=>({ok:true,instance:{id:fixture.instanceId,config_json:JSON.stringify({a2aEnabled:true,a2aPeerIds:['peer']})}}),resolveConversationAuthority:async()=>({ok:true,conversation:{collaboration:null}})}));
+vi.mock('../../../utils/capabilities',()=>({probeCapabilities:async()=> 'supported'}));
+vi.mock('../../../utils/chatAttachments',()=>({loadAndValidateChatAttachments:async()=>[]}));
+vi.mock('../../../services/chatRealtime',()=>({emitChatConversationUpdated:vi.fn()}));
+vi.mock('../../../services/runs/questionBridgeInstaller',()=>({isQuestionBridgeInstalling:()=>false}));
+vi.mock('../../../services/runsReconciler',()=>({RECONCILER_ID:'isolated',primeRunFileSnapshot:vi.fn(),discardRunFileSnapshot:vi.fn(),emitRunLifecycleStep:vi.fn(),requestRunReconcile:fixture.dispatch,requestRunsReconcile:vi.fn()}));
+vi.mock('../../../services/a2aActivity',async importOriginal=>{const actual:any=await importOriginal();return {...actual,readA2AActivities:(options:any)=>actual.readA2AActivities({...options,dataRoot:fixture.root})};});
+import {registerRunRoutes} from './runs.routes';
+import {chatRepo} from '../../../repositories/chatRepo';
+import {closeLocalDatabase,readStore} from '../../../localStore';
+const previousStore=process.env.LOCAL_STORE_PATH;
+const previousRuns=process.env.MYBAY_ASYNC_CHAT_RUNS_ENABLED;
+afterEach(()=>{closeLocalDatabase();if(previousStore===undefined)delete process.env.LOCAL_STORE_PATH;else process.env.LOCAL_STORE_PATH=previousStore;if(previousRuns===undefined)delete process.env.MYBAY_ASYNC_CHAT_RUNS_ENABLED;else process.env.MYBAY_ASYNC_CHAT_RUNS_ENABLED=previousRuns;if(fixture.root)fs.rmSync(fixture.root,{recursive:true,force:true});});
+it('persists recovery through the real HTTP route and SQLite, deduplicates concurrent/reopened submissions, and rejects changed payload identities',async()=>{
+ fixture.root=fs.mkdtempSync(path.join(os.tmpdir(),'mybay-recovery-http-'));
+ process.env.LOCAL_STORE_PATH=path.join(fixture.root,'store.sqlite');process.env.MYBAY_ASYNC_CHAT_RUNS_ENABLED='true';
+ const dir=path.join(fixture.root,fixture.instanceId);fs.mkdirSync(path.join(dir,'a2a_conversations'),{recursive:true});
+ fs.writeFileSync(path.join(dir,'a2a_audit.jsonl'),JSON.stringify({ts:1,direction:'outbound',peer:'peer',task_id:'task-source'}));
+ fs.writeFileSync(path.join(dir,'a2a_conversations','ctx-source.jsonl'),JSON.stringify({ts:1,role:'user',text:'Read-only source',task_id:'task-source'}));
+ const conv=await chatRepo.createConversation('owner',fixture.instanceId,'Recovery HTTP');
+ const router=express.Router();registerRunRoutes(router);const app=express();app.use(express.json(),router);const server=app.listen(0,'127.0.0.1');
+ await new Promise<void>(resolve=>server.once('listening',resolve));
+ const url=`http://127.0.0.1:${(server.address() as any).port}/${fixture.instanceId}/runs`;
+ const payload={conversationId:conv.id,content:'Review original task first',requestId:'first',reasoningEffort:'balanced',a2aRecoverySource:fixture.source};
+ const post=(patch:any={},owner=true)=>fetch(url,{method:'POST',headers:{'Content-Type':'application/json',...(owner?{'x-test-user':'owner'}:{})},body:JSON.stringify({...payload,...patch})});
+ try {
+  expect((await post({},false)).status).toBe(401);
+  expect((await post({a2aRecoverySource:{...fixture.source,taskId:'task-fake'}})).status).toBe(400);
+  const responses=await Promise.all([post(),post({requestId:'second'})]);
+  expect(responses.map(r=>r.status).sort()).toEqual([200,202]);
+  const bodies=await Promise.all(responses.map(r=>r.json()));const id=bodies[0].runId;expect(bodies[1].runId).toBe(id);expect(fixture.dispatch).toHaveBeenCalledTimes(1);
+  const original=await chatRepo.getChatRun(id);expect(original.a2a_recovery_source).toEqual(fixture.source);
+  const replay=await (await post({requestId:'third'})).json();expect(replay).toMatchObject({replayed:true,runId:id,requestId:original.request_id});
+  expect((await post({requestId:original.request_id,reasoningEffort:'deep'})).status).toBe(409);
+  await chatRepo.finishChatRun({runId:id,status:'completed',assistantContent:'Original result checked'});closeLocalDatabase();
+  const reopened=await (await post({requestId:'after-refresh'})).json();expect(reopened).toMatchObject({replayed:true,runId:id,status:'completed'});
+  expect(readStore().chatRuns).toHaveLength(1);expect((await chatRepo.listMessages(conv.id,50)).filter(m=>m.role==='user')).toHaveLength(1);
+ } finally {server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
+},30000);

@@ -54,6 +54,7 @@ import { resolveInitialChatInstanceId } from "./chat-workspace/chatInitialInstan
 import { createChatSelectionPersistence } from "./chat-workspace/chatSelectionPersistence";
 import { createChatModePreference, type PreferredChatMode } from "./chat-workspace/chatModePreference";
 import { readA2ARetryNavigationState } from "./chat-workspace/a2aRetryNavigation";
+import type { ChatGroupConfig } from "../../shared/chatCollaboration";
 
 export { generateUUIDv4 } from "./chat-workspace/chatWorkspaceSendPolicy";
 
@@ -81,6 +82,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
   const [loadingMessages, setLoadingMessages] = useState(false);
   const composer = useChatComposerDraft();
   const { input, replaceInput: setInput } = composer;
+  const a2aRecoveryDraftRef = useRef<ReturnType<typeof readA2ARetryNavigationState>>(null);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [chatReadiness, setChatReadiness] = useState<Record<string, ChatReadinessState>>({});
@@ -141,10 +143,12 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     const retryState = readA2ARetryNavigationState(location.state, selectedId);
     if (!retryState) return;
     consumedA2ARetryLocationRef.current = location.key;
+    a2aRecoveryDraftRef.current = retryState;
     setInput(retryState.a2aRetryDraft);
     setChatMode("agent");
+    modePreference.remember(selectedId, "agent");
     navigate(`${location.pathname}${location.search}${location.hash}`, { replace: true, state: null });
-  }, [location.hash, location.key, location.pathname, location.search, location.state, navigate, selectedId, setInput]);
+  }, [location.hash, location.key, location.pathname, location.search, location.state, modePreference, navigate, selectedId, setInput]);
 
   const {
     attachmentConfig,
@@ -467,29 +471,29 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
           });
           setInstances(activeList);
           
-          // Parallel lightweight chat readiness probes
-          const readinessPromises = activeList.map(async (inst: any) => {
-            try {
-              const probe = await api.get(`/api/instances/${inst.id}/chat-readiness`, { signal: controller.signal });
-              return { id: inst.id, ...normalizeChatReadinessProbe({ ...probe, checkedAt: new Date().toISOString(), probeStatus: "checked" }) };
-            } catch (err) {
-              return { id: inst.id, ...unavailableChatReadiness("PROBE_FAILED", t("dashboard:chatWorkspace.probeFailed")), checkedAt: new Date().toISOString(), probeStatus: "failed" };
+          // Restore history immediately; runtime readiness only gates sending.
+          const initialId = resolveInitialChatInstanceId(activeList, {}, preferredInstanceId, selectionPersistence.read().instanceId);
+          selectInstanceId(initialId);
+
+          // Other instances update independently and never change the selection.
+          // The selected-instance effect owns its probe, avoiding a duplicate call.
+          void (async () => {
+            // Leave browser connections available for history and the active run.
+            for (const inst of activeList) {
+              if (controller.signal.aborted) return;
+              if (inst.id === initialId || inst.id === selectedIdRef.current) continue;
+              try {
+                const probe = await api.get(`/api/instances/${inst.id}/chat-readiness`, { signal: controller.signal });
+                if (controller.signal.aborted) return;
+                if (selectedIdRef.current === inst.id) continue;
+                setChatReadiness(previous => ({ ...previous, [inst.id]: normalizeChatReadinessProbe({ ...probe, checkedAt: new Date().toISOString(), probeStatus: "checked" }) }));
+              } catch {
+                if (controller.signal.aborted) return;
+                if (selectedIdRef.current === inst.id) continue;
+                setChatReadiness(previous => ({ ...previous, [inst.id]: { ...unavailableChatReadiness("PROBE_FAILED", t("dashboard:chatWorkspace.probeFailed")), checkedAt: new Date().toISOString(), probeStatus: "failed" } }));
+              }
             }
-          });
-
-          const results = await Promise.all(readinessPromises);
-          if (controller.signal.aborted) return;
-          const readinessMap = results.reduce((acc: any, cur: any) => {
-            acc[cur.id] = cur;
-            return acc;
-          }, {});
-
-          setChatReadiness(readinessMap);
-
-          // Determine the initial selectedId exactly once after readiness state resolves
-          if (activeList.length > 0) {
-            selectInstanceId(resolveInitialChatInstanceId(activeList, readinessMap, preferredInstanceId, selectionPersistence.read().instanceId));
-          }
+          })();
         }
       } catch (err: any) {
         if (controller.signal.aborted) return;
@@ -512,7 +516,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     const currentInstanceGen = instanceGenerationRef.current;
     const controller = new AbortController();
     
-    async function checkCurrentReadinessAndLoadConversations() {
+    async function checkCurrentReadiness() {
       try {
         // Probe readiness
         const probe = await api.get(`/api/instances/${selectedId}/chat-readiness`, { signal: controller.signal });
@@ -537,10 +541,11 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
         }));
       }
 
-      await loadConversationsForSelectedInstance(initialSelectedId, currentInstanceGen, controller.signal);
     }
-    
-    checkCurrentReadinessAndLoadConversations();
+
+    // History is stored locally and remains readable even when a runtime is slow.
+    void loadConversationsForSelectedInstance(initialSelectedId, currentInstanceGen, controller.signal);
+    void checkCurrentReadiness();
     return () => controller.abort();
   }, [selectedId]);
 
@@ -936,6 +941,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     setConversations,
     selectConversationId,
     maybeRenameDefaultConversation,
+    a2aRecoveryDraftRef,
     createChatRunWithRetry,
     reasoningEffort,
     setActiveRunId,
@@ -1010,9 +1016,33 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
 
   const handleChatModeChange = (mode: PreferredChatMode) => {
     if (!selectedId || selectedIdRef.current !== selectedId) return;
+    if (mode !== "agent" && selectedConversation?.collaboration?.mode === "group") {
+      showToast(t("dashboard:chatWorkspace.groupRoomRequiresAgent"), "warning");
+      return;
+    }
     if (mode === "agent" && !runsSupported) return;
     setChatMode(mode);
     modePreference.remember(selectedId, mode);
+  };
+
+  const selectedConversation = useMemo(
+    () => conversations.find(conversation => conversation.id === selectedConversationId) || null,
+    [conversations, selectedConversationId],
+  );
+
+  const handleCollaborationChange = async (collaboration: ChatGroupConfig | null) => {
+    if (!selectedId || !selectedConversationId) return;
+    try {
+      const response = await api.patch(`/api/instances/${encodeURIComponent(selectedId)}/conversations/${encodeURIComponent(selectedConversationId)}`, { collaboration });
+      if (!response?.success || !response.conversation) throw new Error("GROUP_ROOM_SAVE_FAILED");
+      setConversations(previous => previous.map(conversation => conversation.id === selectedConversationId ? response.conversation : conversation));
+      if (collaboration) handleChatModeChange("agent");
+      showToast(t(collaboration ? "dashboard:chatWorkspace.groupRoomSaved" : "dashboard:chatWorkspace.groupRoomDisabled"), "success");
+    } catch (error) {
+      console.error("Failed to update group room:", error);
+      showToast(t("dashboard:chatWorkspace.groupRoomSaveFailed"), "error");
+      throw error;
+    }
   };
 
   const handleEditMessage = (msg: ChatMessage) => {
@@ -1319,8 +1349,18 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
           />
 
           {/* Message input area */}
+          {selectedId && input.trim() && a2aRecoveryDraftRef.current?.a2aRetryInstanceId === selectedId && a2aRecoveryDraftRef.current.a2aRecoverySource && (
+            <div role="status" className="mx-4 mb-2 rounded-lg border border-outline bg-surface-muted px-3 py-2 text-xs leading-5 text-content-secondary">
+              {t(input.trim() === a2aRecoveryDraftRef.current.a2aRetryDraft && composer.blocks.length === 0 && chatMode === "agent" ? "a2a.draftLinkedHint" : "a2a.draftUnlinkedHint")}
+            </div>
+          )}
           {selectedId && (
             <ChatInputBar
+              workspaceContext={{ instanceId: selectedId, conversationId: selectedConversationId }}
+              onAddWorkspaceFiles={(instanceId, conversationId, files) => {
+                if (selectedIdRef.current !== instanceId || selectedConversationIdRef.current !== conversationId) return;
+                void handleUploadFiles(files);
+              }}
               creatingConversation={creatingConversation}
               loadingConversations={loadingConversations}
               input={input}
@@ -1347,10 +1387,25 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
               mobileKeyboardOpen={mobileWorkspaceFrame?.keyboardOpen || false}
               onUpload={handleUploadFiles}
               onRemoveAttachment={handleRemoveAttachment}
+              onPreviewAttachment={handlePreviewConversationFileFromWorkspace}
 
               onSubmit={handleSend}
               onKeyDown={handleKeyDown}
               onStopRun={handleCancelOrStop}
+              onComposerCommand={command => {
+                if (command === "new") {
+                  void handleCreateConversation();
+                } else if (command === "stop") {
+                  void handleCancelOrStop();
+                } else if (command === "model") {
+                  setMobileOverlay(null);
+                  setShowSettings(true);
+                } else if (command === "help") {
+                  showToast(t("dashboard:chatWorkspace.composerCommandHelpMessage"), "info");
+                }
+              }}
+              collaboration={selectedConversation?.collaboration || null}
+              onCollaborationChange={handleCollaborationChange}
               onInputFocus={() => {
                 if (typeof window !== "undefined" && window.innerWidth < CHAT_WORKSPACE_TABLET_BREAKPOINT) {
                   window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" }));

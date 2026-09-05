@@ -6,19 +6,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ConversationTitle } from "./ConversationTitle";
 import { ConversationActionsDialog } from "./ConversationActionsDialog";
-import { api } from "../../lib/api";
+import { useConversationSearch } from "./useConversationSearch";
+import { SearchHighlight } from "./SearchHighlight";
+import type { ConversationSearchResult } from "../../../shared/conversationSearch";
+export type { ConversationSearchResult } from "../../../shared/conversationSearch";
 
-export interface ConversationSearchResult {
-  conversation_id: string;
-  conversation_title: string;
-  project_id: string | null;
-  matched_field: "title" | "message";
-  message_id: string | null;
-  message_role: string | null;
-  sequence_no: number | null;
-  snippet: string;
-  matched_at: string;
-}
+
 
 interface ChatConversationSidebarProps {
   mobileSidebarOpen: boolean;
@@ -99,10 +92,8 @@ export function ChatConversationSidebar({
   const projectActions = conversationProjects.find(project => project.id === projectActionsId);
   const renameFinishedRef = useRef(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<ConversationSearchResult[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [searchFailed, setSearchFailed] = useState(false);
-  const searchRequestRef = useRef(0);
+  const search = useConversationSearch(selectedId, searchQuery);
+  const { results: searchResults, loading: searching, failed: searchFailed } = search;
 
   const moveConversation = useMemo(() => conversations.find((conv) => conv.id === moveConversationId) || null, [conversations, moveConversationId]);
 
@@ -117,41 +108,8 @@ export function ChatConversationSidebar({
     setActionsId(null);
     setProjectActionsId(null);
     setSearchQuery("");
-    setSearchResults([]);
-    setSearching(false);
-    setSearchFailed(false);
-    searchRequestRef.current += 1;
+
   }, [selectedId]);
-
-  useEffect(() => {
-    const query = searchQuery.trim();
-    const requestId = ++searchRequestRef.current;
-    if (!selectedId || query.length < 2) {
-      setSearchResults([]);
-      setSearching(false);
-      setSearchFailed(false);
-      return;
-    }
-
-    setSearching(true);
-    setSearchFailed(false);
-    const timer = window.setTimeout(async () => {
-      try {
-        const response = await api.get(`/api/instances/${encodeURIComponent(selectedId)}/conversations/search?q=${encodeURIComponent(query)}&limit=30`);
-        if (searchRequestRef.current !== requestId) return;
-        setSearchResults(response?.success && Array.isArray(response.results) ? response.results : []);
-      } catch (error) {
-        if (searchRequestRef.current !== requestId) return;
-        console.error("Failed to search conversations:", error);
-        setSearchResults([]);
-        setSearchFailed(true);
-      } finally {
-        if (searchRequestRef.current === requestId) setSearching(false);
-      }
-    }, 250);
-
-    return () => window.clearTimeout(timer);
-  }, [searchQuery, selectedId]);
 
   const closeProjectModal = () => {
     setProjectModalMode(null);
@@ -362,7 +320,7 @@ export function ChatConversationSidebar({
           searching ? (
             <div className="flex items-center justify-center gap-2 py-10 text-[13px] text-content-muted"><LoaderCircle className="h-4 w-4 animate-spin" />{t("chatWorkspace.searchingConversations")}</div>
           ) : searchFailed ? (
-            <div className="px-4 py-10 text-center text-[13px] text-red-600 dark:text-red-300">{t("chatWorkspace.searchConversationsFailed")}</div>
+            <div className="px-4 py-10 text-center text-[13px] text-red-600 dark:text-red-300"><p role="status">{t("chatWorkspace.searchConversationsFailed")}</p><button type="button" onClick={search.retry} className="mt-2 rounded px-3 py-1 underline">{t("chatWorkspace.retrySearch")}</button></div>
           ) : searchResults.length === 0 ? (
             <div className="px-4 py-10 text-center text-[13px] text-content-muted">{t("chatWorkspace.noConversationSearchResults")}</div>
           ) : (
@@ -378,12 +336,16 @@ export function ChatConversationSidebar({
                 >
                   <div className="flex items-center gap-2">
                     <MessageSquare className="h-3.5 w-3.5 shrink-0 text-indigo-500" />
-                    <span className="min-w-0 flex-1 text-[13px] font-semibold text-content"><ConversationTitle title={result.conversation_title} /></span>
+                    <span className="min-w-0 flex-1 text-[13px] font-semibold text-content"><ConversationTitle title={result.conversation_title}><SearchHighlight text={result.conversation_title} query={searchQuery} /></ConversationTitle></span>
                     <span className="shrink-0 text-[10px] text-content-muted">{t(result.matched_field === "title" ? "chatWorkspace.titleMatch" : "chatWorkspace.messageMatch")}</span>
                   </div>
-                  {result.matched_field === "message" && <p className="mt-1.5 line-clamp-3 text-[12px] leading-5 text-content-muted">{result.snippet}</p>}
+                  {result.matched_field === "message" && <p className="mt-1.5 line-clamp-3 text-[12px] leading-5 text-content-muted">{<SearchHighlight text={result.snippet} query={searchQuery} />}</p>}
                 </button>
               ))}
+              {search.moreFailed && <p role="status" className="px-2 text-xs text-red-600 dark:text-red-300">{t("chatWorkspace.searchConversationsFailed")}</p>}
+              {search.nextCursor && <button type="button" disabled={search.loadingMore} onClick={() => void search.loadMore()} className="flex w-full items-center justify-center gap-2 rounded-lg border border-outline px-3 py-2 text-xs text-content-secondary disabled:opacity-50">
+                {search.loadingMore && <LoaderCircle className="h-3.5 w-3.5 animate-spin" />}{t(search.moreFailed ? "chatWorkspace.retrySearch" : "chatWorkspace.loadMoreSearchResults")}
+              </button>}
             </div>
           )
         ) : loadingConversations ? (

@@ -1,9 +1,10 @@
 import { ChatUsageDetails } from "./ChatUsageDetails";
+import { A2ARecoveryNotice } from "./A2ARecoveryNotice";
 import { readLocalRunUsage, usageNumber } from "../../../shared/localRunUsage";
 import { readLocalModelEvidence } from "../../../shared/localModelEvidence";
-import { Children, isValidElement, useEffect, useMemo, useState } from "react";
-import type { ReactNode } from "react";
-import { Brain, Check, Clock3, Copy, ExternalLink, FileText, Gauge, ThumbsDown, ThumbsUp } from "lucide-react";
+import { memo, useEffect, useMemo, useState } from "react";
+import { useChatCallback } from './useChatCallback';
+import { Brain, Check, Clock3, Copy, Gauge, ThumbsDown, ThumbsUp } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { AgentInstance, User as UserType } from "../../types";
 import type { ChatMessage } from "../../lib/chatWorkspaceState";
@@ -18,14 +19,19 @@ import { InlineRunTimeline } from "./run/InlineRunTimeline";
 import { projectRunTimeline, selectMessageTimeline } from "./run/runTimelinePresentation";
 import { InlineApprovalCard } from "./run/InlineApprovalCard";
 import { ChatRunQuestions } from "./ChatRunQuestions";
-import { GENERATED_FILE_PATH_PATTERN } from "./generatedFilePath";
 import type { GeneratedArtifact } from "./generatedArtifacts";
 import { ChatGeneratedArtifactCards, selectMessageGeneratedArtifacts } from "./ChatGeneratedArtifactCards";
 import { ChatMessageAttachments } from "./ChatMessageAttachments";
 import { ChatMessageStatusNotices } from "./ChatMessageStatusNotices";
 import { ChatRunFileChanges } from "./ChatRunFileChanges";
-import { ChatMarkdownRenderer } from "./ChatMessageContent";
+import { LinkedChatContent, MarkdownChatContent } from "./ChatMessageContent";
+import { copyTextToClipboard } from "./chatClipboard";
 import { ChatAgentAvatar } from "./ChatAgentAvatar";
+import { formatLocalizedDuration } from "./localizedDuration";
+import { ChatGroupRunSummary } from "./ChatGroupRunSummary";
+
+const EMPTY_CONVERSATION_FILES: PendingAttachment[] = [];
+const EMPTY_ARTIFACTS: GeneratedArtifact[] = [];
 
 interface ChatMessageBubbleProps {
   message: ChatMessage;
@@ -74,46 +80,7 @@ export function getMessageAttachments(message: ChatMessage, conversationFiles: P
   });
 }
 
-function escapeRegExp(value: string) {
-  return value.replace(/[|\\{}()[\]^$+*?.]/g, "\\$&");
-}
-
-const MARKDOWN_URL_WRAPPERS = ["**", "__", "`", "*", "_"];
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-function normalizeUrlHref(rawValue: string) {
-  const trimmed = rawValue.replace(/[\]\)}>),.;:!?\uFF0C\u3002\uFF1B\uFF1A\uFF01\uFF1F]+$/u, "");
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  if (/^www\./i.test(trimmed)) return "https://" + trimmed;
-  return "http://" + trimmed;
-}
-
-function splitUrlToken(value: string) {
-  let core = value;
-  let trailing = "";
-  const trailingMatch = core.match(/([\]\)}>),.;:!?\uFF0C\u3002\uFF1B\uFF1A\uFF01\uFF1F]+)$/u);
-  if (trailingMatch?.[1]) {
-    trailing = trailingMatch[1];
-    core = core.slice(0, -trailing.length);
-  }
-
-  for (const wrapper of MARKDOWN_URL_WRAPPERS) {
-    while (core.endsWith(wrapper)) {
-      core = core.slice(0, -wrapper.length);
-    }
-  }
-
-  return { core, trailing };
-}
-
-function trimOpeningMarkdownWrapper(beforeText: string, tokenRaw: string) {
-  for (const wrapper of MARKDOWN_URL_WRAPPERS) {
-    if (beforeText.endsWith(wrapper) && tokenRaw.endsWith(wrapper)) {
-      return beforeText.slice(0, -wrapper.length);
-    }
-  }
-  return beforeText;
-}
 
 function readNumberField(source: unknown, keys: string[]) {
   if (!source || typeof source !== "object") return null;
@@ -147,14 +114,6 @@ function formatTokenUsage(value: number | null | undefined) {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(value);
 }
 
-function formatMessageDuration(value: number | null | undefined) {
-  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return "";
-  if (value < 1000) return `${Math.round(value)}ms`;
-  const seconds = Math.round(value / 1000);
-  if (seconds < 60) return `${seconds}s`;
-  return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
-}
-
 function getAssistantModelPresentation(message: ChatMessage, liveConfiguredModel: string, t: (key: string) => string) {
   const reportedModel = readLocalRunUsage(message.metadata?.usage_evidence)?.model;
   if (reportedModel) return { label: reportedModel, title: t("chatWorkspace.usage.modelReportedTitle") };
@@ -166,321 +125,7 @@ function getAssistantModelPresentation(message: ChatMessage, liveConfiguredModel
   return { label: t("chatWorkspace.usage.unknownModel"), title: t("chatWorkspace.usage.modelUnknownTitle") };
 }
 
-async function copyTextToClipboard(value: string) {
-  if (navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(value);
-    return;
-  }
-  const textarea = document.createElement("textarea");
-  textarea.value = value;
-  textarea.style.position = "fixed";
-  textarea.style.opacity = "0";
-  document.body.appendChild(textarea);
-  textarea.select();
-  document.execCommand("copy");
-  document.body.removeChild(textarea);
-}
-
-function findNextToken(text: string, files: PendingAttachment[]) {
-  const urlRegex = /(?:https?:\/\/|www\.)[^\s<>"']+|\b(?:\d{1,3}\.){3}\d{1,3}(?::\d{1,5})?(?:\/[^\s<>"']*)?/giu;
-  let best: { index: number; raw: string; type: "url" | "file" | "path"; file?: PendingAttachment } | null = null;
-  const urlMatch = urlRegex.exec(text);
-  if (urlMatch) best = { index: urlMatch.index, raw: urlMatch[0], type: "url" };
-
-  GENERATED_FILE_PATH_PATTERN.lastIndex = 0;
-  const pathMatch = GENERATED_FILE_PATH_PATTERN.exec(text);
-  if (pathMatch && (!best || pathMatch.index < best.index)) {
-    best = { index: pathMatch.index, raw: pathMatch[0], type: "path" };
-  }
-
-  for (const file of files) {
-    const name = file.originalName?.trim();
-    if (!name) continue;
-    const fileMatch = new RegExp(escapeRegExp(name), "iu").exec(text);
-    if (fileMatch && (!best || fileMatch.index < best.index)) {
-      best = { index: fileMatch.index, raw: fileMatch[0], type: "file", file };
-    }
-  }
-  return best;
-}
-
-function LinkedChatContent({
-  content,
-  isUser,
-  conversationFiles,
-  onOpenConversationFile,
-  onOpenInstanceFilePath
-}: {
-  content: string;
-  isUser: boolean;
-  conversationFiles: PendingAttachment[];
-  onOpenConversationFile?: (file: PendingAttachment) => void;
-  onOpenInstanceFilePath?: (filePath: string) => void;
-}) {
-  const { t } = useTranslation("dashboard");
-  if (!content) return null;
-  const nodes: React.ReactNode[] = [];
-  let remaining = content;
-  let key = 0;
-
-  while (remaining.length > 0) {
-    const token = findNextToken(remaining, conversationFiles);
-    if (!token) {
-      nodes.push(remaining);
-      break;
-    }
-    const beforeToken = remaining.slice(0, token.index);
-
-    if (token.type === "file" && token.file && onOpenConversationFile) {
-      if (beforeToken) nodes.push(beforeToken);
-      nodes.push(
-        <button
-          key={"file-" + key++}
-          type="button"
-          onClick={() => onOpenConversationFile(token.file!)}
-          className={
-            "mx-0.5 inline-flex max-w-full items-center gap-1 rounded-md border px-1.5 py-0.5 align-baseline text-[13px] font-semibold underline-offset-2 hover:underline " +
-            (isUser
-              ? "border-white/25 bg-white/10 text-white hover:bg-white/20"
-              : "border-indigo-100 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:border-indigo-400/30 dark:bg-indigo-500/10 dark:text-indigo-200 dark:hover:bg-indigo-500/20")
-          }
-          title={t("chatWorkspace.openFile")}
-        >
-          <FileText className="h-3.5 w-3.5 shrink-0" />
-          <span className="truncate">{token.raw}</span>
-        </button>
-      );
-      remaining = remaining.slice(token.index + token.raw.length);
-      continue;
-    }
-
-    if (token.type === "path" && onOpenInstanceFilePath) {
-      const beforePath = trimOpeningMarkdownWrapper(beforeToken, token.raw);
-      if (beforePath) nodes.push(beforePath);
-      const { core, trailing } = splitUrlToken(token.raw);
-      nodes.push(
-        <button
-          key={"path-" + key++}
-          type="button"
-          onClick={() => onOpenInstanceFilePath(core)}
-          className={
-            "mx-0.5 inline-flex max-w-full items-center gap-1 rounded-md border px-1.5 py-0.5 align-baseline text-[13px] font-semibold underline-offset-2 hover:underline " +
-            (isUser
-              ? "border-white/25 bg-white/10 text-white hover:bg-white/20"
-              : "border-emerald-100 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-400/30 dark:bg-emerald-500/10 dark:text-emerald-200 dark:hover:bg-emerald-500/20")
-          }
-          title={core}
-        >
-          <FileText className="h-3.5 w-3.5 shrink-0" />
-          <span className="truncate">{core}</span>
-        </button>
-      );
-      if (trailing) nodes.push(trailing);
-      remaining = remaining.slice(token.index + token.raw.length);
-      continue;
-    }
-
-    if (token.type === "url") {
-      const beforeUrl = trimOpeningMarkdownWrapper(beforeToken, token.raw);
-      if (beforeUrl) nodes.push(beforeUrl);
-      const { core, trailing } = splitUrlToken(token.raw);
-      const href = normalizeUrlHref(core);
-      nodes.push(
-        <a
-          key={"url-" + key++}
-          href={href}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={
-            "inline-flex max-w-full items-center gap-1 break-all font-semibold underline underline-offset-2 " +
-            (isUser
-              ? "text-white decoration-white/55 hover:decoration-white"
-              : "text-indigo-700 decoration-indigo-300 hover:text-indigo-800 hover:decoration-indigo-600 dark:text-indigo-300 dark:decoration-indigo-500/60 dark:hover:text-indigo-200")
-          }
-          title={href}
-        >
-          <span>{core}</span>
-          <ExternalLink className="h-3 w-3 shrink-0" />
-        </a>
-      );
-      if (trailing) nodes.push(trailing);
-      remaining = remaining.slice(token.index + token.raw.length);
-      continue;
-    }
-
-    if (beforeToken) nodes.push(beforeToken);
-    nodes.push(token.raw);
-    remaining = remaining.slice(token.index + token.raw.length);
-  }
-
-  return <>{nodes}</>;
-}
-
-
-type LinkedContentContext = {
-  isUser: boolean;
-  conversationFiles: PendingAttachment[];
-  onOpenConversationFile?: (file: PendingAttachment) => void;
-  onOpenInstanceFilePath?: (filePath: string) => void;
-};
-
-function linkifyMarkdownChildren(children: ReactNode, context: LinkedContentContext): ReactNode {
-  return Children.map(children, (child) => {
-    if (typeof child === "string") {
-      return (
-        <LinkedChatContent
-          content={child}
-          isUser={context.isUser}
-          conversationFiles={context.conversationFiles}
-          onOpenConversationFile={context.onOpenConversationFile}
-          onOpenInstanceFilePath={context.onOpenInstanceFilePath}
-        />
-      );
-    }
-
-    if (Array.isArray(child)) return linkifyMarkdownChildren(child, context);
-    return child;
-  });
-}
-
-function getPlainNodeText(children: ReactNode): string {
-  if (typeof children === "string" || typeof children === "number") return String(children);
-  if (Array.isArray(children)) return children.map(getPlainNodeText).join("");
-  if (isValidElement<{ children?: ReactNode }>(children)) return getPlainNodeText(children.props.children);
-  return "";
-}
-
-function hasLinkableInlineToken(value: string, context: LinkedContentContext) {
-  const token = findNextToken(value, context.conversationFiles);
-  if (!token) return false;
-  if (token.type === "url") return true;
-  if (token.type === "file") return Boolean(token.file && context.onOpenConversationFile);
-  if (token.type === "path") return Boolean(context.onOpenInstanceFilePath);
-  return false;
-}
-
-function MarkdownCodeBlock({ children }: { children: ReactNode }) {
-  const { t } = useTranslation("dashboard");
-  const [copied, setCopied] = useState(false);
-  const codeText = getPlainNodeText(children).replace(/\n$/, "");
-
-  const handleCopy = async () => {
-    if (!codeText) return;
-    await copyTextToClipboard(codeText);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1400);
-  };
-
-  return (
-    <div className="my-2 max-w-full overflow-hidden rounded-xl border border-slate-700 bg-slate-950">
-      <div className="flex items-center justify-between border-b border-slate-800 bg-slate-900 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-        <span>Code</span>
-        <button
-          type="button"
-          onClick={() => void handleCopy()}
-          className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-slate-300 transition-colors hover:bg-slate-800 hover:text-white"
-          title={t("chatWorkspace.copyCode")}
-        >
-          <Copy className="h-3 w-3" />
-          {copied ? t("chatWorkspace.codeCopied") : t("chatWorkspace.copyCode")}
-        </button>
-      </div>
-      <pre className="max-w-full overflow-x-auto p-3 text-[12px] leading-5 text-slate-100">
-        {children}
-      </pre>
-    </div>
-  );
-}
-function MarkdownChatContent({
-  content,
-  conversationFiles,
-  onOpenConversationFile,
-  onOpenInstanceFilePath
-}: {
-  content: string;
-  conversationFiles: PendingAttachment[];
-  onOpenConversationFile?: (file: PendingAttachment) => void;
-  onOpenInstanceFilePath?: (filePath: string) => void;
-}) {
-  const linkContext: LinkedContentContext = {
-    isUser: false,
-    conversationFiles,
-    onOpenConversationFile,
-    onOpenInstanceFilePath
-  };
-
-  return (
-      <ChatMarkdownRenderer
-        content={content}
-        components={{
-          p: ({ children }) => <p className="m-0 whitespace-pre-wrap leading-5">{linkifyMarkdownChildren(children, linkContext)}</p>,
-          strong: ({ children }) => <strong className="font-semibold text-slate-950 dark:text-white">{linkifyMarkdownChildren(children, linkContext)}</strong>,
-          em: ({ children }) => <em className="italic">{linkifyMarkdownChildren(children, linkContext)}</em>,
-          ul: ({ children }) => <ul className="my-2 list-disc space-y-1 pl-5">{children}</ul>,
-          ol: ({ children }) => <ol className="my-2 list-decimal space-y-1 pl-5">{children}</ol>,
-          li: ({ children }) => <li className="pl-0.5 leading-5">{linkifyMarkdownChildren(children, linkContext)}</li>,
-          blockquote: ({ children }) => (
-            <blockquote className="my-2 border-l-2 border-indigo-200 pl-3 text-content-secondary dark:border-indigo-400/40">
-              {children}
-            </blockquote>
-          ),
-          code: ({ children, className }) => {
-            const value = getPlainNodeText(children);
-            const isBlock = Boolean(className) || value.includes("\n");
-            if (isBlock) return <code className={className}>{children}</code>;
-            if (hasLinkableInlineToken(value, linkContext)) {
-              return (
-                <LinkedChatContent
-                  content={value}
-                  isUser={false}
-                  conversationFiles={conversationFiles}
-                  onOpenConversationFile={onOpenConversationFile}
-                  onOpenInstanceFilePath={onOpenInstanceFilePath}
-                />
-              );
-            }
-            return (
-              <code className="rounded-md border border-outline bg-surface-muted px-1.5 py-0.5 text-[12px] font-semibold text-content-secondary">
-                {children}
-              </code>
-            );
-          },
-          pre: ({ children }) => <MarkdownCodeBlock>{children}</MarkdownCodeBlock>,
-          a: ({ href, children }) => {
-            const safeHref = href || "";
-            const isHttpLink = /^https?:\/\//i.test(safeHref);
-            if (!isHttpLink) return <span>{linkifyMarkdownChildren(children, linkContext)}</span>;
-            return (
-              <a
-                href={safeHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex max-w-full items-center gap-1 break-all font-semibold text-indigo-700 underline decoration-indigo-300 underline-offset-2 hover:text-indigo-800 hover:decoration-indigo-600 dark:text-indigo-300 dark:decoration-indigo-500/60 dark:hover:text-indigo-200"
-                title={safeHref}
-              >
-                <span>{children}</span>
-                <ExternalLink className="h-3 w-3 shrink-0" />
-              </a>
-            );
-          },
-          h1: ({ children }) => <h1 className="mt-4 text-xl font-bold leading-tight text-slate-950 dark:text-white">{linkifyMarkdownChildren(children, linkContext)}</h1>,
-          h2: ({ children }) => <h2 className="mt-4 text-lg font-bold leading-tight text-slate-950 dark:text-white">{linkifyMarkdownChildren(children, linkContext)}</h2>,
-          h3: ({ children }) => <h3 className="mt-3 text-base font-bold leading-tight text-slate-950 dark:text-white">{linkifyMarkdownChildren(children, linkContext)}</h3>,
-          hr: () => <hr className="my-4 border-0 border-t border-outline" />,
-          del: ({ children }) => <del className="text-content-muted">{linkifyMarkdownChildren(children, linkContext)}</del>,
-          table: ({ children }) => (
-            <div className="my-3 max-w-full overflow-x-auto rounded-xl border border-outline">
-              <table className="min-w-[520px] border-collapse text-left text-[12px]">{children}</table>
-            </div>
-          ),
-          thead: ({ children }) => <thead className="bg-surface-muted">{children}</thead>,
-          th: ({ children }) => <th className="whitespace-nowrap border-b border-outline px-2.5 py-2 font-semibold">{linkifyMarkdownChildren(children, linkContext)}</th>,
-          td: ({ children }) => <td className="border-b border-outline px-2.5 py-2 align-top break-words">{linkifyMarkdownChildren(children, linkContext)}</td>
-        }}
-      />
-  );
-}
-export function ChatMessageBubble({
+function ChatMessageBubbleBody({
   message,
   retrySourceMessage,
   currentUser,
@@ -489,11 +134,11 @@ export function ChatMessageBubble({
   onRetry,
   onEdit,
   onSwitchToAssistAndDiagnose,
-  conversationFiles = [],
+  conversationFiles = EMPTY_CONVERSATION_FILES,
   onOpenConversationFile,
   onOpenInstanceFilePath,
   onDownloadInstanceFilePath,
-  generatedArtifacts = [],
+  generatedArtifacts = EMPTY_ARTIFACTS,
   fallbackModelLabel = "",
   agentInstance,
   instanceId,
@@ -540,7 +185,7 @@ export function ChatMessageBubble({
   const failureMessage = failureInfo.message;
   const assistantTokenUsage = useMemo(() => getAssistantTokenUsage(message), [message]);
   const assistantTokenUsageLabel = useMemo(() => formatTokenUsage(assistantTokenUsage), [assistantTokenUsage]);
-  const assistantDurationLabel = formatMessageDuration(message.duration_ms ?? runMetrics?.durationMs);
+  const assistantDurationLabel = formatLocalizedDuration(message.duration_ms ?? runMetrics?.durationMs, unit => t(`chatWorkspace.timelineDurationUnits.${unit}`));
 
   const handleCopyAssistantMessage = async () => {
     if (!displayContent) return;
@@ -583,11 +228,13 @@ export function ChatMessageBubble({
         <ChatAgentAvatar instance={agentInstance} />
       )}
 
-      <div className={`rounded-2xl px-3.5 sm:px-4 py-2.5 sm:py-3 text-[14px] leading-5 shadow-sm relative break-words ${
+      <div className={`min-w-0 rounded-2xl px-3.5 sm:px-4 py-2.5 sm:py-3 text-[14px] leading-5 shadow-sm relative break-words ${
         isUser
-          ? "max-w-[90%] sm:max-w-[86%] bg-slate-950 text-white rounded-tr-md font-normal dark:bg-indigo-600"
-          : "max-w-[94%] sm:max-w-[92%] 2xl:max-w-[94%] bg-surface/95 border border-outline/80 text-content rounded-tl-md whitespace-pre-wrap"
+          ? "max-w-[calc(100%_-_2.5rem)] sm:max-w-[min(86%,calc(100%_-_2.875rem))] bg-slate-950 text-white rounded-tr-md font-normal dark:bg-indigo-600"
+          : "max-w-[calc(100%_-_2.5rem)] sm:max-w-[calc(100%_-_2.875rem)] bg-surface/95 border border-outline/80 text-content rounded-tl-md"
       } ${message.status === "failed" ? "border-red-350 bg-red-50/20" : ""} ${message.status === "stopped" ? "border-amber-300 bg-amber-50/20" : ""} ${message.status === "queued" ? "border-amber-200 bg-amber-50/20" : ""} ${message.status === "superseded" ? "opacity-65" : ""}`}>
+        {!isUser && <A2ARecoveryNotice instanceId={instanceId} source={message.metadata?.a2a_recovery_source || retrySourceMessage?.metadata?.a2a_recovery_source} status={runExecutionState?.status || message.status} />}
+        {!isUser && <ChatGroupRunSummary instanceId={instanceId} value={message.metadata?.group_collaboration} />}
         {!isUser && runExecutionState && (
           <InlineRunTimeline execution={{ ...runExecutionState, blocks: presentation?.blocks || runExecutionState.blocks }}
             metrics={runMetrics || { durationMs: message.duration_ms }} hideApprovalBlocks={Boolean(approvalRequest)} textUnaligned={presentation?.textUnaligned}
@@ -673,4 +320,20 @@ export function ChatMessageBubble({
       {isUser && <ChatUserAvatar currentUser={currentUser} />}
     </div>
   );
+}
+
+const MemoizedMessageBubble = memo(ChatMessageBubbleBody);
+
+export function ChatMessageBubble(props: ChatMessageBubbleProps) {
+  const onRetry = useChatCallback(props.onRetry);
+  const onEdit = useChatCallback(props.onEdit);
+  const onSwitchToAssistAndDiagnose = useChatCallback(props.onSwitchToAssistAndDiagnose);
+  const onOpenConversationFile = useChatCallback(props.onOpenConversationFile);
+  const onOpenInstanceFilePath = useChatCallback(props.onOpenInstanceFilePath);
+  const onDownloadInstanceFilePath = useChatCallback(props.onDownloadInstanceFilePath);
+  const onMessageFeedbackChange = useChatCallback(props.onMessageFeedbackChange);
+  const onRespondToApproval = useChatCallback(props.onRespondToApproval);
+  return <MemoizedMessageBubble {...props} onRetry={onRetry} onEdit={onEdit} onSwitchToAssistAndDiagnose={onSwitchToAssistAndDiagnose}
+    onOpenConversationFile={onOpenConversationFile} onOpenInstanceFilePath={onOpenInstanceFilePath} onDownloadInstanceFilePath={onDownloadInstanceFilePath}
+    onMessageFeedbackChange={onMessageFeedbackChange} onRespondToApproval={onRespondToApproval} />;
 }

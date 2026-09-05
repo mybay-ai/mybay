@@ -19,6 +19,9 @@ import { getRunStatusI18nKey, resolveRunDisplayStatus } from "./run/runStatusSem
 import type { GeneratedArtifact } from "./generatedArtifacts";
 import type { InstanceChatReadinessProbe } from "../../hooks/useLocalInstanceReadiness";
 
+const EMPTY_CONVERSATION_FILES: PendingAttachment[] = [];
+const EMPTY_GENERATED_ARTIFACTS: GeneratedArtifact[] = [];
+
 type ReadinessState = {
   ready: boolean;
   reason?: string;
@@ -105,11 +108,11 @@ export function ChatMessagesPanel({
   onRetry,
   onEditMessage,
   onSwitchToAssistAndDiagnose,
-  conversationFiles = [],
+  conversationFiles = EMPTY_CONVERSATION_FILES,
   onOpenConversationFile,
   onOpenInstanceFilePath,
   onDownloadInstanceFilePath,
-  generatedArtifacts = [],
+  generatedArtifacts = EMPTY_GENERATED_ARTIFACTS,
   onMessageFeedbackChange
 }: ChatMessagesPanelProps) {
   const { t } = useTranslation(["dashboard", "common"]);

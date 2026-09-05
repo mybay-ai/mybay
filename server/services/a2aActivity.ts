@@ -5,7 +5,15 @@ import { sanitizeString } from "../utils/sanitizer";
 
 const MAX_ACTIVITY_LIMIT = 50;
 const MAX_FILE_BYTES = 256 * 1024;
-const CONTEXT_FILE_PATTERN = /^ctx-[a-z0-9]+\.jsonl$/i;
+const CONTEXT_FILE_PATTERN = /^ctx-[a-z0-9](?:[a-z0-9-]{0,158})\.jsonl$/i;
+
+function resolveContainedPath(root: string, ...segments: string[]): string | null {
+  const resolvedRoot = path.resolve(root);
+  const candidate = path.resolve(resolvedRoot, ...segments);
+  const relative = path.relative(resolvedRoot, candidate);
+  if (!relative || path.isAbsolute(relative) || relative === ".." || relative.startsWith(`..${path.sep}`)) return null;
+  return candidate;
+}
 
 type AuditRow = {
   ts?: number;
@@ -22,12 +30,13 @@ type ConversationRow = {
   task_id?: string;
 };
 
-export type A2AActivityStatus = "completed" | "in_progress" | "connection_failed" | "timed_out" | "agent_offline" | "auth_failed" | "cancelled" | "failed";
+export type A2AActivityStatus = "completed" | "in_progress" | "connection_failed" | "timed_out" | "agent_offline" | "auth_failed" | "cancelled" | "failed" | "unknown";
 
 type OrchestrationOutcome = {
   mode: "all" | "first" | "best";
   finishedAt: string;
   peerErrors: Map<string, string>;
+  expectedPeers?: number;
 };
 
 type DirectCallOutcome = {
@@ -40,6 +49,7 @@ type DirectCallOutcome = {
 };
 
 export type A2AActivity = {
+  requestText?: string | null;
   contextId: string;
   taskId: string;
   direction: "inbound" | "outbound";
@@ -52,11 +62,13 @@ export type A2AActivity = {
   summary: string;
   result: string | null;
   failureReason: string | null;
+  evidenceIncomplete?: boolean;
+  expectedPeers?: number;
 };
 
 export type A2AOrchestration = {
   contextId: string;
-  status: "completed" | "partial" | "failed" | "in_progress";
+  status: "completed" | "partial" | "failed" | "in_progress" | "unknown";
   startedAt: string;
   completedAt: string | null;
   durationMs: number | null;
@@ -64,6 +76,8 @@ export type A2AOrchestration = {
   completed: number;
   failed: number;
   inProgress: number;
+  unknown: number;
+  evidenceIncomplete: boolean;
   nodes: A2AActivity[];
 };
 
@@ -121,7 +135,7 @@ function parseJsonObject(value: unknown): any | null {
   }
 }
 
-export function classifyA2AFailure(value: unknown): Exclude<A2AActivityStatus, "completed" | "in_progress" | "cancelled"> {
+export function classifyA2AFailure(value: unknown): Exclude<A2AActivityStatus, "completed" | "in_progress" | "cancelled" | "unknown"> {
   const text = String(value || "").toLowerCase();
   if (/timed?\s*out|timeout|etimedout/.test(text)) return "timed_out";
   if (/name or service not known|temporary failure in name resolution|getaddrinfo|enotfound|no route to host|host unreachable/.test(text)) return "agent_offline";
@@ -184,6 +198,7 @@ function readOrchestrationOutcomes(instanceRoot: string): Map<string, Orchestrat
           mode: invocation.mode,
           finishedAt,
           peerErrors: parsePeerErrors(String(row.content || "")),
+          expectedPeers: Number(String(row.content || "").match(/to (\d+) peer\(s\)/)?.[1]) || undefined,
         });
       }
     } finally {
@@ -233,13 +248,15 @@ function readDirectCallOutcomes(instanceRoot: string): DirectCallOutcome[] {
         const finishedAt = toIso(row.timestamp);
         if (!invocation || !finishedAt) continue;
         const output = boundedText(row.content, 1000);
-        const failed = /^error:/i.test(output);
+        // Hermes also returns JSON-RPC ValueErrors without the "Error:" prefix.
+        const failed = /^error:/i.test(output) || /^Peer '[^']+' returned an error:/i.test(output);
+        const completed = /^\[[^\r\n]+ · context [^\r\n]+\]\r?\n/.test(output);
         outcomes.push({
           ...invocation,
           finishedAt,
-          status: failed ? classifyA2AFailure(output) : "completed",
+          status: failed ? classifyA2AFailure(output) : completed ? "completed" : "unknown",
           failureReason: failed ? output : null,
-          result: failed ? null : boundedText(output.replace(/^\[[^\r\n]+\]\r?\n/, "")),
+          result: failed || !completed ? null : boundedText(output.replace(/^\[[^\r\n]+\]\r?\n/, "")),
         });
       }
     } finally {
@@ -275,13 +292,21 @@ export function readA2AActivities(options: {
   peerIpToId?: Map<string, string>;
   trustedPeerIds?: string[];
   dataRoot?: string;
+  includeAll?: boolean;
 }): A2AActivity[] {
   if (!/^[A-Za-z0-9-]{1,128}$/.test(options.instanceId)) return [];
   const limit = Math.min(MAX_ACTIVITY_LIMIT, Math.max(1, Math.floor(Number(options.limit) || 12)));
-  const instanceRoot = path.resolve(options.dataRoot || path.resolve("data", "instances"), options.instanceId);
+  const dataRoot = path.resolve(options.dataRoot || path.resolve("data", "instances"));
+  const instanceRoot = resolveContainedPath(dataRoot, options.instanceId);
+  if (!instanceRoot) return [];
+  const auditPath = resolveContainedPath(instanceRoot, "a2a_audit.jsonl");
+  const conversationsRoot = resolveContainedPath(instanceRoot, "a2a_conversations");
+  if (!auditPath || !conversationsRoot) return [];
   const orchestrationOutcomes = readOrchestrationOutcomes(instanceRoot);
   const directCallOutcomes = readDirectCallOutcomes(instanceRoot);
-  const auditRows = readJsonLines(path.join(instanceRoot, "a2a_audit.jsonl")) as AuditRow[];
+  const auditRows = readJsonLines(auditPath) as AuditRow[];
+  let auditIncomplete = false;
+  try { auditIncomplete = fs.statSync(auditPath).size > MAX_FILE_BYTES; } catch {}
   const auditByTask = new Map<string, AuditRow[]>();
   for (const row of auditRows) {
     const taskId = boundedText(row.task_id, 128);
@@ -291,14 +316,19 @@ export function readA2AActivities(options: {
 
   let files: fs.Dirent[] = [];
   try {
-    files = fs.readdirSync(path.join(instanceRoot, "a2a_conversations"), { withFileTypes: true })
+    files = fs.readdirSync(conversationsRoot, { withFileTypes: true })
       .filter((entry) => entry.isFile() && CONTEXT_FILE_PATTERN.test(entry.name));
   } catch {
     return [];
   }
 
-  return files.flatMap((entry): A2AActivity[] => {
-    const rows = readJsonLines(path.join(instanceRoot, "a2a_conversations", entry.name)) as ConversationRow[];
+  const activities = files.flatMap((entry): A2AActivity[] => {
+    const conversationPath = resolveContainedPath(conversationsRoot, entry.name);
+    if (!conversationPath || !CONTEXT_FILE_PATTERN.test(entry.name)) return [];
+    let evidenceIncomplete = false;
+    try { evidenceIncomplete = auditIncomplete || fs.statSync(conversationPath).size > MAX_FILE_BYTES; }
+    catch { return []; }
+    const rows = readJsonLines(conversationPath) as ConversationRow[];
     const taskRows = new Map<string, ConversationRow[]>();
     for (const row of rows) {
       const taskId = boundedText(row.task_id, 128);
@@ -343,18 +373,19 @@ export function readA2AActivities(options: {
           ? classifyA2AFailure(explicitFailure)
           : directOutcome
             ? directOutcome.status
-          : outcome?.mode === "first"
-            ? "cancelled"
-            : outcome
-              ? "failed"
+          : outcome
+              ? "unknown"
               : "in_progress";
-      const terminalAt = status === "in_progress" ? null : (completedAt || directOutcome?.finishedAt || outcome?.finishedAt || null);
+      const terminalAt = ["in_progress", "unknown"].includes(status) ? null : (completedAt || directOutcome?.finishedAt || outcome?.finishedAt || null);
       const durationMs = terminalAt
         ? Math.max(0, new Date(terminalAt).getTime() - new Date(startedAt).getTime())
         : null;
       return [{
+        requestText: typeof user.text === "string" && user.text.length <= 2400 ? sanitizeString(user.text) : null,
         contextId,
         taskId,
+        evidenceIncomplete,
+        expectedPeers: outcome?.expectedPeers,
         direction,
         peerId,
         peerName,
@@ -367,7 +398,8 @@ export function readA2AActivities(options: {
         failureReason: explicitFailure ? boundedText(explicitFailure, 320) : null,
       }];
     });
-  }).sort((left, right) => right.startedAt.localeCompare(left.startedAt)).slice(0, limit);
+  }).sort((left, right) => right.startedAt.localeCompare(left.startedAt));
+  return options.includeAll ? activities : activities.slice(0, limit);
 }
 
 export function groupA2AOrchestrations(activities: A2AActivity[]): A2AOrchestration[] {
@@ -377,18 +409,19 @@ export function groupA2AOrchestrations(activities: A2AActivity[]): A2AOrchestrat
     contexts.set(activity.contextId, [...(contexts.get(activity.contextId) || []), activity]);
   }
   return [...contexts.entries()].flatMap(([contextId, nodes]): A2AOrchestration[] => {
-    if (nodes.length < 2) return [];
+    if (nodes.length < 2 && !nodes.some(node => (node.expectedPeers || 0) > nodes.length)) return [];
     const ordered = nodes.slice().sort((left, right) => left.startedAt.localeCompare(right.startedAt));
     const completed = ordered.filter((node) => node.status === "completed").length;
-    const failed = ordered.filter((node) => !["completed", "in_progress"].includes(node.status)).length;
-    const inProgress = ordered.length - completed - failed;
-    const completedTimes = ordered.map((node) => node.completedAt).filter((value): value is string => Boolean(value));
+    const failed = ordered.filter((node) => !["completed", "in_progress", "unknown"].includes(node.status)).length;
+    const unknown = ordered.filter(node => node.status === "unknown").length;
+    const inProgress = ordered.length - completed - failed - unknown;
+    const evidenceIncomplete = ordered.some(node => node.evidenceIncomplete || (node.expectedPeers || 0) > ordered.length);
     const terminalTimes = ordered.map((node) => node.completedAt).filter((value): value is string => Boolean(value));
-    const completedAt = inProgress === 0 ? terminalTimes.sort().at(-1) || null : null;
+    const completedAt = inProgress === 0 && unknown === 0 && !evidenceIncomplete ? terminalTimes.sort().at(-1) || null : null;
     const startedAt = ordered[0].startedAt;
     return [{
       contextId,
-      status: completed === ordered.length ? "completed" : inProgress > 0 ? "in_progress" : completed > 0 ? "partial" : "failed",
+      status: unknown > 0 || evidenceIncomplete ? "unknown" : completed === ordered.length ? "completed" : inProgress > 0 ? "in_progress" : completed > 0 ? "partial" : "failed",
       startedAt,
       completedAt,
       durationMs: completedAt ? Math.max(0, new Date(completedAt).getTime() - new Date(startedAt).getTime()) : null,
@@ -396,6 +429,8 @@ export function groupA2AOrchestrations(activities: A2AActivity[]): A2AOrchestrat
       completed,
       failed,
       inProgress,
+      unknown,
+      evidenceIncomplete,
       nodes: ordered,
     }];
   }).sort((left, right) => right.startedAt.localeCompare(left.startedAt));

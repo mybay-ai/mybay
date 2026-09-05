@@ -9,7 +9,7 @@ const options: Array<{ mode: ThemeMode; Icon: typeof Monitor }> = [
   { mode: "dark", Icon: Moon },
 ];
 
-export function ThemeModeToggle() {
+export function ThemeModeToggle({ isDarkHero = false }: { isDarkHero?: boolean }) {
   const { t } = useTranslation("dashboard");
   const { mode, resolvedTheme, setMode } = useTheme();
   const [open, setOpen] = useState(false);
@@ -34,12 +34,15 @@ export function ThemeModeToggle() {
       <button
         type="button"
         onClick={() => setOpen(value => !value)}
-        className={`inline-flex h-9 items-center gap-1.5 rounded-xl border border-transparent px-3 text-[13px] font-medium transition-all duration-200 focus:outline-none select-none cursor-pointer ${
-          open
+        className={`inline-flex h-9 items-center gap-1.5 rounded-xl border border-transparent px-3 text-[13px] font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 select-none cursor-pointer ${
+          isDarkHero
+            ? `text-slate-100 hover:text-white focus-visible:ring-indigo-300 ${open ? "bg-white/15" : "bg-transparent hover:bg-white/10"}`
+            : `focus-visible:ring-indigo-500 dark:focus-visible:ring-indigo-300 ${open
             ? "bg-slate-100 dark:bg-slate-800 text-slate-950 dark:text-slate-50"
-            : "bg-transparent text-slate-600 hover:text-slate-950 hover:bg-slate-100/80 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800/50"
+            : "bg-transparent text-slate-600 hover:text-slate-950 hover:bg-slate-100/80 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800/50"}`
         }`}
         aria-label={t("theme.label")}
+        aria-expanded={open}
         title={t("theme.current", { mode: t(`theme.${mode}`) })}
       >
         <CurrentIcon className="h-4 w-4 shrink-0" />

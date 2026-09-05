@@ -84,6 +84,55 @@ Assert-Contains $acceptancePath 'Docker socket in control panel' "Windows diagno
 Assert-Contains (Join-Path $projectRoot "Collect-Diagnostics.bat") 'windows-acceptance\.ps1' "Windows diagnostics launcher must invoke the evidence collector."
 
 . $preflightPath
+# Exercise boundaries without installing prerequisites or touching live Docker.
+foreach ($case in @(
+    @{ Memory = 0; Status = "FAIL" },
+    @{ Memory = 3.9; Status = "FAIL" },
+    @{ Memory = 4; Status = "WARN" },
+    @{ Memory = 7.9; Status = "WARN" },
+    @{ Memory = 8; Status = "PASS" },
+    @{ Memory = 16; Status = "PASS" }
+)) {
+    $assessment = Get-MyBayWindowsMemoryAssessment $case.Memory
+    if ($assessment.Status -ne $case.Status) { throw "Incorrect memory status for $($case.Memory) GB." }
+}
+foreach ($invalid in @([double]::NaN, [double]::PositiveInfinity)) {
+    if ((Get-MyBayWindowsMemoryAssessment $invalid).Status -ne "FAIL") { throw "Unknown memory must not pass preflight." }
+}
+& {
+    function Test-MyBayIsWindows { return $true }
+    function Get-MyBayWindowsHostFacts([string]$ProjectRoot) {
+        return [pscustomobject]@{ Build = 22631; Architecture = "AMD64"; MemoryGB = $testMemory; FreeDiskGB = 30; VirtualizationReady = $testVirtualization }
+    }
+    function Clear-MyBayInstallResume([string]$ProjectRoot) { }
+    function Get-MyBayWslState { return [pscustomobject]@{ MeetsMinimum = $true; Version = [Version]"2.1.5" } }
+    function Get-MyBayInstallState([string]$ProjectRoot) { return $null }
+    $testVirtualization = $true
+    foreach ($dockerReady in @($false, $true)) {
+        foreach ($testMemory in @(3.9, 4, 7.9, 8)) {
+            $caught = $null
+            $records = @()
+            try { $records = @(Assert-MyBayWindowsHostReady -ProjectRoot "C:\MyBay-test" -InstallPrerequisites -DockerAlreadyReady:$dockerReady 3>&1) }
+            catch { $caught = $_.Exception.Message }
+            if ($testMemory -lt 4) {
+                if (-not $caught -or $caught -notmatch 'at least 4 GB') { throw "Sub-4 GB host must be rejected." }
+            } else {
+                if ($caught) { throw "Valid memory was rejected: $caught" }
+                $warnings = @($records | Where-Object { $_ -is [Management.Automation.WarningRecord] })
+                if ($testMemory -lt 8) {
+                    if ($warnings.Count -ne 1 -or $warnings[0].Message -notmatch 'Docker Desktop officially requires 8 GB') { throw "Low-memory startup must preserve the official-requirements warning." }
+                } elseif ($warnings.Count -ne 0) { throw "8 GB host must not receive a low-memory warning." }
+            }
+        }
+    }
+    $testMemory = 4
+    $testVirtualization = $false
+    $caught = $null
+    try { Assert-MyBayWindowsHostReady -ProjectRoot "C:\MyBay-test" -DockerAlreadyReady 3>$null }
+    catch { $caught = $_.Exception.Message }
+    if (-not $caught -or $caught -notmatch 'Hardware virtualization') { throw "Low-memory mode must preserve virtualization checks." }
+}
+
 $registryWithoutDisplayVersion = [pscustomobject]@{
     ProductName = "Windows 10 Pro"
     CurrentBuildNumber = "19045"
@@ -143,7 +192,7 @@ try {
     New-Item -ItemType Directory -Path $diagnosticTestRoot | Out-Null
     Copy-Item -LiteralPath (Join-Path $projectRoot "package.json") -Destination (Join-Path $diagnosticTestRoot "package.json")
     @(
-        "MYBAY_CONTROL_PANEL_IMAGE=ghcr.io/mybay-ai/mybay:0.1.27-rc.1",
+        "MYBAY_CONTROL_PANEL_IMAGE=ghcr.io/mybay-ai/mybay:0.1.27-rc.2",
         "LOCAL_ADMIN_PASSWORD=diagnostic-password-sentinel",
         "JWT_SECRET=diagnostic-jwt-sentinel",
         "ENCRYPTION_KEY=diagnostic-encryption-sentinel",

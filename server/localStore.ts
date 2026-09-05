@@ -25,6 +25,7 @@ export type LocalStoreData = {
   conversations: any[];
   chatMessages: any[];
   chatRuns: any[];
+  a2aTaskLinks: any[];
   chatMessageFeedback: any[];
   systemSettings: Record<string, string>;
 };
@@ -35,7 +36,7 @@ const COLLECTIONS: CollectionName[] = [
   "users", "instances", "credentials", "auditLogs", "versions",
   "userResourcePolicies", "channelAuthEvents", "deploymentTasks",
   "deploymentEvents", "files", "tasks", "scheduledJobs", "scheduledFires", "templates", "blueprints",
-  "chatProjects", "conversations", "chatMessages", "chatRuns", "chatMessageFeedback"
+  "chatProjects", "conversations", "chatMessages", "chatRuns", "chatMessageFeedback", "a2aTaskLinks"
 ];
 
 const defaultData = (): LocalStoreData => ({
@@ -68,6 +69,7 @@ const defaultData = (): LocalStoreData => ({
   conversations: [],
   chatMessages: [],
   chatRuns: [],
+  a2aTaskLinks: [],
   chatMessageFeedback: [],
   systemSettings: {}
 });
@@ -465,6 +467,18 @@ export function initializeLocalDatabase(): void {
 
 export function readStore(): LocalStoreData {
   return readStoreFromDb(openDatabase());
+}
+
+export function readSystemSetting(key: string): string | null {
+  const row = openDatabase().prepare("SELECT value FROM systemSettings WHERE key = ?").get(key);
+  return row ? String(row.value) : null;
+}
+
+export function writeSystemSetting(key: string, value: string): void {
+  // One statement is atomic. Avoid rewriting unrelated data or unchanged values.
+  openDatabase().prepare(`INSERT INTO systemSettings (key, value) VALUES (?, ?)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value
+    WHERE systemSettings.value IS NOT excluded.value`).run(key, value);
 }
 
 export function writeStore(data: LocalStoreData) {

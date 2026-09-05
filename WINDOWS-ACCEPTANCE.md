@@ -15,4 +15,8 @@ Use this checklist to prove the real “download, extract, double-click, restart
 
 Sample failure cases should cover disabled virtualization, GHCR DNS/TLS/image failures, Windows-container mode, port 3000 contention, and low disk space.
 
-Never attach `.env`, API keys, administrator passwords, or screenshots containing secrets. Automated checks do not close the product gates. Publish `v0.1.27-rc.1` only after the install, product, restart, and preservation paths pass on the clean VM.
+Never attach `.env`, API keys, administrator passwords, or screenshots containing secrets. Automated checks do not close the product gates. Publish `v0.1.27-rc.2` only after the install, product, restart, and preservation paths pass on the clean VM.
+
+## Experimental low-memory acceptance
+
+Keep the 8 GB clean-install baseline above. Separately test a 4 GB VM: verify that startup emits a warning and continues, diagnostics report Memory=WARN, and existing OS/WSL/virtualization/Docker checks still apply. Cover both an already-running Docker Engine and a fresh Docker Desktop installation; record any installer refusal. With a working engine, test one Agent, chat, file preview, restart, memory pressure and failures. Below 4 GB must fail; exactly 8 GB must not warn about low memory. These gates remain open until tested on the actual low-memory VM.

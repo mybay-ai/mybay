@@ -6,6 +6,7 @@ const conversationId = "22222222-2222-4222-8222-222222222222";
 const userId = "33333333-3333-4333-8333-333333333333";
 
 const getInstanceById = vi.hoisted(() => vi.fn());
+const getInstances = vi.hoisted(() => vi.fn());
 const beginChatRun = vi.hoisted(() => vi.fn());
 const getChatRun = vi.hoisted(() => vi.fn());
 const getConversationForOwnerAndInstance = vi.hoisted(() => vi.fn());
@@ -26,7 +27,7 @@ vi.mock("../../../middlewares/auth", () => ({
     next();
   }
 }));
-vi.mock("../../../db", () => ({ dbAdapter: { getInstanceById } }));
+vi.mock("../../../db", () => ({ dbAdapter: { getInstanceById, getInstances } }));
 vi.mock("../../../repositories/chatRepo", () => ({
   chatRepo: {
     beginChatRun,
@@ -213,6 +214,28 @@ describe("Interactive Agent POST /runs integration", () => {
     } finally {
       await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     }
+  });
+
+  it("snapshots trusted collaboration-room members into the queued Run", async () => {
+    process.env.MYBAY_ASYNC_CHAT_RUNS_ENABLED = "true";
+    const peerId = "66666666-6666-4666-8666-666666666666";
+    getInstanceById.mockResolvedValue({ id: instanceId, name: "主持", user_id: userId, owner_id: userId, config_json: JSON.stringify({ a2aEnabled: true, a2aPeerIds: [peerId] }) });
+    getInstances.mockResolvedValue([{ id: peerId, name: "研究", user_id: userId, owner_id: userId, agent_image_tag: "v2026.8.27", config_json: JSON.stringify({ a2aEnabled: true }) }]);
+    getConversationForOwnerAndInstance.mockResolvedValue({ id: conversationId, user_id: userId, instance_id: instanceId, collaboration: { mode: "group", peerIds: [peerId], maxRounds: 1 } });
+    probeCapabilities.mockResolvedValue("supported");
+    beginChatRun.mockResolvedValue({ status: "success", user_message_id: "44444444-4444-4444-8444-444444444444", sequence_no: 1 });
+    const app = express(); app.use(express.json());
+    const router = express.Router(); registerRunRoutes(router); app.use("/api/instances", router);
+    const server = app.listen(0);
+    try {
+      await new Promise<void>(resolve => server.once("listening", resolve));
+      const response = await fetch(`http://127.0.0.1:${(server.address() as any).port}/api/instances/${instanceId}/runs`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ conversationId, content: "一起研究", requestId: "group-request" }) });
+      expect(response.status).toBe(202);
+      expect(beginChatRun).toHaveBeenCalledWith(expect.objectContaining({
+        groupCollaboration: expect.objectContaining({ mode: "group", leader: { id: instanceId, name: "主持" }, peers: [{ id: peerId, name: "研究" }], maxRounds: 1 }),
+      }));
+      expect(beginChatRun.mock.calls.at(-1)?.[0].groupCollaboration.contextId).toMatch(/^ctx-mybay-room-[a-f0-9]+$/);
+    } finally { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); }
   });
 
   it("releases the initial lease before falling back when targeted dispatch is unavailable", async () => {
