@@ -282,6 +282,15 @@ async function upgradeInstanceUnlocked(
     return { success: false, error: "越权操作：您没有权限升级此实例。" };
   }
 
+  const currentContext = buildDeploymentContext(instance);
+  const currentContainer = await docker.getContainer(currentContext.dashboardContainerName).inspect().catch(() => null);
+  if (currentContainer?.State?.Running !== true) {
+    return {
+      success: false,
+      error: "UPGRADE_REQUIRES_RUNNING_INSTANCE: 当前实例没有运行中的 Runtime 容器，无法建立安全回滚点。请先启动或重新部署实例，再执行版本升级。",
+    };
+  }
+
   // Ensure robust validation run inside background loop too
   if (isPiRuntimeInstance(instance)) {
     const selection = resolvePiRuntimeUpgradeSelection({ instance, targetTag });
@@ -747,8 +756,8 @@ async function upgradeInstanceFlow(
     }
 
     // Resolve runtime version and save to DB
-    let resolvedVer = targetTag;
-    if (targetTag === "latest") {
+    let resolvedVer = isPiRuntimeInstance(instance) && vObj?.version ? vObj.version : targetTag;
+    if (!isPiRuntimeInstance(instance) && targetTag === "latest") {
       try {
         const latestRow = await dbAdapter.getLatestMyBayVersion();
         if (latestRow) {

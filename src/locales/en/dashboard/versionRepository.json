@@ -1,6 +1,8 @@
 {
   "title": "Image registry",
   "subtitle": "Official releases, capability matrix, and local Docker cache status",
+  "piTitle": "Pi Runtime releases",
+  "piSubtitle": "Upgradeable Pi Agent and bridge images with data-preserving upgrade and rollback",
   "refresh": "Refresh local list",
   "refreshTitle": "Reload the locally discovered release list",
   "versionFamily": "Version / family",
@@ -15,6 +17,12 @@
   "capabilityMatrix": {
     "items": {
       "core": { "label": "Core", "description": "Core chat, tools, and runtime capabilities" },
+      "streaming": { "label": "Streaming", "description": "Stream Agent progress and results in real time" },
+      "cancellation": { "label": "Cancellation", "description": "Stop queued or running tasks" },
+      "files": { "label": "Files", "description": "Persist, preview, and download generated files" },
+      "backup": { "label": "Backup", "description": "Restore backups and clones with the Runtime binding" },
+      "upgrade": { "label": "Upgrade", "description": "Run controlled Runtime upgrades from the repository" },
+      "rollback": { "label": "Rollback", "description": "Restore the previous release after failure or on request" },
       "feishu": { "label": "Feishu/Lark", "description": "Native Feishu and Lark channel support" },
       "a2a": { "label": "A2A", "description": "A2A v1.0 agent discovery, calls, and task protocol" },
       "outbound_webhooks": { "label": "Event webhooks", "description": "Signed runtime events delivered to external systems" },
@@ -138,7 +146,7 @@
     },
     "piProtection": {
       "title": "Pi-specific upgrade path enabled",
-      "description": "Upgrades are limited to the certified bridge {{version}}. Historical versions can only be restored through instance rollback."
+      "description": "Only certified Pi Runtime releases in this repository can be selected. The recommended release is {{version}}; historical releases are restored through instance rollback."
     }
   }
 }

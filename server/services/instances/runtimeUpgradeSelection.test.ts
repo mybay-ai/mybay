@@ -21,6 +21,14 @@ describe("Pi Runtime upgrade selection", () => {
     });
   });
 
+  it("resolves the published image tag through the same catalog entry", () => {
+    process.env.MYBAY_PI_RUNTIME_IMAGE = "registry.test/mybay/pi:0.1.0-beta";
+    expect(resolvePiRuntimeUpgradeSelection({ instance: { runtime_type: "pi" }, targetTag: "0.1.0-beta" })).toMatchObject({
+      ok: true,
+      selection: { imageRef: "registry.test/mybay/pi:0.1.0-beta", version: "0.85.0" },
+    });
+  });
+
   it("allows only the recorded previous tag through the rollback path", () => {
     const instance = { runtime_type: "pi", agent_image: "mybay/pi-runtime", previous_image_tag: "0.1.0-experimental" };
     expect(resolvePiRuntimeUpgradeSelection({ instance, targetTag: "0.1.0-experimental" })).toMatchObject({

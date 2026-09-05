@@ -43,6 +43,8 @@ import { isAuthorizedHtmlPreviewAssetRequest } from "./server/services/instances
 import { startDockerGC } from "./server/dockerGC";
 import { buildVersionFamilies } from "./server/repositories/versionsRepo";
 import { discoverHermesVersions } from "./server/services/hermesVersionDiscovery";
+import { enrichRuntimeVersionCacheStatus, listManagedRuntimeVersions } from "./server/services/runtimeVersionCatalog";
+import { docker } from "./server/lib/docker";
 import { prewarmManager } from "./server/prewarmManager";
 import { startSchedulerRunner, stopSchedulerRunner } from "./server/schedulerRunner";
 import { startReconciler, stopReconciler } from "./server/reconciler";
@@ -656,6 +658,14 @@ async function startServer() {
   // Support both legacy `/api/agent-versions` and the new `/api/mybay-versions` endpoints
   app.get("/api/agent-versions", authenticateToken, async (req, res) => {
     try {
+      const runtimeType = String(req.query.runtimeType || "hermes").trim().toLowerCase();
+      if (runtimeType === "pi") {
+        res.setHeader("Cache-Control", "no-store");
+        return res.json(await enrichRuntimeVersionCacheStatus(listManagedRuntimeVersions("pi"), docker));
+      }
+      if (runtimeType !== "hermes") {
+        return res.status(400).json({ code: "UNSUPPORTED_RUNTIME_TYPE", error: "Unsupported Runtime type." });
+      }
       const raw = await dbAdapter.getMyBayVersions();
       const families = buildVersionFamilies(raw).slice(0, 3);
       const mapped = families.map((v: any) => ({
@@ -678,6 +688,14 @@ async function startServer() {
 
   app.get("/api/mybay-versions", authenticateToken, async (req, res) => {
     try {
+      const runtimeType = String(req.query.runtimeType || "hermes").trim().toLowerCase();
+      if (runtimeType === "pi") {
+        res.setHeader("Cache-Control", "no-store");
+        return res.json(await enrichRuntimeVersionCacheStatus(listManagedRuntimeVersions("pi"), docker));
+      }
+      if (runtimeType !== "hermes") {
+        return res.status(400).json({ code: "UNSUPPORTED_RUNTIME_TYPE", error: "Unsupported Runtime type." });
+      }
       const raw = await dbAdapter.getMyBayVersions();
       const families = buildVersionFamilies(raw).slice(0, 3);
       res.json(families);
@@ -688,6 +706,23 @@ async function startServer() {
 
   app.get("/api/mybay-versions/latest", authenticateToken, async (req, res) => {
     try {
+      const runtimeType = String(req.query.runtimeType || "hermes").trim().toLowerCase();
+      if (runtimeType === "pi") {
+        const piVersions = await enrichRuntimeVersionCacheStatus(listManagedRuntimeVersions("pi"), docker);
+        const latestPi = piVersions.find((version) => version.is_latest);
+        if (!latestPi) {
+          return res.status(404).json({
+            code: "PI_RUNTIME_RELEASE_NOT_FOUND",
+            params: {},
+            error: "No supported Pi Runtime version is available.",
+          });
+        }
+        res.setHeader("Cache-Control", "no-store");
+        return res.json(latestPi);
+      }
+      if (runtimeType !== "hermes") {
+        return res.status(400).json({ code: "UNSUPPORTED_RUNTIME_TYPE", error: "Unsupported Runtime type." });
+      }
       const latest = await dbAdapter.getLatestMyBayVersion();
       if (!latest) {
         return res.status(404).json({ error: "No official version discovered yet." });

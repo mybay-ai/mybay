@@ -1,6 +1,8 @@
 {
   "title": "镜像仓库",
   "subtitle": "查看官方版本、能力矩阵及其本地 Docker 缓存状态",
+  "piTitle": "Pi Runtime 版本库",
+  "piSubtitle": "查看可升级的 Pi Agent 与桥接镜像版本；升级与回滚均保留实例数据",
   "refresh": "刷新本地列表",
   "refreshTitle": "重新载入本地已发现的版本列表",
   "versionFamily": "版本 / 家族",
@@ -15,6 +17,12 @@
   "capabilityMatrix": {
     "items": {
       "core": { "label": "核心", "description": "基础对话、工具和运行时能力" },
+      "streaming": { "label": "流式输出", "description": "实时返回 Agent 运行过程和结果" },
+      "cancellation": { "label": "任务停止", "description": "可停止排队中或运行中的任务" },
+      "files": { "label": "文件", "description": "生成文件可持久化、预览和下载" },
+      "backup": { "label": "备份恢复", "description": "备份、克隆恢复并保留 Runtime 绑定" },
+      "upgrade": { "label": "升级", "description": "通过版本库执行受控 Runtime 升级" },
+      "rollback": { "label": "回滚", "description": "升级失败或手动操作时恢复上一版本" },
       "feishu": { "label": "飞书/Lark", "description": "原生飞书与 Lark 通道支持" },
       "a2a": { "label": "A2A", "description": "A2A v1.0 Agent 发现、调用和任务协议" },
       "outbound_webhooks": { "label": "事件 Webhook", "description": "向外部系统推送带签名的运行事件" },
@@ -138,7 +146,7 @@
     },
     "piProtection": {
       "title": "Pi 专属升级链路已启用",
-      "description": "当前仅允许升级到已认证桥接器 {{version}}；历史版本只能通过实例回滚恢复。"
+      "description": "只能选择版本库中已认证的 Pi Runtime 版本；当前推荐 {{version}}，历史版本通过实例回滚恢复。"
     }
   }
 }

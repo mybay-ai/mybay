@@ -4,12 +4,12 @@ import { Button, Card, cn } from "../ui";
 import { useTranslation } from "react-i18next";
 import { getUpgradePhaseLabel } from "./versionStatusPresentation";
 import { normalizeAgentUpgradePhase } from "../../../shared/agentUpgradePhase";
-import { PI_RUNTIME_DEFINITION } from "../../../shared/runtimeCatalog";
 
 interface VersionMobileInstanceCardsProps {
   filteredInstances: any[];
   selectedInstances: string[];
   versions: any[];
+  piVersions: any[];
   rollingBackId: string | null;
   doesInstanceNeedUpdate: (instance: any) => boolean;
   toggleSelectInstance: (id: string) => void;
@@ -23,6 +23,7 @@ export function VersionMobileInstanceCards({
   filteredInstances,
   selectedInstances,
   versions,
+  piVersions,
   rollingBackId,
   doesInstanceNeedUpdate,
   toggleSelectInstance,
@@ -147,8 +148,15 @@ export function VersionMobileInstanceCards({
                       className="w-full bg-surface-muted border border-outline h-9 px-3 rounded-xl text-[13px] font-bold appearance-none outline-none"
                     >
                       <option value="">{t("versionManagement.table.scheduleUpgrade")}</option>
-                      <option value="latest">{isPiRuntime ? `${PI_RUNTIME_DEFINITION.runtime.tag} (${t("versionRepository.runtime.certified")})` : t("versionManagement.table.followLatest")}</option>
-                      {!isPiRuntime && versions.map(v => {
+                      <option value="latest">{t("versionManagement.table.followLatest")}</option>
+                      {(isPiRuntime ? piVersions : versions).map(v => {
+                        if (isPiRuntime) {
+                          return (
+                            <option key={v.tag} value={v.tag}>
+                              {v.tag} · Pi {v.version} {v.is_latest ? `(${t("versionManagement.status.latest")})` : ""}
+                            </option>
+                          );
+                        }
                         const isFeishuInst = inst.configuredChannels?.includes("feishu") || inst.configuredChannels?.includes("lark") || inst.channel === "feishu" || inst.channel === "lark";
                         const isFeishuCapable = v.capabilities?.includes("feishu") || v.feishu_capable === true;
                         const isFeishuIncompatible = isFeishuInst && !isFeishuCapable;

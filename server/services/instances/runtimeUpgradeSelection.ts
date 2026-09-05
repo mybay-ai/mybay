@@ -1,4 +1,4 @@
-import { PI_RUNTIME_DEFINITION } from "../../../shared/runtimeCatalog";
+import { findRuntimeRelease, listRuntimeReleases } from "../../../shared/runtimeReleases";
 import { parsePiRuntimeImageRef, resolveLocalPiImageRef } from "../localPiRuntime";
 
 export type RuntimeUpgradeSelection = {
@@ -25,22 +25,20 @@ export function resolvePiRuntimeUpgradeSelection(options: {
   const requested = String(options.targetTag || "").trim();
   const configuredRef = resolveLocalPiImageRef();
   const configured = parsePiRuntimeImageRef(configuredRef);
-  const currentAliases = new Set([
-    "latest",
-    configured.tag,
-    PI_RUNTIME_DEFINITION.runtime.tag,
-    PI_RUNTIME_DEFINITION.version,
-  ]);
+  const release = findRuntimeRelease("pi", requested);
 
-  if (currentAliases.has(requested)) {
+  if (release) {
+    const isLatest = release.isLatest;
+    const image = isLatest ? configured.image : release.image;
+    const tag = isLatest ? configured.tag : release.imageTag;
     return {
       ok: true,
       selection: {
         runtimeType: "pi",
-        image: configured.image,
-        tag: configured.tag,
-        version: PI_RUNTIME_DEFINITION.version,
-        imageRef: configuredRef,
+        image,
+        tag,
+        version: release.runtimeVersion,
+        imageRef: isLatest ? configuredRef : `${image}:${tag}`,
       },
     };
   }
@@ -65,7 +63,6 @@ export function resolvePiRuntimeUpgradeSelection(options: {
   return {
     ok: false,
     code: "PI_RUNTIME_VERSION_NOT_SUPPORTED",
-    error: `Pi Runtime 仅允许升级到当前受支持版本 ${configured.tag}；历史版本只能通过实例回滚入口恢复。`,
+    error: `Pi Runtime 仅允许升级到受支持版本 ${listRuntimeReleases("pi").filter((item) => item.upgradeable).map((item) => item.imageTag).join(", ")}；历史版本只能通过实例回滚入口恢复。`,
   };
 }
-
