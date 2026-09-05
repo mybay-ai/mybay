@@ -6,7 +6,10 @@ describe("Instance A2A collaboration activity presentation", () => {
   it("renders the protected activity feed with direction, duration, context, and result labels", () => {
     const source = fs.readFileSync(path.resolve("src/components/dashboard/InstanceA2ACollaboration.tsx"), "utf8");
 
-    expect(source).toContain("/a2a/activity?limit=12");
+    expect(source).toContain("/a2a/activity?limit=${requestedLimit}");
+    expect(source).toContain('t("a2a.activityShowing"');
+    expect(source).toContain('t("a2a.loadMoreActivity")');
+    expect(source).toContain("activityLimitRef.current + 12");
     expect(source).toContain('t("a2a.recentActivity")');
     expect(source).toContain('t(outbound ? "a2a.outbound" : "a2a.inbound")');
     expect(source).toContain("activity.durationMs");

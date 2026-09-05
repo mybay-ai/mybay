@@ -26,6 +26,7 @@ export type LocalStoreData = {
   chatMessages: any[];
   chatRuns: any[];
   a2aTaskLinks: any[];
+  instanceFileUploads: any[];
   chatMessageFeedback: any[];
   systemSettings: Record<string, string>;
 };
@@ -36,7 +37,7 @@ const COLLECTIONS: CollectionName[] = [
   "users", "instances", "credentials", "auditLogs", "versions",
   "userResourcePolicies", "channelAuthEvents", "deploymentTasks",
   "deploymentEvents", "files", "tasks", "scheduledJobs", "scheduledFires", "templates", "blueprints",
-  "chatProjects", "conversations", "chatMessages", "chatRuns", "chatMessageFeedback", "a2aTaskLinks"
+  "chatProjects", "conversations", "chatMessages", "chatRuns", "chatMessageFeedback", "a2aTaskLinks", "instanceFileUploads"
 ];
 
 const defaultData = (): LocalStoreData => ({
@@ -70,6 +71,7 @@ const defaultData = (): LocalStoreData => ({
   chatMessages: [],
   chatRuns: [],
   a2aTaskLinks: [],
+  instanceFileUploads: [],
   chatMessageFeedback: [],
   systemSettings: {}
 });
@@ -379,6 +381,11 @@ function applySchemaMigrations(db: DatabaseSync) {
         update.run(JSON.stringify(data), runRow.id);
       }
       version = 6;
+    }
+    if (version < 7) {
+      // The table is created by initializeSchema. Advancing the schema version
+      // makes backup/restore compatibility explicit for durable file-upload receipts.
+      version = 7;
     }
     db.prepare("INSERT OR REPLACE INTO localMetadata (key, value) VALUES (?, ?)").run("schema_version", String(version));
     db.exec("COMMIT");

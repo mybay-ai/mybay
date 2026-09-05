@@ -87,6 +87,8 @@ export function InstanceA2ACollaboration({ instance, onRedeploy, onRetryInChat, 
   const [cancellingTask, setCancellingTask] = React.useState<string | null>(null);
   const [activities, setActivities] = React.useState<A2AActivity[]>([]);
   const [orchestrations, setOrchestrations] = React.useState<A2AOrchestration[]>([]);
+  const [activityTotal, setActivityTotal] = React.useState(0);
+  const [activityHasMore, setActivityHasMore] = React.useState(false);
   const [enabled, setEnabled] = React.useState(false);
   const [agentName, setAgentName] = React.useState(instance.name);
   const [peerIds, setPeerIds] = React.useState<string[]>([]);
@@ -95,6 +97,7 @@ export function InstanceA2ACollaboration({ instance, onRedeploy, onRetryInChat, 
   const viewRequestIdRef = React.useRef(0);
   const statusRequestIdRef = React.useRef(0);
   const activityRequestIdRef = React.useRef(0);
+  const activityLimitRef = React.useRef(12);
   currentInstanceIdRef.current = instance.id;
 
   const load = React.useCallback(async () => {
@@ -109,8 +112,12 @@ export function InstanceA2ACollaboration({ instance, onRedeploy, onRetryInChat, 
       setView(next);
       setLoadError(false);
       setStatus(null);
+      ++activityRequestIdRef.current;
       setActivities([]);
       setOrchestrations([]);
+      setActivityTotal(0);
+      setActivityHasMore(false);
+      activityLimitRef.current = 12;
       setEnabled(next.enabled);
       setAgentName(next.agentName);
       setPeerIds(next.peerIds);
@@ -140,21 +147,26 @@ export function InstanceA2ACollaboration({ instance, onRedeploy, onRetryInChat, 
     }
   }, [instance.id]);
 
-  const loadActivity = React.useCallback(async (source?: A2ARecoverySource) => {
+  const loadActivity = React.useCallback(async (source?: A2ARecoverySource, requestedLimit = activityLimitRef.current) => {
     const targetInstanceId = instance.id;
     const requestId = ++activityRequestIdRef.current;
     setActivityLoading(true);
     try {
       const query = source ? `&${new URLSearchParams({ ...source, refreshRemote: "1" })}` : "";
-      const result = await api.get<{ activities: A2AActivity[]; orchestrations?: A2AOrchestration[] }>(`/api/instances/${targetInstanceId}/a2a/activity?limit=12${query}`);
+      const result = await api.get<{ activities: A2AActivity[]; orchestrations?: A2AOrchestration[]; total?: number; hasMore?: boolean }>(`/api/instances/${targetInstanceId}/a2a/activity?limit=${requestedLimit}${query}`);
       if (currentInstanceIdRef.current !== targetInstanceId || activityRequestIdRef.current !== requestId) return;
-      setActivities(Array.isArray(result.activities) ? result.activities : []);
+      const nextActivities = Array.isArray(result.activities) ? result.activities : [];
+      setActivities(nextActivities);
       setActivityError(false);
       setOrchestrations(Array.isArray(result.orchestrations) ? result.orchestrations : []);
+      setActivityTotal(Number.isFinite(result.total) ? Number(result.total) : nextActivities.length);
+      setActivityHasMore(Boolean(result.hasMore));
     } catch {
       if (currentInstanceIdRef.current !== targetInstanceId || activityRequestIdRef.current !== requestId) return;
       setActivities([]);
       setOrchestrations([]);
+      setActivityTotal(0);
+      setActivityHasMore(false);
       setActivityError(true);
     } finally {
       if (currentInstanceIdRef.current === targetInstanceId && activityRequestIdRef.current === requestId) setActivityLoading(false);
@@ -193,7 +205,7 @@ export function InstanceA2ACollaboration({ instance, onRedeploy, onRetryInChat, 
     } finally { setCancellingTask(null); }
   };
   React.useEffect(() => { if (view) void checkStatus(); }, [view, checkStatus]);
-  React.useEffect(() => { if (view?.enabled) void loadActivity(); else { setActivities([]); setOrchestrations([]); } }, [view?.enabled, loadActivity]);
+  React.useEffect(() => { if (view?.enabled) void loadActivity(); else { setActivities([]); setOrchestrations([]); setActivityTotal(0); setActivityHasMore(false); } }, [view?.enabled, loadActivity]);
   React.useEffect(() => {
     if (!view) return;
     const timer = window.setInterval(() => {
@@ -455,6 +467,14 @@ export function InstanceA2ACollaboration({ instance, onRedeploy, onRetryInChat, 
                   </div>;
                 })}</div>
               )}
+              {activities.length > 0 && <div className="mt-3 flex flex-col items-center justify-between gap-2 border-t border-outline pt-3 text-xs text-content-muted sm:flex-row">
+                <span>{t("a2a.activityShowing", { shown: activities.length, total: activityTotal })}</span>
+                {activityHasMore && <Button variant="outline" size="sm" disabled={activityLoading} onClick={() => {
+                  const nextLimit = Math.min(100, activityLimitRef.current + 12);
+                  activityLimitRef.current = nextLimit;
+                  void loadActivity(undefined, nextLimit);
+                }}>{activityLoading ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}{t("a2a.loadMoreActivity")}</Button>}
+              </div>}
             </Card>}
 
             {section === "configuration" && <div className="flex flex-col-reverse justify-between gap-3 sm:flex-row sm:items-center">

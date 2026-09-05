@@ -5,7 +5,7 @@ import { INSTANCE_UPLOAD_EXTENSIONS, INSTANCE_UPLOAD_MAX_BYTES, INSTANCE_UPLOAD_
 import { uploadInstanceFile } from "../lib/instanceFileUpload";
 
 type Entry = { id: string; file: File; directory: string; status: "queued" | "uploading" | "success" | "failed"; progress: number; code?: string };
-const knownErrors = new Set(["UPLOAD_TOO_LARGE", "UPLOAD_NAME_INVALID", "UPLOAD_CONTENT_INVALID", "UPLOAD_DIRECTORY_INVALID", "UPLOAD_DIRECTORY_CHANGED", "UPLOAD_EXISTS", "UPLOAD_BUSY", "UPLOAD_QUOTA_UNKNOWN", "UPLOAD_QUOTA_EXCEEDED", "UPLOAD_ACCESS_DENIED", "UPLOAD_NETWORK", "UPLOAD_ABORTED"]);
+const knownErrors = new Set(["UPLOAD_TOO_LARGE", "UPLOAD_NAME_INVALID", "UPLOAD_CONTENT_INVALID", "UPLOAD_DIRECTORY_INVALID", "UPLOAD_DIRECTORY_CHANGED", "UPLOAD_EXISTS", "UPLOAD_REQUEST_CONFLICT", "UPLOAD_RECEIPT_STALE", "UPLOAD_BUSY", "UPLOAD_QUOTA_UNKNOWN", "UPLOAD_QUOTA_EXCEEDED", "UPLOAD_ACCESS_DENIED", "UPLOAD_NETWORK", "UPLOAD_ABORTED"]);
 
 export function InstanceFileUpload({ instanceId, directory, disabled, onUploaded, onOpenDirectory }: {
   instanceId: string; directory: string; disabled: boolean; onUploaded: (directory: string) => void; onOpenDirectory: (directory: string) => void;
@@ -48,7 +48,7 @@ export function InstanceFileUpload({ instanceId, directory, disabled, onUploaded
         if (entry.file.size > INSTANCE_UPLOAD_MAX_BYTES || !isInstanceUploadFilename(entry.file.name)) continue;
         update(entry.id, { status: "uploading", progress: 0, code: undefined });
         try {
-          await uploadInstanceFile(instanceId, entry.directory, entry.file, request.signal, progress => update(entry.id, { progress }));
+          await uploadInstanceFile(instanceId, entry.directory, entry.file, entry.id, request.signal, progress => update(entry.id, { progress }));
           update(entry.id, { status: "success", progress: 100 }); changed.add(entry.directory);
         } catch (error: any) { update(entry.id, { status: "failed", code: error.code || "UPLOAD_FAILED" }); }
       }

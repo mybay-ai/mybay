@@ -1,11 +1,12 @@
 import express, { Router, type RequestHandler, type Request, type Response } from "express";
 import fs from "node:fs";
 import path from "node:path";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import AdmZip from "adm-zip";
 import { INSTANCE_UPLOAD_MAX_BYTES, INSTANCE_UPLOAD_TEXT_EXTENSIONS, isInstanceUploadDirectory, isInstanceUploadFilename } from "../../../shared/instanceFileUpload";
 import { validateUploadedFileBuffer } from "../../utils/uploadSecurity";
 import type { StorageQuotaStats } from "../../services/instances/instanceStorageQuotaService";
+import { commitInstanceFileUploadReceipt, getInstanceFileUploadReceipt } from "../../services/instances/instanceFileUploadReceipts";
 
 type Validation = { error: string; status: number } | { rootDir: string; absolutePath: string; candidatePath?: string; instance: unknown };
 type Dependencies = {
@@ -16,6 +17,8 @@ type Dependencies = {
 };
 
 function reject(status: number, code: string): never { throw Object.assign(new Error(code), { status, code }); }
+const validUploadId = (value: unknown): value is string => typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+const sha256 = (value: Buffer | string) => createHash("sha256").update(value).digest("hex");
 
 function validateContent(buffer: Buffer, name: string) {
   const extension = path.extname(name).toLowerCase();
@@ -58,6 +61,7 @@ export function createInstanceFileUploadRoutes(deps: Dependencies) {
     const id = req.params.id;
     const directory = typeof req.query.path === "string" ? req.query.path : "";
     const name = typeof req.query.name === "string" ? req.query.name : "";
+    const uploadId = req.get("X-Upload-Id");
     const fail = (error: any) => {
       if (res.headersSent || res.destroyed) return;
       const status = error.type === "entity.too.large" ? 413 : error.code === "EEXIST" ? 409 : error.status || 500;
@@ -68,13 +72,32 @@ export function createInstanceFileUploadRoutes(deps: Dependencies) {
     try {
       if (!/^[A-Za-z0-9_-]{1,128}$/.test(id) || !isInstanceUploadDirectory(directory) || directory.split("/").some(deps.isSensitive)) reject(403, "UPLOAD_DIRECTORY_INVALID");
       if (!isInstanceUploadFilename(name) || deps.isSensitive(name)) reject(400, "UPLOAD_NAME_INVALID");
+      if (uploadId && !validUploadId(uploadId)) reject(400, "INVALID_UPLOAD_ID");
       if (!req.is("application/octet-stream")) reject(415, "UPLOAD_CONTENT_TYPE");
       if (Number(req.headers["content-length"]) > INSTANCE_UPLOAD_MAX_BYTES) reject(413, "UPLOAD_TOO_LARGE");
       const validation = await deps.validateAccess(req, id, "/");
       if ("error" in validation) reject(validation.status, "UPLOAD_ACCESS_DENIED");
+      const root = fs.realpathSync(validation.rootDir);
+      if (uploadId) {
+        const receipt = getInstanceFileUploadReceipt(id, uploadId);
+        if (receipt) {
+          const expectedPath = `${directory}/${name}`;
+          if (receipt.directory !== directory || receipt.name !== name || receipt.path !== expectedPath) reject(409, "UPLOAD_REQUEST_CONFLICT");
+          const target = path.join(root, receipt.path.slice(1));
+          try {
+            const stat = fs.lstatSync(target);
+            if (stat.isSymbolicLink() || !stat.isFile() || stat.size !== receipt.size || sha256(fs.readFileSync(target)) !== receipt.sha256) reject(409, "UPLOAD_RECEIPT_STALE");
+            const real = fs.realpathSync(target);
+            if (!real.startsWith(root + path.sep)) reject(409, "UPLOAD_RECEIPT_STALE");
+          } catch (error: any) {
+            if (error?.code === "UPLOAD_RECEIPT_STALE") throw error;
+            reject(409, "UPLOAD_RECEIPT_STALE");
+          }
+          return res.status(200).json({ ok: true, reused: true, uploadId, name, size: receipt.size, path: receipt.path });
+        }
+      }
       if (active.has(id) || active.size >= 4) reject(409, "UPLOAD_BUSY");
       active.add(id); locked = true;
-      const root = fs.realpathSync(validation.rootDir);
       // Only the five first-level artifact directories may be created automatically.
       const segments = directory.slice(1).split("/");
       const first = path.join(root, segments[0]);
@@ -90,6 +113,7 @@ export function createInstanceFileUploadRoutes(deps: Dependencies) {
       if (!Buffer.isBuffer(req.body)) reject(400, "UPLOAD_CONTENT_INVALID");
       const bytes: Buffer = req.body;
       validateContent(bytes, name);
+      const contentSha256 = sha256(bytes);
       const currentQuota = await deps.checkQuota(validation.instance, root);
       if (currentQuota.storageUsedBytes === null || currentQuota.storageStatus === "unknown") reject(503, "UPLOAD_QUOTA_UNKNOWN");
       if (currentQuota.storageExceeded || (currentQuota.storageLimitBytes !== null && currentQuota.storageUsedBytes + bytes.length > currentQuota.storageLimitBytes)) reject(413, "UPLOAD_QUOTA_EXCEEDED");
@@ -100,6 +124,7 @@ export function createInstanceFileUploadRoutes(deps: Dependencies) {
       const temporary = path.join(checkedDirectory, `.mybay-upload-${randomUUID()}.part`);
       const target = path.join(checkedDirectory, name);
       let ownedTemporary = false;
+      let published = false;
       try {
         const descriptor = fs.openSync(temporary, "wx", 0o644);
         ownedTemporary = true;
@@ -107,10 +132,18 @@ export function createInstanceFileUploadRoutes(deps: Dependencies) {
         assertDirectory(root, directory);
         // Hard-link publication is atomic and never replaces an existing name.
         fs.linkSync(temporary, target);
+        published = true;
+        if (uploadId) commitInstanceFileUploadReceipt({ uploadId, instanceId: id, directory, name, path: `${directory}/${name}`, size: bytes.length, sha256: contentSha256 });
+      } catch (error) {
+        // A receipt and its published file are one logical commit. If durable
+        // receipt persistence fails, remove only the hard link made here so a
+        // retry cannot be mistaken for an unrelated same-name file.
+        if (published) { try { fs.unlinkSync(target); } catch { /* A later retry will report the exact conflict. */ } }
+        throw error;
       } finally {
         if (ownedTemporary) { try { fs.unlinkSync(temporary); } catch { /* Only remove this request's staging file. */ } }
       }
-      res.status(201).json({ ok: true, name, size: bytes.length, path: `${directory}/${name}` });
+      res.status(201).json({ ok: true, reused: false, ...(uploadId ? { uploadId } : {}), name, size: bytes.length, path: `${directory}/${name}` });
     } catch (error) { fail(error); }
     finally { if (locked) active.delete(id); }
   });

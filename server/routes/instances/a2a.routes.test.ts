@@ -107,7 +107,7 @@ describe("A2A instance control-plane routes", () => {
       const response = await fetch(`${baseUrl}/agent-1/a2a/activity?limit=500`, { headers: { "x-test-user": "owner" } });
       expect(response.status).toBe(200);
       const body = await response.json();
-      expect(body).toMatchObject({ activities: [], orchestrations: [] });
+      expect(body).toMatchObject({ activities: [], orchestrations: [], total: 0, hasMore: false });
       expect(body.generatedAt).toEqual(expect.any(String));
       expect(JSON.stringify(body)).not.toContain("token");
     });

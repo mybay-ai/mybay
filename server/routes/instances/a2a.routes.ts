@@ -216,7 +216,7 @@ export function createA2ARoutes() {
         // Activity history remains readable with its raw peer identity when Docker is unavailable.
       }
     }));
-    const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 12));
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 12));
     const activities = readA2AActivities({ instanceId: String(instance.id), includeAll: true, peerNames, peerIpToId, trustedPeerIds: [...trustedPeerIds] });
     const hasSource = ['taskId', 'contextId', 'peerId'].some(key => req.query[key] !== undefined);
     const source = readA2ARecoverySource(req.query);
@@ -262,6 +262,8 @@ export function createA2ARoutes() {
       ...(recoveryEvidence ? { recoveryEvidence } : {}),
       activities: activities.slice(0, limit).map(activity => ({ ...activity, remoteMapping: mappingFor(activity), recoveryAttempts: recoveryRuns.filter(run => sameA2ARecoverySource(run.a2a_recovery_source, { contextId: activity.contextId, taskId: activity.taskId, peerId: activity.peerId || "" })).sort((a,b) => String(b.created_at).localeCompare(String(a.created_at))).slice(0,3).map(run => ({ runId: run.id, status: run.status, createdAt: run.created_at })) })),
       orchestrations: groupA2AOrchestrations(activities).slice(0, limit),
+      total: activities.length,
+      hasMore: activities.length > limit && limit < 100,
       generatedAt: new Date().toISOString(),
     });
   }));
