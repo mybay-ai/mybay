@@ -1,9 +1,10 @@
 import express from 'express';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-const state = vi.hoisted(() => ({ getInstance: vi.fn(), send: vi.fn() }));
+const state = vi.hoisted(() => ({ getInstance: vi.fn(), send: vi.fn(), store: { chatRuns: [] as any[], a2aTaskLinks: [] as any[] } }));
 vi.mock('../db', () => ({ dbAdapter: { getInstanceById: state.getInstance } }));
 vi.mock('../crypto', () => ({ decrypt: () => 'test-peer-secret' }));
 vi.mock('../services/a2aTrackedTransport', () => ({ trackedA2ASend: state.send }));
+vi.mock('../localStore', () => ({ readStoreCollections: () => state.store }));
 import { a2aRelayToken } from '../services/a2aRelayConfig';
 import { createA2ARelayRouter } from './a2aRelay';
 beforeEach(() => {
@@ -11,6 +12,8 @@ beforeEach(() => {
   vi.stubEnv('MYBAY_A2A_TASK_TRACKING', 'true'); vi.stubEnv('MYBAY_INTERNAL_ROUTING_SECRET', 'isolated-test-secret');
   state.getInstance.mockImplementation(async id => ({ id, user_id: 'owner', config_json: JSON.stringify({ a2aEnabled: true, a2aPeerIds: ['peer'], a2aBearerToken: 'encrypted' }) }));
   state.send.mockResolvedValue({ jsonrpc: '2.0', id: 'task-one', result: { task: { id: 'remote-one' } } });
+  state.store.chatRuns = [];
+  state.store.a2aTaskLinks = [];
 });
 afterEach(() => { vi.unstubAllEnvs(); vi.clearAllMocks(); });
 async function serve(test: (url: string) => Promise<void>) {
@@ -54,5 +57,15 @@ it('accepts only the configured peer and returns no peer secret in discovery', a
     expect((await fetch(url,{method:'POST',headers:headers(),body:JSON.stringify(body)})).status).toBe(200);
     expect(state.send).toHaveBeenCalledTimes(1);
     expect(state.send.mock.calls[0][0]).toMatchObject({instanceId:'caller',peerId:'peer',body});
+  });
+});
+it('enforces the snapshotted collaboration-room member and round policy before dispatch', async () => {
+  await serve(async url => {
+    state.store.chatRuns = [{ instance_id: 'caller', group_collaboration: { version: 1, mode: 'group', contextId: 'ctx-mybay-room-policy', leader: { id: 'caller', name: 'Caller' }, peers: [{ id: 'peer', name: 'Peer' }], maxRounds: 1 } }];
+    state.store.a2aTaskLinks = [{ id: 'saved', instanceId: 'caller', peerId: 'peer', contextId: 'ctx-mybay-room-policy', callerTaskId: 'task-old', fingerprint: 'fp', state: 'finished', createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' }];
+    const response = await fetch(url, { method: 'POST', headers: headers(), body: JSON.stringify({ ...body, id: 'task-new', params: { message: { contextId: 'ctx-mybay-room-policy' } } }) });
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ error: { message: 'A2A_GROUP_ROUND_LIMIT' } });
+    expect(state.send).not.toHaveBeenCalled();
   });
 });

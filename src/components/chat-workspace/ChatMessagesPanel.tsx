@@ -18,7 +18,7 @@ import { selectInlineApproval } from "./run/approvalSelectors";
 import { getRunStatusI18nKey, resolveRunDisplayStatus } from "./run/runStatusSemantics";
 import type { GeneratedArtifact } from "./generatedArtifacts";
 import type { InstanceChatReadinessProbe } from "../../hooks/useLocalInstanceReadiness";
-import type { GroupRunActivity } from "./ChatGroupRunSummary";
+import type { GroupRunActivity, GroupRunMissingMember } from "./ChatGroupRunSummary";
 
 const EMPTY_CONVERSATION_FILES: PendingAttachment[] = [];
 const EMPTY_GENERATED_ARTIFACTS: GeneratedArtifact[] = [];
@@ -72,6 +72,7 @@ type ChatMessagesPanelProps = {
   onJumpToLatest?: () => void;
   onRevealMessage?: (message: HTMLElement) => void;
   onPrepareGroupRecovery?: (activity: GroupRunActivity) => void;
+  onPrepareMissingGroupMember?: (member: GroupRunMissingMember) => void;
   onRefreshGeneratedArtifacts?: () => void;
 };
 
@@ -118,6 +119,7 @@ export function ChatMessagesPanel({
   generatedArtifacts = EMPTY_GENERATED_ARTIFACTS,
   onMessageFeedbackChange,
   onPrepareGroupRecovery,
+  onPrepareMissingGroupMember,
   onRefreshGeneratedArtifacts
 }: ChatMessagesPanelProps) {
   const { t } = useTranslation(["dashboard", "common"]);
@@ -235,6 +237,7 @@ export function ChatMessagesPanel({
               canRespondToApproval={canRespondToApproval}
               onRespondToApproval={onRespondToApproval}
               onPrepareGroupRecovery={onPrepareGroupRecovery}
+              onPrepareMissingGroupMember={onPrepareMissingGroupMember}
               onRefreshGeneratedArtifacts={onRefreshGeneratedArtifacts}
             />
             </div>
@@ -261,6 +264,7 @@ export function ChatMessagesPanel({
               canRespondToApproval={canRespondToApproval}
               onRespondToApproval={onRespondToApproval}
               onPrepareGroupRecovery={onPrepareGroupRecovery}
+              onPrepareMissingGroupMember={onPrepareMissingGroupMember}
               onRefreshGeneratedArtifacts={onRefreshGeneratedArtifacts}
             />
           )}

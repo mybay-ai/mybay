@@ -5,6 +5,8 @@ import { decrypt } from '../crypto';
 import { getA2AInternalUrl } from '../../shared/a2aConfig';
 import { a2aRelayToken, a2aRelayUrl, a2aTrackingEnabled } from '../services/a2aRelayConfig';
 import { trackedA2ASend } from '../services/a2aTrackedTransport';
+import { readStoreCollections } from '../localStore';
+import { evaluateA2AGroupDispatch } from '../services/a2aGroupDispatchPolicy';
 
 const parseConfig = (row: any) => typeof row.config_json === 'string' ? JSON.parse(row.config_json) : row.config_json || {};
 export function createA2ARelayRouter() {
@@ -33,6 +35,17 @@ export function createA2ARelayRouter() {
       if (req.method !== 'POST' || !['/', ''].includes(req.path)) return res.sendStatus(404);
       const body = req.body;
       if (!body?.params?.message || Object.keys(body.params).some(key => key !== 'message')) return res.sendStatus(400);
+      const contextId = body.params.message.contextId;
+      const activityStore = readStoreCollections(['chatRuns', 'a2aTaskLinks']);
+      const dispatchPolicy = evaluateA2AGroupDispatch({
+        runs: activityStore.chatRuns,
+        links: activityStore.a2aTaskLinks,
+        instanceId,
+        peerId,
+        contextId,
+        callerTaskId: body.id,
+      });
+      if (!dispatchPolicy.allowed) return res.status(409).json({ jsonrpc: '2.0', id: body.id ?? null, error: { code: -32010, message: dispatchPolicy.error } });
       // Bound sockets and model dispatches; no automatic retries on uncertainty.
       const activeKey = JSON.stringify([instanceId, peerId, body.id]);
       if (active.size >= 16 || active.has(activeKey)) return res.sendStatus(429);

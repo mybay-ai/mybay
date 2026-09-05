@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { ChatGroupRun } from "../../../shared/chatCollaboration";
 import { buildA2ATaskRecordUrl } from "../../constants/routes";
-import { formatGroupDuration, shouldPollGroupActivities, type GroupRunActivity } from "./ChatGroupRunSummary";
+import { formatGroupDuration, groupPollAttemptLimit, shouldPollGroupActivities, type GroupRunActivity } from "./ChatGroupRunSummary";
 
 const group = { contextId: "ctx-room", peers: [{ id: "peer-a", name: "A" }, { id: "peer-b", name: "B" }] } as ChatGroupRun;
 const activity = (peerId: string, status: string): GroupRunActivity => ({ contextId: group.contextId, taskId: `task-${peerId}`, peerId, peerName: peerId, status });
@@ -23,5 +23,10 @@ describe("ChatGroupRunSummary helpers", () => {
 
   it("builds a deep link to the exact instance and A2A task", () => {
     expect(buildA2ATaskRecordUrl("instance/1", "task 1")).toBe("/app/instances?id=instance%2F1&tab=collaboration#a2a-activity-task%201");
+  });
+
+  it("allows a short evidence grace period after the host run becomes terminal", () => {
+    expect(groupPollAttemptLimit(false)).toBe(60);
+    expect(groupPollAttemptLimit(true)).toBe(5);
   });
 });

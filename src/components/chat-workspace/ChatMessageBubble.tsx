@@ -28,7 +28,7 @@ import { LinkedChatContent, MarkdownChatContent } from "./ChatMessageContent";
 import { copyTextToClipboard } from "./chatClipboard";
 import { ChatAgentAvatar } from "./ChatAgentAvatar";
 import { formatLocalizedDuration } from "./localizedDuration";
-import { ChatGroupRunSummary, type GroupRunActivity } from "./ChatGroupRunSummary";
+import { ChatGroupRunSummary, type GroupRunActivity, type GroupRunMissingMember } from "./ChatGroupRunSummary";
 
 const EMPTY_CONVERSATION_FILES: PendingAttachment[] = [];
 const EMPTY_ARTIFACTS: GeneratedArtifact[] = [];
@@ -57,6 +57,7 @@ interface ChatMessageBubbleProps {
   canRespondToApproval?: boolean;
   onRespondToApproval?: (choice: ChatApprovalChoice, approvalId?: string, resolveAll?: boolean) => void | Promise<void>;
   onPrepareGroupRecovery?: (activity: GroupRunActivity) => void;
+  onPrepareMissingGroupMember?: (member: GroupRunMissingMember) => void;
   onRefreshGeneratedArtifacts?: () => void;
 }
 
@@ -151,6 +152,7 @@ function ChatMessageBubbleBody({
   canRespondToApproval = false,
   onRespondToApproval,
   onPrepareGroupRecovery,
+  onPrepareMissingGroupMember,
   onRefreshGeneratedArtifacts
 }: ChatMessageBubbleProps) {
   const { t } = useTranslation("dashboard");
@@ -238,7 +240,14 @@ function ChatMessageBubbleBody({
           : "max-w-[calc(100%_-_2.5rem)] sm:max-w-[calc(100%_-_2.875rem)] bg-surface/95 border border-outline/80 text-content rounded-tl-md"
       } ${message.status === "failed" ? "border-red-350 bg-red-50/20" : ""} ${message.status === "stopped" ? "border-amber-300 bg-amber-50/20" : ""} ${message.status === "queued" ? "border-amber-200 bg-amber-50/20" : ""} ${message.status === "superseded" ? "opacity-65" : ""}`}>
         {!isUser && <A2ARecoveryNotice instanceId={instanceId} source={message.metadata?.a2a_recovery_source || retrySourceMessage?.metadata?.a2a_recovery_source} status={runExecutionState?.status || message.status} />}
-        {!isUser && <ChatGroupRunSummary instanceId={instanceId} value={message.metadata?.group_collaboration} onPrepareRecovery={onPrepareGroupRecovery} />}
+        {!isUser && <ChatGroupRunSummary
+          instanceId={instanceId}
+          value={message.metadata?.group_collaboration}
+          hostTerminal={message.status === "stopped" || !["pending", "streaming", "queued", "running", "stopping"].includes(runExecutionState?.status || message.status)}
+          requestText={retrySourceMessage?.content}
+          onPrepareRecovery={onPrepareGroupRecovery}
+          onPrepareMissing={onPrepareMissingGroupMember}
+        />}
         {!isUser && runExecutionState && (
           <InlineRunTimeline execution={{ ...runExecutionState, blocks: presentation?.blocks || runExecutionState.blocks }}
             metrics={runMetrics || { durationMs: message.duration_ms }} hideApprovalBlocks={Boolean(approvalRequest)} textUnaligned={presentation?.textUnaligned}

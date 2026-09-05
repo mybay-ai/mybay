@@ -19,7 +19,9 @@ const requestRunReconcile = vi.hoisted(() => vi.fn(() => true));
 const primeRunFileSnapshot = vi.hoisted(() => vi.fn());
 const discardRunFileSnapshot = vi.hoisted(() => vi.fn());
 const isQuestionBridgeInstalling = vi.hoisted(() => vi.fn(() => false));
+const cancelMappedA2AGroupTasks = vi.hoisted(() => vi.fn());
 vi.mock("../../../services/runs/questionBridgeInstaller", () => ({ isQuestionBridgeInstalling }));
+vi.mock("../../../services/a2aTaskCancel", () => ({ cancelMappedA2AGroupTasks }));
 
 vi.mock("../../../middlewares/auth", () => ({
   authenticateToken: (req: any, _res: any, next: any) => {
@@ -280,16 +282,20 @@ describe("Interactive Agent POST /runs integration", () => {
   });
 
   it("wakes the reconciler immediately after a stop request is accepted", async () => {
+    const peerId = "66666666-6666-4666-8666-666666666666";
     getInstanceById.mockResolvedValue({ id: instanceId, user_id: userId, owner_id: userId, config_json: "{}" });
+    getInstances.mockResolvedValue([{ id: peerId, user_id: userId, owner_id: userId, config_json: JSON.stringify({ a2aEnabled: true, a2aBearerToken: "encrypted-token" }) }]);
     getConversationForOwnerAndInstance.mockResolvedValue({ id: conversationId, user_id: userId, instance_id: instanceId });
     getChatRun.mockResolvedValue({
       id: "55555555-5555-4555-8555-555555555555",
       instance_id: instanceId,
       user_id: userId,
       conversation_id: conversationId,
-      status: "queued"
+      status: "queued",
+      group_collaboration: { version: 1, mode: "group", contextId: "ctx-mybay-room-stoptest", leader: { id: instanceId, name: "Host" }, peers: [{ id: peerId, name: "Peer" }], maxRounds: 1 },
     });
     requestStopChatRun.mockResolvedValue({ status: "stop_requested", run_status: "stopping" });
+    cancelMappedA2AGroupTasks.mockResolvedValue({ attempted: 2, confirmed: 1, unconfirmed: 1 });
 
     const app = express();
     app.use(express.json());
@@ -308,8 +314,9 @@ describe("Interactive Agent POST /runs integration", () => {
       );
 
       expect(response.status).toBe(200);
-      await expect(response.json()).resolves.toMatchObject({ success: true, status: "stopping" });
+      await expect(response.json()).resolves.toMatchObject({ success: true, status: "stopping", groupCancellation: { attempted: 2, confirmed: 1, unconfirmed: 1 } });
       expect(requestRunsReconcile).toHaveBeenCalledOnce();
+      expect(cancelMappedA2AGroupTasks).toHaveBeenCalledWith(expect.objectContaining({ instanceId, contextId: "ctx-mybay-room-stoptest", peerIds: [peerId] }));
     } finally {
       await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     }

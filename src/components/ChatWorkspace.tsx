@@ -55,7 +55,7 @@ import { createChatSelectionPersistence } from "./chat-workspace/chatSelectionPe
 import { createChatModePreference, type PreferredChatMode } from "./chat-workspace/chatModePreference";
 import { readA2ARetryNavigationState } from "./chat-workspace/a2aRetryNavigation";
 import type { ChatGroupConfig } from "../../shared/chatCollaboration";
-import type { GroupRunActivity } from "./chat-workspace/ChatGroupRunSummary";
+import type { GroupRunActivity, GroupRunMissingMember } from "./chat-workspace/ChatGroupRunSummary";
 
 export { generateUUIDv4 } from "./chat-workspace/chatWorkspaceSendPolicy";
 
@@ -170,6 +170,21 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     setChatMode("agent");
     modePreference.remember(selectedId, "agent");
     showToast(t("dashboard:chatWorkspace.groupRunRecoveryPrepared"), "success");
+  }, [modePreference, selectedId, setInput, showToast, t]);
+
+  const prepareMissingGroupMember = useCallback((member: GroupRunMissingMember) => {
+    if (!selectedId) return;
+    const draft = t("dashboard:chatWorkspace.groupRunMissingDraft", {
+      peerName: member.peerName,
+      peerId: member.peerId,
+      contextId: member.contextId,
+      request: member.requestText || t("dashboard:a2a.recoveryRequestPlaceholder"),
+    });
+    a2aRecoveryDraftRef.current = null;
+    setInput(draft);
+    setChatMode("agent");
+    modePreference.remember(selectedId, "agent");
+    showToast(t("dashboard:chatWorkspace.groupRunMissingPrepared"), "success");
   }, [modePreference, selectedId, setInput, showToast, t]);
 
   const {
@@ -1374,6 +1389,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
               )));
             }}
             onPrepareGroupRecovery={prepareGroupRecovery}
+            onPrepareMissingGroupMember={prepareMissingGroupMember}
             onRefreshGeneratedArtifacts={refreshGeneratedArtifacts}
             highlightedMessageId={selectedSearch?.messageId ?? null}
           />

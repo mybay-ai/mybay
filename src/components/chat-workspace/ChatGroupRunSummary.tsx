@@ -22,8 +22,20 @@ export type GroupRunActivity = {
   failureReason?: string | null;
 };
 
+export type GroupRunMissingMember = {
+  contextId: string;
+  peerId: string;
+  peerName: string;
+  requestText?: string | null;
+};
+
 const TERMINAL_ACTIVITY_STATUSES = new Set(["completed", "failed", "timed_out", "agent_offline", "auth_failed", "connection_failed", "cancelled"]);
 const MAX_AUTO_REFRESH_ATTEMPTS = 60;
+const MAX_TERMINAL_REFRESH_ATTEMPTS = 5;
+
+export function groupPollAttemptLimit(hostTerminal: boolean) {
+  return hostTerminal ? MAX_TERMINAL_REFRESH_ATTEMPTS : MAX_AUTO_REFRESH_ATTEMPTS;
+}
 
 function indexLatestActivityByPeer(activities: GroupRunActivity[]) {
   const byPeer = new Map<string | null, GroupRunActivity>();
@@ -53,16 +65,25 @@ export function formatGroupDuration(durationMs: number | null | undefined, langu
   return `${Number(hours.toFixed(hours < 10 ? 1 : 0))}${zh ? "小时" : "h"}`;
 }
 
-export function ChatGroupRunSummary({ instanceId, value, onPrepareRecovery }: { instanceId?: string; value: unknown; onPrepareRecovery?: (activity: GroupRunActivity) => void }) {
+export function ChatGroupRunSummary({ instanceId, value, hostTerminal = false, requestText, onPrepareRecovery, onPrepareMissing }: {
+  instanceId?: string;
+  value: unknown;
+  hostTerminal?: boolean;
+  requestText?: string | null;
+  onPrepareRecovery?: (activity: GroupRunActivity) => void;
+  onPrepareMissing?: (member: GroupRunMissingMember) => void;
+}) {
   const { t, i18n } = useTranslation("dashboard");
   const group = useMemo(() => readChatGroupRun(value), [value]);
   const [activities, setActivities] = useState<GroupRunActivity[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [pollExhausted, setPollExhausted] = useState(false);
 
   useEffect(() => {
     setActivities([]);
     setLoadFailed(false);
+    setPollExhausted(false);
     if (!instanceId || !group) return;
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -76,7 +97,10 @@ export function ChatGroupRunSummary({ instanceId, value, onPrepareRecovery }: { 
         const matching = (response.activities || []).filter(activity => activity.contextId === group.contextId);
         setActivities(matching);
         setLoadFailed(false);
-        if (attempts < MAX_AUTO_REFRESH_ATTEMPTS && shouldPollGroupActivities(group, matching)) timer = setTimeout(load, 3000);
+        const shouldPoll = shouldPollGroupActivities(group, matching);
+        const attemptLimit = groupPollAttemptLimit(hostTerminal);
+        if (attempts < attemptLimit && shouldPoll) timer = setTimeout(load, 3000);
+        else if (shouldPoll) setPollExhausted(true);
       } catch (error) {
         if (!(error instanceof DOMException && error.name === "AbortError")) {
           setLoadFailed(true);
@@ -92,7 +116,7 @@ export function ChatGroupRunSummary({ instanceId, value, onPrepareRecovery }: { 
       controller.abort();
       if (timer) clearTimeout(timer);
     };
-  }, [group, instanceId]);
+  }, [group, hostTerminal, instanceId]);
 
   if (!group) return null;
   const byPeer = indexLatestActivityByPeer(activities);
@@ -108,17 +132,20 @@ export function ChatGroupRunSummary({ instanceId, value, onPrepareRecovery }: { 
           const activity = byPeer.get(peer.id);
           const completed = activity?.status === "completed";
           const failed = Boolean(activity && TERMINAL_ACTIVITY_STATUSES.has(activity.status) && !completed);
+          const notDispatched = !activity && pollExhausted && hostTerminal && !loadFailed;
           const canPrepareRecovery = Boolean(activity && onPrepareRecovery && canReviewA2ARecovery({ direction: "outbound", peerId: activity.peerId, status: activity.status }));
-          const StatusIcon = completed ? CheckCircle2 : failed ? XCircle : Clock3;
+          const canPrepareMissing = Boolean(notDispatched && onPrepareMissing);
+          const StatusIcon = completed ? CheckCircle2 : failed || notDispatched ? XCircle : Clock3;
           const duration = formatGroupDuration(activity?.durationMs, i18n.language, t("chatWorkspace.groupRunDurationPending"));
           return (
             <div key={peer.id} className="min-w-0 rounded-lg border border-violet-100 bg-surface/80 px-2.5 py-2 dark:border-violet-400/15">
               <div className="flex min-w-0 items-center gap-1.5 text-xs font-semibold text-content">
-                <StatusIcon className={`h-3.5 w-3.5 shrink-0 ${completed ? "text-emerald-500" : failed ? "text-rose-500" : "text-amber-500"}`} />
+                <StatusIcon className={`h-3.5 w-3.5 shrink-0 ${completed ? "text-emerald-500" : failed || notDispatched ? "text-rose-500" : "text-amber-500"}`} />
                 <span className="min-w-0 flex-1 truncate">{peer.name}</span>
                 {activity && <span className="shrink-0 text-[10px] font-normal text-content-muted">{t(`a2a.activityStatuses.${activity.status}`, { defaultValue: activity.status })} · {duration}</span>}
+                {notDispatched && <span className="shrink-0 text-[10px] font-normal text-rose-600 dark:text-rose-300">{t("chatWorkspace.groupRunNotDispatched")}</span>}
               </div>
-              <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-content-muted">{activity?.result || activity?.failureReason || t(activity ? "chatWorkspace.groupRunNoResult" : "chatWorkspace.groupRunNoActivity")}</p>
+              <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-content-muted">{activity?.result || activity?.failureReason || t(notDispatched ? "chatWorkspace.groupRunNotDispatchedHint" : activity ? "chatWorkspace.groupRunNoResult" : "chatWorkspace.groupRunNoActivity")}</p>
               {activity && (
                 <details className="group mt-1.5 border-t border-outline/60 pt-1.5 text-[11px] text-content-muted">
                   <summary className="flex cursor-pointer list-none items-center gap-1 font-medium text-content-secondary hover:text-content">
@@ -137,6 +164,7 @@ export function ChatGroupRunSummary({ instanceId, value, onPrepareRecovery }: { 
                   </div>
                 </details>
               )}
+              {canPrepareMissing && <button type="button" className="mt-1.5 inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-semibold text-amber-800 hover:bg-amber-100 dark:border-amber-700/50 dark:bg-amber-950/30 dark:text-amber-200" onClick={() => onPrepareMissing?.({ contextId: group.contextId, peerId: peer.id, peerName: peer.name, requestText })}><RotateCw className="h-3 w-3" />{t("chatWorkspace.groupRunPrepareMissing")}</button>}
             </div>
           );
         })}
