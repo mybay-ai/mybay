@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Button, Card, cn } from "../ui";
 
 interface VersionOfficialCardProps {
+  runtimeType: "hermes" | "pi";
   currentUser: any;
   latestOfficial: any;
   latestOfficialVer: string;
@@ -14,6 +15,7 @@ interface VersionOfficialCardProps {
 }
 
 export function VersionOfficialCard({
+  runtimeType,
   currentUser,
   latestOfficial,
   latestOfficialVer,
@@ -28,7 +30,9 @@ export function VersionOfficialCard({
   return (
     <Card className="p-4 bg-surface border border-outline rounded-2xl shadow-sm flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-between">
       <div className="flex-1 text-left min-w-0">
-        <span className="text-content-muted text-[13px] font-medium">{t("versionManagement.official.title")}</span>
+        <span className="text-content-muted text-[13px] font-medium">
+          {t(`versionManagement.official.${runtimeType}Title`)}
+        </span>
         <div className="text-xl font-bold text-blue-600 mt-1 flex flex-wrap items-center gap-1.5">
           <span>{latestOfficialVer}</span>
           {isReady ? (
@@ -48,7 +52,7 @@ export function VersionOfficialCard({
             className="h-9 px-3 bg-surface-muted border border-outline hover:bg-control-hover text-content-secondary font-semibold rounded-lg flex items-center gap-1 text-[13px] active:scale-95 transition-all"
           >
             <RefreshCw className={cn("w-3 h-3 text-content-muted", syncingOfficial && "animate-spin")} />
-            <span>{t("versionManagement.actions.sync")}</span>
+            <span>{t(runtimeType === "pi" ? "versionManagement.actions.refreshCatalog" : "versionManagement.actions.sync")}</span>
           </Button>
           {latestOfficial && !latestOfficial.is_prewarmed && (
             <Button

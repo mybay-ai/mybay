@@ -1318,6 +1318,11 @@
   "files_cleanup_now_confirm": "Delete {{count}} recommended cleanup files. This action cannot be undone.",
   "files_usage_recent_files": "Recent Files",
   "versionManagement": {
+    "runtimeTabs": {
+      "label": "Select the Agent Runtime to manage",
+      "hermes": "Hermes Agent upgrades",
+      "pi": "Pi Runtime upgrades"
+    },
     "stats": {
       "total": "Total instances",
       "latest": "Latest version instances",
@@ -1329,11 +1334,14 @@
     },
     "official": {
       "title": "Recommended official version",
+      "hermesTitle": "Recommended Hermes Agent version",
+      "piTitle": "Recommended Pi Runtime version",
       "ready": "Ready"
     },
     "actions": {
       "refreshStats": "Refresh upgrade statistics",
       "sync": "Sync releases",
+      "refreshCatalog": "Refresh release catalog",
       "prewarm": "Prewarm cache"
     },
     "filters": {

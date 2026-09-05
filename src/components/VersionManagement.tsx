@@ -64,6 +64,7 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
   const [statusFilter, setStatusFilter] = useState("all");
   const [systemTagFilter, setSystemTagFilter] = useState("all");
   const [preflight, setPreflight] = useState<any>({ open: false, loading: false, report: null, mode: null, ids: [], tag: "latest" });
+  const [activeRuntime, setActiveRuntime] = useState<"hermes" | "pi">("hermes");
   const debounceTimeoutRef = useRef<any>(null);
 
   const handleRefreshInstances = async () => {
@@ -85,6 +86,10 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
   const latestOfficial = versions.find((version: any) => version.is_latest) || versions[0];
   const latestOfficialVer = latestOfficial?.version || "";
   const latestPi = piVersions.find((version: any) => version.is_latest) || piVersions[0];
+  const runtimeInstances = useMemo(
+    () => instances.filter((instance) => getRuntimeType(instance) === activeRuntime),
+    [instances, activeRuntime],
+  );
 
   // Check if a given inst needs update using semver rules
   const doesInstanceNeedUpdate = (inst: any) => {
@@ -164,19 +169,19 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
 
   const visibleVersions = useMemo(() => {
     const values = new Set<string>();
-    instances.forEach(inst => values.add(getActiveVersion(inst)));
+    runtimeInstances.forEach(inst => values.add(getActiveVersion(inst)));
     return Array.from(values).filter(Boolean).sort();
-  }, [instances]);
+  }, [runtimeInstances, latestPi]);
 
   const visibleSystemTags = useMemo(() => {
     const values = new Set<string>();
-    instances.forEach(inst => getInstanceSystemTags(inst).forEach(tag => values.add(tag)));
+    runtimeInstances.forEach(inst => getInstanceSystemTags(inst).forEach(tag => values.add(tag)));
     return Array.from(values).sort();
-  }, [instances]);
+  }, [runtimeInstances]);
 
   const filteredInstances = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    return instances.filter((inst) => {
+    return runtimeInstances.filter((inst) => {
       const activeVersion = getActiveVersion(inst);
       const systemTags = getInstanceSystemTags(inst);
       const matchesStatus = matchesStatusFilter(inst, statusFilter);
@@ -202,13 +207,13 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
       if (systemTagFilter !== "all" && !systemTags.includes(systemTagFilter)) return false;
       return true;
     });
-  }, [instances, latestOfficialVer, searchQuery, versionFilter, statusFilter, systemTagFilter]);
+  }, [runtimeInstances, latestOfficialVer, latestPi, searchQuery, versionFilter, statusFilter, systemTagFilter]);
 
-  const totalInstances = instances.length;
-  const latestInstances = instances.filter(inst => inst.upgrade_status !== "failed" && !doesInstanceNeedUpdate(inst)).length;
-  const needUpdateInstances = instances.filter(inst => inst.upgrade_status !== "failed" && doesInstanceNeedUpdate(inst)).length;
-  const abnormalInstances = instances.filter(inst => inst.upgrade_status === "failed" || inst.status === "unhealthy" || inst.status === "error").length;
-  const latestBatchUpgradeAt = instances
+  const totalInstances = runtimeInstances.length;
+  const latestInstances = runtimeInstances.filter(inst => inst.upgrade_status !== "failed" && !doesInstanceNeedUpdate(inst)).length;
+  const needUpdateInstances = runtimeInstances.filter(inst => inst.upgrade_status !== "failed" && doesInstanceNeedUpdate(inst)).length;
+  const abnormalInstances = runtimeInstances.filter(inst => inst.upgrade_status === "failed" || inst.status === "unhealthy" || inst.status === "error").length;
+  const latestBatchUpgradeAt = runtimeInstances
     .map(inst => inst.last_upgrade_at ? new Date(inst.last_upgrade_at).getTime() : 0)
     .filter(time => Number.isFinite(time) && time > 0)
     .sort((a, b) => b - a)[0];
@@ -217,14 +222,15 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
     filteredInstances.filter(inst => selectedInstances.includes(inst.id))
   ), [filteredInstances, selectedInstances]);
   const selectedVisibleInstanceIds = useMemo(() => selectedVisibleInstances.map(inst => inst.id), [selectedVisibleInstances]);
-  const selectedRuntimeType = useMemo<"hermes" | "pi" | null>(() => {
-    if (selectedVisibleInstances.length === 0) return null;
-    return getRuntimeType(selectedVisibleInstances[0]);
-  }, [selectedVisibleInstances]);
-
-  useEffect(() => {
-    if (selectedRuntimeType === "pi") setTargetTag("latest");
-  }, [selectedRuntimeType]);
+  const selectedRuntimeType: "hermes" | "pi" = activeRuntime;
+  const handleRuntimeChange = (runtimeType: "hermes" | "pi") => {
+    setActiveRuntime(runtimeType);
+    setSelectedInstances([]);
+    setTargetTag("latest");
+    setVersionFilter("all");
+    setStatusFilter("all");
+    setSystemTagFilter("all");
+  };
   const detailsInstance = useMemo(() => (
     detailsInstanceId ? instances.find(inst => inst.id === detailsInstanceId) || null : null
   ), [detailsInstanceId, instances]);
@@ -366,9 +372,14 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
         body: JSON.stringify({ 
           version: v.version,
           image: v.image,
-          tag: v.tag
+          tag: v.tag,
+          runtime_type: v.runtime_type
         })
       });
+      if (res.ok && v.runtime_type === "pi") {
+        await fetchVersions();
+        setPrewarmingVersion(null);
+      }
       if (!res.ok) {
         const data = await res.json();
         showAlert({
@@ -733,6 +744,28 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
 
   return (
     <div className="space-y-6">
+      <div className="inline-flex w-full rounded-2xl border border-outline bg-surface-muted p-1 sm:w-auto" role="tablist" aria-label={t("versionManagement.runtimeTabs.label")}>
+        {(["hermes", "pi"] as const).map((runtimeType) => (
+          <button
+            key={runtimeType}
+            type="button"
+            role="tab"
+            aria-selected={activeRuntime === runtimeType}
+            onClick={() => handleRuntimeChange(runtimeType)}
+            className={cn(
+              "flex-1 rounded-xl px-5 py-2.5 text-sm font-bold transition-colors sm:flex-none",
+              activeRuntime === runtimeType
+                ? "bg-surface text-content shadow-sm ring-1 ring-outline"
+                : "text-content-muted hover:text-content",
+            )}
+          >
+            {t(`versionManagement.runtimeTabs.${runtimeType}`)}
+            <span className="ml-2 text-xs font-semibold text-content-muted">
+              {instances.filter((instance) => getRuntimeType(instance) === runtimeType).length}
+            </span>
+          </button>
+        ))}
+      </div>
       <VersionOverviewCards
         totalInstances={totalInstances}
         latestInstances={latestInstances}
@@ -743,12 +776,13 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
         onRefreshInstances={handleRefreshInstances}
       />
       <VersionOfficialCard
+        runtimeType={activeRuntime}
         currentUser={currentUser}
-        latestOfficial={latestOfficial}
-        latestOfficialVer={latestOfficialVer}
+        latestOfficial={activeRuntime === "pi" ? latestPi : latestOfficial}
+        latestOfficialVer={activeRuntime === "pi" ? `Pi ${latestPi?.version || PI_RUNTIME_DEFINITION.version}` : latestOfficialVer}
         syncingOfficial={syncingOfficial}
         prewarmingVersion={prewarmingVersion}
-        onSyncOfficial={handleSyncOfficial}
+        onSyncOfficial={activeRuntime === "pi" ? fetchVersions : handleSyncOfficial}
         onPrewarm={handlePrewarm}
       />
       <VersionFilters
@@ -918,6 +952,7 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
       />
 
       <VersionRepositoryPreview
+        runtimeType={activeRuntime}
         versions={versions}
         piVersions={piVersions}
         currentUser={currentUser}

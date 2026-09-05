@@ -1318,6 +1318,11 @@
   "files_cleanup_now_confirm": "将删除系统推荐的 {{count}} 个可清理文件。此操作不可撤销。",
   "files_usage_recent_files": "最近文件",
   "versionManagement": {
+    "runtimeTabs": {
+      "label": "选择要管理的 Agent Runtime",
+      "hermes": "Hermes Agent 升级",
+      "pi": "Pi Runtime 升级"
+    },
     "stats": {
       "total": "总实例数",
       "latest": "最新版本实例",
@@ -1329,11 +1334,14 @@
     },
     "official": {
       "title": "推荐官方最新版本",
+      "hermesTitle": "推荐 Hermes Agent 最新版本",
+      "piTitle": "推荐 Pi Runtime 最新版本",
       "ready": "已就绪"
     },
     "actions": {
       "refreshStats": "刷新待更新实例统计",
       "sync": "检测同步",
+      "refreshCatalog": "刷新版本目录",
       "prewarm": "预热缓存"
     },
     "filters": {

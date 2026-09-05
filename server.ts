@@ -45,6 +45,7 @@ import { buildVersionFamilies } from "./server/repositories/versionsRepo";
 import { discoverHermesVersions } from "./server/services/hermesVersionDiscovery";
 import { enrichRuntimeVersionCacheStatus, listManagedRuntimeVersions } from "./server/services/runtimeVersionCatalog";
 import { docker } from "./server/lib/docker";
+import { ensureSelectedPiRuntimeImage } from "./server/services/localPiRuntime";
 import { prewarmManager } from "./server/prewarmManager";
 import { startSchedulerRunner, stopSchedulerRunner } from "./server/schedulerRunner";
 import { startReconciler, stopReconciler } from "./server/reconciler";
@@ -778,11 +779,16 @@ async function startServer() {
       if (req.user?.role !== "admin") {
         return res.status(403).json({ code: "ADMIN_REQUIRED", params: {}, error: "Only platform administrators can trigger image pre-warming." });
       }
-      const { version, image, tag } = req.body;
+      const { version, image, tag, runtime_type: runtimeType } = req.body;
       if (!version || !image || !tag) {
         return res.status(400).json({ code: "INVALID_PREWARM_REQUEST", params: {}, error: "version, image and tag are required." });
       }
       
+      if (String(runtimeType || "").trim().toLowerCase() === "pi") {
+        const imageRef = `${String(image)}:${String(tag)}`;
+        await ensureSelectedPiRuntimeImage({ dockerClient: docker, imageRef });
+        return res.json({ success: true, status: "cached", version, image, tag });
+      }
       await prewarmManager.addToQueue(String(version), String(image), String(tag));
       res.status(202).json({ success: true, status: "queued", version, image, tag });
     } catch (e: any) {

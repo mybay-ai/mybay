@@ -1,12 +1,16 @@
 FROM node:22-bookworm-slim
 
+ARG PI_AGENT_VERSION=0.85.1
 LABEL com.mybay.pi.runtime="true" \
-  com.mybay.pi.bridge-version="0.1.0-beta" \
-  com.mybay.pi.agent-version="0.85.0"
+  com.mybay.pi.bridge-version="0.1.1-beta" \
+  com.mybay.pi.agent-version="${PI_AGENT_VERSION}"
 
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund
+RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund \
+  && if [ "$(node -p "require('./node_modules/@earendil-works/pi-coding-agent/package.json').version")" != "${PI_AGENT_VERSION}" ]; then \
+       npm install --omit=dev --ignore-scripts --no-audit --no-fund --save-exact "@earendil-works/pi-coding-agent@${PI_AGENT_VERSION}"; \
+     fi
 COPY server.mjs ./server.mjs
 
 RUN mkdir -p /opt/data/workspace /opt/data/pi/sessions /opt/data/pi/runs \

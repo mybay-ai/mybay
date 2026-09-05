@@ -10,17 +10,17 @@ afterEach(() => {
 
 describe("managed Runtime version catalog", () => {
   it("maps the latest Pi release to the configured distributable image", () => {
-    process.env.MYBAY_PI_RUNTIME_IMAGE = "ghcr.io/mybay-ai/pi-runtime:0.1.0-beta";
-    expect(listManagedRuntimeVersions("pi")).toEqual([
-      expect.objectContaining({
+    process.env.MYBAY_PI_RUNTIME_IMAGE = "ghcr.io/mybay-ai/pi-runtime:0.85.1";
+    const versions = listManagedRuntimeVersions("pi");
+    expect(versions).toHaveLength(3);
+    expect(versions[0]).toEqual(expect.objectContaining({
         runtime_type: "pi",
-        version: "0.85.0",
-        tag: "0.1.0-beta",
+        version: "0.85.1",
+        tag: "0.85.1",
         image: "ghcr.io/mybay-ai/pi-runtime",
         certification_level: "certified",
         is_latest: true,
-      }),
-    ]);
+    }));
   });
 
   it("does not mix Hermes discovery into the managed Pi catalog", () => {

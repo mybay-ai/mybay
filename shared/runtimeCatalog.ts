@@ -181,8 +181,8 @@ export const PI_RUNTIME_DEFINITION = freezeRuntimeDefinition({
   specVersion: "1.0.0",
   name: "pi-agent",
   displayName: "Pi Agent",
-  version: "0.85.0",
-  description: "Certified MyBay integration for the Pi Agent bridge 0.1.0-beta, with isolated web conversations and persisted file workflows.",
+  version: "0.85.1",
+  description: "Certified MyBay integration for Pi Agent 0.85.1, with isolated web conversations and persisted file workflows.",
   providerKey: "pi-rpc",
   contractVersion: 1,
   release: {
@@ -193,7 +193,7 @@ export const PI_RUNTIME_DEFINITION = freezeRuntimeDefinition({
   runtime: {
     type: "pi",
     image: "mybay/pi-runtime",
-    tag: "0.1.0-beta",
+    tag: "0.85.1",
     internalPort: 8080,
     environmentVariables: [
       {

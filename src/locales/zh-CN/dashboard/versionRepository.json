@@ -146,7 +146,7 @@
     },
     "piProtection": {
       "title": "Pi 专属升级链路已启用",
-      "description": "只能选择版本库中已认证的 Pi Runtime 版本；当前推荐 {{version}}，历史版本通过实例回滚恢复。"
+      "description": "只能选择版本库中受支持的 Pi Runtime 版本；当前推荐 {{version}}，目录保留最近三个版本，实例仍可使用自己的回滚点恢复。"
     }
   }
 }

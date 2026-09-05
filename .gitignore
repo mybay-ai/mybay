@@ -9,6 +9,7 @@ release/
 /runtime/*
 !/runtime/pi-bridge/
 !/runtime/pi-bridge/**
+**/node_modules/
 /secrets/
 .DS_Store
 *.log

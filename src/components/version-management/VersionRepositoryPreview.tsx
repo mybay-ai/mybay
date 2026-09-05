@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { VersionCapabilityBadges } from "./VersionCapabilityBadges";
 
 interface VersionRepositoryPreviewProps {
+  runtimeType: "hermes" | "pi";
   versions: any[];
   piVersions: any[];
   currentUser: any;
@@ -16,6 +17,7 @@ interface VersionRepositoryPreviewProps {
 }
 
 export function VersionRepositoryPreview({
+  runtimeType,
   versions,
   piVersions,
   currentUser,
@@ -56,7 +58,7 @@ export function VersionRepositoryPreview({
 
   return (
     <div className="space-y-4">
-      <Card className="p-0 border border-outline rounded-2xl overflow-hidden shadow-sm bg-surface">
+      {runtimeType === "hermes" && <Card className="p-0 border border-outline rounded-2xl overflow-hidden shadow-sm bg-surface">
         <div className="px-5 py-4 bg-surface-muted border-b border-outline flex items-center justify-between">
           <div>
             <h4 className="text-sm font-bold text-content flex items-center gap-2">
@@ -137,8 +139,8 @@ export function VersionRepositoryPreview({
             </tbody>
           </table>
         </div>
-      </Card>
-      <Card className="p-0 border border-violet-200/60 dark:border-violet-800/60 rounded-2xl overflow-hidden shadow-sm bg-surface">
+      </Card>}
+      {runtimeType === "pi" && <Card className="p-0 border border-violet-200/60 dark:border-violet-800/60 rounded-2xl overflow-hidden shadow-sm bg-surface">
         <div className="px-5 py-4 bg-violet-50/50 dark:bg-violet-950/20 border-b border-outline flex items-center justify-between gap-3">
           <div>
             <h4 className="text-sm font-bold text-content flex items-center gap-2">
@@ -173,7 +175,7 @@ export function VersionRepositoryPreview({
             <p className="p-5 text-[13px] text-content-muted">{t("versionRepository.notDiscovered")}</p>
           )}
         </div>
-      </Card>
+      </Card>}
     </div>
   );
 }

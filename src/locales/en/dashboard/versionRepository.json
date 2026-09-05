@@ -146,7 +146,7 @@
     },
     "piProtection": {
       "title": "Pi-specific upgrade path enabled",
-      "description": "Only certified Pi Runtime releases in this repository can be selected. The recommended release is {{version}}; historical releases are restored through instance rollback."
+      "description": "Only supported Pi Runtime releases in this repository can be selected. The latest three are retained, and each instance keeps its own rollback point."
     }
   }
 }

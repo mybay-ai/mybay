@@ -4,17 +4,20 @@ import { findRuntimeRelease, getLatestRuntimeRelease, listRuntimeReleases } from
 describe("Runtime release catalog", () => {
   it("resolves the certified Pi release through every supported alias", () => {
     const latest = getLatestRuntimeRelease("pi");
+    expect(listRuntimeReleases("pi")).toHaveLength(3);
+    expect(listRuntimeReleases("pi").map((release) => release.runtimeVersion)).toEqual(["0.85.1", "0.85.0", "0.84.4"]);
     expect(latest).toMatchObject({
       runtimeType: "pi",
-      runtimeVersion: "0.85.0",
-      imageTag: "0.1.0-beta",
+      runtimeVersion: "0.85.1",
+      imageTag: "0.85.1",
       certificationLevel: "certified",
       isLatest: true,
       upgradeable: true,
     });
     expect(findRuntimeRelease("pi", "latest")).toBe(latest);
-    expect(findRuntimeRelease("pi", "0.85.0")).toBe(latest);
-    expect(findRuntimeRelease("pi", "0.1.0-beta")).toBe(latest);
+    expect(findRuntimeRelease("pi", "0.85.1")).toBe(latest);
+    expect(findRuntimeRelease("pi", "0.85.0")?.imageTag).toBe("0.1.0-beta");
+    expect(findRuntimeRelease("pi", "0.1.0-beta")?.runtimeVersion).toBe("0.85.0");
     expect(findRuntimeRelease("pi", "unknown")).toBeNull();
   });
 

@@ -10,22 +10,22 @@ afterEach(() => {
 
 describe("Pi Runtime upgrade selection", () => {
   it("resolves latest and the Agent version to the pinned supported image", () => {
-    process.env.MYBAY_PI_RUNTIME_IMAGE = "registry.test/mybay/pi:0.1.0-beta";
+    process.env.MYBAY_PI_RUNTIME_IMAGE = "registry.test/mybay/pi:0.85.1";
     expect(resolvePiRuntimeUpgradeSelection({ instance: { runtime_type: "pi" }, targetTag: "latest" })).toMatchObject({
       ok: true,
-      selection: { image: "registry.test/mybay/pi", tag: "0.1.0-beta", version: "0.85.0" },
+      selection: { image: "registry.test/mybay/pi", tag: "0.85.1", version: "0.85.1" },
     });
-    expect(resolvePiRuntimeUpgradeSelection({ instance: { runtime_type: "pi" }, targetTag: "0.85.0" })).toMatchObject({
+    expect(resolvePiRuntimeUpgradeSelection({ instance: { runtime_type: "pi" }, targetTag: "0.85.1" })).toMatchObject({
       ok: true,
-      selection: { imageRef: "registry.test/mybay/pi:0.1.0-beta" },
+      selection: { imageRef: "registry.test/mybay/pi:0.85.1" },
     });
   });
 
   it("resolves the published image tag through the same catalog entry", () => {
-    process.env.MYBAY_PI_RUNTIME_IMAGE = "registry.test/mybay/pi:0.1.0-beta";
+    process.env.MYBAY_PI_RUNTIME_IMAGE = "registry.test/mybay/pi:0.85.1";
     expect(resolvePiRuntimeUpgradeSelection({ instance: { runtime_type: "pi" }, targetTag: "0.1.0-beta" })).toMatchObject({
       ok: true,
-      selection: { imageRef: "registry.test/mybay/pi:0.1.0-beta", version: "0.85.0" },
+      selection: { imageRef: "mybay/pi-runtime:0.1.0-beta", version: "0.85.0" },
     });
   });
 

@@ -382,7 +382,7 @@ async function createRun(request, response, body) {
 async function handleRequest(request, response) {
   const url = new URL(request.url || "/", `http://${request.headers.host || "localhost"}`);
   if (request.method === "GET" && ["/health", "/api/health"].includes(url.pathname)) {
-    return json(response, 200, { ok: true, runtime: "pi", version: "0.1.0-beta" });
+    return json(response, 200, { ok: true, runtime: "pi", version: "0.85.1" });
   }
   if (request.method === "GET" && url.pathname === "/api/status") {
     return json(response, 200, { status: "ok", runtime: "pi", auth_required: true, auth_providers: ["basic"] });

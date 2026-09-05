@@ -12,9 +12,9 @@ describe("create runtime image selection", () => {
         ok: true,
         selection: {
           agent_image: "mybay/pi-runtime",
-          agent_image_tag: "0.1.0-beta",
-          agent_version: "0.85.0",
-          resolved_version: "0.85.0",
+          agent_image_tag: "0.85.1",
+          agent_version: "0.85.1",
+          resolved_version: "0.85.1",
           myBayVersions: [],
         },
       });
