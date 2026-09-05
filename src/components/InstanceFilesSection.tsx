@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { Folder, ChevronRight, Download, Eye, ArrowLeft, RefreshCw, AlertCircle, FileText, ImageIcon, FileCode, Search, X, Trash2, HardDrive, PieChart, Sparkles, CheckSquare, Clock3, Copy } from "lucide-react";
+import { Folder, ChevronRight, Download, Eye, ArrowLeft, RefreshCw, AlertCircle, FileText, ImageIcon, FileCode, Search, X, Trash2, HardDrive, PieChart, Sparkles, CheckSquare, Clock3, Copy, ShieldCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "./ui";
 import { useFeedback } from "./FeedbackProvider";
@@ -102,7 +102,7 @@ export function InstanceFilesSection(props: InstanceFilesSectionProps) {
   return <InstanceFilesContent key={props.instanceId} {...props} />;
 }
 
-function InstanceFilesContent({ instanceId }: InstanceFilesSectionProps) {
+function InstanceFilesContent({ instanceId, currentUser }: InstanceFilesSectionProps) {
   const { t } = useTranslation("dashboard");
   const { showToast, showAlert, showConfirm } = useFeedback();
   const [currentPath, setCurrentPath] = useState("/");
@@ -120,6 +120,8 @@ function InstanceFilesContent({ instanceId }: InstanceFilesSectionProps) {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<InstanceFileFilter>("all");
   const [sort, setSort] = useState<InstanceFileSort>("name");
+  const [fileView, setFileView] = useState<"files" | "advanced">("files");
+  const isAdmin = currentUser?.role === "admin" || currentUser?.role === "super_admin";
   const visibleItems = useMemo(() => filterInstanceFiles(items, search, typeFilter, sort), [items, search, typeFilter, sort]);
 
   const closePreview = () => {
@@ -145,7 +147,7 @@ function InstanceFilesContent({ instanceId }: InstanceFilesSectionProps) {
     }
   };
 
-  const fetchFiles = async (path: string) => {
+  const fetchFiles = async (path: string, view = fileView) => {
     requests.current.advanceContext();
     const request = requests.current.begin("list");
     closePreview();
@@ -156,7 +158,7 @@ function InstanceFilesContent({ instanceId }: InstanceFilesSectionProps) {
     setItems([]);
     setSelectedFiles(new Set());
     try {
-      const data = await api.get(`/api/instances/${instanceId}/files?path=${encodeURIComponent(path)}`, { signal: request.signal });
+      const data = await api.get(`/api/instances/${instanceId}/files?path=${encodeURIComponent(path)}&view=${view}`, { signal: request.signal });
       if (!request.isCurrent()) return;
       if (data) {
         setItems(data.items);
@@ -424,6 +426,7 @@ function InstanceFilesContent({ instanceId }: InstanceFilesSectionProps) {
   };
 
   const breadcrumbs = currentPath.split("/").filter(Boolean);
+  const advancedView = fileView === "advanced";
 
   return (
     <div className="flex flex-col h-full bg-surface text-content font-sans relative overflow-hidden min-h-[500px]">
@@ -464,6 +467,17 @@ function InstanceFilesContent({ instanceId }: InstanceFilesSectionProps) {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-end">
+          {isAdmin && (
+            <div className="inline-flex rounded-lg border border-outline/60 bg-surface p-0.5" role="group" aria-label={t("files_view_switch_label")}>
+              {(["files", "advanced"] as const).map(view => (
+                <button key={view} className={cn("min-h-8 rounded-md px-2.5 text-xs font-semibold transition-colors", fileView === view ? "bg-indigo-600 text-white" : "text-content-muted hover:bg-surface-muted hover:text-content")}
+                  aria-pressed={fileView === view} disabled={loading || mutating}
+                  onClick={() => { if (view === fileView) return; setFileView(view); setSearch(""); setTypeFilter("all"); void fetchFiles("/", view); }}>
+                  {t(view === "files" ? "files_view_artifacts" : "files_view_advanced")}
+                </button>
+              ))}
+            </div>
+          )}
           {selectedFiles.size > 0 && (
             <div className="flex items-center text-xs font-medium text-content-secondary bg-surface-muted px-2.5 py-1 rounded-lg border border-outline w-full sm:w-auto justify-between sm:justify-start order-2 sm:order-1 mt-1 sm:mt-0 shadow-2xs">
                <div className="flex items-center truncate">
@@ -509,9 +523,14 @@ function InstanceFilesContent({ instanceId }: InstanceFilesSectionProps) {
         </div>
       </div>
 
-      <InstanceFileUpload instanceId={instanceId} directory={currentPath} disabled={loading || mutating || !!previewFile}
+      {advancedView ? (
+        <div className="flex items-start gap-2 border-b border-outline bg-amber-50/60 px-3 py-3 text-xs text-amber-800 dark:bg-amber-950/20 dark:text-amber-300 sm:px-5">
+          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
+          <div><p className="font-semibold">{t("files_advanced_readonly_title")}</p><p className="mt-0.5 opacity-80">{t("files_advanced_readonly_desc")}</p></div>
+        </div>
+      ) : <InstanceFileUpload instanceId={instanceId} directory={currentPath} disabled={loading || mutating || !!previewFile}
         onOpenDirectory={handleNavigate}
-        onUploaded={directory => { if (directory === currentPath) { setSearch(""); setTypeFilter("all"); } if (!previewFile) void fetchFiles(currentPath); void fetchUsage(); }} />
+        onUploaded={directory => { if (directory === currentPath) { setSearch(""); setTypeFilter("all"); } if (!previewFile) void fetchFiles(currentPath); void fetchUsage(); }} />}
       <div className="flex flex-wrap items-center gap-2 border-b border-outline px-3 sm:px-5 py-3">
         <label className="relative min-w-0 w-full sm:flex-1 sm:w-auto">
           <Search className="absolute left-3 top-3 h-4 w-4 text-content-muted" />
@@ -533,7 +552,7 @@ function InstanceFilesContent({ instanceId }: InstanceFilesSectionProps) {
       {/* File List */}
       <div className="flex-1 overflow-y-auto min-h-0">
 
-        <InstanceUsagePanel
+        {!advancedView && <InstanceUsagePanel
           usage={usage}
           loading={usageLoading}
           error={usageError}
@@ -542,7 +561,7 @@ function InstanceFilesContent({ instanceId }: InstanceFilesSectionProps) {
           onRefresh={fetchUsage}
           onSelectRecommended={handleSelectRecommended}
           onCleanupRecommended={handleCleanupRecommended}
-        />
+        />}
         {loading && items.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-3 py-20">
             <RefreshCw className="w-8 h-8 text-slate-300 animate-spin" />
@@ -595,7 +614,7 @@ function InstanceFilesContent({ instanceId }: InstanceFilesSectionProps) {
                 key={item.path}
                 className={cn(
                   "group flex flex-wrap items-center justify-between px-3 sm:px-5 py-3 hover:bg-surface-muted/50 transition-colors border-l-2",
-                  "cursor-pointer",
+                  item.type === "directory" || !advancedView ? "cursor-pointer" : "cursor-default",
                   isSelected ? "bg-indigo-50/15 border-l-indigo-500" : "border-l-transparent"
                 )}
                 onClick={(e) => {
@@ -603,7 +622,7 @@ function InstanceFilesContent({ instanceId }: InstanceFilesSectionProps) {
                   if (mutationLock.current) return;
                   if (item.type === "directory") {
                     handleNavigate(item.path);
-                  } else {
+                  } else if (!advancedView) {
                     handlePreview(item);
                   }
                 }}
@@ -625,7 +644,7 @@ function InstanceFilesContent({ instanceId }: InstanceFilesSectionProps) {
                   <div className="shrink-0">{getFileIcon(item)}</div>
                   <div className="min-w-0 flex-1 pr-2">
                     <button className="block max-w-full text-left text-xs font-semibold text-content-secondary truncate group-hover:text-content transition-colors" title={item.name}
-                      disabled={mutating} onClick={() => item.type === "directory" ? handleNavigate(item.path) : handlePreview(item)}>
+                      disabled={mutating || (advancedView && item.type === "file")} onClick={() => item.type === "directory" ? handleNavigate(item.path) : !advancedView && handlePreview(item)}>
                       {item.name}
                     </button>
                     <div className="flex flex-wrap items-center gap-x-3 mt-0.5">
@@ -640,14 +659,14 @@ function InstanceFilesContent({ instanceId }: InstanceFilesSectionProps) {
                 </div>
 
                 <div className="flex w-full md:w-auto justify-end shrink-0 items-center gap-1 mt-2 md:mt-0 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100">
-                  <button className="h-11 w-11 md:h-8 md:w-8 rounded-md border border-outline/50 flex items-center justify-center text-content-muted hover:bg-control-hover bg-surface"
+                  {!advancedView && <button className="h-11 w-11 md:h-8 md:w-8 rounded-md border border-outline/50 flex items-center justify-center text-content-muted hover:bg-control-hover bg-surface"
                     title={t("files_copy_path")} aria-label={t("files_copy_path")}
                     onClick={async () => {
                       const isCurrent = requests.current.captureContext();
                       try { await navigator.clipboard.writeText(item.path); if (isCurrent()) showToast(t("files_path_copied"), "success"); }
                       catch { if (isCurrent()) showAlert({ title: t("files_copy_path"), message: t("files_copy_failed"), details: item.path, type: "warning" }); }
-                    }}><Copy className="w-3.5 h-3.5" /></button>
-                  {item.type === "file" && (
+                    }}><Copy className="w-3.5 h-3.5" /></button>}
+                  {!advancedView && item.type === "file" && (
                     <>
                       <button
                         className="h-11 w-11 md:h-8 md:w-8 rounded-md border border-outline/50 flex items-center justify-center text-content-muted hover:text-content-secondary hover:bg-control-hover bg-surface shadow-3xs"
@@ -698,7 +717,7 @@ function InstanceFilesContent({ instanceId }: InstanceFilesSectionProps) {
 
       <div className="px-5 py-2.5 border-t border-outline/60 bg-surface-muted/30 shrink-0">
         <p className="text-[10px] text-content-muted font-mono font-medium">
-          {t("files_mode_footer_desc")}
+          {t(advancedView ? "files_advanced_footer_desc" : "files_mode_footer_desc")}
         </p>
       </div>
 

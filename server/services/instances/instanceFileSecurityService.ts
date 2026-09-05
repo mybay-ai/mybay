@@ -33,6 +33,8 @@ export const isSensitiveFile = (filename: string) => {
     /^mybay\.system\.md$/i,
     /^soul\.md$/i,
     /^auth\.(?:json|lock)$/i,
+    /\.(?:lock|pid|sock)$/i,
+    /-(?:wal|shm|journal)$/i,
     /^spawn-ledger\.json$/i,
     /^(?:backup|backups|home|log|logs|pairing|session|sessions|state)$/i,
     /\.(?:sqlite|db)(?:-(?:wal|shm|journal))?$/i,
@@ -40,6 +42,29 @@ export const isSensitiveFile = (filename: string) => {
   ];
   return sensitivePatterns.some(pattern => pattern.test(filename));
 };
+
+export type InstanceFileView = "files" | "advanced";
+export type InstanceFilePathClass = "artifact" | "runtime" | "hidden";
+
+const ARTIFACT_ROOTS = new Set(["workspace", "outputs", "uploads", "documents", "reports", "tmp", "plans"]);
+const RUNTIME_ROOTS = new Set([
+  "a2a_conversations", "audio_cache", "bin", "cache", "cron", "hooks", "image_cache",
+  "kanban", "lazy-packages", "memories", "pending_messages", "platforms", "sandboxes", "skills", "skins",
+]);
+const RUNTIME_ROOT_FILE = /^(?:a2a_audit\.jsonl|channel_directory\.json|gateway(?:[-_.].*)?|install_id|main_mybay_run\.sh|models_dev_cache(?:\..*)?|state(?:[-_.].*)?)$/i;
+
+export function classifyInstanceFilePath(requestedPathRaw: string): InstanceFilePathClass {
+  const normalized = String(requestedPathRaw || "").replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
+  if (!normalized) return "artifact";
+  const segments = normalized.split("/").filter(Boolean);
+  if (segments.some(isSensitiveFile)) return "hidden";
+  const rootName = segments[0].toLowerCase();
+  if (ARTIFACT_ROOTS.has(rootName)) return "artifact";
+  if (RUNTIME_ROOTS.has(rootName) || (segments.length === 1 && RUNTIME_ROOT_FILE.test(rootName))) return "runtime";
+  // Agents may create deliverables directly in the data root. Unknown names are
+  // treated as user artifacts while known Runtime paths stay in diagnostics.
+  return "artifact";
+}
 
 export const getMimeType = (filename: string) => {
   const ext = path.extname(filename).toLowerCase();
@@ -99,7 +124,12 @@ function resolveExistingDirectory(candidate: unknown): string | null {
   }
 }
 
-export const validateFileAccess = async (req: AuthenticatedRequest, instanceId: string, requestedPathRaw: string) => {
+export const validateFileAccess = async (
+  req: AuthenticatedRequest,
+  instanceId: string,
+  requestedPathRaw: string,
+  options: { view?: InstanceFileView } = {},
+) => {
   if (!/^[A-Za-z0-9_-]{1,128}$/.test(instanceId)) {
     return { error: "无效的实例标识", status: 400 };
   }
@@ -116,8 +146,12 @@ export const validateFileAccess = async (req: AuthenticatedRequest, instanceId: 
     isOwner = instance.user_id === req.user.id;
   }
 
-  if (!isOwner && req.user.role !== 'admin') {
+  const isAdmin = req.user.role === "admin" || req.user.role === "super_admin";
+  if (!isOwner && !isAdmin) {
     return { error: "无权访问此实例的文件", status: 403 };
+  }
+  if (options.view === "advanced" && !isAdmin) {
+    return { error: "高级文件视图仅管理员可用", status: 403 };
   }
 
   let requestedPath = "";
@@ -134,6 +168,14 @@ export const validateFileAccess = async (req: AuthenticatedRequest, instanceId: 
   const segments = requestedPath.split('/').filter(Boolean);
   if (segments.some(segment => isSensitiveFile(segment))) {
     return { error: "禁止访问敏感配置文件或目录", status: 403 };
+  }
+
+  const pathClass = classifyInstanceFilePath(requestedPath);
+  if (pathClass === "hidden") {
+    return { error: "禁止访问敏感配置文件或运行时临时文件", status: 403 };
+  }
+  if (pathClass === "runtime" && (options.view !== "advanced" || !isAdmin)) {
+    return { error: "该路径仅在管理员高级文件视图中可见", status: 403 };
   }
 
   const localDir = path.resolve(process.cwd(), "data", "instances", instanceId);

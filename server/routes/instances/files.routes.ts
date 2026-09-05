@@ -20,7 +20,7 @@ import { findAvailablePort } from "../../utils";
 import { execFile } from "child_process";
 import { runInstanceHealthChecks } from "../../healthCheck";
 import { startPeriodicAgentDbSync } from "../../sqliteAgentSync";
-import { isSensitiveFile, getMimeType, validateFileAccess, validateFileForDeletion } from "../../services/instances/instanceFileSecurityService";
+import { classifyInstanceFilePath, isSensitiveFile, getMimeType, validateFileAccess, validateFileForDeletion } from "../../services/instances/instanceFileSecurityService";
 import { guardFileExport } from "../../services/instances/instanceFileLeakGuard";
 import { validateUploadedFilePath } from "../../utils/uploadSecurity";
 import { checkInstanceStorageQuota, resolveInstanceDiskLimitMb, formatDiskLimitLabel } from "../../services/instances/instanceStorageQuotaService";
@@ -317,9 +317,9 @@ export function createFilesRoutes(deps: RouterDependencies) {
 
   router.get("/:id/files", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const instance = await dbAdapter.getInstanceById(req.params.id);
       const requestedPath = (req.query.path as string) || "/";
-      const validation = await validateFileAccess(req, req.params.id, requestedPath);
+      const view = req.query.view === "advanced" ? "advanced" : "files";
+      const validation = await validateFileAccess(req, req.params.id, requestedPath, { view });
       
       if ("error" in validation) {
         return res.status(validation.status).json({ error: validation.error });
@@ -335,6 +335,7 @@ export function createFilesRoutes(deps: RouterDependencies) {
       const files = fs.readdirSync(absolutePath);
       const items = files
         .filter(f => !isSensitiveFile(f))
+        .filter(f => view === "advanced" || classifyInstanceFilePath(path.posix.join(requestedPath.replace(/\\/g, "/"), f)) === "artifact")
         .map(f => {
           const fPath = path.join(absolutePath, f);
           const fStats = fs.lstatSync(fPath);
@@ -362,6 +363,8 @@ export function createFilesRoutes(deps: RouterDependencies) {
 
       res.json({
         path: requestedPath.replace(/\\/g, "/"),
+        view,
+        readOnly: view === "advanced",
         items: items.sort((a, b) => {
           // Directories first, then alphabetical
           if (a.type !== b.type) return a.type === "directory" ? -1 : 1;
