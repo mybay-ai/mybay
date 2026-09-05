@@ -114,10 +114,18 @@ jobs:
         run: npm run check:api-error-contract
 
       - name: Security Smoke Test
-        run: npx tsx scripts/security-smoke-test.js
+        run: npx tsx scripts/security-smoke-test.mjs
 
       - name: Build Application Bundle
         run: npm run build
+
+      - name: Run File Snapshot Isolation Smoke Test
+        run: npm run smoke:run-file-snapshots
+
+      - name: Validate Public Site Prerendering
+        env:
+          PUBLIC_APP_URL: https://rc.example.test
+        run: npm run site:prerender
 
       - name: Validate Bash Script Syntax
         run: bash -n quick-start.sh scripts/quick-start-env.sh scripts/quick-start-no-node.test.sh

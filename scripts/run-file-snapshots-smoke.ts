@@ -1,4 +1,4 @@
-/** Run the bundled script inside an isolated Linux container; never mounts live data. */
+/** Run after the application build on Linux; all fixture data stays under a temporary directory. */
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
@@ -7,6 +7,7 @@ import { execFileSync } from "node:child_process";
 import { createRunFileSnapshots, readSnapshotFile } from "../server/services/runs/runFileSnapshots";
 
 assert.equal(process.platform, "linux");
+const workerPath = path.resolve("dist/run-file-snapshot-worker.cjs");
 const scratch = await fs.mkdtemp(path.join(os.tmpdir(), "mybay-file-diff-"));
 process.chdir(scratch);
 const root = path.join(scratch, "data/instances/test-instance");
@@ -18,7 +19,7 @@ await write("same.txt", "SAME\n");
 await write("big.txt", "x".repeat(32769));
 await write("binary.txt", "\0BINARY");
 await write("protected.ts", "sk-" + "a".repeat(24));
-const snapshots = createRunFileSnapshots(undefined, "/test-worker.cjs");
+const snapshots = createRunFileSnapshots(undefined, workerPath);
 await snapshots.before("r", "test-instance", true);
 await write("edit.txt", "AFTER\n");
 await write("new.txt", "");
