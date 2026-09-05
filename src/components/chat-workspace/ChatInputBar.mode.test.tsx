@@ -22,7 +22,35 @@ async function renderMode(state: RunsCapabilityState, mode: "quick" | "agent" = 
   /></I18nextProvider>);
 }
 
+async function renderCommands(runtimeType: "hermes" | "pi") {
+  const i18n = createInstance();
+  await i18n.use(initReactI18next).init({ lng: "en", interpolation: { escapeValue: false }, resources: {
+    en: { dashboard: { chatWorkspace: en } },
+  } });
+  return renderToStaticMarkup(<I18nextProvider i18n={i18n}><ChatInputBar
+    input="/" runtimeType={runtimeType} hasActiveConversation attachmentConfig={{ allowedExtensions: null, maxFiles: null, maxFileSizeBytes: 1024 }}
+    sending={false} activeRunId={null} isChatReady selectedChannel="web" chatMode="agent" onChatModeChange={vi.fn()}
+    reasoningEffort="balanced" onReasoningEffortChange={vi.fn()} agentAvailable agentCapabilityState="supported"
+    onInputChange={vi.fn()} onSubmit={vi.fn()} onKeyDown={vi.fn()} onStopRun={vi.fn()}
+  /></I18nextProvider>);
+}
+
 describe("restored Agent mode capability guard", () => {
+  it("shows shared slash commands but keeps collaboration commands off Pi", async () => {
+    const pi = await renderCommands("pi");
+    const hermes = await renderCommands("hermes");
+    for (const command of ["/new", "/clear", "/files", "/status", "/stop", "/model", "/help"]) {
+      expect(pi).toContain(command);
+      expect(hermes).toContain(command);
+    }
+    expect(pi).not.toContain("/agents");
+    expect(pi).not.toContain("/call");
+    expect(pi).not.toContain("/all");
+    expect(hermes).toContain("/agents");
+    expect(hermes).toContain("/call");
+    expect(hermes).toContain("/all");
+  });
+
   it.each(["checking", "disabled", "explicitly_unsupported", "unavailable"] as const)("retains mode/draft and visibly blocks sending when %s", async state => {
     const html = await renderMode(state);
     expect(html).toContain(en.composerAgentShort);

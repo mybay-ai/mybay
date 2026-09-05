@@ -124,22 +124,32 @@ export function ChatInputBar({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const a2aPeers = useChatComposerPeers(workspaceContext?.instanceId);
+  const collaborationSupported = String(runtimeType || "hermes").trim().toLowerCase() !== "pi";
   const composerTrigger = findComposerTrigger(input, composerCursor);
-  const commandSuggestions: ComposerCommandSuggestion[] = [
+  const commonCommandSuggestions: ComposerCommandSuggestion[] = [
     { kind: "command", id: "new", label: t("dashboard:chatWorkspace.composerCommandNew"), description: t("dashboard:chatWorkspace.composerCommandNewDesc") },
+    { kind: "command", id: "clear", label: t("dashboard:chatWorkspace.composerCommandClear"), description: t("dashboard:chatWorkspace.composerCommandClearDesc"), disabled: !hasActiveConversation },
+    { kind: "command", id: "files", label: t("dashboard:chatWorkspace.composerCommandFiles"), description: t("dashboard:chatWorkspace.composerCommandFilesDesc") },
+    { kind: "command", id: "status", label: t("dashboard:chatWorkspace.composerCommandStatus"), description: t("dashboard:chatWorkspace.composerCommandStatusDesc") },
     { kind: "command", id: "stop", label: t("dashboard:chatWorkspace.composerCommandStop"), description: t("dashboard:chatWorkspace.composerCommandStopDesc"), disabled: !sending },
     { kind: "command", id: "model", label: t("dashboard:chatWorkspace.composerCommandModel"), description: t("dashboard:chatWorkspace.composerCommandModelDesc") },
+    { kind: "command", id: "help", label: t("dashboard:chatWorkspace.composerCommandHelp"), description: t("dashboard:chatWorkspace.composerCommandHelpDesc") },
+  ];
+  const collaborationCommandSuggestions: ComposerCommandSuggestion[] = [
     { kind: "command", id: "agents", label: t("dashboard:chatWorkspace.composerCommandAgents"), description: t("dashboard:chatWorkspace.composerCommandAgentsDesc") },
     { kind: "command", id: "call", label: t("dashboard:chatWorkspace.composerCommandCall"), description: t("dashboard:chatWorkspace.composerCommandCallDesc") },
     { kind: "command", id: "all", label: t("dashboard:chatWorkspace.composerCommandAll"), description: t("dashboard:chatWorkspace.composerCommandAllDesc") },
-    { kind: "command", id: "help", label: t("dashboard:chatWorkspace.composerCommandHelp"), description: t("dashboard:chatWorkspace.composerCommandHelpDesc") },
   ];
+  const commandSuggestions = collaborationSupported
+    ? [...commonCommandSuggestions, ...collaborationCommandSuggestions]
+    : commonCommandSuggestions;
   const composerSuggestions: ComposerSuggestion[] = composerTrigger?.kind === "command"
     ? filterComposerSuggestions(commandSuggestions, composerTrigger.query)
-    : composerTrigger?.kind === "mention"
+    : composerTrigger?.kind === "mention" && collaborationSupported
       ? filterComposerSuggestions(a2aPeers.map(peer => ({ ...peer, kind: "mention" as const })), composerTrigger.query)
       : [];
-  const suggestionMenuOpen = Boolean(composerTrigger) && (composerTrigger?.kind === "mention" || composerSuggestions.length > 0);
+  const suggestionMenuOpen = Boolean(composerTrigger)
+    && (composerTrigger?.kind === "command" ? composerSuggestions.length > 0 : collaborationSupported);
   const composerText = serializeLongTextDraft(longTextComposer?.blocks || [], input);
   const composerCharacters = countChatMessageCharacters(composerText.trim());
   const messageTooLong = composerCharacters > MAX_CHAT_USER_MESSAGE_CHARS;
@@ -197,7 +207,7 @@ export function ChatInputBar({
     }
 
     if (suggestion.disabled) return;
-    if (["new", "stop", "model", "help"].includes(suggestion.id)) {
+    if (["new", "clear", "files", "status", "stop", "model", "help"].includes(suggestion.id)) {
       onInputChange("");
       setComposerCursor(0);
       onComposerCommand?.(suggestion.id);
@@ -377,12 +387,14 @@ export function ChatInputBar({
             canUpload={!attachmentDisabledReason} onUpload={() => fileInputRef.current?.click()}
             onChooseWorkspaceFiles={onAddWorkspaceFiles ? () => setWorkspacePickerOpen(true) : undefined}
           />
-          <ChatGroupRoomControl
-            peers={a2aPeers}
-            collaboration={collaboration}
-            disabled={!workspaceContext?.conversationId || !isChatReady || conversationUnavailable}
-            onChange={onCollaborationChange}
-          />
+          {collaborationSupported && (
+            <ChatGroupRoomControl
+              peers={a2aPeers}
+              collaboration={collaboration}
+              disabled={!workspaceContext?.conversationId || !isChatReady || conversationUnavailable}
+              onChange={onCollaborationChange}
+            />
+          )}
           </div>
           <div className="flex shrink-0 items-center gap-1.5 select-none">
             {sending && (

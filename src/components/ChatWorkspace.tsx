@@ -108,6 +108,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
   const [reasoningEffort, setReasoningEffort] = useState<ChatReasoningEffort>("balanced");
   const [chatMode, setChatMode] = useState<"quick" | "assist" | "agent">("quick");
   const [selectedSkillId, setSelectedSkillId] = useState<string>("model_config_diagnosis");
+  const [desktopWorkspaceTab, setDesktopWorkspaceTab] = useState<WorkspaceTab>("result");
   const [mobileWorkspaceTab, setMobileWorkspaceTab] = useState<WorkspaceTab>("result");
 
   // Refs
@@ -1442,13 +1443,25 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
               onComposerCommand={command => {
                 if (command === "new") {
                   void handleCreateConversation();
+                } else if (command === "clear") {
+                  void handleClear();
+                } else if (command === "files" || command === "status") {
+                  const tab = command === "files" ? "files" : "steps";
+                  setDesktopWorkspaceTab(tab);
+                  setMobileWorkspaceTab(tab);
+                  if (typeof window !== "undefined" && shouldUseOverlayWorkspace(window.innerWidth)) {
+                    setShowSettings(false);
+                    setMobileOverlay("workspace");
+                  }
                 } else if (command === "stop") {
                   void handleCancelOrStop();
                 } else if (command === "model") {
                   setMobileOverlay(null);
                   setShowSettings(true);
                 } else if (command === "help") {
-                  showToast(t("dashboard:chatWorkspace.composerCommandHelpMessage"), "info");
+                  showToast(t(String(selectedInstance?.runtime_type || "hermes").toLowerCase() === "pi"
+                    ? "dashboard:chatWorkspace.composerCommandHelpMessagePi"
+                    : "dashboard:chatWorkspace.composerCommandHelpMessage"), "info");
                 }
               }}
               collaboration={selectedConversation?.collaboration || null}
@@ -1462,6 +1475,8 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
           )}
         </div>
         <ChatWorkspacePanel
+          activeTab={desktopWorkspaceTab}
+          onActiveTabChange={setDesktopWorkspaceTab}
           selectedId={selectedId}
           selectedConversationId={selectedConversationId}
           conversationFiles={conversationFiles}
