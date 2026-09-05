@@ -20,16 +20,31 @@ export async function refreshMappedA2ATask(link: A2ATaskLink, read: (remoteId: s
 export async function trackedA2ASend(options: {
   instanceId: string; peerId: string; body: any;
   send: (body: any) => Promise<Response>;
+  read?: (remoteId: string) => Promise<any>;
+  resumeLink?: A2ATaskLink;
 }) {
   const { body } = options;
   const contextId = body?.params?.message?.contextId;
   if (!validId(body?.id) || !validId(contextId) || !['SendMessage', 'message/send'].includes(body?.method)) throw Error('A2A_INVALID_REQUEST');
-  const { created, link } = beginA2ATaskLink({ instanceId: options.instanceId, peerId: options.peerId, contextId,
-    callerTaskId: body.id, fingerprint: crypto.createHash('sha256').update(JSON.stringify(body.params)).digest('hex') });
+  const fingerprint = crypto.createHash('sha256').update(JSON.stringify(body.params)).digest('hex');
+  const started = options.resumeLink
+    ? { created: false, link: options.resumeLink }
+    : beginA2ATaskLink({ instanceId: options.instanceId, peerId: options.peerId, contextId,
+      callerTaskId: body.id, fingerprint });
+  const { created, link } = started;
   if (!created) {
     if (link.state === 'finished' && link.task) return { jsonrpc: '2.0', id: body.id, result: body.method === 'SendMessage' ? { task: link.task } : link.task };
-    // A crash between dispatch and acknowledgement is uncertain; never resend.
-    throw Error('A2A_ALREADY_SUBMITTED_CHECK_RECORD');
+    if (!link.remoteTaskId || !options.read) throw Error('A2A_ALREADY_SUBMITTED_CHECK_RECORD');
+    const deadline = Date.now() + 180_000;
+    let recovered = link;
+    while (Date.now() < deadline) {
+      recovered = await refreshMappedA2ATask(recovered, options.read);
+      if (recovered.task && streamSettled(recovered.task.status?.state || '')) {
+        return { jsonrpc: '2.0', id: body.id, result: body.method === 'SendMessage' ? { task: recovered.task } : recovered.task };
+      }
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    throw Error('A2A_RECOVERY_TIMEOUT');
   }
   let task: any;
   try {

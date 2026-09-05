@@ -64,6 +64,25 @@ it('recovers by the saved remote ID after an interrupted stream and rejects anot
   expect(read).toHaveBeenCalledWith('task-remote');
   expect(recovered).toMatchObject({ state: 'finished', remoteTaskId: task.id, remoteState: 'TASK_STATE_COMPLETED' });
 });
+it('reattaches a restarted caller to the saved remote task without redispatching', async () => {
+  const s = stream(); const send = vi.fn(async () => s.response);
+  const pending = trackedA2ASend({ ...opts, send });
+  s.emit(frame({ task })); s.end();
+  await expect(pending).rejects.toThrow('A2A_STREAM_INCOMPLETE');
+  closeLocalDatabase();
+  const resumeLink = getA2ATaskLink('caller', 'peer', body.id)!;
+  const read = vi.fn(async () => ({ ...task, status: { state: 'TASK_STATE_COMPLETED' } }));
+  const recovered = await trackedA2ASend({
+    ...opts,
+    body: { ...body, id: 'task-after-restart' },
+    send,
+    read,
+    resumeLink,
+  });
+  expect(recovered).toMatchObject({ id: 'task-after-restart', result: { task: { id: task.id, status: { state: 'TASK_STATE_COMPLETED' } } } });
+  expect(read).toHaveBeenCalledWith(task.id);
+  expect(send).toHaveBeenCalledTimes(1);
+});
 it('accepts a final SSE frame at EOF without a trailing blank separator', async () => {
   const s = stream();
   const pending = trackedA2ASend({ ...opts, send: async () => s.response });

@@ -21,6 +21,11 @@ export function evaluateA2AGroupDispatch(options: {
     && link.contextId === options.contextId
     && link.peerId === options.peerId);
   if (existing.some(link => link.callerTaskId === options.callerTaskId)) return { allowed: true, room: true } as const;
+  const unfinished = existing.find(link => link.state !== 'finished' && Boolean(link.remoteTaskId));
+  // A control-plane restart can cause Hermes to retry the tool call with a new
+  // RPC ID. Reattach that retry to the already-dispatched remote task instead
+  // of spending another room round or dispatching duplicate work.
+  if (unfinished) return { allowed: true, room: true, resumeLink: unfinished } as const;
   if (existing.length >= room.maxRounds) return { allowed: false, room: true, error: 'A2A_GROUP_ROUND_LIMIT' } as const;
   return { allowed: true, room: true } as const;
 }

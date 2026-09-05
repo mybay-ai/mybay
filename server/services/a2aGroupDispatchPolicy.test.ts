@@ -13,6 +13,15 @@ describe('A2A collaboration-room dispatch policy', () => {
     expect(evaluate('peer-1', 'task-2', [link])).toEqual({ allowed: false, room: true, error: 'A2A_GROUP_ROUND_LIMIT' });
   });
 
+  it('reattaches a new caller ID to an unfinished member task after control-plane recovery', () => {
+    const unfinished = { ...link, state: 'uncertain' as const, remoteTaskId: 'remote-1' };
+    expect(evaluate('peer-1', 'task-after-restart', [unfinished])).toMatchObject({
+      allowed: true,
+      room: true,
+      resumeLink: unfinished,
+    });
+  });
+
   it('blocks room contexts from contacting members outside the run snapshot', () => {
     expect(evaluate('peer-2', 'task-2')).toEqual({ allowed: false, room: true, error: 'A2A_GROUP_MEMBER_NOT_ALLOWED' });
   });

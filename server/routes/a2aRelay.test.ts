@@ -11,7 +11,7 @@ vi.mock('../services/managedRuntimeA2A', () => ({
 }));
 vi.mock('../localStore', () => ({ readStoreCollections: () => state.store }));
 import { a2aRelayToken } from '../services/a2aRelayConfig';
-import { createA2ARelayRouter } from './a2aRelay';
+import { bindActiveGroupContext, createA2ARelayRouter } from './a2aRelay';
 beforeEach(() => {
   vi.stubEnv('MYBAY_A2A_TRACKED_INSTANCES', 'caller');
   vi.stubEnv('MYBAY_A2A_TASK_TRACKING', 'true'); vi.stubEnv('MYBAY_INTERNAL_ROUTING_SECRET', 'isolated-test-secret');
@@ -30,6 +30,14 @@ async function serve(test: (url: string) => Promise<void>) {
   finally { server.closeAllConnections(); await new Promise<void>(resolve=>server.close(()=>resolve())); }
 }
 const body = { jsonrpc: '2.0', id: 'task-one', method: 'SendMessage', params: { message: { contextId: 'ctx-one' } } };
+
+it('binds relay calls to the single active collaboration-room context', () => {
+  const group = { version: 1, mode: 'group', contextId: 'ctx-mybay-room-active', leader: { id: 'caller', name: 'Caller' }, peers: [{ id: 'peer', name: 'Peer' }], maxRounds: 1 };
+  expect(bindActiveGroupContext(body, [{ instance_id: 'caller', status: 'running', group_collaboration: group }], 'caller').params.message.contextId)
+    .toBe(group.contextId);
+  expect(bindActiveGroupContext(body, [{ instance_id: 'caller', status: 'completed', group_collaboration: group }], 'caller'))
+    .toBe(body);
+});
 const headers = () => ({ Authorization: `Bearer ${a2aRelayToken('caller')}`, 'Content-Type': 'application/json' });
 it('rejects callers outside the explicit scope even with a valid relay credential', async () => {
   await serve(async url => {

@@ -308,13 +308,14 @@ export function createA2ARoutes() {
     };
     const activityStore = readStoreCollections(["chatRuns", "a2aTaskLinks"]);
     const mappingFor = (activity: any) => {
-      const saved = activity.direction === "outbound" && activityStore.a2aTaskLinks.find(row => row.instanceId === instance.id && row.peerId === activity.peerId && row.callerTaskId === activity.taskId && row.contextId === activity.contextId);
-      return saved?.remoteTaskId ? { remoteTaskId: saved.remoteTaskId, remoteState: saved.remoteState || "unknown", recordState: saved.state, updatedAt: saved.updatedAt, result: a2aTaskResultText(saved.task), lookupState: saved.lookupState, checkedAt: saved.checkedAt, diskResult: saved.diskResult } : null;
+      const saved = activity.direction === "outbound" && activityStore.a2aTaskLinks.find(row => row.instanceId === instance.id && row.peerId === activity.peerId && row.callerTaskId === activity.taskId);
+      return saved?.remoteTaskId ? { contextId: saved.contextId, mapping: { remoteTaskId: saved.remoteTaskId, remoteState: saved.remoteState || "unknown", recordState: saved.state, updatedAt: saved.updatedAt, result: a2aTaskResultText(saved.task), lookupState: saved.lookupState, checkedAt: saved.checkedAt, diskResult: saved.diskResult } } : null;
     };
     const recoveryRuns = activityStore.chatRuns.filter(run => run.instance_id === instance.id && run.user_id === ownerId && run.a2a_recovery_source);
     const enrichedActivities = activities.map(activity => {
-      const remoteMapping = mappingFor(activity);
-      return { ...applyA2ARemoteTaskEvidence(activity, remoteMapping), remoteMapping };
+      const saved = mappingFor(activity);
+      const remoteMapping = saved?.mapping || null;
+      return { ...applyA2ARemoteTaskEvidence(activity, remoteMapping), contextId: saved?.contextId || activity.contextId, remoteMapping };
     });
     return res.json({
       ...(recoveryEvidence ? { recoveryEvidence } : {}),

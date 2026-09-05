@@ -28,6 +28,8 @@ describe("ChatGroupRunSummary helpers", () => {
   it("extracts bounded safe files from a collaboration member result", () => {
     expect(extractGroupActivityFiles("Created /opt/data/workspace/report.txt and /etc/passwd; repeated workspace/report.txt"))
       .toEqual([{ path: "workspace/report.txt", name: "report.txt" }]);
+    expect(extractGroupActivityFiles("工作区根目录即 `/opt/data/workspace`（无嵌套），文件 `/opt/data/workspace/final.txt`"))
+      .toEqual([{ path: "workspace/final.txt", name: "final.txt" }]);
   });
 
   it("allows a short evidence grace period after the host run becomes terminal", () => {
