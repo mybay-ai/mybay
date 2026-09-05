@@ -778,7 +778,7 @@
     "verificationTitle": "Collaboration checks and verification",
     "verificationHint": "Checks use saved peers. Once both configurations are applied and discovery is reachable, prepare a chat verification. This only fills a draft; it does not send a message or invoke a model.",
     "verificationNoPeers": "Select peers and save the configuration first.",
-    "readyForTest": "Peer configuration applied and discovery reachable. See the call records below for task results.",
+    "readyForTest": "The live protocol probe confirms that the peer is reachable. See the call records below for task results.",
     "guideApplied": "Saved configuration applied. Start a collaboration or review task records.",
     "latestCall": "Latest call: {{status}} · {{time}}",
     "viewCallRecord": "View this record",

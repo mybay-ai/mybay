@@ -71,6 +71,13 @@ type A2AStatusView = {
   error?: string;
 };
 
+export function isA2AApplicationOperational(
+  applicationState: "pending" | "applied" | "unknown" | undefined,
+  liveState: "ready" | "unreachable" | "invalid_card" | "disabled" | "unknown" | undefined,
+) {
+  return applicationState === "applied" || (applicationState === "unknown" && liveState === "ready");
+}
+
 export function InstanceA2ACollaboration({ instance, onRedeploy, onRetryInChat, onOpenPeer }: { instance: AgentInstance; onRedeploy: () => void; onRetryInChat: (draft: string, source?: A2ARecoverySource) => void; onOpenPeer: (peerId: string) => void }) {
   const { t, i18n } = useTranslation("dashboard");
   const { showToast, showAlert, showConfirm } = useFeedback();
@@ -298,6 +305,7 @@ export function InstanceA2ACollaboration({ instance, onRedeploy, onRetryInChat, 
     </div>
   );
   const applicationState = status?.applicationState || view.applicationState || "unknown";
+  const applicationOperational = isA2AApplicationOperational(applicationState, status?.state);
   const selectedPeers = view.peers.filter(peer => peerIds.includes(peer.id));
   const needsAttention = selectedPeers.filter(peer => !status?.peers?.some(item => item.id === peer.id) && (!peer.supported || !peer.enabled || peer.status !== "running"));
   const activityCounts = {
@@ -347,10 +355,10 @@ export function InstanceA2ACollaboration({ instance, onRedeploy, onRetryInChat, 
             ]} />
 
             {section === "configuration" && <Card className="space-y-3 border-indigo-200 p-4 dark:border-indigo-900" aria-live="polite">
-              <div className="font-semibold text-content">{t(!enabled ? "a2a.guideOff" : applicationState === "applied" && view.enabled ? "a2a.guideApplied" : "a2a.guideOn")}</div>
-              {(!enabled || applicationState !== "applied" || !view.enabled) && <p className="text-sm leading-6 text-content-secondary">{t("a2a.guideSteps")}</p>}
+              <div className="font-semibold text-content">{t(!enabled ? "a2a.guideOff" : applicationOperational && view.enabled ? "a2a.guideApplied" : "a2a.guideOn")}</div>
+              {(!enabled || !applicationOperational || !view.enabled) && <p className="text-sm leading-6 text-content-secondary">{t("a2a.guideSteps")}</p>}
               <details className="text-xs leading-5 text-content-muted"><summary className="cursor-pointer font-medium text-content-secondary">{t("a2a.viewConfigurationGuide")}</summary><p className="mt-2">{t("a2a.applyScope", { name: instance.name })}</p><p className="mt-1">{t("a2a.discoveryOnly")}</p></details>
-              {applicationState !== "applied" && <p className="text-sm font-medium text-amber-700 dark:text-amber-300">{t(applicationState === "pending" ? "a2a.pendingApply" : "a2a.applicationUnknown")}</p>}
+              {!applicationOperational && <p className="text-sm font-medium text-amber-700 dark:text-amber-300">{t(applicationState === "pending" ? "a2a.pendingApply" : "a2a.applicationUnknown")}</p>}
               {enabled && needsAttention.map(peer => <div key={peer.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-surface-muted p-3 text-sm"><span>{peer.name} · {t(!peer.supported ? "a2a.peerUnsupported" : !peer.enabled ? "a2a.peerNeedsEnable" : "a2a.peerNotRunning")}</span><Button variant="outline" size="sm" onClick={() => onOpenPeer(peer.id)}>{t("a2a.managePeer")}</Button></div>)}
               {status?.error && <p role="alert" className="text-sm text-amber-700 dark:text-amber-300">{t("a2a.checkFailedHint")}</p>}
             </Card>}
@@ -386,7 +394,7 @@ export function InstanceA2ACollaboration({ instance, onRedeploy, onRetryInChat, 
               {status?.peers?.map(peer => {
                 const candidate = view.peers.find(item => item.id === peer.id);
                 const latest = latestOutboundActivity(activities, peer.id);
-                const canPrepare = enabled && applicationState === "applied" && status.state === "ready" && status.toolState === "ready" && !peer.setupIssue && peer.applicationState === "applied" && peer.state === "ready";
+                const canPrepare = enabled && applicationOperational && status.state === "ready" && status.toolState === "ready" && !peer.setupIssue && isA2AApplicationOperational(peer.applicationState, peer.state) && peer.state === "ready";
                 return <div key={peer.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-surface-muted p-3">
                   <div className="min-w-0 text-sm"><div className="break-all font-medium text-content">{candidate?.name || peer.id}</div><p className="mt-1 text-xs text-content-muted">{t(peer.setupIssue ? `a2a.setupIssues.${peer.setupIssue}` : peer.state === "ready" ? "a2a.readyForTest" : "a2a.serviceNeedsCheck")}</p>
                     {latest && <p className="mt-2 text-xs text-content-secondary">{t("a2a.latestCall", { status: t(activityStatusLabelKey(latest.status)), time: new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium", timeStyle: "short" }).format(new Date(latest.startedAt)) })} <a className="underline underline-offset-2" href={`#a2a-activity-${latest.taskId}`} onClick={() => { setActivityFilter("all"); setSection("activity"); }}>{t("a2a.viewCallRecord")}</a></p>}

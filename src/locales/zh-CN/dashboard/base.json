@@ -778,7 +778,7 @@
     "verificationTitle": "协作检查与验证",
     "verificationHint": "这里检查已保存的协作对象。双方配置应用且服务可访问后，可到对话中验证；按钮只填入草稿，不会自动发送或调用模型。",
     "verificationNoPeers": "请先选择协作对象并保存配置。",
-    "readyForTest": "对方配置已应用，发现服务可访问。任务结果以下方调用记录为准。",
+    "readyForTest": "在线协议探测已确认对方服务可访问。任务结果以下方调用记录为准。",
     "guideApplied": "已保存配置已应用，可发起协作或查看任务记录",
     "latestCall": "最近调用：{{status}} · {{time}}",
     "viewCallRecord": "查看这次记录",

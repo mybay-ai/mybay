@@ -60,7 +60,7 @@ describe("A2A instance control-plane routes", () => {
     });
     state.getInstances.mockResolvedValue([
       { id: "agent-1", name: "Agent One", user_id: "owner", agent_image_tag: "v2026.8.31", config_json: "{}" },
-      { id: "agent-2", name: "Agent Two", user_id: "owner", agent_image_tag: "v2026.8.31", config_json: JSON.stringify({ a2aEnabled: true }) },
+      { id: "agent-2", name: "Agent Two", user_id: "owner", status: "running", agent_image_tag: "v2026.8.31", config_json: JSON.stringify({ a2aEnabled: true }) },
       { id: "deleted-agent", name: "Deleted Agent", user_id: "owner", status: "deleted", agent_image_tag: "v2026.8.31", config_json: "{}" },
     ]);
     state.probe.mockResolvedValue({ state: "ready", statusCode: 200, durationMs: 8 });
@@ -139,7 +139,7 @@ describe("A2A instance control-plane routes", () => {
       expect(await response.json()).toMatchObject({
         state: "ready",
         toolState: "not_configured",
-        peers: [{ id: "agent-2", state: "ready", statusCode: 200 }],
+        peers: [{ id: "agent-2", state: "ready", statusCode: 200, applicationState: "unknown", setupIssue: null }],
         generatedAt: expect.any(String),
       });
       expect(state.probe.mock.calls.map(([id]) => id)).toEqual(["agent-1", "agent-2"]);

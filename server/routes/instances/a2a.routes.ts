@@ -183,12 +183,15 @@ export function createA2ARoutes() {
       if (!peer) return { id: peerId, state: "unknown", setupIssue: "unavailable" };
       const peerConfig = parseConfig(peer);
       const peerApplicationState = await getApplicationState(peer);
+      const live = peerConfig.a2aEnabled === true ? await probeA2AAgentCard(peerId) : { state: "disabled" };
+      // Older deployments can be fully live without the revision marker added
+      // by newer control planes. A successful protocol probe is authoritative
+      // for that legacy case; an explicit pending revision still requires apply.
       const setupIssue = !supportsA2AByVersion(resolveVersion(peer), peer.capabilities) ? "unsupported"
         : peerConfig.a2aEnabled !== true ? "disabled"
         : peerApplicationState === "pending" ? "pending"
         : peer.status !== "running" ? "not_running"
-        : peerApplicationState === "unknown" ? "unknown" : null;
-      const live = peerConfig.a2aEnabled === true ? await probeA2AAgentCard(peerId) : { state: "disabled" };
+        : peerApplicationState === "unknown" && live.state !== "ready" ? "unknown" : null;
       return { id: peerId, ...live, enabled: peerConfig.a2aEnabled === true, applicationState: peerApplicationState, setupIssue };
     }));
     return res.json({ ...ownStatus, peers, applicationState, toolState, generatedAt: new Date().toISOString() });
