@@ -182,18 +182,18 @@ export const PI_RUNTIME_DEFINITION = freezeRuntimeDefinition({
   name: "pi-agent",
   displayName: "Pi Agent",
   version: "0.85.0",
-  description: "Experimental Pi Agent runtime bridge for isolated web conversations.",
+  description: "Beta Pi Agent runtime bridge for isolated web conversations and persisted file workflows.",
   providerKey: "pi-rpc",
   contractVersion: 1,
   release: {
     supportStatus: "available",
-    certificationLevel: "experimental",
+    certificationLevel: "beta",
     deploymentSupported: true,
   },
   runtime: {
     type: "pi",
     image: "mybay/pi-runtime",
-    tag: "0.1.0-experimental",
+    tag: "0.1.0-beta",
     internalPort: 8080,
     environmentVariables: [
       {

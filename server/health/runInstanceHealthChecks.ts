@@ -93,7 +93,7 @@ async function runPiRuntimeHealthChecks(options: {
       }).catch(() => {});
       await updateInstanceStatusStmt.run({ status: "running", id: instanceId });
       io.emit(`deploy_status_${instanceId}`, "running");
-      io.emit(`deploy_log_${instanceId}`, { timestamp: checkedAt, message: "[Pi Runtime] 实验底座已就绪，可开始 Web 对话。" });
+      io.emit(`deploy_log_${instanceId}`, { timestamp: checkedAt, message: "[Pi Runtime Beta] 已就绪，可开始 Web 对话。" });
       return;
     }
     if (!state.Running && (state.Status === "exited" || state.Dead || state.OOMKilled)) break;

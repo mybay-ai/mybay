@@ -76,9 +76,9 @@ describe("Runtime certification evaluator", () => {
     expect(report.requirements[0]).toMatchObject({ status: "invalid" });
   });
 
-  it("keeps an experimental Runtime pending until live evidence is supplied", () => {
+  it("keeps a Beta Runtime pending until live evidence is supplied", () => {
     expect(evaluateRuntimeCertification(PI_RUNTIME_DEFINITION, undefined, { now })).toMatchObject({
-      declaredLevel: "experimental",
+      declaredLevel: "beta",
       verifiedLevel: "unverified",
       publicationStatus: "pending",
     });

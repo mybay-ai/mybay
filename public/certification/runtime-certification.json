@@ -436,8 +436,8 @@
       "runtimeType": "pi",
       "providerKey": "pi-rpc",
       "contractVersion": 1,
-      "declaredLevel": "experimental",
-      "verifiedLevel": "experimental",
+      "declaredLevel": "beta",
+      "verifiedLevel": "beta",
       "publicationStatus": "verified",
       "requirements": [
         {
@@ -452,12 +452,11 @@
             "requirementId": "runtime-install",
             "status": "passed",
             "scope": "runtime",
-            "observedAt": "2026-09-05T11:34:53.844Z",
-            "environment": "Windows + Docker Desktop; MyBay OSS local branch; Pi bridge 0.1.0-experimental; Pi coding agent 0.85.0",
+            "observedAt": "2026-09-05T12:20:06.879Z",
+            "environment": "Windows + Docker Desktop; MyBay OSS local branch; Pi bridge 0.1.0-beta; Pi coding agent 0.85.0",
             "evidenceRefs": [
-              "certification/artifacts/pi-experimental-20260905.json#observations.runtimeInstall"
-            ],
-            "note": "MyBay built and deployed its packaged Pi Runtime image, authenticated its health and capability endpoints, and retained a healthy chat-ready state through background reconciliation."
+              "certification/artifacts/pi-beta-core-20260905.json#observations.runtimeInstall"
+            ]
           }
         },
         {
@@ -473,11 +472,10 @@
             "status": "passed",
             "scope": "runtime",
             "observedAt": "2026-09-05T11:25:26.756Z",
-            "environment": "Windows + Docker Desktop; MyBay OSS local branch; Pi bridge 0.1.0-experimental; Pi coding agent 0.85.0",
+            "environment": "Windows + Docker Desktop; MyBay OSS local branch; Pi bridge Beta candidate; Pi coding agent 0.85.0",
             "evidenceRefs": [
-              "certification/artifacts/pi-experimental-20260905.json#observations.taskSubmit"
-            ],
-            "note": "An authenticated Agent-mode browser task reached the Pi RPC Runtime, persisted its upstream binding, completed, and returned the expected deterministic marker with terminal usage."
+              "certification/artifacts/pi-beta-core-20260905.json#observations.taskSubmit"
+            ]
           }
         },
         {
@@ -493,11 +491,10 @@
             "status": "passed",
             "scope": "runtime",
             "observedAt": "2026-09-05T11:26:00.644Z",
-            "environment": "Windows + Docker Desktop; MyBay OSS local branch; Pi bridge 0.1.0-experimental; Pi coding agent 0.85.0",
+            "environment": "Windows + Docker Desktop; MyBay OSS local branch; Pi bridge Beta candidate; Pi coding agent 0.85.0",
             "evidenceRefs": [
-              "certification/artifacts/pi-experimental-20260905.json#observations.streamingOutput"
-            ],
-            "note": "Two Pi runs produced ordered Runtime event sequences and persisted non-empty output; the browser restored the results and native session context after reload."
+              "certification/artifacts/pi-beta-core-20260905.json#observations.streamingOutput"
+            ]
           }
         },
         {
@@ -513,11 +510,10 @@
             "status": "passed",
             "scope": "runtime",
             "observedAt": "2026-09-05T11:26:21.118Z",
-            "environment": "Windows + Docker Desktop; MyBay OSS local branch; Pi bridge 0.1.0-experimental; Pi coding agent 0.85.0",
+            "environment": "Windows + Docker Desktop; MyBay OSS local branch; Pi bridge Beta candidate; Pi coding agent 0.85.0",
             "evidenceRefs": [
-              "certification/artifacts/pi-experimental-20260905.json#observations.cancellation"
-            ],
-            "note": "The product stop action cancelled an active Pi run, persisted cancelled/CANCELLED_UPSTREAM, and retained the stopped state after browser reload."
+              "certification/artifacts/pi-beta-core-20260905.json#observations.cancellation"
+            ]
           }
         },
         {
@@ -526,8 +522,18 @@
           "title": "Session recovery",
           "description": "Resume a persisted native session without losing conversation continuity.",
           "minimumEvidenceScope": "runtime",
-          "status": "missing",
-          "detail": "No evidence was supplied."
+          "status": "passed",
+          "detail": "Evidence satisfies this requirement.",
+          "evidence": {
+            "requirementId": "session-recovery",
+            "status": "passed",
+            "scope": "e2e",
+            "observedAt": "2026-09-05T12:20:33.403Z",
+            "environment": "Authenticated localhost browser after controlled Pi Runtime Beta redeploy",
+            "evidenceRefs": [
+              "certification/artifacts/pi-beta-core-20260905.json#observations.sessionRecovery"
+            ]
+          }
         },
         {
           "id": "file-artifact",
@@ -535,8 +541,18 @@
           "title": "File artifact",
           "description": "Create, persist, and retrieve a file artifact produced by the Runtime.",
           "minimumEvidenceScope": "runtime",
-          "status": "missing",
-          "detail": "No evidence was supplied."
+          "status": "passed",
+          "detail": "Evidence satisfies this requirement.",
+          "evidence": {
+            "requirementId": "file-artifact",
+            "status": "passed",
+            "scope": "e2e",
+            "observedAt": "2026-09-05T11:53:55.776Z",
+            "environment": "Authenticated localhost browser and persisted instance workspace",
+            "evidenceRefs": [
+              "certification/artifacts/pi-beta-core-20260905.json#observations.fileArtifact"
+            ]
+          }
         },
         {
           "id": "usage-reporting",
@@ -544,8 +560,18 @@
           "title": "Usage reporting",
           "description": "Persist attributable usage evidence for a completed Runtime run.",
           "minimumEvidenceScope": "runtime",
-          "status": "missing",
-          "detail": "No evidence was supplied."
+          "status": "passed",
+          "detail": "Evidence satisfies this requirement.",
+          "evidence": {
+            "requirementId": "usage-reporting",
+            "status": "passed",
+            "scope": "runtime",
+            "observedAt": "2026-09-05T12:20:33.403Z",
+            "environment": "MyBay SQLite terminal Runtime evidence from Pi bridge 0.1.0-beta",
+            "evidenceRefs": [
+              "certification/artifacts/pi-beta-core-20260905.json#observations.usageReporting"
+            ]
+          }
         },
         {
           "id": "tool-events",
@@ -553,8 +579,18 @@
           "title": "Tool events",
           "description": "Observe tool lifecycle events with stable identifiers and terminal outcomes.",
           "minimumEvidenceScope": "runtime",
-          "status": "missing",
-          "detail": "No evidence was supplied."
+          "status": "passed",
+          "detail": "Evidence satisfies this requirement.",
+          "evidence": {
+            "requirementId": "tool-events",
+            "status": "passed",
+            "scope": "runtime",
+            "observedAt": "2026-09-05T12:20:33.403Z",
+            "environment": "Persisted MyBay run timeline from Pi bridge 0.1.0-beta RPC events",
+            "evidenceRefs": [
+              "certification/artifacts/pi-beta-core-20260905.json#observations.toolEvents"
+            ]
+          }
         },
         {
           "id": "restart-recovery",
@@ -562,8 +598,18 @@
           "title": "Restart recovery",
           "description": "Recover persisted Runtime state after a controlled process restart.",
           "minimumEvidenceScope": "runtime",
-          "status": "missing",
-          "detail": "No evidence was supplied."
+          "status": "passed",
+          "detail": "Evidence satisfies this requirement.",
+          "evidence": {
+            "requirementId": "restart-recovery",
+            "status": "passed",
+            "scope": "e2e",
+            "observedAt": "2026-09-05T12:20:33.403Z",
+            "environment": "Authenticated localhost browser after product Beta redeploy path",
+            "evidenceRefs": [
+              "certification/artifacts/pi-beta-core-20260905.json#observations.restartRecovery"
+            ]
+          }
         },
         {
           "id": "control-plane-deploy",

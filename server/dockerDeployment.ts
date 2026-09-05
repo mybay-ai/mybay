@@ -38,6 +38,7 @@ import { resolveHermesProvider, VALID_HERMES_PROVIDERS } from "./providerEnv";
 import { writePiRuntimeEnvironment } from "./runtime/adapters/pi/PiRuntimeEnvironment";
 import { getDockerProfile, getResourceLimits } from "./services/docker/dockerResourcePolicy";
 import { ensureLocalFeishuRuntimeImage, requiresLocalFeishuRuntime } from "./services/localFeishuRuntime";
+import { parsePiRuntimeImageRef } from "./services/localPiRuntime";
 import {
   connectControlPlaneToNetwork,
   connectTraefikToNetwork,
@@ -1016,7 +1017,7 @@ agent.task_completion_guidance=true`
   if (piRuntimeConfigResult) {
     io.emit(`deploy_log_${instanceId}`, {
       timestamp: new Date().toISOString(),
-      message: `[Pi Runtime 实验底座]\nprovider=${piRuntimeConfigResult.provider}\nmodel=${piRuntimeConfigResult.model}\ntransport=rpc-jsonl\nconversation=streaming`,
+      message: `[Pi Runtime Beta]\nprovider=${piRuntimeConfigResult.provider}\nmodel=${piRuntimeConfigResult.model}\ntransport=rpc-jsonl\nconversation=streaming`,
     });
   }
 
@@ -1292,6 +1293,19 @@ agent.task_completion_guidance=true`
                  requestUser,
                  systemTrustedContext
                 });
+
+               if (isPiRuntime) {
+                 const actualImage = parsePiRuntimeImageRef(finalImageName);
+                 config.image = actualImage.image;
+                 config.imageTag = actualImage.tag;
+                 await Promise.all([
+                   dbAdapter.updateInstanceConfig(instanceId, JSON.stringify(config)),
+                   dbAdapter.updateInstanceVersionInfo(instanceId, {
+                     agent_image: actualImage.image,
+                     agent_image_tag: actualImage.tag,
+                   }),
+                 ]);
+               }
                
                deploymentEventsRepo.create({
                  instance_id: instanceId,

@@ -74,6 +74,21 @@ describe("HermesRunEventProvider", () => {
     });
   });
 
+  it("preserves a safe native tool call id and its file metadata", () => {
+    const { interpreter, events } = createHarness();
+    interpreter.handle(
+      { id: "run-1" },
+      { event: "tool.started", tool: "write", tool_call_id: "pi-call-1", path: "/opt/data/workspace/report.txt", operation: "write" },
+    );
+    interpreter.handle(
+      { id: "run-1" },
+      { event: "tool.completed", tool: "write", tool_call_id: "pi-call-1", path: "/opt/data/workspace/report.txt", operation: "write" },
+    );
+    const [started, completed] = events.map((event) => JSON.parse(event.data));
+    expect(started).toMatchObject({ id: "step-pi-call-1", status: "running", metadata: { file_path: "workspace/report.txt" } });
+    expect(completed).toMatchObject({ id: "step-pi-call-1", status: "completed", metadata: { file_path: "workspace/report.txt", file_evidence_confirmed: true } });
+  });
+
   it("defaults invalid approval identifiers and choices", () => {
     const { interpreter, events } = createHarness();
     interpreter.handle(

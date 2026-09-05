@@ -6,7 +6,7 @@ import {
   UNSUPPORTED_RUNTIME_RELEASE_CODE,
 } from "./runtimeReleaseBoundary";
 
-describe("Pi runtime experimental release boundary", () => {
+describe("Pi runtime Beta release boundary", () => {
   it("fails closed for runtime_type=pi unless explicitly enabled", () => {
     const previous = process.env.MYBAY_ENABLE_PI_RUNTIME;
     delete process.env.MYBAY_ENABLE_PI_RUNTIME;
@@ -15,7 +15,7 @@ describe("Pi runtime experimental release boundary", () => {
       status: 400,
       code: PI_RUNTIME_RELEASE_CODE
     });
-    expect(getRuntimeReleaseBoundary("pi")?.error).toContain("experimental");
+    expect(getRuntimeReleaseBoundary("pi")?.error).toContain("Beta");
     expect(getRuntimeReleaseBoundary("pi")?.error).not.toMatch(/v?\d+\.\d+/i);
     process.env.MYBAY_ENABLE_PI_RUNTIME = "true";
     expect(getRuntimeReleaseBoundary("pi")).toBeNull();

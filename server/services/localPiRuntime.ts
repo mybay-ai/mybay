@@ -2,11 +2,23 @@ import fs from "node:fs";
 import path from "node:path";
 import tar from "tar-fs";
 
-export const PI_RUNTIME_IMAGE = "mybay/pi-runtime:0.1.0-experimental";
+export const PI_RUNTIME_IMAGE = "mybay/pi-runtime:0.1.0-beta";
 const pendingBuilds = new Map<string, Promise<string>>();
 
 export function resolveLocalPiImageRef(): string {
   return process.env.MYBAY_PI_RUNTIME_IMAGE?.trim() || PI_RUNTIME_IMAGE;
+}
+
+export function parsePiRuntimeImageRef(imageRef: string): { image: string; tag: string } {
+  const normalized = String(imageRef || "").trim();
+  const lastSlash = normalized.lastIndexOf("/");
+  const lastColon = normalized.lastIndexOf(":");
+  if (!normalized || lastColon <= lastSlash || lastColon === normalized.length - 1) {
+    throw Object.assign(new Error("The Pi Runtime image reference must include an explicit tag."), {
+      code: "PI_RUNTIME_IMAGE_INVALID",
+    });
+  }
+  return { image: normalized.slice(0, lastColon), tag: normalized.slice(lastColon + 1) };
 }
 
 function resolveBuildContext(): string {
@@ -23,7 +35,7 @@ async function isReusable(dockerClient: any, imageRef: string): Promise<boolean>
     const details = await dockerClient.getImage(imageRef).inspect();
     const labels = details?.Config?.Labels || details?.ContainerConfig?.Labels || {};
     return labels["com.mybay.pi.runtime"] === "true"
-      && labels["com.mybay.pi.bridge-version"] === "0.1.0-experimental"
+      && labels["com.mybay.pi.bridge-version"] === "0.1.0-beta"
       && labels["com.mybay.pi.agent-version"] === "0.85.0";
   } catch {
     return false;
@@ -43,7 +55,7 @@ export async function ensureLocalPiRuntimeImage(options: {
   if (pending) return pending;
   const build = (async () => {
     const context = resolveBuildContext();
-    options.onLog?.("正在构建本地 Pi Runtime 实验镜像，首次构建需要下载官方 Pi 依赖。");
+    options.onLog?.("正在构建本地 Pi Runtime Beta 镜像，首次构建需要下载官方 Pi 依赖。");
     const stream = await options.dockerClient.buildImage(tar.pack(context), { t: imageRef, rm: true, forcerm: true });
     await new Promise<void>((resolve, reject) => {
       let progressError: Error | null = null;
@@ -52,7 +64,7 @@ export async function ensureLocalPiRuntimeImage(options: {
       });
     });
     if (!await isReusable(options.dockerClient, imageRef)) throw new Error("The built Pi Runtime image is missing verification labels.");
-    options.onLog?.(`Pi Runtime 实验镜像 ${imageRef} 已构建并验证。`);
+    options.onLog?.(`Pi Runtime Beta 镜像 ${imageRef} 已构建并验证。`);
     return imageRef;
   })().catch((error: any) => {
     throw Object.assign(new Error(`Pi Runtime image preparation failed: ${error?.message || String(error)}`), {

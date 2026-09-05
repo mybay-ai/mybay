@@ -28,7 +28,7 @@ export default defineConfig(() => {
     },
     test: {
       fileParallelism: false,
-      exclude: ['.codex-worktrees/**', 'tmp/**', 'backups/**', 'release/**', 'dist/**', 'data/**', 'node_modules/**'],
+      exclude: ['.codex-worktrees/**', 'tmp/**', 'backups/**', 'release/**', 'dist/**', 'data/**', 'node_modules/**', 'runtime/pi-bridge/server.test.mjs'],
     },
     build: {
       rollupOptions: {

@@ -105,7 +105,7 @@ export function ContainerConfigStep({
               className="w-full flex h-10 rounded-lg border border-outline bg-surface px-3 py-2 text-[13px] font-bold text-content shadow-sm focus:border-blue-500 appearance-none outline-none"
             >
               {isPiRuntime
-                ? <option value="0.1.0-experimental">0.1.0-experimental</option>
+                ? <option value="0.1.0-beta">0.1.0-beta</option>
                 : <option value="latest">{t("container_config.latest_option")}</option>}
               {!isPiRuntime && versions.map(v => {
                 const isFeishu = v.capabilities?.includes("feishu") || v.feishu_capable === true;

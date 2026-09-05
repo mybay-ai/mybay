@@ -712,7 +712,7 @@
                                       "title":  "Enable skills and capabilities",
                                       "description":  "Add system-level skills to this Agent. Enable high-risk capabilities carefully; sensitive actions are logged.",
                                       "piManagedTitle":  "Pi Runtime manages its own tools",
-                                      "piManagedDescription":  "This experimental release uses the Pi RPC runtime toolset and does not load Hermes skills or plugins. Compatible tools will be exposed through the runtime capability manifest.",
+                                      "piManagedDescription":  "Pi Runtime Beta uses its native RPC toolset and does not load Hermes skills or plugins. File operations are recorded through the runtime capability contract.",
                                       "hideAdvanced":  "Hide high-risk settings",
                                       "showAdvanced":  "Show high-risk capabilities",
                                       "credentialsTitle":  "Advanced capability credentials",
@@ -799,7 +799,7 @@
                        },
                        "channel":  {
                                        "restricted":  "This channel is disabled by the local configuration.",
-                                       "piWebOnly":  "The experimental Pi Runtime currently supports Web console chat only.",
+                                       "piWebOnly":  "Pi Runtime Beta currently supports Web console chat and persisted files only.",
                                        "title":  "Agent conversations and messaging channels",
                                        "description":  "Connect messaging channels for conversations, task notifications, and command execution.",
                                        "hideGuide":  "Hide setup guide",

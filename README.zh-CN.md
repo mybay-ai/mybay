@@ -259,9 +259,9 @@ data/
 ## Runtime 支持状态
 
 - **Hermes Agent：** 当前 Preview 创建与生命周期链路支持的 Runtime。
-- **Pi Agent：** 通过 `MYBAY_ENABLE_PI_RUNTIME=true` 开启的 Web 对话实验底座。它通过本地隔离桥接器接入 Pi RPC，支持流式输出、会话恢复、工具进度与停止；文件、定时任务、外部渠道、A2A、模板和蓝图仍需完成认证后再开放。
+- **Pi Agent：** 通过 `MYBAY_ENABLE_PI_RUNTIME=true` 开启的 Web 对话 Beta 底座。它通过本地隔离桥接器接入 Pi RPC，支持流式输出、停止、原生会话恢复、可归属用量、稳定工具事件，以及持久化文件的创建、预览和下载；定时任务、外部渠道、A2A、模板和蓝图仍未开放。
 
-Pi 默认关闭；启用后会在首次部署时从随控制面分发的构建上下文生成固定版本本地镜像。它当前属于实验支持范围，不应替代生产认证的 Hermes Runtime。
+Pi 默认关闭；启用后会在首次部署时从随控制面分发的构建上下文生成固定版本本地镜像。Beta 证据已覆盖受控重启恢复与 Web/文件链路；Hermes 仍是默认的认证 Runtime。
 
 ---
 ## 架构
@@ -300,12 +300,12 @@ desktop、LAN、server 三种模式的 Webhook 默认都要求 secret。历史�
 
 ## Agent 运行态接入规范 (`mybay.runtime.yaml`)
 
-MyBay 提供可扩展的 **Agent Runtime Specification（运行态接入规范）**，用于接入更多开源 Agent。Hermes Agent 为认证 Runtime；Pi Agent 已接通实验部署与 Web 对话链路：
+MyBay 提供可扩展的 **Agent Runtime Specification（运行态接入规范）**，用于接入更多开源 Agent。Hermes Agent 为认证 Runtime；Pi Agent 已接通 Beta 部署、Web 对话与持久化文件链路：
 
 - **JSON Schema 校验规范**：`/public/schemas/mybay.runtime.schema.json`
 - **运行态规格声明示例**：
   - Hermes Agent：`/public/specs/mybay.runtime.yaml`
-  - Pi Agent 实验运行时清单：`/public/specs/pi.runtime.yaml`
+  - Pi Agent Beta 运行时清单：`/public/specs/pi.runtime.yaml`
 
 通过定义 `mybay.runtime.yaml` 规格文件，开发者可以标准化声明 Agent 容器端口、健康检查 Endpoint、挂载卷路径及支持的通讯渠道（飞书、Telegram、Discord、Slack、微信等）。
 

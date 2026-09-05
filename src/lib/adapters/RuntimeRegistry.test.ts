@@ -7,16 +7,16 @@ describe("client RuntimeRegistry", () => {
     expect(runtimes.map((runtime) => runtime.type)).toEqual(["hermes", "pi"]);
     expect(runtimes[0].manifest.runtime.image).toBe("nousresearch/hermes-agent");
     expect(runtimes[1].manifest.release).toEqual({
-      supportStatus: "spec-only",
-      certificationLevel: "spec-only",
-      deploymentSupported: false,
+      supportStatus: "available",
+      certificationLevel: "beta",
+      deploymentSupported: true,
     });
     expect(runtimes[1].manifest.capabilities).toMatchObject({
-      chat: false,
+      chat: true,
       fileUpload: false,
       browser: false,
-      shell: false,
-      imChannels: [],
+      shell: true,
+      imChannels: ["web"],
     });
     expect(() => runtimeRegistry.getAdapter("unknown-runtime")).toThrow("is not registered");
   });

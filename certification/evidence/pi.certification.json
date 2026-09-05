@@ -1,54 +1,15 @@
 {
   "schemaVersion": 1,
-  "runtime": {
-    "type": "pi",
-    "providerKey": "pi-rpc",
-    "contractVersion": 1
-  },
+  "runtime": { "type": "pi", "providerKey": "pi-rpc", "contractVersion": 1 },
   "checks": [
-    {
-      "requirementId": "runtime-install",
-      "status": "passed",
-      "scope": "runtime",
-      "observedAt": "2026-09-05T11:34:53.844Z",
-      "environment": "Windows + Docker Desktop; MyBay OSS local branch; Pi bridge 0.1.0-experimental; Pi coding agent 0.85.0",
-      "evidenceRefs": [
-        "certification/artifacts/pi-experimental-20260905.json#observations.runtimeInstall"
-      ],
-      "note": "MyBay built and deployed its packaged Pi Runtime image, authenticated its health and capability endpoints, and retained a healthy chat-ready state through background reconciliation."
-    },
-    {
-      "requirementId": "task-submit",
-      "status": "passed",
-      "scope": "runtime",
-      "observedAt": "2026-09-05T11:25:26.756Z",
-      "environment": "Windows + Docker Desktop; MyBay OSS local branch; Pi bridge 0.1.0-experimental; Pi coding agent 0.85.0",
-      "evidenceRefs": [
-        "certification/artifacts/pi-experimental-20260905.json#observations.taskSubmit"
-      ],
-      "note": "An authenticated Agent-mode browser task reached the Pi RPC Runtime, persisted its upstream binding, completed, and returned the expected deterministic marker with terminal usage."
-    },
-    {
-      "requirementId": "streaming-output",
-      "status": "passed",
-      "scope": "runtime",
-      "observedAt": "2026-09-05T11:26:00.644Z",
-      "environment": "Windows + Docker Desktop; MyBay OSS local branch; Pi bridge 0.1.0-experimental; Pi coding agent 0.85.0",
-      "evidenceRefs": [
-        "certification/artifacts/pi-experimental-20260905.json#observations.streamingOutput"
-      ],
-      "note": "Two Pi runs produced ordered Runtime event sequences and persisted non-empty output; the browser restored the results and native session context after reload."
-    },
-    {
-      "requirementId": "cancellation",
-      "status": "passed",
-      "scope": "runtime",
-      "observedAt": "2026-09-05T11:26:21.118Z",
-      "environment": "Windows + Docker Desktop; MyBay OSS local branch; Pi bridge 0.1.0-experimental; Pi coding agent 0.85.0",
-      "evidenceRefs": [
-        "certification/artifacts/pi-experimental-20260905.json#observations.cancellation"
-      ],
-      "note": "The product stop action cancelled an active Pi run, persisted cancelled/CANCELLED_UPSTREAM, and retained the stopped state after browser reload."
-    }
+    { "requirementId": "runtime-install", "status": "passed", "scope": "runtime", "observedAt": "2026-09-05T12:20:06.879Z", "environment": "Windows + Docker Desktop; MyBay OSS local branch; Pi bridge 0.1.0-beta; Pi coding agent 0.85.0", "evidenceRefs": ["certification/artifacts/pi-beta-core-20260905.json#observations.runtimeInstall"] },
+    { "requirementId": "task-submit", "status": "passed", "scope": "runtime", "observedAt": "2026-09-05T11:25:26.756Z", "environment": "Windows + Docker Desktop; MyBay OSS local branch; Pi bridge Beta candidate; Pi coding agent 0.85.0", "evidenceRefs": ["certification/artifacts/pi-beta-core-20260905.json#observations.taskSubmit"] },
+    { "requirementId": "streaming-output", "status": "passed", "scope": "runtime", "observedAt": "2026-09-05T11:26:00.644Z", "environment": "Windows + Docker Desktop; MyBay OSS local branch; Pi bridge Beta candidate; Pi coding agent 0.85.0", "evidenceRefs": ["certification/artifacts/pi-beta-core-20260905.json#observations.streamingOutput"] },
+    { "requirementId": "cancellation", "status": "passed", "scope": "runtime", "observedAt": "2026-09-05T11:26:21.118Z", "environment": "Windows + Docker Desktop; MyBay OSS local branch; Pi bridge Beta candidate; Pi coding agent 0.85.0", "evidenceRefs": ["certification/artifacts/pi-beta-core-20260905.json#observations.cancellation"] },
+    { "requirementId": "session-recovery", "status": "passed", "scope": "e2e", "observedAt": "2026-09-05T12:20:33.403Z", "environment": "Authenticated localhost browser after controlled Pi Runtime Beta redeploy", "evidenceRefs": ["certification/artifacts/pi-beta-core-20260905.json#observations.sessionRecovery"] },
+    { "requirementId": "file-artifact", "status": "passed", "scope": "e2e", "observedAt": "2026-09-05T11:53:55.776Z", "environment": "Authenticated localhost browser and persisted instance workspace", "evidenceRefs": ["certification/artifacts/pi-beta-core-20260905.json#observations.fileArtifact"] },
+    { "requirementId": "usage-reporting", "status": "passed", "scope": "runtime", "observedAt": "2026-09-05T12:20:33.403Z", "environment": "MyBay SQLite terminal Runtime evidence from Pi bridge 0.1.0-beta", "evidenceRefs": ["certification/artifacts/pi-beta-core-20260905.json#observations.usageReporting"] },
+    { "requirementId": "tool-events", "status": "passed", "scope": "runtime", "observedAt": "2026-09-05T12:20:33.403Z", "environment": "Persisted MyBay run timeline from Pi bridge 0.1.0-beta RPC events", "evidenceRefs": ["certification/artifacts/pi-beta-core-20260905.json#observations.toolEvents"] },
+    { "requirementId": "restart-recovery", "status": "passed", "scope": "e2e", "observedAt": "2026-09-05T12:20:33.403Z", "environment": "Authenticated localhost browser after product Beta redeploy path", "evidenceRefs": ["certification/artifacts/pi-beta-core-20260905.json#observations.restartRecovery"] }
   ]
 }

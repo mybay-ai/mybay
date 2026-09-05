@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildRuntimeCatalogResponse } from "./runtimes";
 
 describe("runtime catalog route", () => {
-  it("advertises Pi capabilities but keeps experimental deployment disabled by default", async () => {
+  it("advertises Pi Beta capabilities but keeps deployment disabled by default", async () => {
     const response = buildRuntimeCatalogResponse(false);
     expect(response.schemaVersion).toBe(1);
     expect(response.runtimes.map((runtime) => runtime.runtime.type)).toEqual(["hermes", "pi"]);
@@ -14,7 +14,7 @@ describe("runtime catalog route", () => {
     const pi = response.runtimes[1];
     expect(pi.release).toEqual({
       supportStatus: "available",
-      certificationLevel: "experimental",
+      certificationLevel: "beta",
       deploymentSupported: false,
     });
     expect(pi.capabilities).toMatchObject({

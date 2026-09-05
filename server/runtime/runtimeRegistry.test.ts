@@ -36,7 +36,7 @@ describe("server RuntimeRegistry", () => {
     }
   });
 
-  it("registers Pi as an experimental streaming execution boundary", () => {
+  it("registers Pi as a Beta streaming execution boundary", () => {
     expect(runtimeRegistry.get("pi")).toBe(piRuntimeDriver);
     expect(runtimeRegistry.createBindingForInstance({ runtime_type: "pi" })).toEqual({
       runtimeType: "pi",

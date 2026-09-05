@@ -1,7 +1,7 @@
 FROM node:22-bookworm-slim
 
 LABEL com.mybay.pi.runtime="true" \
-  com.mybay.pi.bridge-version="0.1.0-experimental" \
+  com.mybay.pi.bridge-version="0.1.0-beta" \
   com.mybay.pi.agent-version="0.85.0"
 
 WORKDIR /app

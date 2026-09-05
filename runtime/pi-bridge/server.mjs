@@ -61,6 +61,40 @@ export function assistantText(message) {
     .join("");
 }
 
+function safeToolCallId(value) {
+  const text = String(value || "").trim();
+  return /^[A-Za-z0-9_.:-]{1,80}$/.test(text) ? text : null;
+}
+
+function hasControlCharacter(value) {
+  return [...value].some((character) => {
+    const code = character.charCodeAt(0);
+    return code <= 31 || code === 127;
+  });
+}
+
+export function safeToolMetadata(toolName, args) {
+  const tool = String(toolName || "").toLowerCase();
+  if (!["read", "write", "edit"].includes(tool) || !args || typeof args !== "object" || Array.isArray(args)) return {};
+  const rawPath = [args.path, args.file_path, args.filePath].find((value) => typeof value === "string");
+  if (!rawPath) return {};
+  let relative = rawPath.replaceAll("\\", "/").trim();
+  const workspacePrefix = `${WORKSPACE_DIR.replaceAll("\\", "/").replace(/\/$/, "")}/`;
+  let evidencePrefix = "/opt/data/workspace/";
+  if (relative.startsWith(workspacePrefix)) {
+    relative = relative.slice(workspacePrefix.length);
+  } else if (relative.startsWith("/opt/data/")) {
+    relative = relative.slice("/opt/data/".length);
+    evidencePrefix = "/opt/data/";
+  }
+  if (relative.startsWith("./")) relative = relative.slice(2);
+  if (!relative || relative.startsWith("/") || relative.length > 220
+    || hasControlCharacter(relative) || /[:%?#*<>|"`$]/.test(relative)
+    || relative.split("/").some((part) => !part || part === "." || part === "..")) return {};
+  if (/^(?:pi|sessions|state|cache|logs|\.git)(?:\/|$)/i.test(relative)) return {};
+  return { path: `${evidencePrefix}${relative}`, operation: tool };
+}
+
 export function normalizePiEvent(event, run) {
   if (!event || typeof event !== "object") return [];
   if (event.type === "message_update" && event.assistantMessageEvent?.type === "text_delta") {
@@ -68,13 +102,28 @@ export function normalizePiEvent(event, run) {
     return delta ? [{ type: "message.delta", delta }] : [];
   }
   if (event.type === "tool_execution_start") {
-    return [{ type: "tool.started", tool: event.toolName || "tool", title: event.toolName || "Tool", timestamp: Date.now() / 1000 }];
+    const toolCallId = safeToolCallId(event.toolCallId);
+    const metadata = safeToolMetadata(event.toolName, event.args);
+    if (toolCallId) run.activeTools?.set(toolCallId, metadata);
+    return [{
+      type: "tool.started",
+      tool: event.toolName || "tool",
+      title: event.toolName || "Tool",
+      ...(toolCallId ? { tool_call_id: toolCallId } : {}),
+      ...metadata,
+      timestamp: Date.now() / 1000,
+    }];
   }
   if (event.type === "tool_execution_end") {
+    const toolCallId = safeToolCallId(event.toolCallId);
+    const metadata = toolCallId ? run.activeTools?.get(toolCallId) || {} : {};
+    if (toolCallId) run.activeTools?.delete(toolCallId);
     return [{
       type: "tool.completed",
       tool: event.toolName || "tool",
       title: event.toolName || "Tool",
+      ...(toolCallId ? { tool_call_id: toolCallId } : {}),
+      ...metadata,
       status: event.isError ? "failed" : "completed",
       is_error: event.isError === true,
       timestamp: Date.now() / 1000,
@@ -261,7 +310,9 @@ async function restoreRuns() {
         await persistRun(run);
       }
       runs.set(run.id, run);
-    } catch {}
+    } catch {
+      // Ignore one malformed retained run without preventing Runtime startup.
+    }
   }
 }
 
@@ -285,6 +336,7 @@ async function createRun(request, response, body) {
     usage: undefined,
     model: MODEL,
     stopRequested: false,
+    activeTools: new Map(),
     events: [],
     subscribers: new Set(),
     createdAt: new Date().toISOString(),
@@ -304,7 +356,7 @@ async function createRun(request, response, body) {
 async function handleRequest(request, response) {
   const url = new URL(request.url || "/", `http://${request.headers.host || "localhost"}`);
   if (request.method === "GET" && ["/health", "/api/health"].includes(url.pathname)) {
-    return json(response, 200, { ok: true, runtime: "pi", version: "0.1.0-experimental" });
+    return json(response, 200, { ok: true, runtime: "pi", version: "0.1.0-beta" });
   }
   if (request.method === "GET" && url.pathname === "/api/status") {
     return json(response, 200, { status: "ok", runtime: "pi", auth_required: true, auth_providers: ["basic"] });
