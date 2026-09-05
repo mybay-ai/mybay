@@ -33,6 +33,11 @@
   "feishuUnsupported": "不支持飞书/Lark",
   "followLatest": "跟随最新",
   "loadingImages": "正在载入镜像仓库...",
+  "runtime": {
+    "hermes": "Hermes",
+    "pi": "Pi",
+    "certified": "已认证"
+  },
   "preflight": {
     "title": "升级前安全检查",
     "subtitle": "提交前核对目标版本、运行环境、数据与回滚条件",
@@ -108,6 +113,10 @@
     "bulk": {
       "submitFailedTitle": "提交失败",
       "selectAtLeastOne": "请至少选择一个实例进行批量调度。",
+      "runtimeMismatchTitle": "请选择同一种 Runtime",
+      "runtimeMismatch": "Hermes 与 Pi 使用不同的镜像和升级链路，不能放在同一批升级任务中。",
+      "runtimeSelectionReset": "已切换 Runtime，并重新开始本批次选择。",
+      "filterRuntimeFirst": "当前列表同时包含 Hermes 与 Pi。请先用系统标记筛选 Runtime，再执行全选。",
       "feishuUnsupported": "所选实例中包含已启用飞书/Lark 通道的实例：{{names}}，但目标版本 [{{tag}}] 不支持飞书能力。请重新选择兼容版本，或从批量更新列表中移除这些实例。",
       "confirmMessage": "确定要将当前选中的 {{count}} 个实例批量更新到 [{{tag}}] 版本吗？任务将并发平滑处理。",
       "confirmAction": "确定更新",
@@ -126,6 +135,10 @@
     "latestProtection": {
       "title": "智能路由解析防护已启用：",
       "description": "当前目标版本为 <latest>latest</latest>。普通实例将自动升级至最新主线官方版；对于<feishu>已启用飞书/Lark 通道</feishu>的实例，后端会<routed>自动路由至支持 Feishu 能力的最新专属稳定版</routed>，避免因依赖缺失导致通信中断。"
+    },
+    "piProtection": {
+      "title": "Pi 专属升级链路已启用",
+      "description": "当前仅允许升级到已认证桥接器 {{version}}；历史版本只能通过实例回滚恢复。"
     }
   }
 }

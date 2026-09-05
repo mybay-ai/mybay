@@ -4,6 +4,7 @@ import { Button, Card, cn } from "../ui";
 import { useTranslation } from "react-i18next";
 import { getUpgradePhaseLabel } from "./versionStatusPresentation";
 import { normalizeAgentUpgradePhase } from "../../../shared/agentUpgradePhase";
+import { PI_RUNTIME_DEFINITION } from "../../../shared/runtimeCatalog";
 
 interface VersionDesktopInstanceTableProps {
   filteredInstances: any[];
@@ -58,8 +59,9 @@ export function VersionDesktopInstanceTable({
             <tbody className="divide-y divide-outline text-sm">
               {filteredInstances.map((inst) => {
                 const isSelected = selectedInstances.includes(inst.id);
+                const isPiRuntime = String(inst.runtime_type || "hermes").toLowerCase() === "pi";
                 const currentTag = inst.agent_image_tag || "latest";
-                const activeVersion = inst.resolved_version || inst.agent_version || currentTag;
+                const activeVersion = isPiRuntime ? currentTag : inst.resolved_version || inst.agent_version || currentTag;
                 const upgradeStatus = inst.upgrade_status;
                 const upgradePhase = normalizeAgentUpgradePhase(inst.upgrade_phase, upgradeStatus);
                 const previousTag = inst.previous_image_tag;
@@ -81,7 +83,11 @@ export function VersionDesktopInstanceTable({
                     {/* Meta */}
                     <td className="p-4">
                       <div className="font-semibold text-content">{inst.name}</div>
-                      <div className="text-[11px] text-content-muted font-mono mt-0.5">{inst.id}</div>
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                        <span className={cn("rounded-full border px-2 py-0.5 text-[10px] font-bold", isPiRuntime ? "border-violet-300/50 bg-violet-500/10 text-violet-500" : "border-blue-300/50 bg-blue-500/10 text-blue-500")}>{isPiRuntime ? t("versionRepository.runtime.pi") : t("versionRepository.runtime.hermes")}</span>
+                        <span className="text-[10px] font-semibold text-emerald-600">{t("versionRepository.runtime.certified")}</span>
+                      </div>
+                      <div className="text-[11px] text-content-muted font-mono mt-1">{inst.id}</div>
                     </td>
 
                     {/* Version tag */}
@@ -161,8 +167,8 @@ export function VersionDesktopInstanceTable({
                             className="bg-blue-600 hover:bg-blue-500 text-white border border-blue-500 h-8 pl-2.5 pr-7 rounded-lg text-[13px] font-bold outline-none cursor-pointer focus:border-blue-300 transition-colors appearance-none disabled:opacity-60 disabled:cursor-not-allowed"
                           >
                             <option value="">{t("versionManagement.table.scheduleUpgrade")}</option>
-                            <option value="latest">{t("versionManagement.table.followLatest")}</option>
-                            {versions.map(v => {
+                            <option value="latest">{isPiRuntime ? `${PI_RUNTIME_DEFINITION.runtime.tag} (${t("versionRepository.runtime.certified")})` : t("versionManagement.table.followLatest")}</option>
+                            {!isPiRuntime && versions.map(v => {
                               const isFeishuInst = inst.configuredChannels?.includes("feishu") || inst.configuredChannels?.includes("lark") || inst.channel === "feishu" || inst.channel === "lark";
                               const isFeishuCapable = v.capabilities?.includes("feishu") || v.feishu_capable === true;
                               const isFeishuIncompatible = isFeishuInst && !isFeishuCapable;

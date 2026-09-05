@@ -13,6 +13,7 @@ import { VersionMobileInstanceCards } from "./version-management/VersionMobileIn
 import { VersionDesktopInstanceTable } from "./version-management/VersionDesktopInstanceTable";
 import { UpgradePreflightDialog } from "./version-management/UpgradePreflightDialog";
 import { compareHermesVersions } from "../../shared/version";
+import { PI_RUNTIME_DEFINITION } from "../../shared/runtimeCatalog";
 
 interface VersionItem {
   tag: string;
@@ -73,18 +74,30 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
   const isLowerVersion = (v1?: string, v2?: string): boolean =>
     !!v1 && !!v2 && compareHermesVersions(v1, v2) < 0;
 
+  const getRuntimeType = (inst: any): "hermes" | "pi" =>
+    String(inst?.runtime_type || "hermes").trim().toLowerCase() === "pi" ? "pi" : "hermes";
+
   // The API is already sorted and marks the synchronized upstream latest.
   const latestOfficial = versions.find((version: any) => version.is_latest) || versions[0];
   const latestOfficialVer = latestOfficial?.version || "";
 
   // Check if a given inst needs update using semver rules
   const doesInstanceNeedUpdate = (inst: any) => {
+    if (getRuntimeType(inst) === "pi") {
+      const imageTag = String(inst.agent_image_tag || "").trim();
+      const runtimeVersion = String(inst.agent_version || "").trim();
+      return imageTag !== "latest"
+        && imageTag !== PI_RUNTIME_DEFINITION.runtime.tag
+        && runtimeVersion !== PI_RUNTIME_DEFINITION.version;
+    }
     const cur = inst.resolved_version || inst.agent_version || inst.agent_image_tag || "latest";
     if (cur === "latest") return false;
     return isLowerVersion(cur, latestOfficialVer);
   };
 
-  const getActiveVersion = (inst: any) => inst.resolved_version || inst.agent_version || inst.agent_image_tag || "latest";
+  const getActiveVersion = (inst: any) => getRuntimeType(inst) === "pi"
+    ? inst.agent_image_tag || PI_RUNTIME_DEFINITION.runtime.tag
+    : inst.resolved_version || inst.agent_version || inst.agent_image_tag || "latest";
 
   const getInstanceSystemTags = (inst: any): string[] => {
     const tags = new Set<string>();
@@ -198,6 +211,14 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
     filteredInstances.filter(inst => selectedInstances.includes(inst.id))
   ), [filteredInstances, selectedInstances]);
   const selectedVisibleInstanceIds = useMemo(() => selectedVisibleInstances.map(inst => inst.id), [selectedVisibleInstances]);
+  const selectedRuntimeType = useMemo<"hermes" | "pi" | null>(() => {
+    if (selectedVisibleInstances.length === 0) return null;
+    return getRuntimeType(selectedVisibleInstances[0]);
+  }, [selectedVisibleInstances]);
+
+  useEffect(() => {
+    if (selectedRuntimeType === "pi") setTargetTag("latest");
+  }, [selectedRuntimeType]);
   const detailsInstance = useMemo(() => (
     detailsInstanceId ? instances.find(inst => inst.id === detailsInstanceId) || null : null
   ), [detailsInstanceId, instances]);
@@ -575,6 +596,16 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
       return;
     }
 
+    const runtimeTypes = new Set(selectedVisibleInstances.map(getRuntimeType));
+    if (runtimeTypes.size > 1) {
+      showAlert({
+        title: t("versionRepository.management.bulk.runtimeMismatchTitle"),
+        message: t("versionRepository.management.bulk.runtimeMismatch"),
+        type: "warning"
+      });
+      return;
+    }
+
     // Check Feishu upgrade compatibility for all selected instances
     const selectedFeishuInsts = selectedVisibleInstances.filter(inst =>
       (inst.configuredChannels?.includes("feishu") || inst.configuredChannels?.includes("lark") || inst.channel === "feishu" || inst.channel === "lark")
@@ -653,13 +684,33 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
   };
 
   const toggleSelectInstance = (id: string) => {
-    setSelectedInstances(prev => 
-      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
-    );
+    const nextInstance = instances.find(instance => instance.id === id);
+    if (!nextInstance) return;
+    if (selectedInstances.includes(id)) {
+      setSelectedInstances(prev => prev.filter(item => item !== id));
+      return;
+    }
+    const existingRuntime = instances.find(instance => selectedInstances.includes(instance.id));
+    if (existingRuntime && getRuntimeType(existingRuntime) !== getRuntimeType(nextInstance)) {
+      showToast(t("versionRepository.management.bulk.runtimeSelectionReset"), "info");
+      setSelectedInstances([id]);
+      return;
+    }
+    setSelectedInstances(prev => [...prev, id]);
   };
 
   const toggleSelectAll = () => {
-    const visibleIds = filteredInstanceIds;
+    const visibleRuntimeTypes = new Set(filteredInstances.map(getRuntimeType));
+    if (!selectedRuntimeType && visibleRuntimeTypes.size > 1) {
+      showAlert({
+        title: t("versionRepository.management.bulk.runtimeMismatchTitle"),
+        message: t("versionRepository.management.bulk.filterRuntimeFirst"),
+        type: "info"
+      });
+      return;
+    }
+    const runtimeType = selectedRuntimeType || getRuntimeType(filteredInstances[0]);
+    const visibleIds = filteredInstances.filter(instance => getRuntimeType(instance) === runtimeType).map(instance => instance.id);
     const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedInstances.includes(id));
     if (allVisibleSelected) {
       setSelectedInstances(prev => prev.filter(id => !visibleIds.includes(id)));
@@ -722,8 +773,12 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
                 onChange={(e) => setTargetTag(e.target.value)}
                 className="bg-slate-800 border border-slate-700 text-white px-3 py-2 pr-8 rounded-xl text-[13px] font-bold w-full sm:w-48 outline-none appearance-none cursor-pointer focus:border-blue-500 transition-colors"
               >
-                <option value="latest">latest ({t("versionRepository.followLatest")})</option>
-                {loadingVersions ? (
+                <option value="latest">
+                  {selectedRuntimeType === "pi"
+                    ? `${PI_RUNTIME_DEFINITION.runtime.tag} (${t("versionRepository.runtime.certified")})`
+                    : `latest (${t("versionRepository.followLatest")})`}
+                </option>
+                {selectedRuntimeType === "pi" ? null : loadingVersions ? (
                   <option>{t("versionRepository.loadingImages")}</option>
                 ) : (
                   versions.map((ver) => {
@@ -797,7 +852,19 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
           </Button>
         </div>
 
-        {targetTag === "latest" && (
+        {targetTag === "latest" && selectedRuntimeType === "pi" && (
+          <div className="text-left bg-slate-900 border border-violet-700/50 p-3 rounded-xl flex items-start gap-2.5 text-[13px] text-slate-300">
+            <span className="text-violet-400 text-base shrink-0 select-none">PI</span>
+            <div>
+              <span className="text-violet-300 font-bold block mb-0.5">{t("versionRepository.management.piProtection.title")}</span>
+              <p className="text-content-muted leading-relaxed">
+                {t("versionRepository.management.piProtection.description", { version: PI_RUNTIME_DEFINITION.runtime.tag })}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {targetTag === "latest" && selectedRuntimeType !== "pi" && (
           <div className="text-left bg-slate-900 border border-slate-800/80 p-3 rounded-xl flex items-start gap-2.5 text-[13px] text-slate-300">
             <span className="text-amber-400 text-base shrink-0 select-none">💡</span>
             <div>

@@ -33,6 +33,11 @@
   "feishuUnsupported": "Feishu/Lark unsupported",
   "followLatest": "follow latest",
   "loadingImages": "Loading image registry...",
+  "runtime": {
+    "hermes": "Hermes",
+    "pi": "Pi",
+    "certified": "Certified"
+  },
   "preflight": {
     "title": "Pre-upgrade safety check",
     "subtitle": "Verify the target release, runtime, data, and rollback conditions before submission",
@@ -108,6 +113,10 @@
     "bulk": {
       "submitFailedTitle": "Submission failed",
       "selectAtLeastOne": "Select at least one instance for bulk scheduling.",
+      "runtimeMismatchTitle": "Select one Runtime type",
+      "runtimeMismatch": "Hermes and Pi use different images and upgrade paths, so they cannot share one bulk upgrade task.",
+      "runtimeSelectionReset": "The Runtime type changed, so the batch selection was restarted.",
+      "filterRuntimeFirst": "This list contains both Hermes and Pi. Filter by Runtime system tag before selecting all.",
       "feishuUnsupported": "The selection includes instances with Feishu/Lark channels: {{names}}, but target version [{{tag}}] does not support Feishu. Select a compatible image or remove those instances.",
       "confirmMessage": "Upgrade the selected {{count}} instance(s) to [{{tag}}]? The tasks will run concurrently as rolling upgrades.",
       "confirmAction": "Confirm upgrade",
@@ -126,6 +135,10 @@
     "latestProtection": {
       "title": "Smart release routing is enabled:",
       "description": "The target is <latest>latest</latest>. Standard instances will upgrade to the newest official mainline release. Instances with <feishu>Feishu/Lark channels enabled</feishu> are <routed>automatically routed to the newest stable Feishu-compatible release</routed>, preventing outages caused by missing dependencies."
+    },
+    "piProtection": {
+      "title": "Pi-specific upgrade path enabled",
+      "description": "Upgrades are limited to the certified bridge {{version}}. Historical versions can only be restored through instance rollback."
     }
   }
 }
