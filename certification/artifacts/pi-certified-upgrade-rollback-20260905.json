@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "artifactType": "runtime-certified-upgrade-rollback-live-evidence",
+  "generatedAt": "2026-09-05T13:51:45.002Z",
+  "sanitization": {
+    "credentials": "API keys, passwords, cookies, tokens, and environment values were not collected",
+    "identifiers": "instance, container, and run identifiers are omitted or SHA-256 only",
+    "filesystem": "host absolute paths are omitted"
+  },
+  "environment": {
+    "host": "Windows with Docker Desktop",
+    "application": "MyBay OSS local branch on localhost",
+    "runtime": { "type": "pi", "providerKey": "pi-rpc", "contractVersion": 1 },
+    "sourceImage": {
+      "ref": "mybay/pi-runtime:0.1.0-experimental",
+      "imageId": "sha256:1921b16863ddcbd923d910d33227f5a662bc835e979607224699c6475268a680",
+      "bridgeVersion": "0.1.0-experimental",
+      "agentVersion": "0.85.0"
+    },
+    "targetImage": {
+      "ref": "mybay/pi-runtime:0.1.0-beta",
+      "imageId": "sha256:6b2a6bdbaf5eb576acea3e2efa3f362dba2de413533dd6dee9d0d05bdaba9378",
+      "bridgeVersion": "0.1.0-beta",
+      "agentVersion": "0.85.0"
+    }
+  },
+  "observations": {
+    "upgrade": {
+      "observedAt": "2026-09-05T13:47:42.313Z",
+      "result": "passed",
+      "productPath": "Authenticated MyBay UI -> Agent version repository -> Pi verification clone -> latest -> upgrade preflight -> confirm",
+      "path": "0.1.0-experimental -> 0.1.0-beta",
+      "preflight": { "passed": 9, "warnings": 2, "blockers": 0 },
+      "outcome": {
+        "phase": "completed",
+        "upgradeStatus": "success",
+        "instanceStatus": "running",
+        "healthStatus": "healthy",
+        "chatReady": true,
+        "previousImageTag": "0.1.0-experimental",
+        "supportedStatePreserved": true
+      }
+    },
+    "rollback": {
+      "observedAt": "2026-09-05T13:49:18.185Z",
+      "result": "passed",
+      "productPath": "Authenticated MyBay UI -> Agent version repository -> restored rollback condition -> confirm rollback",
+      "path": "0.1.0-beta -> 0.1.0-experimental",
+      "outcome": {
+        "phase": "rolled_back",
+        "upgradeStatus": "success",
+        "instanceStatus": "running",
+        "healthStatus": "healthy",
+        "chatReady": true,
+        "previousImageTag": "0.1.0-beta",
+        "supportedStatePreserved": true
+      }
+    },
+    "finalSupportedState": {
+      "observedAt": "2026-09-05T13:51:45.002Z",
+      "result": "passed",
+      "path": "0.1.0-experimental -> 0.1.0-beta",
+      "outcome": {
+        "phase": "completed",
+        "upgradeStatus": "success",
+        "instanceStatus": "running",
+        "healthStatus": "healthy",
+        "image": "mybay/pi-runtime:0.1.0-beta",
+        "containerUser": "node",
+        "readonlyRootfs": true,
+        "capDrop": ["ALL"],
+        "securityOpt": ["no-new-privileges:true"],
+        "loopbackPort": "127.0.0.1:10106 -> 8080"
+      },
+      "artifact": {
+        "path": "outputs/pi-restore-proof.txt",
+        "sha256Before": "108b41dd0cd3e8b9a20e468b4ebc05368083fd00a5ec2b3412be730cb7b593bf",
+        "sha256After": "108b41dd0cd3e8b9a20e468b4ebc05368083fd00a5ec2b3412be730cb7b593bf"
+      },
+      "runtimeVerification": {
+        "runRef": "sha256:a9ae940e0dad3e5de2e5a81aa7ed77e02d5a91e3d17a98e641839a5e2e50e4d7",
+        "status": "completed",
+        "runtimeType": "pi",
+        "providerKey": "pi-rpc",
+        "contractVersion": 1,
+        "dispatchAttempts": 1,
+        "lastEventSequence": 21,
+        "expectedOutput": "PI_RESTORE_PROOF_OK",
+        "actualOutput": "PI_RESTORE_PROOF_OK"
+      }
+    },
+    "failureRecovery": {
+      "result": "passed",
+      "trigger": "Historical Pi image rejected the first readiness probe before the Runtime-specific environment writer was applied",
+      "outcome": "The replacement was removed, the original Beta container was restored and started, Runtime chat readiness was verified, and only then was rolled_back persisted."
+    }
+  },
+  "boundary": "The historical image is a local, labeled Pi Runtime predecessor used only to prove migration and rollback. The final deployed state is the supported 0.1.0-beta image."
+}

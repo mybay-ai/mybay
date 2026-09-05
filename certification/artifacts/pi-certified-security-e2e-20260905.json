@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "artifactType": "runtime-certified-security-and-e2e-live-evidence",
+  "generatedAt": "2026-09-05T12:52:47.809Z",
+  "sanitization": {
+    "identifiers": "instance and container identifiers are SHA-256 only",
+    "credentials": "values, cookies, tokens, passwords, and encryption material were not collected",
+    "filesystem": "only one harmless proof file name, ownership mode, and expected content marker were retained",
+    "docker": "host source paths and raw environment variables were omitted"
+  },
+  "environment": {
+    "host": "Windows with Docker Desktop",
+    "application": "MyBay OSS local branch on localhost",
+    "runtime": {
+      "type": "pi",
+      "providerKey": "pi-rpc",
+      "contractVersion": 1,
+      "image": "mybay/pi-runtime:0.1.0-beta",
+      "imageId": "sha256:6b2a6bdbaf5eb576acea3e2efa3f362dba2de413533dd6dee9d0d05bdaba9378"
+    },
+    "instanceRef": "sha256:4087bc6e6c5386fd6788c05f5e736f2f42cf906b8a401b7378ab488f25944161",
+    "containerRef": "sha256:04c14981ea17214b5de7c42174b085343f97414cdd678f27e3037b9b3e4ebf92"
+  },
+  "observations": {
+    "controlPlaneDeploy": {
+      "observedAt": "2026-09-05T12:52:41.539Z",
+      "result": "passed",
+      "productPath": "MyBay UI -> Agent instance center -> Pi Runtime verification instance -> Redeploy -> Confirm",
+      "outcome": {
+        "instanceStatus": "running",
+        "healthStatus": "healthy",
+        "runtimeType": "pi",
+        "providerKey": "pi-rpc",
+        "contractVersion": 1,
+        "runtimeHealthHttpStatus": 200,
+        "runtimeVersion": "0.1.0-beta",
+        "persistedProofFileReadableAfterRedeploy": true,
+        "historicalPiStateMigratedToRuntimeUid": true
+      }
+    },
+    "security": {
+      "observedAt": "2026-09-05T12:52:47.809Z",
+      "result": "passed",
+      "authentication": {
+        "anonymousControlPlaneInstanceListStatus": 401,
+        "anonymousControlPlaneInstanceStatus": 401,
+        "anonymousRuntimeCapabilitiesStatus": 401,
+        "anonymousRuntimeRunsStatus": 401,
+        "publicRuntimeHealthStatus": 200,
+        "authenticatedBrowserSessionWorked": true
+      },
+      "containerIsolation": {
+        "user": "node",
+        "uid": 1000,
+        "privileged": false,
+        "readonlyRootfs": true,
+        "capDrop": ["ALL"],
+        "capAdd": [],
+        "securityOpt": ["no-new-privileges:true"],
+        "tmpfs": {
+          "/tmp": "rw,noexec,nosuid,nodev,size=64m,mode=1777"
+        },
+        "mountDestinations": ["/opt/data"],
+        "dockerSocketMounted": false,
+        "hostPortBinding": "127.0.0.1 only",
+        "privateIpcNamespace": true,
+        "hostPidNamespace": false,
+        "memoryLimitBytes": 1073741824,
+        "nanoCpus": 1000000000,
+        "pidsLimit": 512
+      },
+      "legacyDataMigration": {
+        "trigger": "Pi product redeploy before starting the hardened Runtime",
+        "oneShotUser": "root",
+        "networkDisabled": true,
+        "readonlyRootfs": true,
+        "capDrop": ["ALL"],
+        "capAdd": ["CHOWN"],
+        "securityOpt": ["no-new-privileges:true"],
+        "mountDestinations": ["/opt/data"],
+        "removedAfterExit": true,
+        "resultingOwner": "node:node",
+        "runtimeWorkspaceWritable": true
+      },
+      "verification": {
+        "focusedTestsPassed": 17,
+        "lintPassed": true,
+        "typecheckPassed": true,
+        "credentialedBrowserFileReadPassed": true
+      },
+      "boundary": "The Pi bridge is not represented as a complete hostile-code sandbox. This evidence certifies the authenticated local control plane, Runtime API authentication, one-instance data mount, loopback binding, resource limits, non-root execution, read-only root filesystem, dropped capabilities, no-new-privileges, and a constrained compatibility migration for pre-hardening data."
+    },
+    "realE2E": {
+      "observedAt": "2026-09-05T12:51:32.677Z",
+      "result": "passed",
+      "productPath": "Authenticated MyBay UI -> Pi Agent workspace -> Agent mode -> credentialed file-read task -> live Runtime events -> persisted result and file evidence",
+      "expectedResponse": "PI_BETA_FILE_2_OK",
+      "actualResponse": "PI_BETA_FILE_2_OK",
+      "run": {
+        "status": "completed",
+        "runtimeType": "pi",
+        "providerKey": "pi-rpc",
+        "contractVersion": 1,
+        "dispatchAttempts": 1,
+        "lastEventSequence": 21,
+        "durationMs": 5543,
+        "model": "deepseek-v4-flash",
+        "usageTotalTokens": 10675,
+        "usageSource": "runtime_terminal",
+        "completionVerificationSource": "runtime_status",
+        "stableFileToolStepLifecycle": true,
+        "fileEvidence": [{"path": "pi-beta-proof-2.txt", "kind": "referenced"}]
+      }
+    }
+  }
+}

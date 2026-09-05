@@ -49,9 +49,23 @@ export function getResourceLimits(config?: any) {
 
 export interface DockerProfile {
   CapDrop: string[];
+  CapAdd?: string[];
   SecurityOpt: string[];
   ReadonlyRootfs: boolean;
   User: string;
+}
+
+export function getAgentContainerSecurityProfile(agentRuntimeType: unknown): DockerProfile {
+  if (String(agentRuntimeType || "").trim().toLowerCase() === "pi") {
+    return {
+      CapDrop: ["ALL"],
+      CapAdd: [],
+      SecurityOpt: ["no-new-privileges:true"],
+      ReadonlyRootfs: true,
+      User: "node",
+    };
+  }
+  return getDockerProfile("mybay-agent-runtime");
 }
 
 export function getDockerProfile(runtimeType: "console-runtime" | "mybay-agent-runtime" | "sandbox-skill-runtime"): DockerProfile {

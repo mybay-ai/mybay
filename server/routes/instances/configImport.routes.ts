@@ -15,18 +15,16 @@ import { getDirectorySizeBytes } from "../../utils/storageQuota";
 import { isQuotaConsumingStatus, resolveInstanceLimit } from "../../utils/quota";
 import { parseCpuToNum, parseMemoryToMb, formatMemoryStr, resolveResourceLimitsForInstance } from "../../utils/instances/instanceResourceLimits";
 import { isAdvancedResourceConfigEnabled } from "../../utils/advancedResourceConfigFeature";
-import { supportsFeishu } from "../../utils/hermesCapabilities";
 import { instanceSensitiveFields } from "../../utils/instances/instanceSensitiveFields";
 import { validateInstancePathForDeletion } from "../../utils/instances/instancePathUtils";
 import { checkLimitOrSkipAdmin } from "./create.routes"; // Import from create if needed
 import { sanitizeChannelConfigForChannel } from "../../utils/channelConfigSanitizer";
 import { assertCanExportBackup, assertCanUseChannel, getInstanceLimit, sendEntitlementError } from "../../services/entitlements";
 import { RouterDependencies } from "./index";
-import { parseImageRef, isSensitiveFile, getMimeType, validateFileAccess, upload } from "./helpers";
+import { isSensitiveFile, getMimeType, validateFileAccess, upload } from "./helpers";
 import { encrypt } from "../../crypto";
 import { isMaskedSecretPlaceholder, redactSecretsDeep, sanitizeConfig, sanitizeErrorMessage } from "../../utils/sanitizer";
 import bcrypt from "bcryptjs";
-import { providerRegistry as registry } from "../../../shared/providerRegistry";
 import { resolveProviderRegistryKey } from "../../../shared/providerRegistryUtils";
 import { checkSSRFSafe } from "../../utils/ssrfValidator";
 import { skillPolicyRegistry } from "../../../shared/skillPolicyRegistry";
@@ -43,6 +41,7 @@ import {
   resolveProviderCredentialSelection,
 } from "../../services/instanceConfig/instanceConfigRoutePolicy";
 import { createRuntimeConfigRoutes } from "./config/runtimeConfig.routes";
+import { resolveRestoredRuntimeMetadata } from "./restoreRuntimeSelection";
 import {
   collectReservedInstancePorts,
   disableCredentiallessA2AForRestore,
@@ -541,84 +540,10 @@ export function createConfigImportRoutes(deps: RouterDependencies) {
       // Build context (to resolve public URL and paths)
       const ctx = buildDeploymentContext({ id: generatedId, path: pathSlug }, configData);
 
-      // Determine image parameters
-      let { agent_image, agent_image_tag } = parseImageRef(configData.image || "");
-      if (configData.imageTag) {
-        agent_image_tag = configData.imageTag;
-      }
-      let agent_version = agent_image_tag;
-      let resolved_version: string | null = null;
-
-      // Determine Feishu variant
-      const isChannelFeishu =
-        configData.channel === "feishu" ||
-        configData.channel === "lark" ||
-        (Array.isArray(configData.channel) && configData.channel.some((ch: any) => ["feishu", "lark"].includes(String(ch).toLowerCase()))) ||
-        (configData.configuredChannels && (
-          (Array.isArray(configData.configuredChannels) && configData.configuredChannels.some((ch: any) => ["feishu", "lark"].includes(String(ch).toLowerCase()))) ||
-          (typeof configData.configuredChannels === 'string' && (configData.configuredChannels.toLowerCase().includes("feishu") || configData.configuredChannels.toLowerCase().includes("lark")))
-        ));
-
-      const hasFeishuSkill =
-        Array.isArray(configData.skills) &&
-        configData.skills.some((s: string) =>
-          ["feishu", "lark", "feishu_adapter", "lark_adapter"].includes(String(s).toLowerCase())
-        );
-
-      const isFeishu = !!(isChannelFeishu || hasFeishuSkill);
-
-      // Feishu-tag resolution (equivalent to create.routes.ts resolution block)
-      const myBayVersions = await dbAdapter.getMyBayVersions();
-      if (isFeishu) {
-        const { versionsRepo } = await import("../../repositories/versionsRepo");
-        const matchingVersion = agent_image_tag === "latest"
-          ? await versionsRepo.getResolvedLatestFeishuVersion()
-          : myBayVersions.find((version: any) => {
-              const tag = version.image_tag || version.tag || version.version;
-              return tag === agent_image_tag || version.version === agent_image_tag;
-            });
-        if (!matchingVersion || !supportsFeishu(matchingVersion)) {
-          return res.status(409).json({
-            code: "FEISHU_CAPABILITY_REQUIRED",
-            params: { version: agent_image_tag },
-            error: "The selected official Hermes version does not support Feishu/Lark."
-          });
-        }
-        agent_image = matchingVersion.image || process.env.MY_BAY_IMAGE || "nousresearch/hermes-agent";
-        agent_image_tag = matchingVersion.image_tag || matchingVersion.tag || matchingVersion.version;
-        agent_version = matchingVersion.version || agent_image_tag;
-        resolved_version = agent_version;
-      } else {
-        // Non-feishu instance
-        if (agent_image_tag === 'latest') {
-          try {
-            const { versionsRepo } = await import("../../repositories/versionsRepo");
-            const resolvedLatest = await versionsRepo.getResolvedLatestCoreVersion();
-            if (resolvedLatest && resolvedLatest.image && resolvedLatest.image_tag) {
-              agent_image = resolvedLatest.image;
-              agent_image_tag = resolvedLatest.image_tag;
-              agent_version = resolvedLatest.version || resolvedLatest.image_tag;
-              resolved_version = resolvedLatest.version || resolvedLatest.image_tag;
-            }
-          } catch (e) {
-            console.warn("[Import Create] Failed to resolve latest core version", e);
-          }
-        } else {
-          const coreTag = agent_image_tag.endsWith("-feishu") ? agent_image_tag.replace(/-feishu$/, "") : agent_image_tag;
-          const matchCore = myBayVersions.find((v: any) => (v.image_tag || v.tag || v.version) === coreTag);
-          if (matchCore) {
-            agent_image = matchCore.image || agent_image;
-            agent_image_tag = matchCore.image_tag || matchCore.tag || matchCore.version;
-            agent_version = matchCore.version;
-            resolved_version = matchCore.version || matchCore.image_tag;
-          } else {
-            agent_image_tag = coreTag;
-            agent_version = coreTag;
-            resolved_version = coreTag;
-          }
-        }
-      }
-
+      const runtimeMetadata = await resolveRestoredRuntimeMetadata({ configData, userRole: req.user.role });
+      if (runtimeMetadata.ok === false) return res.status(runtimeMetadata.status).json(runtimeMetadata.body);
+      const { agent_image, agent_image_tag, agent_version, resolved_version } = runtimeMetadata.selection;
+      const runtimeBinding = runtimeMetadata.binding;
       // Update image details inside configData as well
       configData.image = `${agent_image}:${agent_image_tag}`;
       configData.imageTag = agent_image_tag;
@@ -699,6 +624,9 @@ export function createConfigImportRoutes(deps: RouterDependencies) {
         agent_image_tag,
         agent_version,
         resolved_version,
+        runtime_type: runtimeBinding.runtimeType,
+        runtime_provider_key: runtimeBinding.providerKey,
+        runtime_contract_version: runtimeBinding.contractVersion,
         model_provider: configData.provider || null,
         model_name: configData.model || null,
         model_base_url: configData.baseUrl || null,

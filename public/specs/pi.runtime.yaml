@@ -3,10 +3,12 @@ specVersion: 1.0.0
 name: pi-agent
 displayName: Pi Agent
 version: 0.85.0
-description: Beta Pi Agent runtime bridge for isolated web conversations and persisted file workflows.
+description: >-
+  Certified MyBay integration for the Pi Agent bridge 0.1.0-beta, with isolated web conversations and persisted file
+  workflows.
 release:
   supportStatus: available
-  certificationLevel: beta
+  certificationLevel: certified
   deploymentSupported: true
 runtime:
   type: pi

@@ -21,6 +21,10 @@ import {
   type InstanceOperation,
 } from "./services/instances/instanceOperationCoordinator";
 import type { AgentUpgradePhase } from "../shared/agentUpgradePhase";
+import { ensurePiRuntimeDataOwnership } from "./services/localPiRuntime";
+import { isPiRuntimeInstance, resolvePiRuntimeUpgradeSelection } from "./services/instances/runtimeUpgradeSelection";
+import { probePiRuntimeReadiness } from "./runtime/adapters/pi/PiRuntimeReadiness";
+import { writePiRuntimeEnvironment } from "./runtime/adapters/pi/PiRuntimeEnvironment";
 
 type UpgradeOperationResult = { success: boolean; error?: string };
 
@@ -31,11 +35,19 @@ async function persistUpgradePhase(instanceId: string, phase: AgentUpgradePhase,
 
 async function waitForChatReadiness(
   containerName: string,
-  instanceId: string,
+  instance: any,
   enabledChannels: string[],
 ): Promise<{ ready: boolean; detail: string }> {
+  const instanceId = String(instance.id);
   let lastDetail = "Chat API port or gateway is not ready";
   for (let attempt = 0; attempt < 10; attempt += 1) {
+    if (isPiRuntimeInstance(instance)) {
+      const readiness = await probePiRuntimeReadiness(instance);
+      if (readiness.gateway_ready && readiness.chat_ready) return { ready: true, detail: "ready" };
+      lastDetail = readiness.gateway_error || readiness.gateway_status;
+      if (attempt < 9) await new Promise(resolve => setTimeout(resolve, 3000));
+      continue;
+    }
     const logsTail = await getContainerLogTail(containerName, 120).catch(() => "");
     const probe = await probeGatewayReadiness(docker.getContainer(containerName), instanceId, logsTail, enabledChannels);
     if (probe.gateway_ready && probe.chat_ready) return { ready: true, detail: "ready" };
@@ -170,6 +182,12 @@ export async function validateUpgradeTag(
     return { success: false, error: "实例未找到。", code: "INSTANCE_NOT_FOUND" };
   }
 
+  if (isPiRuntimeInstance(instance)) {
+    const selection = resolvePiRuntimeUpgradeSelection({ instance, targetTag });
+    if (selection.ok === false) return { success: false, error: selection.error, code: selection.code };
+    return { success: true, resolvedTag: selection.selection.tag };
+  }
+
   const isFeishu = isFeishuInstance(instance);
   let resolvedTag = targetTag;
   let vObj: any = null;
@@ -265,12 +283,19 @@ async function upgradeInstanceUnlocked(
   }
 
   // Ensure robust validation run inside background loop too
+  if (isPiRuntimeInstance(instance)) {
+    const selection = resolvePiRuntimeUpgradeSelection({ instance, targetTag });
+    if (selection.ok === false) return { success: false, error: selection.error };
+    targetTag = selection.selection.tag;
+  }
   const isFeishu = isFeishuInstance(instance);
   let resolvedTag = targetTag;
   const versions = await dbAdapter.getMyBayVersions();
   let vObj: any = null;
 
-  if (targetTag === "latest") {
+  if (isPiRuntimeInstance(instance)) {
+    resolvedTag = targetTag;
+  } else if (targetTag === "latest") {
     const resolved = await resolveLatestTag(isFeishu);
     if (!resolved) {
       return { success: false, error: isFeishu ? "升级中断：未找到任何支持飞书能力的镜象版本。" : "未找到可用版本。" };
@@ -329,6 +354,21 @@ async function upgradeInstanceFlow(
   const isFeishu = isFeishuInstance(instance);
   const versions = await dbAdapter.getMyBayVersions();
   let vObj: any = null;
+
+  if (isPiRuntimeInstance(instance)) {
+    const selection = resolvePiRuntimeUpgradeSelection({
+      instance,
+      targetTag,
+      allowPreviousTag: isDirectRollback,
+    });
+    if (selection.ok === false) return { success: false, error: selection.error };
+    vObj = {
+      version: selection.selection.version,
+      image: selection.selection.image,
+      image_tag: selection.selection.tag,
+      source: "local_docker",
+    };
+  }
 
   if (!vObj) {
     vObj = versions.find((v: any) => v.version === targetTag && (isFeishu ? isVersionCompatibleWithFeishu(v) : true));
@@ -430,7 +470,14 @@ async function upgradeInstanceFlow(
   } catch (pullErr: any) {
     const errMsg = `拉取 Docker 新镜像失败: ${pullErr.message || String(pullErr)}`;
     await logUpgrade(`[拉取镜像] ❌ 失败: ${errMsg}`);
-    await rollbackFlow(instance, previousTag, errMsg, userId, io);
+    await dbAdapter.updateInstanceVersionInfo(instanceId, {
+      status: instance.status || "running",
+      upgrade_status: "failed",
+      upgrade_phase: "failed",
+      upgrade_error: errMsg,
+    });
+    io.emit("instances_updated", { id: instanceId, status: instance.status || "running", upgrade_phase: "failed" });
+    await logUpgrade(`[升级终止] 当前容器尚未停止，实例继续运行原版本。`);
     return { success: false, error: errMsg };
   }
 
@@ -443,7 +490,9 @@ async function upgradeInstanceFlow(
   const gatewayContainerName = ctx.gatewayContainerName;
   const dashboardContainerName = ctx.dashboardContainerName;
 
-  const { finalEnvMap: envVars } = writePhysicalConfigs(instanceId, config);
+  const { finalEnvMap: envVars } = isPiRuntimeInstance(instance)
+    ? writePiRuntimeEnvironment(instanceId, config)
+    : writePhysicalConfigs(instanceId, config);
   const gatewayEnv: string[] = [
     "TZ=Asia/Shanghai",
     "HERMES_HOME=/opt/data"
@@ -564,6 +613,13 @@ async function upgradeInstanceFlow(
   let nextCreatedDash: any;
 
   try {
+    if (isPiRuntimeInstance(instance)) {
+      await ensurePiRuntimeDataOwnership({
+        dockerClient: docker,
+        image: finalUpgradeImage,
+        hostInstanceDataDir,
+      });
+    }
     const hostConfig = await buildDockerHostConfig("single", {
       networkName,
       gatewayHostPort: gatewayHostPort,
@@ -580,11 +636,12 @@ async function upgradeInstanceFlow(
       name: dashboardContainerName,
       Env: [
         ...gatewayEnv,
-        "PORT=9119",
-        "GATEWAY_HEALTH_URL=http://127.0.0.1:8642"
+        `PORT=${ctx.internal_web_port}`,
+        ...(!isPiRuntimeInstance(instance) ? ["GATEWAY_HEALTH_URL=http://127.0.0.1:8642"] : [])
       ],
       Labels: dashboardLabels,
-      HostConfig: hostConfig
+      HostConfig: hostConfig,
+      RuntimeType: String(config.runtime_type || instance.runtime_type || "hermes").trim().toLowerCase(),
     });
 
     if (config.a2aEnabled === true) {
@@ -667,7 +724,7 @@ async function upgradeInstanceFlow(
       ...(Array.isArray(config.channels) ? config.channels : []),
       ...(config.channel ? [config.channel] : []),
     ].map(channel => String(channel).toLowerCase());
-    const chatReadiness = await waitForChatReadiness(dashboardContainerName, instanceId, [...new Set(enabledChannels)]);
+    const chatReadiness = await waitForChatReadiness(dashboardContainerName, instance, [...new Set(enabledChannels)]);
     if (!chatReadiness.ready) {
       throw new Error(`Chat readiness check failed: ${chatReadiness.detail}`);
     }
@@ -782,12 +839,11 @@ async function rollbackFlow(
 
     if (gateExisted && oldGateName) {
       const oldGate = docker.getContainer(oldGateName);
-      await oldGate.rename({ name: gatewayContainerName }).catch((e: any) => {
-         console.warn(`Rename back failed for gateway - target probably already exists: ${e.message}`);
-      });
-      await oldGate.start().catch((e: any) => {
-        console.error(`Failed to restart old gateway container:`, e);
-      });
+      await oldGate.rename({ name: gatewayContainerName });
+      const restoredGate = docker.getContainer(gatewayContainerName);
+      await restoredGate.start();
+      const restoredState = await restoredGate.inspect();
+      if (restoredState?.State?.Running !== true) throw new Error("Restored Gateway container did not enter the running state.");
       const rollbackStartNow = new Date().toISOString();
       await dbAdapter.updateInstanceVersionInfo(instanceId, { started_at: rollbackStartNow }).catch(() => {});
       await logRollback(`[物理回滚] 原 Gateway 旧版容器已重命名还原并启动成功。`);
@@ -797,10 +853,11 @@ async function rollbackFlow(
 
     if (dashExisted && oldDashName) {
       const oldDash = docker.getContainer(oldDashName);
-      await oldDash.rename({ name: dashboardContainerName }).catch(() => {});
-      await oldDash.start().catch((e: any) => {
-        console.error(`Failed to restart old dashboard container:`, e);
-      });
+      await oldDash.rename({ name: dashboardContainerName });
+      const restoredDash = docker.getContainer(dashboardContainerName);
+      await restoredDash.start();
+      const restoredState = await restoredDash.inspect();
+      if (restoredState?.State?.Running !== true) throw new Error("Restored Dashboard container did not enter the running state.");
       await logRollback(`[物理回滚] 原 Dashboard 旧版容器已重命名还原并启动成功。`);
     } else {
       await logRollback(`[回滚初始化] 未能探测到原旧版实例镜像, 正在从 ${originalTag} 重新拉起 Dashboard 物理节点...`);
@@ -811,6 +868,14 @@ async function rollbackFlow(
     if (!rollbackIsTraefik) {
       await rebuildProxyConfig(instance, io, { run: async () => {} });
     }
+
+    const enabledChannels = (Array.isArray(config.configuredChannels)
+      ? config.configuredChannels
+      : [config.channel || "web"])
+      .map((channel: unknown) => String(channel))
+      .filter(Boolean);
+    const readiness = await waitForChatReadiness(dashboardContainerName, instance, [...new Set<string>(enabledChannels)]);
+    if (!readiness.ready) throw new Error(`Restored container chat readiness failed: ${readiness.detail}`);
 
     await dbAdapter.updateInstanceVersionInfo(instanceId, {
       status: "running",

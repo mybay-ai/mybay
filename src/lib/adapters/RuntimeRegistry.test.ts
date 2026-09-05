@@ -8,7 +8,7 @@ describe("client RuntimeRegistry", () => {
     expect(runtimes[0].manifest.runtime.image).toBe("nousresearch/hermes-agent");
     expect(runtimes[1].manifest.release).toEqual({
       supportStatus: "available",
-      certificationLevel: "beta",
+      certificationLevel: "certified",
       deploymentSupported: true,
     });
     expect(runtimes[1].manifest.capabilities).toMatchObject({

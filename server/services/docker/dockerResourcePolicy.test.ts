@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getDockerProfile, getResourceLimits } from "../../dockerDeployment";
+import { getAgentContainerSecurityProfile } from "./dockerResourcePolicy";
 
 describe("docker resource policy characterization", () => {
   it("normalizes configured CPU and memory while preserving runtime limits", () => {
@@ -44,6 +45,17 @@ describe("docker resource policy characterization", () => {
       ReadonlyRootfs: false,
       User: "root"
     });
+  });
+
+  it("hardens the Pi Agent container without changing the Hermes profile", () => {
+    expect(getAgentContainerSecurityProfile("pi")).toEqual({
+      CapDrop: ["ALL"],
+      CapAdd: [],
+      SecurityOpt: ["no-new-privileges:true"],
+      ReadonlyRootfs: true,
+      User: "node",
+    });
+    expect(getAgentContainerSecurityProfile("hermes")).toEqual(getDockerProfile("mybay-agent-runtime"));
   });
 });
 

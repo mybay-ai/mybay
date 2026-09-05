@@ -38,7 +38,7 @@ import { resolveHermesProvider, VALID_HERMES_PROVIDERS } from "./providerEnv";
 import { writePiRuntimeEnvironment } from "./runtime/adapters/pi/PiRuntimeEnvironment";
 import { getDockerProfile, getResourceLimits } from "./services/docker/dockerResourcePolicy";
 import { ensureLocalFeishuRuntimeImage, requiresLocalFeishuRuntime } from "./services/localFeishuRuntime";
-import { parsePiRuntimeImageRef } from "./services/localPiRuntime";
+import { ensurePiRuntimeDataOwnership, parsePiRuntimeImageRef } from "./services/localPiRuntime";
 import {
   connectControlPlaneToNetwork,
   connectTraefikToNetwork,
@@ -175,6 +175,14 @@ export async function recreateInstance(
     requestUser: options.requestUser,
     systemTrustedContext: options.systemTrustedContext
   });
+
+  if (runtimeType === "pi") {
+    await ensurePiRuntimeDataOwnership({
+      dockerClient: docker,
+      image,
+      hostInstanceDataDir: options.hostInstanceDataDir,
+    });
+  }
 
   // 3. Create and start the single main MyBay container (historically referred to as dashboard container name but running elements of both)
   const limits = getResourceLimits(options.config);
