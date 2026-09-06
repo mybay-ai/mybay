@@ -36,19 +36,17 @@ async function renderCommands(runtimeType: "hermes" | "pi") {
 }
 
 describe("restored Agent mode capability guard", () => {
-  it("shows shared slash commands but keeps collaboration commands off Pi", async () => {
+  it("shows the same collaboration commands for certified Hermes and Pi runtimes", async () => {
     const pi = await renderCommands("pi");
     const hermes = await renderCommands("hermes");
     for (const command of ["/new", "/clear", "/files", "/status", "/stop", "/model", "/help"]) {
       expect(pi).toContain(command);
       expect(hermes).toContain(command);
     }
-    expect(pi).not.toContain("/agents");
-    expect(pi).not.toContain("/call");
-    expect(pi).not.toContain("/all");
-    expect(hermes).toContain("/agents");
-    expect(hermes).toContain("/call");
-    expect(hermes).toContain("/all");
+    for (const command of ["/agents", "/call", "/all"]) {
+      expect(pi).toContain(command);
+      expect(hermes).toContain(command);
+    }
   });
 
   it.each(["checking", "disabled", "explicitly_unsupported", "unavailable"] as const)("retains mode/draft and visibly blocks sending when %s", async state => {

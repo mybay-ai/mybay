@@ -6,6 +6,8 @@ test("advertises the managed attachment and generated-file contract", () => {
   assert.equal(PI_BRIDGE_FEATURES.chat_attachments, true);
   assert.equal(PI_BRIDGE_FEATURES.persisted_workspace, true);
   assert.equal(PI_BRIDGE_FEATURES.generated_file_evidence, true);
+  assert.equal(PI_BRIDGE_FEATURES.a2a_tools, true);
+  assert.equal(PI_BRIDGE_FEATURES.managed_collaboration, true);
   assert.equal(PI_BRIDGE_FEATURES.session_resources, false);
 });
 

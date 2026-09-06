@@ -12,6 +12,7 @@ RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund \
        npm install --omit=dev --ignore-scripts --no-audit --no-fund --save-exact "@earendil-works/pi-coding-agent@${PI_AGENT_VERSION}"; \
      fi
 COPY server.mjs ./server.mjs
+COPY mybay-a2a-extension.mjs ./mybay-a2a-extension.mjs
 
 RUN mkdir -p /opt/data/workspace /opt/data/pi/sessions /opt/data/pi/runs \
   && chown -R node:node /app /opt/data

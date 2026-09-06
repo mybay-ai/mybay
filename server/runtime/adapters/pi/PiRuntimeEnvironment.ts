@@ -3,6 +3,7 @@ import path from "node:path";
 import { decrypt } from "../../../crypto";
 import { buildProviderRuntimeEnv } from "../../../providerEnv";
 import { isMaskedSecretPlaceholder } from "../../../utils/sanitizer";
+import { buildA2ARuntimeEnv } from "../../../services/a2aRuntimeConfig";
 
 const PI_PROVIDER_ALIASES: Readonly<Record<string, string>> = Object.freeze({
   openai: "openai",
@@ -42,6 +43,7 @@ export function buildPiRuntimeEnvironment(config: any): Record<string, string> {
   const providerEnv = buildProviderRuntimeEnv({ provider, model, baseUrl, apiKey });
   return {
     ...providerEnv,
+    ...buildA2ARuntimeEnv(config),
     PORT: String(config?.internal_web_port || 8080),
     PI_BRIDGE_API_KEY: bridgeKey,
     HERMES_API_KEY: bridgeKey,

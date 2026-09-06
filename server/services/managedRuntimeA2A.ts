@@ -9,12 +9,30 @@ function runtimeType(instance: any): string {
 }
 
 export function isManagedRuntimeA2APeer(instance: any): boolean {
-  if (runtimeType(instance) !== "pi" || String(instance?.status || "").toLowerCase() !== "running") return false;
+  if (!isManagedRuntimeA2ACaller(instance) || String(instance?.status || "").toLowerCase() !== "running") return false;
+  return true;
+}
+
+export function isManagedRuntimeA2ACaller(instance: any): boolean {
+  if (runtimeType(instance) !== "pi") return false;
   try {
     runtimeRegistry.resolveRunBinding(instance);
     return true;
   } catch {
     return false;
+  }
+}
+
+export async function probeManagedRuntimeA2ACaller(instance: any) {
+  if (!isManagedRuntimeA2APeer(instance)) return { state: "disabled" as const, toolState: "unknown" as const };
+  try {
+    const response = await runtimeRequest(instance, "GET", "/v1/capabilities", undefined, 5_000);
+    const ready = response.ok && response.json?.features?.run_submission === true;
+    return ready
+      ? { state: "ready" as const, runtime: "pi", transport: "mybay_runtime" as const, toolState: response.json?.features?.a2a_tools === true ? "ready" as const : "unavailable" as const }
+      : { state: "unavailable" as const, runtime: "pi", transport: "mybay_runtime" as const, toolState: "unavailable" as const };
+  } catch {
+    return { state: "unavailable" as const, runtime: "pi", transport: "mybay_runtime" as const, toolState: "unavailable" as const };
   }
 }
 

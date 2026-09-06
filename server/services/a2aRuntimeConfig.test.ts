@@ -31,6 +31,9 @@ describe("A2A runtime configuration", () => {
       expect(config.a2aResolvedPeers[0].encryptedToken).not.toBe(first);
       await hydrateA2ARuntimePeers('excluded-caller', config);
       expect(config.a2aResolvedPeers[0]).toMatchObject({ url: 'http://mybay-agent-peer:9900', encryptedToken: 'encrypted:peer-secret' });
+      vi.stubEnv('MYBAY_A2A_TRACKED_INSTANCES', '*');
+      await hydrateA2ARuntimePeers('excluded-caller', config);
+      expect(config.a2aResolvedPeers[0].url).toBe('http://test-control:3000/internal/a2a/excluded-caller/peer');
     } finally { vi.unstubAllEnvs(); }
   });
   it("routes a running Pi peer through the managed relay without requiring native A2A configuration", async () => {
@@ -80,6 +83,15 @@ describe("A2A runtime configuration", () => {
       A2A_RATE_LIMIT: "600",
       A2A_MAX_PINGPONG_TURNS: "20",
     });
+  });
+
+  it("injects only resolved peer credentials for the Pi collaboration extension", () => {
+    const env = buildA2ARuntimeEnv({
+      a2aEnabled: true,
+      a2aBearerToken: "encrypted:secret",
+      a2aResolvedPeers: [{ instanceId: "peer-1", name: "Reviewer", url: "http://relay/a2a", encryptedToken: "encrypted:relay-token", capabilities: ["review"] }],
+    });
+    expect(JSON.parse(env.MYBAY_A2A_PEERS_JSON)).toEqual([{ id: "peer-1", name: "Reviewer", url: "http://relay/a2a", token: "relay-token", capabilities: ["review"] }]);
   });
 
   it("writes only resolved peers into Hermes YAML", () => {

@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { sanitizeString } from "../utils/sanitizer";
+import { a2aTaskResultText, type A2ATaskLink } from "./a2aTaskLinks";
 
 const MAX_ACTIVITY_LIMIT = 50;
 const MAX_FILE_BYTES = 256 * 1024;
@@ -442,6 +443,42 @@ export type A2ARemoteTaskEvidence = {
   result?: string;
   updatedAt?: string;
 };
+
+export function mergeA2ATaskLinkActivities(
+  activities: A2AActivity[],
+  links: A2ATaskLink[],
+  instanceId: string,
+  peerNames: Map<string, string> = new Map(),
+): A2AActivity[] {
+  const known = new Set(activities.map(activity => `${activity.peerId || ""}\n${activity.taskId}\n${activity.contextId}`));
+  const linked = links.flatMap((link): A2AActivity[] => {
+    if (link.instanceId !== instanceId || known.has(`${link.peerId}\n${link.callerTaskId}\n${link.contextId}`)) return [];
+    const state = String(link.remoteState || "").replace(/^TASK_STATE_/, "").toLowerCase().replaceAll("_", "-");
+    const status: A2AActivityStatus = state === "completed" && link.state === "finished" ? "completed"
+      : ["cancelled", "canceled"].includes(state) && link.state === "finished" ? "cancelled"
+      : ["failed", "rejected"].includes(state) && link.state === "finished" ? "failed"
+      : link.state === "uncertain" ? "unknown" : "in_progress";
+    const completedAt = ["completed", "cancelled", "failed"].includes(status) ? link.updatedAt : null;
+    const result = a2aTaskResultText(link.task) || link.diskResult || null;
+    return [{
+      requestText: null,
+      contextId: link.contextId,
+      taskId: link.callerTaskId,
+      direction: "outbound",
+      peerId: link.peerId,
+      peerName: peerNames.get(link.peerId) || link.peerId,
+      status,
+      startedAt: link.createdAt,
+      completedAt,
+      durationMs: completedAt ? Math.max(0, new Date(completedAt).getTime() - new Date(link.createdAt).getTime()) : null,
+      summary: "Managed A2A task",
+      result: status === "completed" ? result : null,
+      failureReason: ["failed", "unknown"].includes(status) ? result : null,
+      evidenceIncomplete: link.state === "uncertain",
+    }];
+  });
+  return [...activities, ...linked].sort((left, right) => right.startedAt.localeCompare(left.startedAt));
+}
 
 export function applyA2ARemoteTaskEvidence(
   activity: A2AActivity,

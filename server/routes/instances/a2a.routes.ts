@@ -23,13 +23,15 @@ import {
 } from "../../../shared/a2aConfig";
 import { ensureA2ABearerToken } from "../../services/a2aRuntimeConfig";
 import { probeA2AAgentCard } from "../../services/a2aProbe";
-import { applyA2ARemoteTaskEvidence, groupA2AOrchestrations, readA2AActivities } from "../../services/a2aActivity";
+import { applyA2ARemoteTaskEvidence, groupA2AOrchestrations, mergeA2ATaskLinkActivities, readA2AActivities } from "../../services/a2aActivity";
 import { docker } from "../../lib/docker";
 import { probeA2ATools } from "../../services/a2aToolProbe";
 import { a2aTrackingEnabled } from "../../services/a2aRelayConfig";
 import {
   cancelManagedRuntimeA2ATask,
+  isManagedRuntimeA2ACaller,
   isManagedRuntimeA2APeer,
+  probeManagedRuntimeA2ACaller,
   probeManagedRuntimeA2APeer,
   readManagedRuntimeA2ATask,
 } from "../../services/managedRuntimeA2A";
@@ -138,7 +140,7 @@ async function buildA2AView(instance: any, req: AuthenticatedRequest) {
   return {
     instanceId: instance.id,
     version,
-    supported: supportsA2AByVersion(version, instance.capabilities),
+    supported: (isManagedRuntimeA2ACaller(instance) && a2aTrackingEnabled(String(instance.id))) || supportsA2AByVersion(version, instance.capabilities),
     enabled: config.a2aEnabled === true,
     applicationState: await getApplicationState(instance),
     agentName: normalizeA2AAgentName(config.a2aAgentName, instance.name || instance.id),
@@ -217,8 +219,10 @@ export function createA2ARoutes() {
     const config = parseConfig(instance);
     const applicationState = await getApplicationState(instance);
     if (config.a2aEnabled !== true) return res.json({ state: "disabled", applicationState });
-    const ownStatus = await probeA2AAgentCard(instance.id);
-    const toolState = ownStatus.state === "ready" ? await probeA2ATools(instance) : "unknown";
+    const managedCaller = isManagedRuntimeA2ACaller(instance) && a2aTrackingEnabled(String(instance.id));
+    const managedStatus = managedCaller ? await probeManagedRuntimeA2ACaller(instance) : null;
+    const ownStatus = managedStatus || await probeA2AAgentCard(instance.id);
+    const toolState = managedStatus?.toolState || (ownStatus.state === "ready" ? await probeA2ATools(instance) : "unknown");
     const trustedPeerIds = normalizeA2APeerIds(config.a2aPeerIds, instance.id);
     const available = await dbAdapter.getInstances(req.user.id, req.user.role);
     const peers = await Promise.all(trustedPeerIds.map(async (peerId) => {
@@ -264,7 +268,13 @@ export function createA2ARoutes() {
       }
     }));
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 12));
-    const activities = readA2AActivities({ instanceId: String(instance.id), includeAll: true, peerNames, peerIpToId, trustedPeerIds: [...trustedPeerIds] });
+    const activityStore = readStoreCollections(["chatRuns", "a2aTaskLinks"]);
+    const activities = mergeA2ATaskLinkActivities(
+      readA2AActivities({ instanceId: String(instance.id), includeAll: true, peerNames, peerIpToId, trustedPeerIds: [...trustedPeerIds] }),
+      activityStore.a2aTaskLinks,
+      String(instance.id),
+      peerNames,
+    );
     const refreshLink = async (currentLink: any) => {
       const peer = peers.find((row: any) => row.id === currentLink.peerId);
       const peerConfig = peer ? parseConfig(peer) : null;
@@ -306,7 +316,6 @@ export function createA2ARoutes() {
     if (recoveryEvidence && link?.remoteTaskId && link.contextId === source!.contextId) recoveryEvidence.remoteMapping = {
       remoteTaskId: link.remoteTaskId, remoteState: link.remoteState || 'unknown', recordState: link.state, updatedAt: link.updatedAt, result: a2aTaskResultText(link.task), lookupState: link.lookupState, checkedAt: link.checkedAt, diskResult: link.diskResult,
     };
-    const activityStore = readStoreCollections(["chatRuns", "a2aTaskLinks"]);
     const mappingFor = (activity: any) => {
       const saved = activity.direction === "outbound" && activityStore.a2aTaskLinks.find(row => row.instanceId === instance.id && row.peerId === activity.peerId && row.callerTaskId === activity.taskId);
       return saved?.remoteTaskId ? { contextId: saved.contextId, mapping: { remoteTaskId: saved.remoteTaskId, remoteState: saved.remoteState || "unknown", recordState: saved.state, updatedAt: saved.updatedAt, result: a2aTaskResultText(saved.task), lookupState: saved.lookupState, checkedAt: saved.checkedAt, diskResult: saved.diskResult } } : null;
@@ -332,7 +341,7 @@ export function createA2ARoutes() {
     if (!instance) return res.status(404).json({ code: "INSTANCE_NOT_FOUND" });
     if (!canAccess(instance, req)) return res.status(403).json({ code: "FORBIDDEN" });
     const version = resolveVersion(instance);
-    if (!supportsA2AByVersion(version, instance.capabilities)) {
+    if (!(isManagedRuntimeA2ACaller(instance) && a2aTrackingEnabled(String(instance.id))) && !supportsA2AByVersion(version, instance.capabilities)) {
       return res.status(409).json({ code: "A2A_VERSION_UNSUPPORTED", params: { version } });
     }
     const enabled = req.body?.enabled === true;

@@ -124,7 +124,7 @@ export function ChatInputBar({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const a2aPeers = useChatComposerPeers(workspaceContext?.instanceId);
-  const collaborationSupported = String(runtimeType || "hermes").trim().toLowerCase() !== "pi";
+  const collaborationSupported = ["hermes", "pi"].includes(String(runtimeType || "hermes").trim().toLowerCase());
   const composerTrigger = findComposerTrigger(input, composerCursor);
   const commonCommandSuggestions: ComposerCommandSuggestion[] = [
     { kind: "command", id: "new", label: t("dashboard:chatWorkspace.composerCommandNew"), description: t("dashboard:chatWorkspace.composerCommandNewDesc") },

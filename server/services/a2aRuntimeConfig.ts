@@ -32,6 +32,15 @@ export function buildA2ARuntimeEnv(config: any): Record<string, string> {
   if (config?.a2aEnabled !== true) return revisionEnv;
   const token = config.a2aBearerToken ? decrypt(config.a2aBearerToken) : "";
   if (!token) throw new Error("A2A_TOKEN_REQUIRED");
+  const peers = (Array.isArray(config.a2aResolvedPeers) ? config.a2aResolvedPeers : [])
+    .map((peer: ResolvedA2APeer) => ({
+      id: peer.instanceId,
+      name: peer.name,
+      url: peer.url,
+      token: peer.encryptedToken ? decrypt(peer.encryptedToken) : "",
+      capabilities: peer.capabilities || [],
+    }))
+    .filter((peer: any) => peer.id && peer.url && peer.token);
   return {
     ...revisionEnv,
     A2A_BEARER_TOKEN: token,
@@ -41,6 +50,7 @@ export function buildA2ARuntimeEnv(config: any): Record<string, string> {
     A2A_PUBLIC_URL: String(config.a2aPublicUrl || getA2AInternalUrl(config.instanceId || config.id || "agent")),
     A2A_RATE_LIMIT: String(Math.min(600, Math.max(1, Number(config.a2aRateLimit) || 60))),
     A2A_MAX_PINGPONG_TURNS: String(Math.min(20, Math.max(1, Number(config.a2aMaxPingPongTurns) || 5))),
+    ...(peers.length ? { MYBAY_A2A_PEERS_JSON: JSON.stringify(peers) } : {}),
   };
 }
 

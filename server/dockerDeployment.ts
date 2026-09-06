@@ -896,12 +896,12 @@ export async function executeDeployment(instance: any, io: SocketIOServer, updat
   let piRuntimeConfigResult: any = null;
 
   try {
+    await hydrateA2ARuntimePeers(instanceId, config);
     if (isPiRuntime) {
       const configResult = writePiRuntimeEnvironment(instanceId, config);
       generatedEnvMap = configResult.finalEnvMap;
       piRuntimeConfigResult = configResult.piRuntimeConfigResult;
     } else {
-      await hydrateA2ARuntimePeers(instanceId, config);
       const configResult = writePhysicalConfigs(instanceId, config);
       generatedEnvMap = configResult.finalEnvMap;
       hermesModelConfigResult = configResult.hermesModelConfigResult;

@@ -5,7 +5,9 @@ vi.mock("./runsReconciler", () => ({ requestRunsAPI: request }));
 
 import {
   cancelManagedRuntimeA2ATask,
+  isManagedRuntimeA2ACaller,
   isManagedRuntimeA2APeer,
+  probeManagedRuntimeA2ACaller,
   readManagedRuntimeA2ATask,
   sendManagedRuntimeA2A,
 } from "./managedRuntimeA2A";
@@ -21,9 +23,17 @@ const peer = {
 beforeEach(() => request.mockReset());
 
 it("accepts only a running Pi instance with a valid persisted Runtime binding", () => {
+  expect(isManagedRuntimeA2ACaller({ ...peer, status: "stopped" })).toBe(true);
   expect(isManagedRuntimeA2APeer(peer)).toBe(true);
   expect(isManagedRuntimeA2APeer({ ...peer, status: "stopped" })).toBe(false);
   expect(isManagedRuntimeA2APeer({ ...peer, runtime_provider_key: "hermes-core" })).toBe(false);
+});
+
+it("requires the Pi bridge to advertise active A2A tools before declaring the caller ready", async () => {
+  request.mockResolvedValueOnce({ ok: true, json: { features: { run_submission: true, a2a_tools: true } } });
+  await expect(probeManagedRuntimeA2ACaller(peer)).resolves.toMatchObject({ state: "ready", toolState: "ready" });
+  request.mockResolvedValueOnce({ ok: true, json: { features: { run_submission: true } } });
+  await expect(probeManagedRuntimeA2ACaller(peer)).resolves.toMatchObject({ state: "ready", toolState: "unavailable" });
 });
 
 it("translates an A2A message into a Pi run and streams mapped terminal evidence", async () => {
