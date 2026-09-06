@@ -155,6 +155,14 @@ export function sanitizeInstance(instance: any, mode: 'list' | 'detail' = 'detai
     try {
       config = typeof instance.config_json === 'string' ? JSON.parse(instance.config_json) : instance.config_json;
     } catch (e) {}
+
+    const avatarFilename = typeof config.agentAvatarFilename === "string" && /^avatar\.(?:jpg|png|webp|gif)$/.test(config.agentAvatarFilename)
+      ? config.agentAvatarFilename
+      : "";
+    const avatarUpdatedAt = typeof config.agentAvatarUpdatedAt === "string" ? config.agentAvatarUpdatedAt : "";
+    if (avatarFilename) {
+      final.avatar_url = `/api/instances/${encodeURIComponent(instance.id)}/avatar${avatarUpdatedAt ? `?v=${encodeURIComponent(avatarUpdatedAt)}` : ""}`;
+    }
     
     const channel = config.channel || 'default';
     const isChannelFeishu = 
@@ -295,6 +303,7 @@ export function sanitizeInstance(instance: any, mode: 'list' | 'detail' = 'detai
       a2aEnabled: config.a2aEnabled === true,
       a2aAgentName: config.a2aAgentName || null,
       a2aPeerCount: Array.isArray(config.a2aPeerIds) ? config.a2aPeerIds.length : 0,
+      avatarUrl: final.avatar_url || null,
       
       // CONFIG CHECKS (Safe summary for status panel)
       configChecks: {

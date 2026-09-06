@@ -1,5 +1,6 @@
 import type { AgentInstance } from "../../types";
 import { useTranslation } from "react-i18next";
+import { AgentAvatar } from "../agent/AgentAvatar";
 
 type AgentAvatarPresentation = {
   runtime: string;
@@ -14,6 +15,11 @@ const RUNTIME_AVATARS: Record<string, Omit<AgentAvatarPresentation, "runtime">> 
     labelKey: "chatWorkspace.agentAvatarHermes",
     initials: "H",
     className: "border-indigo-300/70 bg-gradient-to-br from-indigo-500 to-violet-700 text-white dark:border-indigo-300/40",
+  },
+  pi: {
+    labelKey: "chatWorkspace.agentAvatarPi",
+    initials: "PI",
+    className: "border-violet-300/70 bg-violet-500/10 text-violet-700 dark:border-violet-300/40 dark:text-violet-200",
   },
   opencode: {
     labelKey: "chatWorkspace.agentAvatarOpenCode",
@@ -52,14 +58,11 @@ export function ChatAgentAvatar({ instance }: { instance?: AgentInstance }) {
   const avatar = resolveAgentAvatarPresentation(instance);
   const label = t(avatar.labelKey, { runtime: avatar.runtimeLabel });
   return (
-    <div
-      role="img"
-      aria-label={label}
-      title={label}
-      data-agent-runtime={avatar.runtime}
-      className={`flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-xl border text-[12px] font-black leading-none shadow-sm ${avatar.className}`}
-    >
-      {avatar.initials}
-    </div>
+    <AgentAvatar
+      instance={instance}
+      label={label}
+      className={`h-8 w-8 rounded-xl ${avatar.className}`}
+      defaultIconClassName="h-6 w-6"
+    />
   );
 }

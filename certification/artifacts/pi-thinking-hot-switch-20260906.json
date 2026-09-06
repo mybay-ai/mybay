@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "verifiedAt": "2026-09-06T11:40:49.073Z",
+  "instanceRef": "sha256:2370a902e42bfcf23481a1427cdce1e060503b7d72d168e5324d4ed80334eaa6",
+  "runtime": "pi",
+  "runtimeVersion": "0.85.1",
+  "runtimeImageId": "sha256:24e0ffab1fc2f469f2174f4133b75b8182c19dd086b74cf933514884b1e2b2bb",
+  "browserVerified": true,
+  "before": {
+    "mode": "balanced",
+    "piThinkingLevel": "medium",
+    "runRef": "sha256:50eb469f6291f46fa455d3d91e8f8f452d2fa2ff46afd57061a8a821755c0354",
+    "upstreamRunRef": "sha256:cdec902d6e842dba8428a60ce71b7c937c5c316eb87c477f7525bacffb987a4e",
+    "output": "PI_THINKING_BALANCED_OK",
+    "runtimeDurationMs": 3904,
+    "piProcessId": 33
+  },
+  "after": {
+    "mode": "fast",
+    "piThinkingLevel": "off",
+    "runRef": "sha256:9ce9686920c75ccb5e073330acff575b4bec5b24b93df7e826b1d3ac85a2b19a",
+    "upstreamRunRef": "sha256:15f58ee91e005cd373883d583331a4513590f28d917a4c53f54b7fa2a8fdddbb",
+    "output": "PI_THINKING_FAST_OK",
+    "runtimeDurationMs": 2676,
+    "piProcessId": 33
+  },
+  "result": {
+    "processReused": true,
+    "sessionPreserved": true,
+    "rpcCommand": "set_thinking_level",
+    "wallClockSpeedupClaimed": false
+  }
+}

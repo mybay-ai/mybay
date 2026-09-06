@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-09-06T10:16:00Z",
+  "runtime": {
+    "type": "pi",
+    "agentVersion": "0.85.1",
+    "image": "mybay/pi-runtime:0.85.1",
+    "instanceRef": "sha256:2370a902e42bfcf23481a1427cdce1e060503b7d72d168e5324d4ed80334eaa6"
+  },
+  "observation": {
+    "capability": "structured_questions",
+    "result": "passed",
+    "conversationRef": "sha256:95536f9f24ddc326f66f9d56c589deda12cf79b20331e34aa4cc1561f38afb59",
+    "runRef": "sha256:2e969ca6c59859d91eacc16347b599bf60f8d1135105eaf66c17d88a620521b9",
+    "questionId": "39d63eee-2a55-45a7-ada9-6931075b400e",
+    "questionTitle": "请选择 Pi 验收结果",
+    "selectedOption": "pass",
+    "answerStatus": "answered",
+    "terminalResponseMarkers": [
+      "PI_QUESTION_E2E_OK",
+      "pass"
+    ],
+    "bridgeHealth": "healthy",
+    "browserConversationVisible": true
+  },
+  "security": {
+    "instanceScopedCredential": true,
+    "credentialValueRecorded": false,
+    "sessionBoundRunSelection": true,
+    "crossSessionIsolationTested": true
+  }
+}

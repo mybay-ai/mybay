@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "verifiedAt": "2026-09-06T11:26:59.155Z",
+  "instanceRef": "sha256:2370a902e42bfcf23481a1427cdce1e060503b7d72d168e5324d4ed80334eaa6",
+  "runtime": "pi",
+  "runtimeVersion": "0.85.1",
+  "browserVerified": true,
+  "capabilities": {
+    "approvalEvents": true,
+    "runApprovalResponse": true
+  },
+  "allow": {
+    "runRef": "sha256:2861a043e016d821ba48d0fe63a800c10eecd8003386c5e11c4435aaa2222809",
+    "upstreamRunRef": "sha256:a4e1ff16350863b9889593302a6ff1800b6706de93db6e272a546d71dc4e5b00",
+    "status": "completed",
+    "fileAbsentBeforeApproval": true,
+    "fileCreatedAfterApproval": true,
+    "sequentialSensitiveCallsRequiredSeparateApproval": true
+  },
+  "deny": {
+    "runRef": "sha256:312083577d8ce4a0294e57230b877ac5563aa8da69d56aca641fdc994c9020f6",
+    "upstreamRunRef": "sha256:99100adc0e4a1dd3a90c6b590f3ad963c28fea3dc066bb3be1ea0453f6876531",
+    "status": "completed",
+    "output": "PI_APPROVAL_DENIED",
+    "fileCreatedAfterDenial": false
+  },
+  "stopWhileWaiting": {
+    "runRef": "sha256:f82f18618383830c511e578acadb109bc15fe922bffa3be5f66abe2adec1deb5",
+    "upstreamRunRef": "sha256:723b41fef9ec8e71ed8dd2c26008f5a096bb266a3c40e06df305ba8ca517621b",
+    "status": "cancelled",
+    "fileCreated": false,
+    "pendingApprovalExpiredInUi": true
+  },
+  "waitingTimeline": {
+    "eventSequenceAtFirstSample": 12,
+    "eventSequenceAfter12Seconds": 12,
+    "repeatedWorkerClaimEvents": false
+  },
+  "verification": {
+    "nodeTests": 23,
+    "vitestTests": 30,
+    "typecheck": true,
+    "productionBuild": true,
+    "runtimeCertification": "verified"
+  },
+  "persistentApprovalRevocation": {
+    "allowRunRef": "sha256:3f75fc4b8d97ab86f4ef51bf21cb0551e9a0f6e51084426bf29ab0d978f3a416",
+    "allowUpstreamRunRef": "sha256:25bba9584f577c1359eff574c14796eb18a3148b02bb92375964e82d7231423e",
+    "tool": "write",
+    "policyVisibleInSettings": true,
+    "revokedWithoutRuntimeRestart": true,
+    "policyAfterRevocation": [],
+    "auditLogAction": "revoke_pi_tool_approval",
+    "repromptRunRef": "sha256:3d5474adaecf3a274367885469c9e45ec6d2dc79c001d2b9d9454f816c760ddd",
+    "repromptUpstreamRunRef": "sha256:11baddbe9aa28ef8f07293ed245245ec40224819551b996974950c22b8e7388c",
+    "approvalPromptShownAgain": true,
+    "deniedAfterReprompt": true,
+    "fileCreatedAfterDenial": false
+  }
+}

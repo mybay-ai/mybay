@@ -2,9 +2,10 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const source = readFileSync(new URL("./AssistantInstanceGrid.tsx", import.meta.url), "utf8");
+const drawerSource = readFileSync(new URL("./AgentManagementDrawer.tsx", import.meta.url), "utf8");
 
 describe("AssistantInstanceGrid presentation", () => {
-  it("keeps the commercial-inspired work hierarchy without commercial-only management code", () => {
+  it("keeps the Agent card focused on primary work and opens a dedicated management surface", () => {
     expect(source).toContain("xl:grid-cols-3");
     expect(source).toContain("min-h-[236px]");
     expect(source).not.toContain("min-h-[292px]");
@@ -15,7 +16,20 @@ describe("AssistantInstanceGrid presentation", () => {
     expect(source).toContain("sm:grid-cols-[minmax(0,1fr)_auto_auto]");
     expect(source).toContain('openDetails(instance.id, "diagnostics")');
     expect(source).toContain("props.bulkMode &&");
-    expect(source).not.toContain("AssistantManagementSummary");
+    expect(source).toContain("AgentManagementDrawer");
+    expect(source).toContain("setManagedInstanceId(instance.id)");
     expect(source).not.toContain("owner_id");
+  });
+
+  it("keeps Agent management usable as a desktop drawer and a narrow-screen full-width surface", () => {
+    expect(drawerSource).toContain("h-dvh");
+    expect(drawerSource).toContain("w-full max-w-2xl");
+    expect(drawerSource).toContain("min-[360px]:grid-cols-2");
+    expect(drawerSource).toContain("env(safe-area-inset-bottom)");
+    expect(drawerSource).toContain("showModal()");
+    expect(drawerSource).toContain("returnFocusRef.current?.focus()");
+    expect(drawerSource).toContain('supportsRuntimeDashboard(runtimeType)');
+    expect(drawerSource).toContain('t("action_export_archive_short")');
+    expect(source).toContain("props.handleExportConfig(event, managedInstance.id, managedInstance.name)");
   });
 });

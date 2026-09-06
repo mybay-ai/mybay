@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { X, Info } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { X, Info, Upload, RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button, Label } from "./ui";
 import { useFeedback } from "./FeedbackProvider";
@@ -14,7 +14,9 @@ import { isDeployChannelAllowedByEntitlement } from "@/shared/planChannelAccess"
 import { skillPolicyRegistry } from "@/shared/skillPolicyRegistry";
 import { supportsRuntimeDashboard } from "../../shared/runtimeAccessPolicy";
 
-import { api } from "../lib/api";
+import { api, apiFetch } from "../lib/api";
+import { AgentAvatar } from "./agent/AgentAvatar";
+import { PiApprovalPolicySection } from "./PiApprovalPolicySection";
 
 export function InstanceSettingsModal({ instance: initialInstance, onClose, onSave, currentUser, advancedResourceConfigEnabled = false }: { instance: AgentInstance, onClose: () => void, onSave: () => void, currentUser: any, advancedResourceConfigEnabled?: boolean }) {
   const { t } = useTranslation("dashboard");
@@ -78,6 +80,9 @@ export function InstanceSettingsModal({ instance: initialInstance, onClose, onSa
   const [enableDashboard, setEnableDashboard] = useState(dashboardSupported && (instance.config?.enableDashboard ?? instance.configSummary?.enableDashboard ?? true));
   const [limitsCpu, setLimitsCpu] = useState(instance.config?.limitsCpu || instance.configSummary?.limitsCpu || "0.5");
   const [limitsMem, setLimitsMem] = useState(instance.config?.limitsMem || instance.configSummary?.limitsMem || "512MB");
+  const [agentAvatarUrl, setAgentAvatarUrl] = useState(instance.avatar_url || instance.configSummary?.avatarUrl || "");
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   // Update states when instance detail is loaded
   useEffect(() => {
@@ -97,6 +102,7 @@ export function InstanceSettingsModal({ instance: initialInstance, onClose, onSa
       setEnableDashboard(dashboardSupported && (instance.config?.enableDashboard ?? instance.configSummary?.enableDashboard ?? true));
       setLimitsCpu(instance.config?.limitsCpu || instance.configSummary?.limitsCpu || "0.5");
       setLimitsMem(instance.config?.limitsMem || instance.configSummary?.limitsMem || "512MB");
+      setAgentAvatarUrl(instance.avatar_url || instance.configSummary?.avatarUrl || "");
 
       const conf = providerRegistry[p];
       const models = conf ? conf.models || [] : [];
@@ -138,6 +144,47 @@ export function InstanceSettingsModal({ instance: initialInstance, onClose, onSa
       setSkills(instance.configSummary?.skills || instance.config?.skills || []);
     }
   }, [loadingDetail, instance.configSummary]);
+
+  const handleAgentAvatarUpload = async (file?: File) => {
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type)) {
+      showToast(t("settings_avatar_invalid_type"), "error");
+      return;
+    }
+    if (file.size > 1024 * 1024) {
+      showToast(t("settings_avatar_too_large"), "error");
+      return;
+    }
+
+    setAvatarUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("avatarFile", file);
+      const result = await apiFetch(`/api/instances/${instance.id}/avatar`, { method: "POST", body: formData });
+      setAgentAvatarUrl(result.avatar_url);
+      setInstance(current => ({ ...current, avatar_url: result.avatar_url }));
+      showToast(t("settings_avatar_upload_success"), "success");
+    } catch (error: any) {
+      showToast(error?.message || t("settings_avatar_upload_failed"), "error");
+    } finally {
+      setAvatarUploading(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
+    }
+  };
+
+  const resetAgentAvatar = async () => {
+    setAvatarUploading(true);
+    try {
+      await api.delete(`/api/instances/${instance.id}/avatar`);
+      setAgentAvatarUrl("");
+      setInstance(current => ({ ...current, avatar_url: null }));
+      showToast(t("settings_avatar_reset_success"), "success");
+    } catch (error: any) {
+      showToast(error?.message || t("settings_avatar_reset_failed"), "error");
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
 
   // Channel details
   const [telegramBotToken, setTelegramBotToken] = useState("");
@@ -439,6 +486,40 @@ export function InstanceSettingsModal({ instance: initialInstance, onClose, onSa
             {t("settings_restart_notice")}
           </div>
 
+          <div className="rounded-xl border border-slate-200/60 bg-surface p-5 shadow-2xs dark:border-slate-800">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+              <AgentAvatar
+                instance={{ ...instance, avatar_url: agentAvatarUrl }}
+                label={instance.name}
+                className="h-16 w-16 rounded-2xl"
+                defaultIconClassName="h-12 w-12"
+              />
+              <div className="min-w-0 flex-1">
+                <h4 className="text-sm font-semibold text-content">{t("settings_avatar_title")}</h4>
+                <p className="mt-1 text-xs leading-5 text-content-muted">{t("settings_avatar_description")}</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    className="sr-only"
+                    onChange={(event) => void handleAgentAvatarUpload(event.target.files?.[0])}
+                  />
+                  <Button type="button" variant="outline" disabled={avatarUploading} onClick={() => avatarInputRef.current?.click()}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    {avatarUploading ? t("settings_avatar_uploading") : t("settings_avatar_upload")}
+                  </Button>
+                  {agentAvatarUrl && (
+                    <Button type="button" variant="outline" disabled={avatarUploading} onClick={() => void resetAgentAvatar()}>
+                      <RotateCcw className="mr-2 h-4 w-4" />
+                      {t("settings_avatar_reset")}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
           <AppSettingsLLMSection
             password={password} setPassword={setPassword}
             provider={provider} setProvider={setProvider}
@@ -602,6 +683,8 @@ export function InstanceSettingsModal({ instance: initialInstance, onClose, onSa
               </div>
             </div>
           )}
+
+          {runtimeType === "pi" && <PiApprovalPolicySection instanceId={instance.id} />}
 
           {advancedResourceConfigEnabled && currentUser?.role === 'admin' && (
             <div className="p-5 bg-surface border border-slate-200/60 dark:border-slate-800 rounded-xl space-y-3.5 shadow-2xs">

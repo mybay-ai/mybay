@@ -7,12 +7,12 @@
   "required": ["schemaVersion", "runtime", "checks"],
   "properties": {
     "schemaVersion": {
-      "const": 1
+      "const": 2
     },
     "runtime": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["type", "providerKey", "contractVersion"],
+      "required": ["type", "providerKey", "contractVersion", "version", "imageRef"],
       "properties": {
         "type": {
           "type": "string",
@@ -25,6 +25,16 @@
         "contractVersion": {
           "type": "integer",
           "minimum": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "imageRef": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 512
         }
       }
     },

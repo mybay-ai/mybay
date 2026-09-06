@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { MANAGED_OPERATION_SYSTEM_POLICY } from "./managedOperationGuard";
+import {
+  MANAGED_OPERATION_SYSTEM_POLICY,
+  guardManagedOperation,
+  managedOperationSystemPolicy,
+} from "./managedOperationGuard";
 
 describe("managed operation system policy", () => {
   it("keeps MyBay A2A credentials platform-managed and routes calls by configured peer identity", () => {
@@ -11,5 +15,13 @@ describe("managed operation system policy", () => {
     expect(MANAGED_OPERATION_SYSTEM_POLICY).toContain("不要为了猜测未返回的任务 ID 或状态反复调用");
     expect(MANAGED_OPERATION_SYSTEM_POLICY).toContain("不要显示、比较、索取或要求用户手动编辑 Token");
     expect(MANAGED_OPERATION_SYSTEM_POLICY).toContain("不能据此判断 Token 已轮换或失效");
+  });
+
+  it("identifies Pi as Pi Runtime without inheriting Hermes identity wording", () => {
+    const policy = managedOperationSystemPolicy("pi");
+    expect(policy).toContain("你当前是 Pi Agent");
+    expect(policy).not.toContain("Hermes Agent");
+    expect(policy).toContain("Pi Agent 版本");
+    expect(guardManagedOperation("帮我升级 Agent 版本", "pi").message).toContain("Pi Agent 版本升级");
   });
 });

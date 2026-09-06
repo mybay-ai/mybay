@@ -2,6 +2,7 @@ import { dbAdapter } from "../../db";
 import { supportsFeishu } from "../../utils/hermesCapabilities";
 import { parseImageRef } from "./helpers";
 import { PI_RUNTIME_DEFINITION } from "../../../shared/runtimeCatalog";
+import { findRuntimeRelease } from "../../../shared/runtimeReleases";
 
 type RuntimeImageSelection = {
   agent_image: string;
@@ -25,13 +26,16 @@ export async function resolveCreateRuntimeImage(options: {
     const imageRef = process.env.MYBAY_PI_RUNTIME_IMAGE
       || `${PI_RUNTIME_DEFINITION.runtime.image}:${PI_RUNTIME_DEFINITION.runtime.tag}`;
     const { agent_image, agent_image_tag } = parseImageRef(imageRef);
+    const release = findRuntimeRelease("pi", agent_image_tag);
+    const runtimeVersion = release?.runtimeVersion
+      || (agent_image_tag === PI_RUNTIME_DEFINITION.runtime.tag ? PI_RUNTIME_DEFINITION.version : agent_image_tag);
     return {
       ok: true,
       selection: {
         agent_image,
         agent_image_tag,
-        agent_version: PI_RUNTIME_DEFINITION.version,
-        resolved_version: PI_RUNTIME_DEFINITION.version,
+        agent_version: runtimeVersion,
+        resolved_version: runtimeVersion,
         myBayVersions: [],
       },
     };

@@ -209,16 +209,6 @@ export function registerRunRoutes(router: Router) {
       return res.status(400).json({ success: false, error: "INVALID_REQUEST", message: "缺少 Request ID。" });
     }
 
-    const managedGuard = guardManagedOperation(content);
-    if (managedGuard.blocked) {
-      return res.status(422).json({
-        success: false,
-        error: managedGuard.code,
-        message: managedGuard.message,
-        reason: managedGuard.reason
-      });
-    }
-
     try {
       const authorityStartedAt = Date.now();
       const instanceAuthority = await resolveInstanceAuthority({ actor: authorityActorFromRequest(req), instanceId: id });
@@ -227,6 +217,15 @@ export function registerRunRoutes(router: Router) {
       if (conversationAuthority.ok === false) return sendAuthorityFailure(res, conversationAuthority, "对话会话不存在或无权访问。");
       acceptTiming.authorityMs = Date.now() - authorityStartedAt;
       const instance = instanceAuthority.instance;
+      const managedGuard = guardManagedOperation(content, instance.runtime_type);
+      if (managedGuard.blocked) {
+        return res.status(422).json({
+          success: false,
+          error: managedGuard.code,
+          message: managedGuard.message,
+          reason: managedGuard.reason
+        });
+      }
 
       let validatedFiles: any[] = [];
       const attachmentValidationStartedAt = Date.now();

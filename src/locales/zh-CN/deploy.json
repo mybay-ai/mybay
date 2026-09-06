@@ -272,9 +272,21 @@
     "quickDeploy":  {
                         "badge":  "本地快速部署",
                         "title":  "几分钟内启动你的 Agent",
-                        "description":  "使用经过验证的安全默认值部署 Hermes Agent，并可直接配置 Web、Telegram、飞书或个人微信消息渠道。",
+                        "description":  "选择 Hermes Agent 或 Pi Agent，使用经过验证的安全默认值快速创建本地 Agent。",
                         "advanced":  "切换到高级配置",
                         "deploy":  "立即部署 Agent",
+                        "deployPi":  "立即部署 Pi Agent",
+                        "runtime":  {
+                                        "title":  "选择 Agent Runtime",
+                                        "description":  "Hermes 提供完整渠道与工具能力；Pi 适合轻量 Web 对话和文件工作流。",
+                                        "loading":  "正在读取可部署的 Runtime…",
+                                        "loadError":  "无法读取 Runtime 目录，请刷新后重试。",
+                                        "hermesBadge":  "标准 / 全功能",
+                                        "piBadge":  "轻量 / Web 工作区",
+                                        "hermesDescription":  "支持 Dashboard、Web 与外部消息渠道、技能和完整工具链。",
+                                        "piDescription":  "基于官方 Pi RPC 的隔离运行时，支持 Web 流式对话、会话恢复和文件工作流。",
+                                        "unavailable":  "当前版本暂不可部署"
+                                    },
                         "instance":  {
                                          "title":  "Agent 信息",
                                          "description":  "为实例设置一个便于识别的名称和用途。",
@@ -298,17 +310,21 @@
                         "channel":  {
                                         "title":  "消息渠道",
                                         "description":  "选择 Agent 接收消息的入口。飞书和个人微信支持扫码绑定，Telegram 使用 Bot Token。",
+                                        "piDescription":  "Pi Runtime 当前通过 MyBay Web 工作区进行对话。",
                                         "configurationHint":  "完成扫码后凭证会自动填入；你也可以手动填写。外部渠道默认采用“稍后绑定”的安全访问策略。"
                                     },
                         "access":  {
                                        "title":  "Dashboard 访问保护",
                                        "description":  "该账号和密码用于首次访问 Agent Dashboard，请妥善保存。",
                                        "username":  "访问账号",
-                                       "password":  "访问密码"
+                                       "password":  "访问密码",
+                                       "piTitle":  "通过 MyBay 工作区访问",
+                                       "piDescription":  "Pi Runtime 不提供独立 Dashboard，无需设置访问账号和密码。部署后直接在 MyBay 对话与文件页面使用。"
                                    },
                         "review":  {
                                        "title":  "安全默认配置",
                                        "description":  "快速部署固定使用 Hermes Runtime、自动路径、受保护的 Dashboard 和安全的渠道访问策略。",
+                                       "piDescription":  "快速部署使用 Pi Runtime、自动路径和隔离的 Web 工作区，不会开放独立 Dashboard。",
                                        "runtime":  "Hermes Runtime",
                                        "resources":  "{{channel}} · 1 CPU · 1024 MB",
                                        "confirm":  "我已检查模型与访问配置，并同意使用以上权限创建本地 Agent。"
@@ -367,6 +383,7 @@
                                            "dashboardPasswordTooShort":  "Dashboard 密码至少需要 8 个字符。",
                                            "providerRequired":  "请选择模型提供商。",
                                            "providerUnavailable":  "所选模型提供商当前不可用。",
+                                           "runtimeProviderUnsupported":  "所选模型提供商不受当前 Runtime 支持，请更换提供商。",
                                            "modelRequired":  "请选择或填写模型。",
                                            "customBaseUrlRequired":  "自定义兼容模型必须填写 Base URL。",
                                            "savedCredentialRequired":  "请选择一个已保存的模型凭证。",

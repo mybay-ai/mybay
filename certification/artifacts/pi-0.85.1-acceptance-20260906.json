@@ -1,0 +1,161 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-09-06T08:20:00.000Z",
+  "runtime": {
+    "type": "pi",
+    "agentVersion": "0.85.1",
+    "bridgeVersion": "0.1.1-beta",
+    "image": "mybay/pi-runtime:0.85.1",
+    "imageDigest": "sha256:a9c1e2ebd77c8d1b7225b160dfa0aaeb9ad1473b99d2489627ad992a581186ec",
+    "instanceRef": "sha256:b3321a13f514d30169259e5b671fd8a6b9c16b7eecee3c3ed2f742810e22ba9b"
+  },
+  "observations": {
+    "runtimeInstall": {
+      "result": "passed",
+      "container": "mybay-agent-f50e8c70-5e0f-43c1-837f-4f830a15633e",
+      "runtimeState": "running",
+      "productPath": "MyBay Quick Deploy"
+    },
+    "warmPerformance": {
+      "result": "passed",
+      "mode": "agent-balanced",
+      "model": "deepseek-v4-flash",
+      "runIds": [
+        "111c429c-f8f3-41a8-8432-7940a748aa7b",
+        "5c952df3-9014-4f0e-91d3-e0bfa3bd5a38",
+        "1cc228a0-f185-4c55-ae1f-9e73e29a9ea9",
+        "a626c05a-719c-4d2d-98ed-bbbf895e7233",
+        "b55a28c3-41ae-403a-bb85-341b26b29ff7"
+      ],
+      "totalMs": [
+        6472,
+        9848,
+        3845,
+        3909,
+        4374
+      ],
+      "dispatchPreparationMs": [
+        610,
+        485,
+        422,
+        379,
+        398
+      ],
+      "firstVisibleTextMs": [
+        3481,
+        7847,
+        2261,
+        2291,
+        2711
+      ],
+      "terminalPersistMs": [
+        937,
+        466,
+        370,
+        407,
+        416
+      ],
+      "summary": {
+        "totalP50Ms": 4374,
+        "totalP95NearestRankMs": 9848,
+        "dispatchPreparationP50Ms": 422,
+        "firstVisibleTextP50Ms": 2711,
+        "terminalPersistP50Ms": 416
+      },
+      "browserResponses": [
+        "PI_WARM_SAMPLE_1_OK",
+        "PI_WARM_SAMPLE_2_OK",
+        "PI_WARM_SAMPLE_3_OK",
+        "PI_WARM_SAMPLE_4_OK",
+        "PI_WARM_SAMPLE_5_OK"
+      ]
+    },
+    "cancellation": {
+      "result": "passed",
+      "runRef": "sha256:718f2ea470b670d831268cd6717298d09f3838d1142d8a86303a2cc8cf812d62",
+      "terminalStatus": "cancelled",
+      "browserStatus": "stopped"
+    },
+    "fileWorkflow": {
+      "result": "passed",
+      "runRef": "sha256:7f5d6dcec3c2f5c7db70a9b8d90190f2ad285fbfe7d54b79fcc6533fa8bcae67",
+      "path": "outputs/pi-speed-regression.txt",
+      "contentMarker": "PI_FILE_AFTER_OPT_OK",
+      "fileChanges": {
+        "added": 1,
+        "modified": 0,
+        "deleted": 0
+      },
+      "browserActions": [
+        "preview",
+        "download",
+        "reload-restore"
+      ]
+    },
+    "restartRecovery": {
+      "result": "passed",
+      "containerRestarted": "mybay-agent-f50e8c70-5e0f-43c1-837f-4f830a15633e",
+      "followUpRunId": "32d2b964-995f-4698-84fb-491b5c49890e",
+      "expectedContextMarker": "PI_WARM_SAMPLE_5_OK",
+      "observedResponse": "PI_WARM_SAMPLE_5_OK",
+      "browserReloadedBeforeFollowUp": true
+    },
+    "security": {
+      "result": "passed",
+      "user": "node",
+      "readOnlyRootFilesystem": true,
+      "privileged": false,
+      "capabilitiesDropped": [
+        "ALL"
+      ],
+      "securityOptions": [
+        "no-new-privileges:true"
+      ],
+      "hostBinding": "127.0.0.1:10105",
+      "memoryBytes": 1073741824,
+      "nanoCpus": 1000000000,
+      "mountCount": 1
+    },
+    "upgrade": {
+      "result": "passed",
+      "productPath": "Agent version repository",
+      "instanceRef": "sha256:b3321a13f514d30169259e5b671fd8a6b9c16b7eecee3c3ed2f742810e22ba9b",
+      "fromVersion": "0.1.0-beta",
+      "toVersion": "0.85.1",
+      "terminalStatus": "completed",
+      "runtimeState": "running",
+      "observedAt": "2026-09-06T08:28:00.000Z"
+    },
+    "rollback": {
+      "result": "passed",
+      "productPath": "Agent version repository rollback action",
+      "instanceRef": "sha256:b3321a13f514d30169259e5b671fd8a6b9c16b7eecee3c3ed2f742810e22ba9b",
+      "fromVersion": "0.85.1",
+      "toVersion": "0.1.0-beta",
+      "terminalStatus": "rolled_back",
+      "runtimeState": "running",
+      "finalRestoredVersion": "0.85.1",
+      "finalRestoredState": "running",
+      "observedAt": "2026-09-06T08:32:00.000Z"
+    },
+    "backupRestore": {
+      "result": "passed",
+      "productPath": "Agent management export and backup import",
+      "sourceInstanceId": "f50e8c70-5e0f-43c1-837f-4f830a15633e",
+      "backupFile": "data/pi-0.85.1-backup-acceptance.zip",
+      "backupBytes": 2282,
+      "previewValid": true,
+      "restoredInstanceId": "c379fff6-3844-4fea-a106-233c40491aec",
+      "restoredRuntime": "pi",
+      "restoredVersion": "0.85.1",
+      "credentialRebound": true,
+      "restoredFile": "outputs/pi-speed-regression.txt",
+      "restoredFileMarker": "PI_FILE_AFTER_OPT_OK",
+      "verificationRunId": "37302f90-51a2-4347-90b7-eda169a14ad3",
+      "verificationRunStatus": "completed",
+      "verificationResponse": "PI_BACKUP_RESTORE_OK",
+      "observedAt": "2026-09-06T08:50:00.000Z"
+    }
+  },
+  "remainingCertifiedChecks": []
+}

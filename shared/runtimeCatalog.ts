@@ -239,7 +239,7 @@ export const PI_RUNTIME_DEFINITION = freezeRuntimeDefinition({
     conversation: { modes: ["streaming"] },
     cancellation: { supported: true, granularity: "run" },
     terminal: { observation: "events" },
-    interactions: { approvals: false, questions: false },
+    interactions: { approvals: true, questions: true },
   },
   resources: {
     minimumMemory: "512Mi",

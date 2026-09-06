@@ -56,6 +56,8 @@ export interface RuntimeRunPreparationController {
     options?: { bindImmediately?: boolean; allowTransientFallback?: boolean },
   ): Promise<RuntimeSessionBinding>;
   ensureSessionForConversation(run: RuntimeSessionTarget): Promise<RuntimeSessionBinding>;
+  /** Whether the control plane must replay persisted messages for this binding. */
+  shouldLoadManagedHistory?(sessionBinding: RuntimeSessionBinding): boolean;
   buildRunPayload(options: RuntimeRunPayloadOptions): Record<string, unknown>;
 }
 

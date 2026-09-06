@@ -1,15 +1,16 @@
-import { Globe, Send, Slack, Terminal, MessageSquareMore, Check, Wind } from "lucide-react";
+import { Check } from "lucide-react";
 import { channelRegistry } from "../../../shared/channelRegistry";
 import { useTranslation } from "react-i18next";
+import { ChannelBrandIcon } from "../../components/brand/ChannelBrandIcon";
 
 export const CHANNELS = [
-  { id: "web", icon: <Globe className="w-5 h-5 text-indigo-500" /> },
-  { id: "telegram", icon: <Send className="w-5 h-5 text-[#229ed9]" /> },
-  { id: "feishu", icon: <Wind className="w-5 h-5 text-[#3370ff]" /> },
-  { id: "weixin", icon: <MessageSquareMore className="w-5 h-5 text-[#07c160]" /> },
-  { id: "slack", icon: <Slack className="w-5 h-5 text-[#4a154b]" /> },
-  { id: "webhook", icon: <Terminal className="w-5 h-5 text-content-secondary" /> },
-  { id: "api", icon: <Terminal className="w-5 h-5 text-emerald-500" /> }
+  { id: "web" },
+  { id: "telegram" },
+  { id: "feishu" },
+  { id: "weixin" },
+  { id: "slack" },
+  { id: "webhook" },
+  { id: "api" }
 ];
 export const EXTERNAL_CHANNEL_IDS = new Set([
   "telegram",
@@ -67,7 +68,7 @@ export function ChannelSelector({ selectedId, onSelect, channelIds, compact = fa
               }`}
             >
               <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isSelected ? "bg-blue-105 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300" : "bg-surface-muted text-content-muted"}`}>
-                {c.icon}
+                <ChannelBrandIcon channelId={c.id} className="h-6 w-6" />
               </div>
               <div className="space-y-1 text-left min-w-0 flex-1">
                 <span className="text-[13px] font-bold text-content flex items-center justify-between gap-1">

@@ -20,6 +20,8 @@ import { filterComposerSuggestions, findComposerTrigger, replaceComposerTrigger,
 import { useChatComposerPeers } from "./useChatComposerPeers";
 import { ChatGroupRoomControl } from "./ChatGroupRoomControl";
 import type { ChatGroupConfig } from "../../../shared/chatCollaboration";
+import type { LocalRunUsage } from "../../../shared/localRunUsage";
+import { ConversationContextStatus } from "./ConversationContextStatus";
 export type PendingAttachment = {
   id: string;
   originalName: string;
@@ -52,6 +54,7 @@ type ChatInputBarProps = {
   runtimeType?: string;
   selectedInstanceName?: string;
   runMetrics?: ChatRunMetrics | null;
+  contextUsage?: LocalRunUsage | null;
   hasActiveConversation?: boolean;
   chatMode: "quick" | "assist" | "agent";
   onChatModeChange: (mode: "quick" | "agent") => void;
@@ -87,6 +90,7 @@ export function ChatInputBar({
   runtimeType,
   selectedInstanceName,
   runMetrics = null,
+  contextUsage = null,
   hasActiveConversation = true,
   chatMode,
   onChatModeChange,
@@ -438,7 +442,8 @@ export function ChatInputBar({
         {conversationUnavailable && <p role="status" className="mt-2 px-2 text-xs text-content-muted">{conversationUnavailableMessage}</p>}
         {messageTooLong && <p role="alert" className="mt-2 px-2 text-xs text-red-600 dark:text-red-400">{t("dashboard:chatWorkspace.messageTooLong", { max: MAX_CHAT_USER_MESSAGE_CHARS.toLocaleString() })}</p>}
         {agentModeBlocked && <p role="status" className="mt-2 px-2 text-xs text-amber-700 dark:text-amber-300">{agentUnavailableMessage}</p>}
-        <div className={`mt-1.5 items-center gap-3 px-2 text-[11px] text-content-muted ${mobileKeyboardOpen ? "hidden" : "hidden md:flex"}`}>
+        <div className={`mt-1.5 items-center justify-between gap-2 px-1 text-[11px] text-content-muted sm:px-2 ${mobileKeyboardOpen ? "hidden" : "flex"}`}>
+          <div className="hidden min-w-0 items-center gap-3 md:flex">
           <div
             className="inline-flex min-w-0 items-center gap-1.5"
             title={`${t("dashboard:chatWorkspace.inputStatusInstance")}: ${selectedInstanceName?.trim() || t("dashboard:chatWorkspace.inputStatusNoInstance")}`}
@@ -456,6 +461,17 @@ export function ChatInputBar({
               <span className="min-w-0 truncate font-medium text-content-secondary">
                 {formatDuration(runMetrics?.durationMs)} · {formatTokens(runMetrics?.usageTotalTokens)} tokens
               </span>
+            </div>
+          )}
+          </div>
+          {workspaceContext?.instanceId && (
+            <div className="ml-auto min-w-0 max-w-full">
+              <ConversationContextStatus
+                usage={contextUsage}
+                instanceId={workspaceContext.instanceId}
+                conversationId={workspaceContext.conversationId}
+                disabled={sending || !isChatReady || conversationUnavailable}
+              />
             </div>
           )}
         </div>

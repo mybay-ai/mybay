@@ -504,7 +504,8 @@ async function upgradeInstanceFlow(
     : writePhysicalConfigs(instanceId, config);
   const gatewayEnv: string[] = [
     "TZ=Asia/Shanghai",
-    "HERMES_HOME=/opt/data"
+    "MYBAY_AGENT_HOME=/opt/data",
+    isPiRuntimeInstance(instance) ? "PI_HOME=/opt/data" : "HERMES_HOME=/opt/data"
   ];
   Object.entries(envVars).forEach(([k, v]) => {
     gatewayEnv.push(`${k}=${v}`);

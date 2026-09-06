@@ -6,11 +6,15 @@ import { buildPiRuntimeEnvironment, resolvePiProvider } from "./PiRuntimeEnviron
 describe("Pi runtime environment", () => {
   it("maps control-plane providers to Pi provider ids without losing credentials", () => {
     expect(resolvePiProvider("openai-api")).toBe("openai");
-    expect(buildPiRuntimeEnvironment({
+    const env = buildPiRuntimeEnvironment({
       provider: "deepseek", model: "deepseek-chat", providerApiKey: "provider-secret", hermesApiKey: "bridge-secret", internal_web_port: 8080,
-    })).toMatchObject({
-      PI_PROVIDER: "deepseek", PI_MODEL: "deepseek-chat", DEEPSEEK_API_KEY: "provider-secret", PI_BRIDGE_API_KEY: "bridge-secret", PORT: "8080",
     });
+    expect(env).toMatchObject({
+      PI_PROVIDER: "deepseek", PI_MODEL: "deepseek-chat", DEEPSEEK_API_KEY: "provider-secret", PI_BRIDGE_API_KEY: "bridge-secret", PORT: "8080", PI_HOME: "/opt/data", MYBAY_AGENT_HOME: "/opt/data",
+    });
+    expect(env).not.toHaveProperty("HERMES_MODEL_PROVIDER");
+    expect(env).not.toHaveProperty("HERMES_MODEL");
+    expect(env).not.toHaveProperty("HERMES_API_KEY");
   });
 
   it("rejects providers outside the experimental compatibility set", () => {

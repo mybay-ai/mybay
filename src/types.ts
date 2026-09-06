@@ -20,6 +20,7 @@ export interface AgentInstance {
   name: string;
   path: string;
   runtime_type?: string;
+  avatar_url?: string | null;
   status: "deploying" | "initializing" | "running" | "partial_running" | "stopped" | "failed" | "restarting" | "container_starting" | "dashboard_ready" | "gateway_starting" | "gateway_syncing" | "gateway_ready" | "unhealthy" | "frontend_missing_build" | "deleting" | "archiving" | "archived" | "cleanup_failed";
   url: string;
   createdAt: string;
@@ -53,6 +54,7 @@ export interface AgentInstance {
     a2aEnabled?: boolean;
     a2aAgentName?: string | null;
     a2aPeerCount?: number;
+    avatarUrl?: string | null;
     telegramAllowedUsers?: string;
     discordAllowedGuilds?: string;
     feishuAppId?: string;

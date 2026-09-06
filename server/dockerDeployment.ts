@@ -1270,7 +1270,8 @@ agent.task_completion_guidance=true`
 
              const gatewayEnv: string[] = [
                "TZ=Asia/Shanghai",
-               "HERMES_HOME=/opt/data"
+               "MYBAY_AGENT_HOME=/opt/data",
+               isPiRuntime ? "PI_HOME=/opt/data" : "HERMES_HOME=/opt/data"
              ];
              Object.entries(envVars).forEach(([k, v]) => {
                gatewayEnv.push(`${k}=${v}`);

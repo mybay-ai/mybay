@@ -6,6 +6,7 @@ export interface QuickDeployDefaultsInput {
   password?: string;
   provider?: string;
   model?: string;
+  runtimeType?: "hermes" | "pi";
 }
 
 function compactSuffix(value: string) {
@@ -19,7 +20,7 @@ export function createQuickDeployDraft(input: QuickDeployDefaultsInput = {}): Qu
 
   return {
     schemaVersion: 1,
-    runtimeType: "hermes",
+    runtimeType: input.runtimeType || "hermes",
     entrypoint: "web",
     name: `mybay-agent-${suffix}`,
     purpose: "",

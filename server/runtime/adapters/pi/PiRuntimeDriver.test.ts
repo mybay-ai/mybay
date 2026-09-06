@@ -20,6 +20,8 @@ describe("PiRuntimeDriver experimental boundary", () => {
     }));
     await expect(controller.ensureSessionForConversation({ instance_id: "instance-1", conversation_id: "conversation-1" } as any))
       .resolves.toEqual({ sessionId: "pi-session-1234", state: "existing" });
+    expect(controller.shouldLoadManagedHistory?.({ sessionId: "pi-session-1234", state: "existing" })).toBe(false);
+    expect(controller.shouldLoadManagedHistory?.({ sessionId: "pi-session-1234", state: "created" })).toBe(true);
     expect(controller.buildRunPayload({
       userContent: "hello",
       reasoningEffort: "deep",

@@ -17,7 +17,7 @@ import { EventEmitter } from "events";
 
 
 import { buildAgentAttachmentContextForPrompt, loadAndValidateChatAttachments } from "../utils/chatAttachments";
-import { MANAGED_OPERATION_SYSTEM_POLICY } from "../utils/managedOperationGuard";
+import { MANAGED_OPERATION_SYSTEM_POLICY, managedOperationSystemPolicy } from "../utils/managedOperationGuard";
 import { createLocalRunUsage } from "../../shared/localRunUsage";
 
 
@@ -63,7 +63,7 @@ import {
 
 function managedRunSystemPolicy(run: any): string {
   return [
-    MANAGED_OPERATION_SYSTEM_POLICY,
+    managedOperationSystemPolicy(run?.runtime_type),
     a2aRecoveryTaskPolicy(run?.a2a_recovery_source),
     chatGroupSystemPolicy(run?.group_collaboration),
   ].filter(Boolean).join("\n\n");
@@ -126,15 +126,20 @@ const runReconcileScheduler = createRunReconcileScheduler({
       claimLimit,
     },
   }),
-  emitClaimed: (run) => emitRunLifecycleStep(
-    run.id,
-    "worker-claimed",
-    "Deployment worker claimed the Agent task",
-    "completed",
-    "model_reasoning",
-    RECONCILER_ID,
-    { runtime: "local" }
-  ),
+  emitClaimed: (run) => {
+    // Running tasks are reclaimed for status polling after each short lease.
+    // Only the initial queued claim belongs in the user-visible timeline.
+    if (run.status !== "queued") return;
+    emitRunLifecycleStep(
+      run.id,
+      "worker-claimed",
+      "Deployment worker claimed the Agent task",
+      "completed",
+      "model_reasoning",
+      RECONCILER_ID,
+      { runtime: "local" }
+    );
+  },
   processRun: (run, leaseLostRuns) => processSingleRun(run, leaseLostRuns),
   cleanupInactiveCaches: () => cleanupInactiveRunCaches(),
   clearStreams: () => runSseStreamController.clearAll(),
@@ -661,19 +666,36 @@ export async function processSingleRun(
         })
         : Promise.resolve();
 
-      // D. Build message context
-      const historyStartedAt = Date.now();
-      const history = await chatRepo.getLatestCompletedMessagesForContext(run.conversation_id);
-      dispatchTiming.historyMs = Date.now() - historyStartedAt;
-      const filteredHistory = filterCurrentRunMessageFromHistory(history, userMsg?.id, userMsg?.request_id);
-      const runtimeMessages = filteredHistory.map(h => ({
-        role: h.role,
-        content: h.content
-      }));
-      runtimeMessages.unshift({
-        role: "system",
-        content: managedRunSystemPolicy(run)
-      });
+      // D. Bind the native session before loading history. Runtimes such as Pi
+      // hydrate an existing native transcript themselves, so a warm turn can
+      // avoid a redundant database read and prompt reconstruction.
+      let sessionBinding: RuntimeSessionBinding;
+      const sessionStartedAt = Date.now();
+      try {
+        sessionBinding = await runPreparation.ensureSessionForConversation(run);
+      } catch (sessionErr: any) {
+        const errorCode = sessionErr?.message === "CONVERSATION_NOT_FOUND"
+          ? "CONVERSATION_NOT_FOUND"
+          : sanitizeErrorCode(sessionErr?.message || runExecution.sessionCreateFailureCode);
+        logOperation("RUNTIME_SESSION_BIND_FAILED", run.id, run.instance_id, sessionErr?.statusCode || 500, errorCode);
+        await completeRun(run.id, "failed", "", errorCode);
+        return;
+      } finally {
+        dispatchTiming.sessionMs = Date.now() - sessionStartedAt;
+      }
+      const runtimeSessionId = sessionBinding.sessionId;
+
+      let history: Array<{ id?: string; request_id?: string; role: string; content: string }> = [];
+      if (runPreparation.shouldLoadManagedHistory?.(sessionBinding) !== false) {
+        const historyStartedAt = Date.now();
+        history = await chatRepo.getLatestCompletedMessagesForContext(run.conversation_id);
+        dispatchTiming.historyMs = Date.now() - historyStartedAt;
+      } else {
+        dispatchTiming.historyMs = 0;
+      }
+      let filteredHistory = filterCurrentRunMessageFromHistory(history, userMsg?.id, userMsg?.request_id);
+      const runtimeMessages = filteredHistory.map(h => ({ role: h.role, content: h.content }));
+      runtimeMessages.unshift({ role: "system", content: managedRunSystemPolicy(run) });
       const attachmentIds = Array.isArray(userMsg.metadata?.attachmentIds) ? userMsg.metadata.attachmentIds : [];
       let agentAttachmentContext = "";
       if (attachmentIds.length > 0) {
@@ -701,22 +723,6 @@ export async function processSingleRun(
       });
 
       // E. Build the native Runtime dispatch body with the session bound to this conversation.
-      let sessionBinding: RuntimeSessionBinding;
-      const sessionStartedAt = Date.now();
-      try {
-        sessionBinding = await runPreparation.ensureSessionForConversation(run);
-      } catch (sessionErr: any) {
-        const errorCode = sessionErr?.message === "CONVERSATION_NOT_FOUND"
-          ? "CONVERSATION_NOT_FOUND"
-          : sanitizeErrorCode(sessionErr?.message || runExecution.sessionCreateFailureCode);
-        logOperation("RUNTIME_SESSION_BIND_FAILED", run.id, run.instance_id, sessionErr?.statusCode || 500, errorCode);
-        await completeRun(run.id, "failed", "", errorCode);
-        return;
-      } finally {
-        dispatchTiming.sessionMs = Date.now() - sessionStartedAt;
-      }
-      const runtimeSessionId = sessionBinding.sessionId;
-
       const payload = runPreparation.buildRunPayload({
         userContent: userMsg.content,
         systemPolicy: managedRunSystemPolicy(run),
@@ -835,6 +841,13 @@ export async function processSingleRun(
             convInfo?.title || "MyBay Agent Conversation",
             { bindImmediately: false }
           );
+
+          // A replacement native session has no transcript yet. Load managed
+          // history lazily only on this exceptional recovery path.
+          if (history.length === 0) {
+            history = await chatRepo.getLatestCompletedMessagesForContext(run.conversation_id);
+            filteredHistory = filterCurrentRunMessageFromHistory(history, userMsg?.id, userMsg?.request_id);
+          }
 
           const retryPayload = runPreparation.buildRunPayload({
             userContent: userMsg.content,

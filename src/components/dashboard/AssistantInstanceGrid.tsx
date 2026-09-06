@@ -1,5 +1,5 @@
 import React from "react";
-import { AlertTriangle, ArrowRight, Bot, FolderOpen, MessageSquare, RotateCcw, Settings2 } from "lucide-react";
+import { AlertTriangle, ArrowRight, FolderOpen, MessageSquare, RotateCcw, Settings2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { APP_ROUTES } from "../../constants/routes";
@@ -7,14 +7,18 @@ import { Button, cn } from "../ui";
 import { InstanceGrid } from "./InstanceGrid";
 import { getRefinedStatusLabel } from "./instanceStatus";
 import { getAssistantCardPresentation } from "./assistantCardPresentation";
+import { AgentManagementDrawer } from "./AgentManagementDrawer";
+import { AgentAvatar } from "../agent/AgentAvatar";
 
 type Props = React.ComponentProps<typeof InstanceGrid> & { bulkMode: boolean };
 
 export function AssistantInstanceGrid(props: Props) {
   const { t } = useTranslation("dashboard");
   const navigate = useNavigate();
+  const [managedInstanceId, setManagedInstanceId] = React.useState<string | null>(null);
+  const managedInstance = props.instances.find((instance) => instance.id === managedInstanceId) || null;
 
-  const openDetails = (instanceId: string, tab: "logs" | "diagnostics" = "logs") => {
+  const openDetails = (instanceId: string, tab: "logs" | "diagnostics" | "collaboration" = "logs") => {
     props.setActiveLogs(instanceId);
     props.setDetailTab(tab);
   };
@@ -55,27 +59,21 @@ export function AssistantInstanceGrid(props: Props) {
                     onChange={(event) => props.onSelectInstance(instance.id, event.target.checked)}
                   />
                 )}
-                <div className="shrink-0 rounded-xl bg-indigo-500/10 p-2.5 text-indigo-600 dark:text-indigo-300">
-                  <Bot className="h-5 w-5" />
-                </div>
-                <button
-                  type="button"
-                  className="min-w-0 flex-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/30"
-                  onClick={() => openDetails(instance.id)}
-                >
+                <AgentAvatar instance={instance} label={instance.name} />
+                <div className="min-w-0 flex-1">
                   <h3 className="line-clamp-2 break-words text-base font-semibold leading-6 text-content" title={instance.name}>
                     {instance.name}
                   </h3>
                   <p className="mt-0.5 line-clamp-2 break-words text-xs leading-5 text-content-muted" title={subtitle}>
                     {subtitle}
                   </p>
-                </button>
+                </div>
                 <button
                   type="button"
                   className="shrink-0 rounded-lg p-2 text-content-muted transition-colors hover:bg-surface-muted hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/30"
                   aria-label={t("agent_view_manage_named", { name: instance.name })}
                   title={t("action_manage")}
-                  onClick={() => openDetails(instance.id)}
+                  onClick={() => setManagedInstanceId(instance.id)}
                 >
                   <Settings2 className="h-4 w-4" />
                 </button>
@@ -132,6 +130,21 @@ export function AssistantInstanceGrid(props: Props) {
           );
         })}
       </div>
+      {managedInstance && (
+        <AgentManagementDrawer
+          instance={managedInstance}
+          pending={props.deletingIds.has(managedInstance.id)}
+          actioning={props.actioningIds.has(managedInstance.id)}
+          onClose={() => setManagedInstanceId(null)}
+          onChat={() => navigate(`${APP_ROUTES.CHAT_WORKSPACE}?instanceId=${encodeURIComponent(managedInstance.id)}`)}
+          onFiles={() => props.handleOpenTerminalView(managedInstance.id, "files")}
+          onSettings={() => props.setEditingInstance(managedInstance)}
+          onRename={props.onRenameInstance ? () => props.onRenameInstance?.(managedInstance) : undefined}
+          onOpenDetails={(tab) => openDetails(managedInstance.id, tab)}
+          onExport={(event) => props.handleExportConfig(event, managedInstance.id, managedInstance.name)}
+          onRedeploy={() => props.handleInstanceAction(managedInstance.id, "redeploy", true, t("confirm_redeploy"))}
+        />
+      )}
     </>
   );
 }

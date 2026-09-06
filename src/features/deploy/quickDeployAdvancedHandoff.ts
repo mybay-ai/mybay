@@ -1,28 +1,32 @@
 import type { SetupFormData } from "../../types";
 import type { QuickDeployDraft } from "./quickDeployTypes";
+import { getRuntimeDefinition } from "../../../shared/runtimeCatalog";
 
 export function buildQuickDeployAdvancedInitialData(
   draft: QuickDeployDraft,
   path: string,
 ): Partial<SetupFormData> {
+  const runtime = getRuntimeDefinition(draft.runtimeType);
+  const isPi = draft.runtimeType === "pi";
+  const channel = isPi ? "web" : draft.channel;
   const common: Partial<SetupFormData> = {
-    runtime_type: "hermes",
+    runtime_type: draft.runtimeType,
     name: draft.name.trim(),
     path,
-    username: draft.dashboardUsername.trim(),
-    password: draft.dashboardPassword,
-    image: "nousresearch/hermes-agent",
-    imageTag: "latest",
-    enableDashboard: true,
+    username: isPi ? "" : draft.dashboardUsername.trim(),
+    password: isPi ? "" : draft.dashboardPassword,
+    image: runtime.runtime.image,
+    imageTag: runtime.runtime.tag,
+    enableDashboard: !isPi,
     limitsCpu: "1",
     limitsMem: "1024MB",
     prompt: draft.purpose.trim(),
-    channel: draft.channel,
-    channelMode: draft.channel === "web" ? undefined : "production",
-    allowMode: draft.channel === "web" ? "disabled" : "bind_later",
+    channel,
+    channelMode: channel === "web" ? undefined : "production",
+    allowMode: channel === "web" ? "disabled" : "bind_later",
     gatewayAllowAllUsers: false,
     modelBillingMode: "byok",
-    skills: [...new Set(draft.selectedSkillIds || [])],
+    skills: isPi ? [] : [...new Set(draft.selectedSkillIds || [])],
     telegramBotToken: draft.telegramBotToken?.trim(),
     telegramAllowedUsers: draft.telegramAllowedUsers?.trim(),
     telegramAllowedChats: draft.telegramAllowedChats?.trim(),

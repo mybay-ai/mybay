@@ -1,0 +1,57 @@
+{
+  "schema": "mybay.runtime-context-compaction.acceptance.v1",
+  "observedAt": "2026-09-06T12:48:00.000Z",
+  "scope": "local-docker",
+  "controlPlane": {
+    "url": "http://localhost:3000",
+    "health": 200,
+    "version": "0.1.27"
+  },
+  "hermes": {
+    "instanceRef": "sha256:8439695264f8e6c69df1c2bbf3f419b18a6beb0106cae7023521a35b30916f0a",
+    "conversationRef": "sha256:716b745922cad8dedb95938c656de09b42a8151b5f504b8c8131cdbbfd30cc0d",
+    "sessionRef": "sha256:880be67150ff4f7a9b0f7100c6240c8fa739f0c05a8fe7f3a070f81b62f680de",
+    "manualCompaction": {
+      "httpStatus": 200,
+      "status": "completed",
+      "tokensBefore": 34959,
+      "estimatedTokensAfter": 28724,
+      "messagesBefore": 47,
+      "messagesAfter": 21
+    },
+    "continuity": {
+      "browserVerified": true,
+      "reply": "HERMES_COMPACTION_CONTINUITY_OK",
+      "reportedTokens": 13519
+    }
+  },
+  "pi": {
+    "instanceRef": "sha256:2370a902e42bfcf23481a1427cdce1e060503b7d72d168e5324d4ed80334eaa6",
+    "conversationRef": "sha256:eea3fd32d61b7d42aed5997235ce4333cfbcf77d5d02b2fdc5d83d32dc6ced1c",
+    "sessionRef": "sha256:2f9dc96dd6a75e196c8401358129b0af6727dee63d216114d334a60b49e670b9",
+    "imageDigest": "sha256:a21adfb7556f551c6dfccb5ebfd19e67c46ea6cf9ffb2e6d9d374f846d12f853",
+    "manualCompaction": {
+      "httpStatus": 409,
+      "status": "aborted",
+      "reason": "Nothing to compact (session too small)",
+      "truthfulNoOp": true
+    }
+  },
+  "verification": {
+    "piBridgeTests": {
+      "passed": 22,
+      "failed": 0
+    },
+    "targetedVitest": {
+      "passed": 9,
+      "failed": 0
+    },
+    "typecheck": "passed",
+    "productionBuild": "passed",
+    "auditLogRecorded": true
+  },
+  "boundaries": {
+    "automaticThresholdCompactionE2E": "not_forced_in_this_acceptance",
+    "piSuccessfulCompaction": "not_observed_because_the_selected_session_was_below_the_native_threshold"
+  }
+}

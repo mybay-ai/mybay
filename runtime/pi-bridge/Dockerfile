@@ -13,6 +13,8 @@ RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund \
      fi
 COPY server.mjs ./server.mjs
 COPY mybay-a2a-extension.mjs ./mybay-a2a-extension.mjs
+COPY mybay-question-extension.mjs ./mybay-question-extension.mjs
+COPY mybay-approval-extension.mjs ./mybay-approval-extension.mjs
 
 RUN mkdir -p /opt/data/workspace /opt/data/pi/sessions /opt/data/pi/runs \
   && chown -R node:node /app /opt/data

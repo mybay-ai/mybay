@@ -53,8 +53,8 @@ lifecycle:
   terminal:
     observation: events
   interactions:
-    approvals: false
-    questions: false
+    approvals: true
+    questions: true
 resources:
   minimumMemory: 512Mi
   recommendedMemory: 1Gi

@@ -6,6 +6,7 @@ import { api } from "../../lib/api";
 import type { RuntimeDefinition } from "../../../shared/runtimeCatalog";
 import { fetchRuntimeCatalog } from "./runtimeCatalogClient";
 import { supportsRuntimeDashboard } from "../../../shared/runtimeAccessPolicy";
+import { AgentRuntimeIcon } from "../../components/brand/AgentRuntimeIcon";
 
 interface InstanceInfoStepProps {
   data: any;
@@ -649,12 +650,15 @@ export function InstanceInfoStep({ data, update, updateTemplateInput, applyTempl
         <div className="space-y-2.5 border-b border-outline pb-4">
           <div className="flex items-center justify-between">
             <Label className="text-[13px] font-bold text-content-secondary uppercase tracking-wider flex items-center gap-1.5">
-              <Bot className="w-4 h-4 text-blue-600" />
+              <AgentRuntimeIcon runtimeType={data.runtime_type} className="h-5 w-5" />
               <span>{t("wizardCopy.instanceInfo.runtimeType")}</span>
             </Label>
             {runtimeCatalogState === "ready" && (
               <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 px-2.5 py-0.5 rounded-full border border-indigo-100 dark:border-indigo-800/60">
-                {runtimeDefinitions.find((runtime) => runtime.runtime.type === (data.runtime_type || "hermes"))?.displayName || t("wizardCopy.instanceInfo.runtimeUnavailable")}
+                <span className="inline-flex items-center gap-1.5">
+                  <AgentRuntimeIcon runtimeType={data.runtime_type} className="h-4 w-4" />
+                  {runtimeDefinitions.find((runtime) => runtime.runtime.type === (data.runtime_type || "hermes"))?.displayName || t("wizardCopy.instanceInfo.runtimeUnavailable")}
+                </span>
               </span>
             )}
           </div>
@@ -715,7 +719,7 @@ export function InstanceInfoStep({ data, update, updateTemplateInput, applyTempl
                     <div className="flex items-center justify-between mb-1.5">
                       <div className="flex items-center gap-2">
                         <div className={`p-1.5 rounded-lg ${isPi ? "bg-purple-100/80 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300" : "bg-blue-100/80 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300"}`}>
-                          {isPi ? <Zap className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+                          <AgentRuntimeIcon runtimeType={runtimeType} className="h-7 w-7" />
                         </div>
                         <div>
                           <span className="font-bold text-content text-[13px] block">{definition.displayName}</span>

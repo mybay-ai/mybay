@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ChatAgentAvatar, resolveAgentAvatarPresentation } from "./ChatAgentAvatar";
 import type { AgentInstance } from "../../types";
+import { resolveAgentAvatarRuntime } from "../agent/AgentAvatar";
 
 function instance(values: Partial<AgentInstance>): AgentInstance {
   return { id: "instance", name: "Agent", path: "/agent", status: "running", url: "http://localhost", createdAt: "2026-09-01", ...values };
@@ -13,11 +14,24 @@ describe("ChatAgentAvatar", () => {
     expect(presentation).toMatchObject({ runtime: "hermes", labelKey: "chatWorkspace.agentAvatarHermes", initials: "H" });
     expect(renderToStaticMarkup(<ChatAgentAvatar instance={instance({ runtime_type: "hermes" })} />))
       .toContain('data-agent-runtime="hermes"');
+    expect(renderToStaticMarkup(<ChatAgentAvatar instance={instance({ runtime_type: "hermes" })} />))
+      .toContain('/assets/agent-runtimes/hermes-agent.png');
   });
 
   it("falls back to the configured image and keeps other runtimes distinct", () => {
     expect(resolveAgentAvatarPresentation(instance({ agent_image: "nousresearch/hermes-agent" })).runtime).toBe("hermes");
+    expect(resolveAgentAvatarPresentation(instance({ runtime_type: "pi" }))).toMatchObject({ runtime: "pi", labelKey: "chatWorkspace.agentAvatarPi", initials: "PI" });
     expect(resolveAgentAvatarPresentation(instance({ runtime_type: "opencode" }))).toMatchObject({ runtime: "opencode", labelKey: "chatWorkspace.agentAvatarOpenCode", initials: "OC" });
     expect(resolveAgentAvatarPresentation(instance({ runtime_type: "custom-runtime" }))).toMatchObject({ runtime: "custom-runtime", labelKey: "chatWorkspace.agentAvatarCustom", runtimeLabel: "custom-runtime", initials: "CR" });
+    expect(resolveAgentAvatarRuntime(instance({ agent_image: "mybay/pi-runtime" }))).toBe("pi");
+  });
+
+  it("uses the uploaded instance avatar in conversation bubbles", () => {
+    const markup = renderToStaticMarkup(<ChatAgentAvatar instance={instance({
+      runtime_type: "pi",
+      avatar_url: "/api/instances/instance/avatar?v=1",
+    })} />);
+    expect(markup).toContain('data-agent-avatar="custom"');
+    expect(markup).toContain('src="/api/instances/instance/avatar?v=1"');
   });
 });

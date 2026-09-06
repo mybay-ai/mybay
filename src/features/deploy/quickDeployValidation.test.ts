@@ -15,6 +15,24 @@ describe("quick deployment validation", () => {
     expect(canSubmitQuickDeploy(validDraft())).toBe(true);
   });
 
+  it("accepts Pi Web without Dashboard credentials", () => {
+    const draft = validDraft();
+    draft.runtimeType = "pi";
+    draft.dashboardUsername = "";
+    draft.dashboardPassword = "";
+    expect(validateQuickDeployDraft(draft)).toEqual([]);
+  });
+
+  it("rejects providers and channels that Pi Runtime cannot execute", () => {
+    const draft = validDraft();
+    draft.runtimeType = "pi";
+    draft.channel = "telegram";
+    draft.modelStrategy = { mode: "saved_credential", credentialId: "oauth-openai", provider: "openai-codex", model: "gpt-5.5" };
+    const issues = validateQuickDeployDraft(draft);
+    expect(issues).toContainEqual(expect.objectContaining({ code: "unsupportedChannel", requiresAdvanced: true }));
+    expect(issues).toContainEqual(expect.objectContaining({ code: "runtimeProviderUnsupported" }));
+  });
+
   it("requires a BYOK secret only for providers that need one", () => {
     const draft = validDraft();
     draft.modelStrategy = { mode: "byok", provider: "deepseek", model: "deepseek-v4-flash" };

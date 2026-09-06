@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { AlertCircle, Copy, Eye, EyeOff, KeyRound, Loader2, Settings2, ShieldCheck, Sparkles, Zap } from "lucide-react";
+import { AlertCircle, CheckCircle2, Copy, Eye, EyeOff, KeyRound, Loader2, Settings2, ShieldCheck, Sparkles, Zap } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { providerRegistry } from "../../../shared/providerRegistry";
 import { resolveProviderRegistryKey } from "../../../shared/providerRegistryUtils";
-import { Button, Card, Input, Label } from "../../components/ui";
+import { Button, Card, Input, Label, cn } from "../../components/ui";
 import { ProviderSelect } from "../../components/ProviderSelect";
 import type { Credential, SetupFormData } from "../../types";
 import { api } from "../../lib/api";
@@ -17,6 +17,11 @@ import { validateQuickDeployDraft } from "./quickDeployValidation";
 import { requiresPredeployModelTest } from "./deployStepValidation";
 import { QuickDeployDelivery } from "./QuickDeployDelivery";
 import { useProviderOAuth } from "./useProviderOAuth";
+import { fetchRuntimeCatalog } from "./runtimeCatalogClient";
+import type { RuntimeDefinition } from "../../../shared/runtimeCatalog";
+import { PI_QUICK_DEPLOY_PROVIDER_IDS, supportsQuickDeployRuntimeProvider } from "../../../shared/runtimeModelProviderPolicy";
+import { AgentRuntimeIcon } from "../../components/brand/AgentRuntimeIcon";
+import { ChannelBrandIcon } from "../../components/brand/ChannelBrandIcon";
 
 interface QuickDeployPageProps {
   currentUser: any;
@@ -39,6 +44,8 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
   const [idempotencyKey] = useState(() => randomToken());
   const [credentials, setCredentials] = useState<Credential[]>([]);
   const [optionsLoading, setOptionsLoading] = useState(true);
+  const [runtimeDefinitions, setRuntimeDefinitions] = useState<RuntimeDefinition[]>([]);
+  const [runtimeCatalogState, setRuntimeCatalogState] = useState<"loading" | "ready" | "error">("loading");
   const [preflight, setPreflight] = useState<"loading" | "ready" | "blocked">("loading");
   const [preflightMessage, setPreflightMessage] = useState("");
   const [modelTest, setModelTest] = useState<"idle" | "testing" | "passed" | "failed">("idle");
@@ -51,6 +58,12 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
   const submitLock = useRef(false);
 
   const strategy = draft.modelStrategy;
+  const isPiRuntime = draft.runtimeType === "pi";
+  const compatibleCredentials = useMemo(() => credentials.filter((credential) => {
+    const provider = resolveProviderRegistryKey(credential.provider || credential.type, undefined, credential.baseUrl);
+    return supportsQuickDeployRuntimeProvider(draft.runtimeType, provider);
+  }), [credentials, draft.runtimeType]);
+  const selectedRuntime = runtimeDefinitions.find((definition) => definition.runtime.type === draft.runtimeType);
   const providerConfig = providerRegistry[strategy.provider];
   const isOAuthProvider = providerConfig?.authMode === "oauth-device-code";
   const modelNeedsTest = requiresPredeployModelTest(strategy.provider);
@@ -82,6 +95,45 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
 
   const updateChannelField = (key: string, value: unknown) => {
     setDraft((current) => ({ ...current, [key]: value, permissionConfirmed: false }));
+  };
+
+  const selectRuntime = (runtimeType: "hermes" | "pi") => {
+    const definition = runtimeDefinitions.find((candidate) => candidate.runtime.type === runtimeType);
+    if (!definition?.release.deploymentSupported) return;
+    setDraft((current) => {
+      let modelStrategy = current.modelStrategy;
+      if (!supportsQuickDeployRuntimeProvider(runtimeType, modelStrategy.provider)) {
+        const compatibleCredential = credentials.find((credential) => {
+          const provider = resolveProviderRegistryKey(credential.provider || credential.type, undefined, credential.baseUrl);
+          return supportsQuickDeployRuntimeProvider(runtimeType, provider);
+        });
+        if (compatibleCredential) {
+          const provider = resolveProviderRegistryKey(compatibleCredential.provider || compatibleCredential.type, undefined, compatibleCredential.baseUrl);
+          const config = providerRegistry[provider];
+          modelStrategy = {
+            mode: "saved_credential",
+            credentialId: compatibleCredential.id,
+            provider,
+            model: config?.defaultModel || "",
+            baseUrl: compatibleCredential.baseUrl || config?.defaultBaseUrl,
+            isCustomModel: compatibleCredential.isCustom,
+          };
+        } else {
+          const config = providerRegistry.deepseek;
+          modelStrategy = { mode: "byok", provider: config.id, model: config.defaultModel, baseUrl: config.defaultBaseUrl, apiKey: "" };
+        }
+      }
+      return {
+        ...current,
+        runtimeType,
+        channel: runtimeType === "pi" ? "web" : current.channel,
+        selectedSkillIds: runtimeType === "pi" ? [] : current.selectedSkillIds,
+        modelStrategy,
+        permissionConfirmed: false,
+      };
+    });
+    setModelTest("idle");
+    setModelTestMessage("");
   };
 
   const oauth = useProviderOAuth({
@@ -117,20 +169,32 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
         const nextCredentials = Array.isArray(credentialResult) ? credentialResult : [];
         setCredentials(nextCredentials);
         if (nextCredentials.length > 0) {
-          const selected = nextCredentials[0];
-          const provider = resolveProviderRegistryKey(selected.provider || selected.type, undefined, selected.baseUrl);
-          const config = providerRegistry[provider];
-          setDraft((current) => ({
-            ...current,
-            modelStrategy: {
-              mode: "saved_credential",
-              credentialId: selected.id,
-              provider,
-              model: config?.defaultModel || "",
-              baseUrl: selected.baseUrl || config?.defaultBaseUrl,
-              isCustomModel: selected.isCustom,
-            },
-          }));
+          setDraft((current) => {
+            const selected = nextCredentials.find((credential) => {
+              const provider = resolveProviderRegistryKey(credential.provider || credential.type, undefined, credential.baseUrl);
+              return supportsQuickDeployRuntimeProvider(current.runtimeType, provider);
+            });
+            if (!selected) {
+              const fallback = providerRegistry.deepseek;
+              return {
+                ...current,
+                modelStrategy: { mode: "byok", provider: fallback.id, model: fallback.defaultModel, baseUrl: fallback.defaultBaseUrl, apiKey: "" },
+              };
+            }
+            const provider = resolveProviderRegistryKey(selected.provider || selected.type, undefined, selected.baseUrl);
+            const config = providerRegistry[provider];
+            return {
+              ...current,
+              modelStrategy: {
+                mode: "saved_credential",
+                credentialId: selected.id,
+                provider,
+                model: config?.defaultModel || "",
+                baseUrl: selected.baseUrl || config?.defaultBaseUrl,
+                isCustomModel: selected.isCustom,
+              },
+            };
+          });
         } else {
           setDraft((current) => ({
             ...current,
@@ -152,6 +216,21 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
     void load();
     return () => { active = false; };
   }, [currentUser, t]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setRuntimeCatalogState("loading");
+    void fetchRuntimeCatalog(controller.signal)
+      .then((result) => {
+        setRuntimeDefinitions(result.runtimes.filter((runtime) => ["hermes", "pi"].includes(runtime.runtime.type)));
+        setRuntimeCatalogState("ready");
+      })
+      .catch((error) => {
+        if (error?.name === "AbortError") return;
+        setRuntimeCatalogState("error");
+      });
+    return () => controller.abort();
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -178,7 +257,7 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
   }, [currentUser, t]);
 
   const selectCredential = (credentialId: string) => {
-    const credential = credentials.find((item) => item.id === credentialId);
+    const credential = compatibleCredentials.find((item) => item.id === credentialId);
     if (!credential) return;
     const provider = resolveProviderRegistryKey(credential.provider || credential.type, undefined, credential.baseUrl);
     const config = providerRegistry[provider];
@@ -198,8 +277,8 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
   };
 
   const selectMode = (mode: "saved_credential" | "byok") => {
-    if (mode === "saved_credential" && credentials.length > 0) {
-      selectCredential(credentials[0].id);
+    if (mode === "saved_credential" && compatibleCredentials.length > 0) {
+      selectCredential(compatibleCredentials[0].id);
       return;
     }
     const provider = strategy.provider || "deepseek";
@@ -289,6 +368,59 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
         </Button>
       </div>
 
+      <Card className="mb-6 space-y-4 p-5 sm:p-6">
+        <div>
+          <h2 className="font-bold text-content">{t("quickDeploy.runtime.title")}</h2>
+          <p className="mt-1 text-xs leading-5 text-content-muted">{t("quickDeploy.runtime.description")}</p>
+        </div>
+        {runtimeCatalogState === "loading" && (
+          <div className="flex items-center gap-2 rounded-xl border border-outline bg-surface-muted p-4 text-sm text-content-muted">
+            <Loader2 className="h-4 w-4 animate-spin" />{t("quickDeploy.runtime.loading")}
+          </div>
+        )}
+        {runtimeCatalogState === "error" && (
+          <div role="alert" className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />{t("quickDeploy.runtime.loadError")}
+          </div>
+        )}
+        {runtimeCatalogState === "ready" && (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {runtimeDefinitions.map((definition) => {
+              const runtimeType = definition.runtime.type as "hermes" | "pi";
+              const selected = draft.runtimeType === runtimeType;
+              const deployable = definition.release.deploymentSupported;
+              return (
+                <button
+                  key={runtimeType}
+                  type="button"
+                  disabled={!deployable}
+                  aria-pressed={selected}
+                  onClick={() => selectRuntime(runtimeType)}
+                  className={cn(
+                    "relative rounded-2xl border p-4 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40",
+                    selected ? "border-indigo-500 bg-indigo-50/60 ring-2 ring-indigo-500/15 dark:bg-indigo-950/30" : "border-outline bg-surface hover:border-outline-strong hover:bg-surface-muted/40",
+                    !deployable && "cursor-not-allowed opacity-55",
+                  )}
+                >
+                  <div className="flex items-start gap-3">
+                    <span className={cn("rounded-xl p-2.5", runtimeType === "pi" ? "bg-violet-500/10 text-violet-600 dark:text-violet-300" : "bg-blue-500/10 text-blue-600 dark:text-blue-300")}>
+                      <AgentRuntimeIcon runtimeType={runtimeType} className="h-7 w-7" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-semibold text-content">{definition.displayName}</span>
+                      <span className="mt-0.5 block text-xs font-medium text-content-muted">{t(`quickDeploy.runtime.${runtimeType}Badge`)}</span>
+                    </span>
+                    {selected && <CheckCircle2 className="h-5 w-5 shrink-0 text-indigo-600 dark:text-indigo-300" />}
+                  </div>
+                  <span className="mt-3 block text-xs leading-5 text-content-muted">{t(`quickDeploy.runtime.${runtimeType}Description`)}</span>
+                  {!deployable && <span className="mt-2 block text-xs font-semibold text-amber-700 dark:text-amber-300">{t("quickDeploy.runtime.unavailable")}</span>}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+
       <div className="grid gap-6 lg:grid-cols-[1fr_0.9fr]">
         <div className="space-y-6">
           <Card className="space-y-5 p-6">
@@ -300,15 +432,15 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
           <Card className="space-y-5 p-6">
             <div><h2 className="font-bold text-content">{t("quickDeploy.model.title")}</h2><p className="mt-1 text-xs text-content-muted">{t("quickDeploy.model.description")}</p></div>
             <div className="grid grid-cols-2 gap-2">
-              <Button type="button" variant={strategy.mode === "saved_credential" ? "primary" : "outline"} disabled={credentials.length === 0} onClick={() => selectMode("saved_credential")}><KeyRound className="mr-2 h-4 w-4" />{t("quickDeploy.model.saved")}</Button>
+              <Button type="button" variant={strategy.mode === "saved_credential" ? "primary" : "outline"} disabled={compatibleCredentials.length === 0} onClick={() => selectMode("saved_credential")}><KeyRound className="mr-2 h-4 w-4" />{t("quickDeploy.model.saved")}</Button>
               <Button type="button" variant={strategy.mode === "byok" ? "primary" : "outline"} onClick={() => selectMode("byok")}><Zap className="mr-2 h-4 w-4" />{t("quickDeploy.model.byok")}</Button>
             </div>
             {strategy.mode === "saved_credential" ? (
-              <div><Label>{t("quickDeploy.model.credential")}</Label><select value={strategy.credentialId} onChange={(event) => selectCredential(event.target.value)} className="mt-2 h-11 w-full rounded-lg border border-outline bg-control px-3 text-sm text-content">{credentials.map((credential) => <option key={credential.id} value={credential.id}>{credential.name} ({credential.type})</option>)}</select></div>
+              <div><Label>{t("quickDeploy.model.credential")}</Label><select value={strategy.credentialId} onChange={(event) => selectCredential(event.target.value)} className="mt-2 h-11 w-full rounded-lg border border-outline bg-control px-3 text-sm text-content">{compatibleCredentials.map((credential) => <option key={credential.id} value={credential.id}>{credential.name} ({credential.type})</option>)}</select></div>
             ) : !isOAuthProvider ? (
               <div><Label>{t("quickDeploy.model.apiKey")}</Label><Input type="password" autoComplete="new-password" value={strategy.apiKey || ""} onChange={(event) => updateStrategy({ apiKey: event.target.value })} /></div>
             ) : null}
-            <div><Label>{t("quickDeploy.model.provider")}</Label><ProviderSelect className="mt-2" value={strategy.provider} onValueChange={selectProvider} includeOAuth disabled={strategy.mode === "saved_credential" || oauth.loading} /></div>
+            <div><Label>{t("quickDeploy.model.provider")}</Label><ProviderSelect className="mt-2" value={strategy.provider} onValueChange={selectProvider} includeOAuth={!isPiRuntime} allowedProviderIds={isPiRuntime ? PI_QUICK_DEPLOY_PROVIDER_IDS : undefined} disabled={strategy.mode === "saved_credential" || oauth.loading} /></div>
             {isOAuthProvider && (
               <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-4 text-sm text-blue-900 dark:border-blue-400/30 dark:bg-blue-400/10 dark:text-blue-100">
                 <div className="flex items-start gap-3">
@@ -336,11 +468,11 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
           </Card>
 
           <Card className="space-y-5 p-6">
-            <div><h2 className="font-bold text-content">{t("quickDeploy.channel.title")}</h2><p className="mt-1 text-xs leading-5 text-content-muted">{t("quickDeploy.channel.description")}</p></div>
+            <div><h2 className="font-bold text-content">{t("quickDeploy.channel.title")}</h2><p className="mt-1 text-xs leading-5 text-content-muted">{t(isPiRuntime ? "quickDeploy.channel.piDescription" : "quickDeploy.channel.description")}</p></div>
             <ChannelSelector
               selectedId={draft.channel}
               onSelect={selectChannel}
-              channelIds={["web", "telegram", "feishu", "weixin"]}
+              channelIds={isPiRuntime ? ["web"] : ["web", "telegram", "feishu", "weixin"]}
               compact
             />
             {draft.channel !== "web" && (
@@ -354,20 +486,39 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
 
         <div className="space-y-6">
           <Card className="space-y-5 p-6">
-            <div><h2 className="font-bold text-content">{t("quickDeploy.access.title")}</h2><p className="mt-1 text-xs text-content-muted">{t("quickDeploy.access.description")}</p></div>
-            <div><Label>{t("quickDeploy.access.username")}</Label><Input value={draft.dashboardUsername} onChange={(event) => updateDraft({ dashboardUsername: event.target.value, permissionConfirmed: false })} /></div>
-            <div><Label>{t("quickDeploy.access.password")}</Label><div className="relative"><Input type={showPassword ? "text" : "password"} value={draft.dashboardPassword} onChange={(event) => updateDraft({ dashboardPassword: event.target.value, permissionConfirmed: false })} className="pr-20" /><button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute right-10 top-1/2 mt-0.5 -translate-y-1/2 text-content-muted">{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button><button type="button" onClick={() => navigator.clipboard.writeText(draft.dashboardPassword)} className="absolute right-3 top-1/2 mt-0.5 -translate-y-1/2 text-content-muted"><Copy className="h-4 w-4" /></button></div></div>
+            {isPiRuntime ? (
+              <div className="flex items-start gap-3 rounded-xl border border-violet-200 bg-violet-50/70 p-4 text-violet-900 dark:border-violet-500/30 dark:bg-violet-950/30 dark:text-violet-100">
+                <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" />
+                <div><h2 className="font-bold">{t("quickDeploy.access.piTitle")}</h2><p className="mt-1 text-xs leading-5 opacity-80">{t("quickDeploy.access.piDescription")}</p></div>
+              </div>
+            ) : (
+              <>
+                <div><h2 className="font-bold text-content">{t("quickDeploy.access.title")}</h2><p className="mt-1 text-xs text-content-muted">{t("quickDeploy.access.description")}</p></div>
+                <div><Label>{t("quickDeploy.access.username")}</Label><Input value={draft.dashboardUsername} onChange={(event) => updateDraft({ dashboardUsername: event.target.value, permissionConfirmed: false })} /></div>
+                <div><Label>{t("quickDeploy.access.password")}</Label><div className="relative"><Input type={showPassword ? "text" : "password"} value={draft.dashboardPassword} onChange={(event) => updateDraft({ dashboardPassword: event.target.value, permissionConfirmed: false })} className="pr-20" /><button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute right-10 top-1/2 mt-0.5 -translate-y-1/2 text-content-muted">{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button><button type="button" onClick={() => navigator.clipboard.writeText(draft.dashboardPassword)} className="absolute right-3 top-1/2 mt-0.5 -translate-y-1/2 text-content-muted"><Copy className="h-4 w-4" /></button></div></div>
+              </>
+            )}
           </Card>
 
           <Card className="space-y-4 p-6">
-            <div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" /><div><h2 className="font-bold text-content">{t("quickDeploy.review.title")}</h2><p className="mt-1 text-xs leading-5 text-content-muted">{t("quickDeploy.review.description")}</p></div></div>
-            <div className="rounded-xl bg-surface-muted p-4 text-sm text-content-secondary"><p>{t("quickDeploy.review.runtime")}</p><p>{t("quickDeploy.review.resources", { channel: t(`wizardCopy.channelSelector.channels.${draft.channel}.name`) })}</p><p>{strategy.provider} · {strategy.model}</p></div>
+            <div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" /><div><h2 className="font-bold text-content">{t("quickDeploy.review.title")}</h2><p className="mt-1 text-xs leading-5 text-content-muted">{t(isPiRuntime ? "quickDeploy.review.piDescription" : "quickDeploy.review.description")}</p></div></div>
+            <div className="space-y-2 rounded-xl bg-surface-muted p-4 text-sm text-content-secondary">
+              <p className="flex items-center gap-2 font-semibold text-content">
+                <AgentRuntimeIcon runtimeType={draft.runtimeType} className="h-6 w-6" />
+                <span>{selectedRuntime?.displayName || draft.runtimeType}</span>
+              </p>
+              <p className="flex items-center gap-2">
+                <ChannelBrandIcon channelId={draft.channel} className="h-5 w-5" />
+                <span>{t("quickDeploy.review.resources", { channel: t(`wizardCopy.channelSelector.channels.${draft.channel}.name`) })}</span>
+              </p>
+              <p>{strategy.provider} · {strategy.model}</p>
+            </div>
             <label className="flex cursor-pointer items-start gap-3 text-sm text-content-secondary"><input type="checkbox" checked={draft.permissionConfirmed} onChange={(event) => updateDraft({ permissionConfirmed: event.target.checked })} className="mt-1 h-4 w-4 rounded border-outline" /><span>{t("quickDeploy.review.confirm")}</span></label>
             {preflight === "blocked" && <div className="flex gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/30 dark:text-red-300"><AlertCircle className="h-4 w-4 shrink-0" /><span>{t("quickDeploy.errors.preflightBlocked", { details: preflightMessage })}</span></div>}
             {submitted && !modelReady && <p className="text-sm text-danger">{t("quickDeploy.validation.modelTestRequired")}</p>}
             {visibleIssues.map((issue) => <p key={`${issue.code}-${issue.field}`} className="text-sm text-danger">{issueText(issue)}</p>)}
             {submitError && <p className="text-sm text-danger">{submitError}</p>}
-            <Button type="submit" className="w-full" disabled={submitting || optionsLoading || preflight === "loading"}>{submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}{t("quickDeploy.deploy")}</Button>
+            <Button type="submit" className="w-full" disabled={submitting || optionsLoading || preflight === "loading" || runtimeCatalogState !== "ready" || !selectedRuntime?.release.deploymentSupported}>{submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}{t(isPiRuntime ? "quickDeploy.deployPi" : "quickDeploy.deploy")}</Button>
           </Card>
         </div>
       </div>

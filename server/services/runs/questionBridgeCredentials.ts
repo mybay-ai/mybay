@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { createHash, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { QUESTION_ID } from "../../../shared/localRunQuestions";
 import { getLocalDatabasePath } from "../../localStore";
 
@@ -10,6 +10,18 @@ export function bridgeCredentialPath(instanceId: string) {
 }
 export function questionBridgeEnabled(instanceId: string): boolean {
   try { return readCredential(instanceId)?.enabled === true; } catch { return false; }
+}
+export function issueQuestionBridgeCredential(instanceId: string): string {
+  const file = bridgeCredentialPath(instanceId);
+  const token = randomBytes(32).toString("hex");
+  fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
+  const temporary = `${file}.${process.pid}.${Date.now()}.tmp`;
+  fs.writeFileSync(temporary, JSON.stringify({
+    enabled: true,
+    tokenHash: createHash("sha256").update(token).digest("hex"),
+  }), { mode: 0o600, flag: "wx" });
+  fs.renameSync(temporary, file);
+  return token;
 }
 function readCredential(instanceId: string): { tokenHash: string; enabled: boolean } {
   const file = bridgeCredentialPath(instanceId);

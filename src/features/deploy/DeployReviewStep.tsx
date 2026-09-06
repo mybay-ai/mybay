@@ -4,6 +4,8 @@ import { Button, Card } from "../../components/ui";
 import { useNavigate } from "react-router-dom";
 import { InstanceReadinessNotice } from "../../components/instance-runtime/InstanceReadinessNotice";
 import type { AgentInstance } from "../../types";
+import { AgentRuntimeIcon } from "../../components/brand/AgentRuntimeIcon";
+import { ChannelBrandIcon } from "../../components/brand/ChannelBrandIcon";
 
 interface DeployReviewStepProps {
   step: number;
@@ -488,6 +490,18 @@ export function DeployReviewStep({ step, data, createdInstance, testResults, onS
           <div className="p-4 border border-outline bg-surface rounded-xl shadow-sm flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <div className="p-1 px-1.5 rounded-lg bg-surface-muted text-content-secondary shrink-0">
+                <AgentRuntimeIcon runtimeType={data.runtime_type} className="h-5 w-5" />
+              </div>
+              <span className="text-content-muted font-sans font-medium">{t("wizardCopy.instanceInfo.runtimeType")}</span>
+            </div>
+            <span className="font-bold text-content-secondary">
+              {isPiRuntime ? "Pi Agent" : "Hermes Agent"}
+            </span>
+          </div>
+
+          <div className="p-4 border border-outline bg-surface rounded-xl shadow-sm flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <div className="p-1 px-1.5 rounded-lg bg-surface-muted text-content-secondary shrink-0">
                 <Globe className="w-4 h-4" />
               </div>
               <span className="text-content-muted font-sans font-medium">{t("wizardCopy.review.route")}</span>
@@ -522,12 +536,14 @@ export function DeployReviewStep({ step, data, createdInstance, testResults, onS
           <div className="p-4 border border-outline bg-surface rounded-xl shadow-sm flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <div className="p-1 px-1.5 rounded-lg bg-surface-muted text-content-secondary shrink-0">
-                <Terminal className="w-4 h-4" />
+                <ChannelBrandIcon channelId={data.channel} className="h-5 w-5" />
               </div>
               <span className="text-content-muted font-sans font-medium">{t("wizardCopy.review.channel")}</span>
             </div>
             <span className="font-bold text-purple-600">
-              {data.channel === "none" ? t("wizardCopy.review.localOnly") : `${data.channel?.toUpperCase()} (${data.channelMode || 'testing'})`}
+              {data.channel === "none"
+                ? t("wizardCopy.review.localOnly")
+                : `${t(`wizardCopy.channelSelector.channels.${data.channel}.name`)} (${data.channelMode || "testing"})`}
             </span>
           </div>
         </div>

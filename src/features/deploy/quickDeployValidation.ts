@@ -1,6 +1,7 @@
 import { providerRegistry } from "../../../shared/providerRegistry";
 import { skillPolicyRegistry } from "../../../shared/skillPolicyRegistry";
 import type { QuickDeployDraft, QuickDeployValidationIssue } from "./quickDeployTypes";
+import { supportsQuickDeployRuntimeProvider } from "../../../shared/runtimeModelProviderPolicy";
 
 export function validateQuickDeployDraft(draft: QuickDeployDraft): QuickDeployValidationIssue[] {
   const issues: QuickDeployValidationIssue[] = [];
@@ -8,14 +9,15 @@ export function validateQuickDeployDraft(draft: QuickDeployDraft): QuickDeployVa
   const entrypoint = String(draft.entrypoint || "");
 
   if (draft.schemaVersion !== 1) issues.push({ code: "unsupportedSchemaVersion", field: "schemaVersion", requiresAdvanced: true });
-  if (runtimeType !== "hermes") issues.push({ code: "unsupportedRuntime", field: "runtimeType", requiresAdvanced: true });
+  if (!["hermes", "pi"].includes(runtimeType)) issues.push({ code: "unsupportedRuntime", field: "runtimeType", requiresAdvanced: true });
   if (entrypoint !== "web") issues.push({ code: "unsupportedEntrypoint", field: "entrypoint", requiresAdvanced: true });
   if (!["web", "telegram", "feishu", "weixin"].includes(String(draft.channel || ""))) {
     issues.push({ code: "unsupportedChannel", field: "channel", requiresAdvanced: true });
   }
   if (!draft.name?.trim()) issues.push({ code: "nameRequired", field: "name" });
-  if (!draft.dashboardUsername?.trim()) issues.push({ code: "dashboardUsernameRequired", field: "dashboardUsername" });
-  if ((draft.dashboardPassword || "").length < 8) issues.push({ code: "dashboardPasswordTooShort", field: "dashboardPassword" });
+  if (runtimeType === "hermes" && !draft.dashboardUsername?.trim()) issues.push({ code: "dashboardUsernameRequired", field: "dashboardUsername" });
+  if (runtimeType === "hermes" && (draft.dashboardPassword || "").length < 8) issues.push({ code: "dashboardPasswordTooShort", field: "dashboardPassword" });
+  if (runtimeType === "pi" && draft.channel !== "web") issues.push({ code: "unsupportedChannel", field: "channel", requiresAdvanced: true });
 
   const strategy = draft.modelStrategy;
   const provider = strategy?.provider?.trim();
@@ -23,6 +25,7 @@ export function validateQuickDeployDraft(draft: QuickDeployDraft): QuickDeployVa
   const config = provider ? providerRegistry[provider] : undefined;
   if (!provider) issues.push({ code: "providerRequired", field: "modelStrategy.provider" });
   else if (!config?.enabled) issues.push({ code: "providerUnavailable", field: "modelStrategy.provider" });
+  else if (!supportsQuickDeployRuntimeProvider(runtimeType, provider)) issues.push({ code: "runtimeProviderUnsupported", field: "modelStrategy.provider" });
   if (!model) issues.push({ code: "modelRequired", field: "modelStrategy.model" });
   if (provider === "custom-openai-compatible" && !strategy?.baseUrl?.trim()) {
     issues.push({ code: "customBaseUrlRequired", field: "modelStrategy.baseUrl" });
@@ -36,13 +39,13 @@ export function validateQuickDeployDraft(draft: QuickDeployDraft): QuickDeployVa
   if (strategy?.mode === "byok" && config?.requiresApiKey && !strategy.apiKey?.trim()) {
     issues.push({ code: "apiKeyRequired", field: "modelStrategy.apiKey" });
   }
-  if (draft.channel === "telegram" && !draft.telegramBotToken?.trim()) {
+  if (runtimeType === "hermes" && draft.channel === "telegram" && !draft.telegramBotToken?.trim()) {
     issues.push({ code: "telegramBotTokenRequired", field: "telegramBotToken" });
   }
-  if (draft.channel === "feishu" && (!draft.feishuAppId?.trim() || !draft.feishuAppSecret?.trim())) {
+  if (runtimeType === "hermes" && draft.channel === "feishu" && (!draft.feishuAppId?.trim() || !draft.feishuAppSecret?.trim())) {
     issues.push({ code: "feishuCredentialsRequired", field: "feishuAppId" });
   }
-  if (draft.channel === "weixin" && (!draft.weixinAccountId?.trim() || !draft.weixinToken?.trim())) {
+  if (runtimeType === "hermes" && draft.channel === "weixin" && (!draft.weixinAccountId?.trim() || !draft.weixinToken?.trim())) {
     issues.push({ code: "weixinCredentialsRequired", field: "weixinAccountId" });
   }
   if (!draft.permissionConfirmed) {
@@ -50,6 +53,7 @@ export function validateQuickDeployDraft(draft: QuickDeployDraft): QuickDeployVa
   }
 
   const advancedSkillIds = [...new Set(draft.selectedSkillIds || [])].filter((skillId) => {
+    if (runtimeType === "pi") return true;
     const policy = skillPolicyRegistry[skillId];
     return !policy
       || policy.runtimeStatus !== "available"

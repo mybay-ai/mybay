@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "verifiedAt": "2026-09-06T11:33:17.770Z",
+  "instanceRef": "sha256:2370a902e42bfcf23481a1427cdce1e060503b7d72d168e5324d4ed80334eaa6",
+  "runtime": "pi",
+  "runtimeVersion": "0.85.1",
+  "runtimeImageId": "sha256:dce186b31fe9491d0316fac1806e2b01c4308a2472334d9d8750234012d3e649",
+  "browserVerified": true,
+  "optimization": "inject unchanged system instructions only once per warm Pi process",
+  "baseline": {
+    "firstRunRef": "sha256:12aad73c1dac4b144be5227097328621ea69d8cdf5fdd040f266a8f24ed63258",
+    "firstTotalTokens": 7138,
+    "firstRuntimeDurationMs": 3286,
+    "secondRunRef": "sha256:d2f269f0057d03c56060ea2a1ddcf7356a10255ea6a032206785c41557dde163",
+    "secondTotalTokens": 8091,
+    "secondRuntimeDurationMs": 2405,
+    "secondTurnTokenGrowth": 953
+  },
+  "optimized": {
+    "firstRunRef": "sha256:dd0d144af06def65a0a5d4bf542e1e9ec14a0792082e2039f9b0c3d81a67eb41",
+    "firstTotalTokens": 9044,
+    "firstRuntimeDurationMs": 4955,
+    "secondRunRef": "sha256:22c2e282f4868121f16e46461260a9ffa5aa14db5cd56d6c4d164131c1e3036d",
+    "secondTotalTokens": 9074,
+    "secondRuntimeDurationMs": 2559,
+    "secondTurnTokenGrowth": 30
+  },
+  "result": {
+    "avoidedTokensOnComparableSecondTurn": 923,
+    "artificialTokenGrowthReductionPercent": 96.85,
+    "wallClockSpeedupClaimed": false,
+    "note": "Provider latency varies; this acceptance proves removal of repeated prompt growth, not a guaranteed wall-clock latency reduction."
+  }
+}

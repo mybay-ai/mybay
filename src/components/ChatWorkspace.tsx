@@ -56,8 +56,19 @@ import { createChatModePreference, type PreferredChatMode } from "./chat-workspa
 import { readA2ARetryNavigationState } from "./chat-workspace/a2aRetryNavigation";
 import type { ChatGroupConfig } from "../../shared/chatCollaboration";
 import type { GroupRunActivity, GroupRunMissingMember } from "./chat-workspace/ChatGroupRunSummary";
+import { readLocalRunUsage } from "../../shared/localRunUsage";
 
 export { generateUUIDv4 } from "./chat-workspace/chatWorkspaceSendPolicy";
+
+export function selectConversationContextUsage(messages: ChatMessage[]) {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (message.role !== "assistant" || message.status === "pending") continue;
+    const usage = readLocalRunUsage(message.metadata?.usage_evidence);
+    if (usage && (usage.contextTokens !== null || usage.contextWindow !== null || usage.contextPercent !== null || usage.compactionStatus !== null)) return usage;
+  }
+  return null;
+}
 
 export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType | null; socket?: Socket | null }) {
   const { t } = useTranslation(["dashboard", "common"]);
@@ -1073,6 +1084,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     () => conversations.find(conversation => conversation.id === selectedConversationId) || null,
     [conversations, selectedConversationId],
   );
+  const conversationContextUsage = useMemo(() => selectConversationContextUsage(messages), [messages]);
 
   const handleCollaborationChange = async (collaboration: ChatGroupConfig | null) => {
     if (!selectedId || !selectedConversationId) return;
@@ -1420,6 +1432,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
               runtimeType={selectedInstance?.runtime_type}
               selectedInstanceName={selectedInstance?.name}
               runMetrics={selectedRunMetrics}
+              contextUsage={conversationContextUsage}
               chatMode={chatMode}
               onChatModeChange={handleChatModeChange}
               reasoningEffort={reasoningEffort}

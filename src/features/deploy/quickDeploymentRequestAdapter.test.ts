@@ -38,6 +38,35 @@ describe("quick deployment request adapter", () => {
     expect(request.body).not.toHaveProperty("permissionConfirmed");
   });
 
+  it("builds a catalog-aligned Pi request without Dashboard or Hermes skills", () => {
+    const draft = validDraft();
+    draft.runtimeType = "pi";
+    draft.dashboardUsername = "must-not-leak";
+    draft.dashboardPassword = "must-not-leak";
+    draft.selectedSkillIds = [];
+
+    const request = buildQuickDeploymentRequest({
+      draft,
+      path: "quick-pi-request",
+      idempotencyKey: "quick-deploy-pi-1",
+    });
+
+    expect(request.body).toMatchObject({
+      runtime_type: "pi",
+      image: "mybay/pi-runtime",
+      imageTag: "0.85.1",
+      channel: "web",
+      allowMode: "disabled",
+      enableDashboard: false,
+      username: "",
+      password: "",
+      provider: "deepseek",
+      providerCredentialId: "credential-1",
+      skills: [],
+      confirmed_skill_ids: [],
+    });
+  });
+
   it("preserves BYOK values when handing off to the advanced wizard", () => {
     const draft = validDraft();
     draft.modelStrategy = { mode: "byok", provider: "custom-openai-compatible", model: "local-model", apiKey: "local-key", baseUrl: "http://model.local/v1", isCustomModel: true };

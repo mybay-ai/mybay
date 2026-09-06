@@ -1,5 +1,5 @@
 import http from "node:http";
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { mkdir, readFile, readdir, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { spawn } from "node:child_process";
@@ -10,6 +10,7 @@ const HOST = process.env.HOST || "0.0.0.0";
 const DATA_DIR = process.env.PI_BRIDGE_DATA_DIR || "/opt/data/pi";
 const SESSION_DIR = process.env.PI_CODING_AGENT_SESSION_DIR || join(DATA_DIR, "sessions");
 const RUN_DIR = join(DATA_DIR, "runs");
+const APPROVAL_POLICY_FILE = join(DATA_DIR, "approval-policy.json");
 const WORKSPACE_DIR = process.env.PI_WORKSPACE_DIR || "/opt/data/workspace";
 const API_KEY = process.env.PI_BRIDGE_API_KEY || process.env.HERMES_API_KEY || "";
 const PROVIDER = process.env.PI_PROVIDER || process.env.HERMES_MODEL_PROVIDER || "openai";
@@ -27,6 +28,11 @@ const MAX_BODY_BYTES = 2 * 1024 * 1024;
 const MAX_RUNS = 200;
 const runs = new Map();
 const sessions = new Map();
+const approvalBridgeToken = randomBytes(32).toString("hex");
+const alwaysApprovedTools = new Set();
+const GUARDED_APPROVAL_TOOLS = new Set(["bash", "powershell", "write", "edit"]);
+const APPROVAL_CHOICES = new Set(["once", "session", "always", "deny"]);
+const ACTIVE_RUN_STATUSES = new Set(["queued", "running", "waiting_for_approval"]);
 
 export const PI_BRIDGE_FEATURES = Object.freeze({
   run_submission: true,
@@ -39,8 +45,12 @@ export const PI_BRIDGE_FEATURES = Object.freeze({
   generated_file_evidence: true,
   a2a_tools: true,
   managed_collaboration: true,
-  approval_events: false,
-  run_approval_response: false,
+  structured_questions: true,
+  approval_events: true,
+  run_approval_response: true,
+  session_context_usage: true,
+  auto_compaction: true,
+  manual_compaction: true,
   session_resources: false,
 });
 
@@ -113,6 +123,23 @@ export function safeToolMetadata(toolName, args) {
 
 export function normalizePiEvent(event, run) {
   if (!event || typeof event !== "object") return [];
+  if (event.type === "compaction_start") {
+    run.lastCompaction = {
+      status: "running",
+      reason: ["manual", "threshold", "overflow"].includes(event.reason) ? event.reason : undefined,
+    };
+    return [];
+  }
+  if (event.type === "compaction_end") {
+    const result = event.result && typeof event.result === "object" ? event.result : {};
+    run.lastCompaction = {
+      status: event.aborted === true ? "aborted" : event.result ? "completed" : "failed",
+      reason: ["manual", "threshold", "overflow"].includes(event.reason) ? event.reason : undefined,
+      tokensBefore: safeNonNegativeInteger(result.tokensBefore),
+      estimatedTokensAfter: safeNonNegativeInteger(result.estimatedTokensAfter),
+    };
+    return [];
+  }
   if (event.type === "message_update" && event.assistantMessageEvent?.type === "text_delta") {
     const delta = String(event.assistantMessageEvent.delta || "");
     return delta ? [{ type: "message.delta", delta }] : [];
@@ -229,9 +256,11 @@ function piArguments(sessionId, thinking) {
     "--provider", PROVIDER,
     "--model", MODEL,
     "--thinking", thinking,
-    "--tools", "read,bash,edit,write,grep,find,ls,a2a_list,a2a_call,a2a_orchestrate",
+    "--tools", "read,bash,edit,write,grep,find,ls,a2a_list,a2a_call,a2a_orchestrate,ask_user",
     "--no-extensions",
     "--extension", "/app/mybay-a2a-extension.mjs",
+    "--extension", "/app/mybay-question-extension.mjs",
+    "--extension", "/app/mybay-approval-extension.mjs",
     "--no-skills",
     "--no-prompt-templates",
     "--no-context-files",
@@ -242,27 +271,78 @@ function piArguments(sessionId, thinking) {
 function createPiSession(sessionId, thinking) {
   const child = spawn(process.execPath, piArguments(sessionId, thinking), {
     cwd: WORKSPACE_DIR,
-    env: { ...process.env, PI_TELEMETRY: "0", PI_SKIP_VERSION_CHECK: "1" },
+    env: {
+      ...process.env,
+      PI_TELEMETRY: "0",
+      PI_SKIP_VERSION_CHECK: "1",
+      MYBAY_PI_SESSION_ID: sessionId,
+      MYBAY_PI_APPROVAL_BRIDGE_URL: `http://127.0.0.1:${PORT}/internal/approvals`,
+      MYBAY_PI_APPROVAL_BRIDGE_TOKEN: approvalBridgeToken,
+    },
     stdio: ["pipe", "pipe", "pipe"],
   });
-  const state = { child, buffer: "", pendingRunId: null, stderr: "" };
+  const state = {
+    child,
+    buffer: "",
+    pendingRunId: null,
+    stderr: "",
+    thinking,
+    lastInstructions: null,
+    statsRunId: null,
+    statsTimer: null,
+    pendingCompaction: null,
+    lastCompaction: null,
+  };
   child.stdout.setEncoding("utf8");
   child.stderr.setEncoding("utf8");
   child.stdout.on("data", (chunk) => consumePiOutput(state, chunk));
   child.stderr.on("data", (chunk) => { state.stderr = `${state.stderr}${chunk}`.slice(-4000); });
   child.on("exit", (code, signal) => {
+    if (state.statsTimer) clearTimeout(state.statsTimer);
+    if (state.pendingCompaction) {
+      const pending = state.pendingCompaction;
+      state.pendingCompaction = null;
+      clearTimeout(pending.timer);
+      pending.reject(Object.assign(new Error("PI_PROCESS_EXITED_DURING_COMPACTION"), { statusCode: 502 }));
+    }
     const run = state.pendingRunId ? runs.get(state.pendingRunId) : null;
-    if (run && ["queued", "running"].includes(run.status)) {
+    if (run && ACTIVE_RUN_STATUSES.has(run.status)) {
       run.status = run.stopRequested ? "cancelled" : "failed";
       run.error = run.stopRequested ? "CANCELLED_UPSTREAM" : `PI_PROCESS_EXITED_${code ?? signal ?? "UNKNOWN"}`;
       run.updatedAt = new Date().toISOString();
       emit(run, { type: run.status === "cancelled" ? "run.cancelled" : "run.failed", error: run.error, output: run.output });
+      for (const pending of run.pendingApprovals?.values() || []) pending.resolve("deny");
+      run.pendingApprovals?.clear();
       void persistRun(run);
     }
-    sessions.delete(sessionId);
+    // A configuration change can replace an idle process before its exit event
+    // arrives. Never let the old process remove the replacement session.
+    if (sessions.get(sessionId) === state) sessions.delete(sessionId);
   });
+  // Keep Pi's native threshold/overflow protection enabled even if a retained
+  // user-level Pi setting disabled it in an earlier interactive session.
+  child.stdin.write(`${JSON.stringify({ type: "set_auto_compaction", enabled: true })}\n`);
   sessions.set(sessionId, state);
   return state;
+}
+
+export function instructionsForPiTurn(state, rawInstructions) {
+  const instructions = typeof rawInstructions === "string" ? rawInstructions.trim() : "";
+  if (!instructions || state.lastInstructions === instructions) return "";
+  state.lastInstructions = instructions;
+  return instructions;
+}
+
+export function selectPiSession(existing, sessionId, thinking, createSession = createPiSession) {
+  if (!existing || existing.child?.killed) return createSession(sessionId, thinking);
+  return existing;
+}
+
+export function applyPiThinkingLevel(state, thinking) {
+  if (state.thinking === thinking) return false;
+  state.child.stdin.write(`${JSON.stringify({ type: "set_thinking_level", level: thinking })}\n`);
+  state.thinking = thinking;
+  return true;
 }
 
 function consumePiOutput(state, chunk) {
@@ -275,6 +355,46 @@ function consumePiOutput(state, chunk) {
     if (!line.trim()) continue;
     let event;
     try { event = JSON.parse(line); } catch { continue; }
+    if (event.type === "compaction_start" && state.pendingCompaction) {
+      state.pendingCompaction.evidence = { status: "running", reason: "manual" };
+    }
+    if (event.type === "compaction_end" && state.pendingCompaction) {
+      const result = event.result && typeof event.result === "object" ? event.result : {};
+      state.pendingCompaction.evidence = {
+        status: event.aborted === true ? "aborted" : event.result ? "completed" : "failed",
+        reason: "manual",
+        tokensBefore: safeNonNegativeInteger(result.tokensBefore),
+        estimatedTokensAfter: safeNonNegativeInteger(result.estimatedTokensAfter),
+      };
+    }
+    if (event.type === "response" && event.command === "compact" && state.pendingCompaction) {
+      const pending = state.pendingCompaction;
+      state.pendingCompaction = null;
+      clearTimeout(pending.timer);
+      const data = event.data && typeof event.data === "object" ? event.data : {};
+      const evidence = pending.evidence || {
+        status: event.success === true ? "completed" : "failed",
+        reason: "manual",
+      };
+      const errorText = event.success === true ? "" : String(event.error || "PI_COMPACTION_FAILED").slice(0, 240);
+      const result = {
+        ...evidence,
+        status: event.success === true ? evidence.status : piCompactionFailureStatus(errorText),
+        reason: "manual",
+        tokensBefore: safeNonNegativeInteger(data.tokensBefore) ?? evidence.tokensBefore ?? null,
+        estimatedTokensAfter: safeNonNegativeInteger(data.estimatedTokensAfter) ?? evidence.estimatedTokensAfter ?? null,
+        error: event.success === true ? undefined : errorText,
+      };
+      state.lastCompaction = result;
+      pending.resolve(result);
+      continue;
+    }
+    if (event.type === "response" && event.command === "get_session_stats" && state.statsRunId) {
+      const statsRun = runs.get(state.statsRunId);
+      if (statsRun && event.success === true) applyPiSessionEvidence(statsRun, event.data);
+      if (statsRun) finishRun(state, statsRun);
+      continue;
+    }
     const run = state.pendingRunId ? runs.get(state.pendingRunId) : null;
     if (!run) continue;
     for (const normalized of normalizePiEvent(event, run)) emit(run, normalized);
@@ -283,7 +403,7 @@ function consumePiOutput(state, chunk) {
       run.updatedAt = new Date().toISOString();
       emit(run, { type: "run.started" });
     }
-    if (event.type === "agent_settled") finishRun(state, run);
+    if (event.type === "agent_settled") requestPiSessionStats(state, run);
     if (event.type === "response" && event.command === "prompt" && event.success === false) {
       run.error = event.error || "PI_PROMPT_REJECTED";
       finishRun(state, run);
@@ -291,8 +411,70 @@ function consumePiOutput(state, chunk) {
   }
 }
 
+export function piCompactionFailureStatus(error) {
+  return /nothing to compact|session too small/i.test(String(error || "")) ? "aborted" : "failed";
+}
+
+export function requestPiCompaction(state, timeoutMs = 120_000) {
+  if (!state || state.child?.killed) return Promise.reject(Object.assign(new Error("PI_SESSION_UNAVAILABLE"), { statusCode: 409 }));
+  if (state.pendingRunId || state.pendingCompaction) return Promise.reject(Object.assign(new Error("PI_SESSION_BUSY"), { statusCode: 409 }));
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      if (!state.pendingCompaction) return;
+      state.pendingCompaction = null;
+      reject(Object.assign(new Error("PI_COMPACTION_TIMEOUT"), { statusCode: 504 }));
+    }, timeoutMs);
+    timer.unref?.();
+    state.pendingCompaction = { resolve, reject, timer, evidence: null };
+    state.child.stdin.write(`${JSON.stringify({ id: `compact:${randomUUID()}`, type: "compact" })}\n`);
+  });
+}
+
+function safeNonNegativeInteger(value) {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
+}
+
+function safePercentage(value) {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 100
+    ? Math.round(value * 100) / 100
+    : null;
+}
+
+export function applyPiSessionEvidence(run, data) {
+  const stats = data && typeof data === "object" && !Array.isArray(data) ? data : {};
+  const context = stats.contextUsage && typeof stats.contextUsage === "object" && !Array.isArray(stats.contextUsage)
+    ? stats.contextUsage
+    : {};
+  const compaction = run.lastCompaction && typeof run.lastCompaction === "object" ? run.lastCompaction : {};
+  run.usage = {
+    ...(run.usage && typeof run.usage === "object" && !Array.isArray(run.usage) ? run.usage : {}),
+    scope: "session",
+    context_tokens: safeNonNegativeInteger(context.tokens),
+    context_window: safeNonNegativeInteger(context.contextWindow),
+    context_percent: safePercentage(context.percent),
+    compaction_status: compaction.status || undefined,
+    compaction_reason: compaction.reason || undefined,
+    compaction_tokens_before: safeNonNegativeInteger(compaction.tokensBefore),
+    compaction_estimated_tokens_after: safeNonNegativeInteger(compaction.estimatedTokensAfter),
+  };
+  return run.usage;
+}
+
+function requestPiSessionStats(state, run) {
+  if (state.statsRunId === run.id) return;
+  state.statsRunId = run.id;
+  state.statsTimer = setTimeout(() => finishRun(state, run), 1500);
+  state.statsTimer.unref?.();
+  state.child.stdin.write(`${JSON.stringify({ type: "get_session_stats" })}\n`);
+}
+
 function finishRun(state, run) {
-  if (!["queued", "running"].includes(run.status)) return;
+  if (!ACTIVE_RUN_STATUSES.has(run.status)) return;
+  if (state.statsRunId === run.id) {
+    if (state.statsTimer) clearTimeout(state.statsTimer);
+    state.statsRunId = null;
+    state.statsTimer = null;
+  }
   run.status = run.stopRequested ? "cancelled" : run.error ? "failed" : "completed";
   run.updatedAt = new Date().toISOString();
   emit(run, {
@@ -308,7 +490,7 @@ function finishRun(state, run) {
 }
 
 export function cancelActiveRun(state, run) {
-  if (!["queued", "running"].includes(run.status)) return false;
+  if (!ACTIVE_RUN_STATUSES.has(run.status)) return false;
   run.stopRequested = true;
   run.status = "cancelled";
   run.error = "CANCELLED_UPSTREAM";
@@ -321,6 +503,8 @@ export function cancelActiveRun(state, run) {
     model: run.model || MODEL,
     duration_ms: Date.now() - run.startedAtMs,
   });
+  for (const pending of run.pendingApprovals?.values() || []) pending.resolve("deny");
+  run.pendingApprovals?.clear();
   if (state?.pendingRunId === run.id) {
     // A queued prompt can start after an RPC abort acknowledgement. Terminate
     // the per-session process so cancellation is authoritative at every phase.
@@ -337,16 +521,24 @@ async function restoreRuns() {
   await mkdir(RUN_DIR, { recursive: true });
   await mkdir(SESSION_DIR, { recursive: true });
   await mkdir(WORKSPACE_DIR, { recursive: true });
+  try {
+    const policy = JSON.parse(await readFile(APPROVAL_POLICY_FILE, "utf8"));
+    for (const tool of Array.isArray(policy?.alwaysApprovedTools) ? policy.alwaysApprovedTools : []) {
+      if (GUARDED_APPROVAL_TOOLS.has(tool)) alwaysApprovedTools.add(tool);
+    }
+  } catch {
+    // The approval policy is optional on first boot.
+  }
   const files = (await readdir(RUN_DIR).catch(() => [])).filter((name) => name.endsWith(".json")).slice(-MAX_RUNS);
   for (const file of files) {
     try {
       const restored = JSON.parse(await readFile(join(RUN_DIR, file), "utf8"));
-      const run = { ...restored, events: [], subscribers: new Set(), startedAtMs: Date.parse(restored.created_at || restored.createdAt) || Date.now() };
+      const run = { ...restored, activeTools: new Map(), pendingApprovals: new Map(), events: [], subscribers: new Set(), startedAtMs: Date.parse(restored.created_at || restored.createdAt) || Date.now() };
       run.clientRunId = restored.client_run_id || restored.clientRunId;
       run.sessionId = restored.session_id || restored.sessionId;
       run.createdAt = restored.created_at || restored.createdAt;
       run.updatedAt = restored.updated_at || restored.updatedAt;
-      if (["queued", "running"].includes(run.status)) {
+      if (ACTIVE_RUN_STATUSES.has(run.status)) {
         run.status = "failed";
         run.error = "PI_RUNTIME_RESTARTED";
         run.updatedAt = new Date().toISOString();
@@ -367,8 +559,12 @@ async function createRun(request, response, body) {
     const existing = [...runs.values()].find((run) => run.clientRunId === idempotencyKey);
     if (existing) return json(response, 200, publicRun(existing));
   }
-  const state = sessions.get(sessionId) || createPiSession(sessionId, normalizeReasoningEffort(body.model_options));
+  const thinking = normalizeReasoningEffort(body.model_options);
+  const state = selectPiSession(sessions.get(sessionId), sessionId, thinking);
   if (state.pendingRunId) return json(response, 409, { error: "PI_SESSION_BUSY" });
+  // Pi RPC can change thinking level in place. Keep the warm process and its
+  // transcript instead of paying a process restart on every mode switch.
+  applyPiThinkingLevel(state, thinking);
   const run = {
     id: randomUUID(),
     clientRunId: idempotencyKey || randomUUID(),
@@ -380,24 +576,136 @@ async function createRun(request, response, body) {
     model: MODEL,
     stopRequested: false,
     activeTools: new Map(),
+    pendingApprovals: new Map(),
     events: [],
     subscribers: new Set(),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     startedAtMs: Date.now(),
+    lastCompaction: state.lastCompaction || undefined,
   };
+  state.lastCompaction = null;
   runs.set(run.id, run);
   while (runs.size > MAX_RUNS) runs.delete(runs.keys().next().value);
   state.pendingRunId = run.id;
   emit(run, { type: "run.created" });
   await persistRun(run);
-  const prompt = normalizePrompt(body.input, body.instructions);
+  // A Pi RPC session owns and persists its transcript. Repeating an unchanged
+  // system policy on every warm turn bloats the transcript and slows later
+  // model calls. Re-inject only when the policy changes or the process restarts.
+  const prompt = normalizePrompt(body.input, instructionsForPiTurn(state, body.instructions));
   state.child.stdin.write(`${JSON.stringify({ id: run.clientRunId, type: "prompt", message: prompt })}\n`);
   return json(response, 202, publicRun(run));
 }
 
+function safeApprovalText(value, maxLength) {
+  return Array.from(String(value || ""), (character) => hasControlCharacter(character) ? " " : character).join("").trim().slice(0, maxLength);
+}
+
+async function persistApprovalPolicy() {
+  const temporary = `${APPROVAL_POLICY_FILE}.${process.pid}.tmp`;
+  await writeFile(temporary, JSON.stringify({ version: 1, alwaysApprovedTools: [...alwaysApprovedTools].sort() }), { encoding: "utf8", mode: 0o600 });
+  await rename(temporary, APPROVAL_POLICY_FILE);
+}
+
+export function approvalPolicySnapshot(policy = alwaysApprovedTools) {
+  return {
+    version: 1,
+    alwaysApprovedTools: [...policy].filter((tool) => GUARDED_APPROVAL_TOOLS.has(tool)).sort(),
+    guardedTools: [...GUARDED_APPROVAL_TOOLS].sort(),
+  };
+}
+
+export function revokeAlwaysApprovedTool(rawTool, policy = alwaysApprovedTools) {
+  const tool = safeApprovalText(rawTool, 80).toLowerCase();
+  if (!GUARDED_APPROVAL_TOOLS.has(tool)) return { ok: false, error: "INVALID_APPROVAL_TOOL" };
+  return { ok: true, tool, revoked: policy.delete(tool) };
+}
+
+async function createApprovalRequest(request, response, body) {
+  const sessionId = safeId(body.sessionId);
+  const approvalId = safeToolCallId(body.approvalId);
+  const toolName = safeApprovalText(body.toolName, 80).toLowerCase();
+  if (!sessionId || !approvalId || !GUARDED_APPROVAL_TOOLS.has(toolName)) {
+    return json(response, 400, { success: false, error: "INVALID_APPROVAL_REQUEST" });
+  }
+  if (alwaysApprovedTools.has(toolName)) return json(response, 200, { success: true, choice: "always" });
+  const state = sessions.get(sessionId);
+  const run = state?.pendingRunId ? runs.get(state.pendingRunId) : null;
+  if (!run || run.sessionId !== sessionId || !ACTIVE_RUN_STATUSES.has(run.status)) {
+    return json(response, 409, { success: false, error: "RUN_NOT_ACTIVE" });
+  }
+  run.pendingApprovals ||= new Map();
+  if (run.pendingApprovals.has(approvalId)) {
+    return json(response, 409, { success: false, error: "APPROVAL_ALREADY_PENDING" });
+  }
+  const choice = await new Promise((resolve) => {
+    const timeout = setTimeout(() => {
+      if (!run.pendingApprovals?.delete(approvalId)) return;
+      emit(run, { type: "approval.response", approval_id: approvalId, choice: "deny", reason: "APPROVAL_TIMEOUT" });
+      if (run.pendingApprovals.size === 0 && run.status === "waiting_for_approval") {
+        run.status = "running";
+        run.updatedAt = new Date().toISOString();
+      }
+      resolve("deny");
+    }, 300_000);
+    run.pendingApprovals.set(approvalId, {
+      toolName,
+      resolve: (decision) => { clearTimeout(timeout); resolve(decision); },
+    });
+    run.status = "waiting_for_approval";
+    run.updatedAt = new Date().toISOString();
+    emit(run, {
+      type: "approval.request",
+      approval_id: approvalId,
+      title: safeApprovalText(body.title, 120) || `Pi 请求执行 ${toolName}`,
+      description: safeApprovalText(body.description, 500),
+      command: safeApprovalText(body.command, 700),
+      choices: ["once", "session", "always", "deny"],
+      allow_permanent: true,
+    });
+    void persistRun(run);
+  });
+  return json(response, 200, { success: true, choice });
+}
+
+async function respondToApproval(response, run, body) {
+  const choice = String(body.choice || "").trim().toLowerCase();
+  if (!APPROVAL_CHOICES.has(choice)) return json(response, 400, { error: "INVALID_APPROVAL_CHOICE" });
+  const requestedId = safeToolCallId(body.approval_id);
+  if (body.approval_id !== undefined && !requestedId) return json(response, 400, { error: "INVALID_APPROVAL_ID" });
+  const pending = [...(run.pendingApprovals?.entries() || [])];
+  const selected = body.resolve_all === true
+    ? pending
+    : requestedId
+      ? pending.filter(([id]) => id === requestedId)
+      : pending.length === 1 ? pending : [];
+  if (selected.length === 0) return json(response, 409, { error: pending.length > 1 ? "APPROVAL_ID_REQUIRED" : "NO_PENDING_APPROVAL" });
+  if (choice === "always") {
+    for (const [, approval] of selected) alwaysApprovedTools.add(approval.toolName);
+    await persistApprovalPolicy();
+  }
+  for (const [id, approval] of selected) {
+    run.pendingApprovals.delete(id);
+    emit(run, { type: "approval.response", approval_id: id, choice });
+    approval.resolve(choice);
+  }
+  if (run.pendingApprovals.size === 0 && run.status === "waiting_for_approval") {
+    run.status = "running";
+    run.updatedAt = new Date().toISOString();
+  }
+  await persistRun(run);
+  return json(response, 200, { success: true, choice, resolved: selected.map(([id]) => id) });
+}
+
 async function handleRequest(request, response) {
   const url = new URL(request.url || "/", `http://${request.headers.host || "localhost"}`);
+  if (request.method === "POST" && url.pathname === "/internal/approvals") {
+    if (String(request.headers.authorization || "") !== `Bearer ${approvalBridgeToken}`) {
+      return json(response, 401, { success: false, error: "UNAUTHORIZED" });
+    }
+    return createApprovalRequest(request, response, await readJson(request));
+  }
   if (request.method === "GET" && ["/health", "/api/health"].includes(url.pathname)) {
     return json(response, 200, { ok: true, runtime: "pi", version: "0.85.1" });
   }
@@ -418,13 +726,34 @@ async function handleRequest(request, response) {
   if (request.method === "POST" && url.pathname === "/api/sessions") {
     return json(response, 201, { id: randomUUID(), runtime: "pi" });
   }
+  const compactMatch = url.pathname.match(/^\/v1\/sessions\/([A-Za-z0-9_.:-]{8,160})\/compact$/);
+  if (request.method === "POST" && compactMatch) {
+    const sessionId = safeId(compactMatch[1]);
+    const state = sessionId ? selectPiSession(sessions.get(sessionId), sessionId, "medium") : null;
+    if (!state) return json(response, 400, { error: "INVALID_SESSION_ID" });
+    try {
+      const result = await requestPiCompaction(state);
+      return json(response, result.status === "completed" ? 200 : 409, { runtime: "pi", session_id: sessionId, ...result });
+    } catch (error) {
+      return json(response, Number(error?.statusCode || 500), { error: String(error?.message || "PI_COMPACTION_FAILED") });
+    }
+  }
   if (request.method === "GET" && url.pathname === "/v1/runs") {
     return json(response, 200, { data: [...runs.values()].map(publicRun), runs: [...runs.values()].map(publicRun) });
   }
   if (request.method === "POST" && url.pathname === "/v1/runs") {
     return createRun(request, response, await readJson(request));
   }
-  const match = url.pathname.match(/^\/v1\/runs\/([A-Za-z0-9_.:-]{8,160})(?:\/(events|stop))?$/);
+  if (request.method === "GET" && url.pathname === "/v1/approval-policy") {
+    return json(response, 200, approvalPolicySnapshot());
+  }
+  if (request.method === "DELETE" && url.pathname === "/v1/approval-policy") {
+    const result = revokeAlwaysApprovedTool((await readJson(request)).tool);
+    if (!result.ok) return json(response, 400, { error: result.error });
+    await persistApprovalPolicy();
+    return json(response, 200, { success: true, ...result, policy: approvalPolicySnapshot() });
+  }
+  const match = url.pathname.match(/^\/v1\/runs\/([A-Za-z0-9_.:-]{8,160})(?:\/(events|stop|approval))?$/);
   if (match) {
     const run = runs.get(match[1]);
     if (!run) return json(response, 404, { error: "RUN_NOT_FOUND" });
@@ -435,11 +764,14 @@ async function handleRequest(request, response) {
       await persistRun(run);
       return json(response, 202, publicRun(run));
     }
+    if (request.method === "POST" && match[2] === "approval") {
+      return respondToApproval(response, run, await readJson(request));
+    }
     if (request.method === "GET" && match[2] === "events") {
       response.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-cache, no-transform", connection: "keep-alive", "x-accel-buffering": "no" });
       let sequence = 0;
       for (const event of run.events) sendSse(response, event, ++sequence);
-      if (!["queued", "running"].includes(run.status)) return response.end();
+      if (!ACTIVE_RUN_STATUSES.has(run.status)) return response.end();
       const subscriber = (event) => {
         sendSse(response, event, ++sequence);
         if (["run.completed", "run.failed", "run.cancelled"].includes(event.type)) response.end();

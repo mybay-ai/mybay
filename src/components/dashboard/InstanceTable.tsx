@@ -147,7 +147,9 @@ export const InstanceTable = React.memo(function InstanceTable({
                              >
                               <Box className="w-2.5 h-2.5 shrink-0 text-content-muted" />
                               <span className="truncate max-w-[100px]">
-                                {inst.resolved_version || inst.agent_version || inst.agent_image_tag ? `Hermes ${inst.resolved_version || inst.agent_version || inst.agent_image_tag}` : t("not_recorded")}
+                                {inst.resolved_version || inst.agent_version || inst.agent_image_tag
+                                  ? `${String(inst.runtime_type || inst.config?.runtime_type || "hermes").toLowerCase() === "pi" ? "Pi" : "Hermes"} ${inst.resolved_version || inst.agent_version || inst.agent_image_tag}`
+                                  : t("not_recorded")}
                               </span>
                              </div>
                            </div>

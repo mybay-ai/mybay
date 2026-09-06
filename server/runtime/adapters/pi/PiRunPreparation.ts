@@ -45,6 +45,10 @@ export class PiRunPreparationProvider implements RuntimeRunPreparationProvider {
     return {
       createSessionBinding,
       ensureSessionForConversation,
+      // Pi's long-lived RPC process persists and hydrates its own transcript.
+      // Replaying the same MyBay history on every warm turn increases prompt
+      // assembly latency and can duplicate context.
+      shouldLoadManagedHistory: (sessionBinding) => sessionBinding.state !== "existing",
       buildRunPayload: (options) => {
         const current = options.agentAttachmentContext
           ? `${options.userContent}\n\n${options.agentAttachmentContext}`
