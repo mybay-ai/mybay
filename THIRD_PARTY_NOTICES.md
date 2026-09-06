@@ -12,6 +12,14 @@ Hermes Agent is maintained by Nous Research and is distributed under the MIT Lic
 - Copyright: Nous Research
 - License: MIT License (<https://github.com/NousResearch/hermes-agent/blob/main/LICENSE>)
 
+## Pi Coding Agent
+
+The MyBay Pi Runtime bridge uses the `@earendil-works/pi-coding-agent` package, which is distributed under the MIT License. MyBay is an independent project and is not an official Earendil Works product. Interoperability with Pi does not imply sponsorship, endorsement, or affiliation.
+
+- Project: <https://github.com/earendil-works/pi>
+- Package: <https://www.npmjs.com/package/@earendil-works/pi-coding-agent>
+- License: MIT
+
 ## PDF.js
 
 The instance file center uses the `pdfjs-dist` distribution of Mozilla PDF.js to render local PDF previews in the browser.
