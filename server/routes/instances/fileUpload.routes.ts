@@ -121,8 +121,9 @@ export function createInstanceFileUploadRoutes(deps: Dependencies) {
       if (before.storageExceeded || before.storageStatus === "exceeded") reject(413, "UPLOAD_QUOTA_EXCEEDED");
       await new Promise<void>((resolve, rejectParse) => parse(req, res, error => error ? rejectParse(error) : resolve()));
       if (req.aborted || res.destroyed) return;
-      if (!Buffer.isBuffer(req.body)) reject(400, "UPLOAD_CONTENT_INVALID");
-      const bytes: Buffer = req.body;
+      const rawBody: unknown = req.body;
+      if (!Buffer.isBuffer(rawBody)) return res.status(400).json({ error: "UPLOAD_CONTENT_INVALID", code: "UPLOAD_CONTENT_INVALID" });
+      const bytes = Buffer.from(rawBody);
       validateContent(bytes, name);
       const contentSha256 = sha256(bytes);
       const currentQuota = await deps.checkQuota(validation.instance, root);

@@ -163,13 +163,14 @@ export const validateFileAccess = async (
   requestedPathRaw: string,
   options: { view?: InstanceFileView } = {},
 ) => {
-  if (!/^[A-Za-z0-9_-]{1,128}$/.test(instanceId)) {
+  const safeInstanceId = path.basename(instanceId);
+  if (safeInstanceId !== instanceId || !/^[A-Za-z0-9_-]{1,128}$/.test(safeInstanceId)) {
     return { error: "无效的实例标识", status: 400 };
   }
   if (typeof requestedPathRaw !== "string" || requestedPathRaw.length > 4096 || /[\0-\x1f\x7f]/.test(requestedPathRaw)) {
     return { error: "无效的文件路径", status: 400 };
   }
-  const instance: any = await dbAdapter.getInstanceById(instanceId);
+  const instance: any = await dbAdapter.getInstanceById(safeInstanceId);
   if (!instance) return { error: "实例不存在", status: 404 };
   
   let isOwner = false;
@@ -211,7 +212,7 @@ export const validateFileAccess = async (
     return { error: "该路径仅在管理员高级文件视图中可见", status: 403 };
   }
 
-  const localDir = path.resolve(process.cwd(), "data", "instances", instanceId);
+  const localDir = path.resolve(process.cwd(), "data", "instances", safeInstanceId);
   let rootDir = resolveExistingDirectory(localDir) || resolveExistingDirectory(instance.data_volume_path);
 
   if (!rootDir) {
@@ -243,12 +244,12 @@ export const validateFileAccess = async (
           || resolveExistingDirectory(hostPathFound)
           || resolveExistingDirectory(localDir);
         
-        dbAdapter.updateInstanceVersionInfo(instanceId, { data_volume_path: hostPathFound }).catch((e: any) => {
-          console.warn("[File Manager] Failed to auto-heal data_volume_path", { instanceId, error: e.message });
+        dbAdapter.updateInstanceVersionInfo(safeInstanceId, { data_volume_path: hostPathFound }).catch((e: any) => {
+          console.warn("[File Manager] Failed to auto-heal data_volume_path", { instanceId: safeInstanceId, error: e.message });
         });
       }
     } catch (e: any) {
-      console.warn("[File Manager] Docker inspect fallback failed", { instanceId, error: e.message });
+      console.warn("[File Manager] Docker inspect fallback failed", { instanceId: safeInstanceId, error: e.message });
     }
   }
 
