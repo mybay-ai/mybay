@@ -34,9 +34,67 @@ import { getStoredFileDiff } from "../../../services/runs/runFileSnapshots";
 import { isQuestionBridgeInstalling } from "../../../services/runs/questionBridgeInstaller";
 import { createConfiguredModelEvidence } from "../../../../shared/localModelEvidence";
 import { DEFAULT_RUN_LEASE_POLICY } from "../../../services/runs/runLease";
-import { createChatGroupRun, readChatGroupConfig } from "../../../../shared/chatCollaboration";
-import { normalizeA2AAgentName, normalizeA2APeerIds, supportsA2AByVersion } from "../../../../shared/a2aConfig";
+import { createChatGroupRun, readChatGroupConfig, readChatGroupRun } from "../../../../shared/chatCollaboration";
+import { getA2AInternalUrl, normalizeA2AAgentName, normalizeA2APeerIds, supportsA2AByVersion } from "../../../../shared/a2aConfig";
 import { dbAdapter } from "../../../db";
+import { decrypt } from "../../../crypto";
+import { readStoreCollections } from "../../../localStore";
+import { cancelMappedA2AGroupTasks } from "../../../services/a2aTaskCancel";
+import { cancelManagedRuntimeA2ATask, isManagedRuntimeA2APeer, isNativeA2APeer } from "../../../services/managedRuntimeA2A";
+import { a2aTrackingEnabled } from "../../../services/a2aRelayConfig";
+
+async function cancelRunGroupTasks(run: any, instance: any, req: AuthenticatedRequest) {
+  const group = readChatGroupRun(run?.group_collaboration);
+  if (!group) return null;
+  const ownerId = String(instance?.owner_id || instance?.user_id || "");
+  const available = await dbAdapter.getInstances(req.user.id, req.user.role);
+  const peers = new Map(group.peers.flatMap(member => {
+    const peer: any = available.find((candidate: any) => String(candidate.id) === member.id
+      && String(candidate.owner_id || candidate.user_id || "") === ownerId);
+    return peer ? [[member.id, peer] as const] : [];
+  }));
+  return cancelMappedA2AGroupTasks({
+    links: readStoreCollections(["a2aTaskLinks"]).a2aTaskLinks,
+    instanceId: String(instance.id),
+    contextId: group.contextId,
+    peerIds: group.peers.map(peer => peer.id),
+    send: async (peerId, remoteTaskId) => {
+      const peer: any = peers.get(peerId);
+      let peerConfig: any = {};
+      try { peerConfig = typeof peer?.config_json === "string" ? JSON.parse(peer.config_json) : (peer?.config_json || {}); } catch {}
+      const managed = a2aTrackingEnabled(String(instance.id)) && isManagedRuntimeA2APeer(peer);
+      if (!peer || (!managed && (peerConfig.a2aEnabled !== true || !peerConfig.a2aBearerToken))) throw Error("A2A_CANCEL_UNCONFIRMED");
+      if (managed) return cancelManagedRuntimeA2ATask(peer, group.contextId, remoteTaskId);
+      const rpcId = crypto.randomUUID();
+      const response = await fetch(getA2AInternalUrl(peerId), {
+        method: "POST",
+        redirect: "error",
+        signal: AbortSignal.timeout(5000),
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${decrypt(peerConfig.a2aBearerToken)}` },
+        body: JSON.stringify({ jsonrpc: "2.0", id: rpcId, method: "CancelTask", params: { id: remoteTaskId } }),
+      });
+      if (!response.ok || !response.body) throw Error("A2A_CANCEL_UNCONFIRMED");
+      const reader = response.body.getReader();
+      const chunks: Uint8Array[] = [];
+      let bytes = 0;
+      try {
+        while (true) {
+          const next = await reader.read();
+          if (next.done) break;
+          bytes += next.value.length;
+          if (bytes > 256 * 1024) throw Error("A2A_CANCEL_UNCONFIRMED");
+          chunks.push(next.value);
+        }
+      } finally {
+        await reader.cancel().catch(() => {});
+        reader.releaseLock();
+      }
+      const rpc = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+      if (rpc.id !== rpcId || rpc.error) throw Error("A2A_CANCEL_UNCONFIRMED");
+      return rpc.result?.task || rpc.result;
+    },
+  });
+}
 
 export function requireInteractiveRunsEnabled(_req: AuthenticatedRequest, res: Response, next: NextFunction) {
   if (!isInteractiveRunsEnabled()) {
@@ -151,16 +209,6 @@ export function registerRunRoutes(router: Router) {
       return res.status(400).json({ success: false, error: "INVALID_REQUEST", message: "缺少 Request ID。" });
     }
 
-    const managedGuard = guardManagedOperation(content);
-    if (managedGuard.blocked) {
-      return res.status(422).json({
-        success: false,
-        error: managedGuard.code,
-        message: managedGuard.message,
-        reason: managedGuard.reason
-      });
-    }
-
     try {
       const authorityStartedAt = Date.now();
       const instanceAuthority = await resolveInstanceAuthority({ actor: authorityActorFromRequest(req), instanceId: id });
@@ -169,6 +217,15 @@ export function registerRunRoutes(router: Router) {
       if (conversationAuthority.ok === false) return sendAuthorityFailure(res, conversationAuthority, "对话会话不存在或无权访问。");
       acceptTiming.authorityMs = Date.now() - authorityStartedAt;
       const instance = instanceAuthority.instance;
+      const managedGuard = guardManagedOperation(content, instance.runtime_type);
+      if (managedGuard.blocked) {
+        return res.status(422).json({
+          success: false,
+          error: managedGuard.code,
+          message: managedGuard.message,
+          reason: managedGuard.reason
+        });
+      }
 
       let validatedFiles: any[] = [];
       const attachmentValidationStartedAt = Date.now();
@@ -235,7 +292,8 @@ export function registerRunRoutes(router: Router) {
           let peerConfig: any = {};
           try { peerConfig = typeof peer.config_json === "string" ? JSON.parse(peer.config_json) : (peer.config_json || {}); } catch {}
           const peerVersion = String(peer.resolved_version || peer.agent_image_tag || peer.agent_version || "");
-          if (peerConfig.a2aEnabled !== true || !supportsA2AByVersion(peerVersion, peer.capabilities)) return [];
+          const managed = a2aTrackingEnabled(id) && isManagedRuntimeA2APeer(peer);
+          if (!managed && !isNativeA2APeer(peer, peerConfig, supportsA2AByVersion(peerVersion, peer.capabilities))) return [];
           return [{ id: String(peer.id), name: normalizeA2AAgentName(peer.name, peerConfig.a2aAgentName || peer.id) }];
         });
         if (peers.length !== groupConfig.peerIds.length) {
@@ -491,16 +549,20 @@ export function registerRunRoutes(router: Router) {
 
       if (stopResult.status === 'stop_requested') {
         requestRunsReconcile();
+        const groupCancellation = await cancelRunGroupTasks(run, instanceAuthority.instance, req);
         return res.json({
           success: true,
           status: "stopping",
+          ...(groupCancellation ? { groupCancellation } : {}),
           message: "中止请求已发送。"
         });
       } else if (stopResult.status === 'already_stopping') {
         requestRunsReconcile();
+        const groupCancellation = await cancelRunGroupTasks(run, instanceAuthority.instance, req);
         return res.json({
           success: true,
           status: "stopping",
+          ...(groupCancellation ? { groupCancellation } : {}),
           message: "中止请求已发送。"
         });
       } else if (stopResult.status === 'already_terminal') {

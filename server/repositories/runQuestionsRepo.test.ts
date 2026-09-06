@@ -21,6 +21,22 @@ describe("local Run questions", () => {
     expect(runQuestionsRepo.poll("instance", "native", "session", "question")).toEqual(result);
     expect(runQuestionsRepo.list("other")).toEqual([]);
   });
+  it("binds a Pi question to the only active Run in its native session", () => {
+    mutateStoreCollections(["chatRuns"], data => { data.chatRuns[0].runtime_type = "pi"; });
+    const piRequest = { runtimeType: "pi", sessionId: "session", id: "pi-question", spec };
+    const question = runQuestionsRepo.create("instance", piRequest);
+    expect(question.runId).toBe("run");
+    const answered = runQuestionsRepo.answer("run", "pi-question", { selected: ["a"], custom: "" }, false);
+    expect(runQuestionsRepo.poll("instance", undefined, "session", "pi-question", "pi")).toEqual(answered);
+  });
+  it("keeps simultaneous Pi sessions isolated", () => {
+    mutateStoreCollections(["chatRuns", "conversations"], data => {
+      data.chatRuns[0].runtime_type = "pi";
+      data.chatRuns.push({ ...data.chatRuns[0], id: "other-run", conversation_id: "other-conversation" });
+      data.conversations.push({ ...data.conversations[0], id: "other-conversation", session_id: "other-session" });
+    });
+    expect(runQuestionsRepo.create("instance", { runtimeType: "pi", sessionId: "session", id: "pi-question", spec }).runId).toBe("run");
+  });
   it("deduplicates a retry but rejects a changed question or second pending question", () => {
     const first = runQuestionsRepo.create("instance", request);
     expect(runQuestionsRepo.create("instance", request)).toEqual(first);

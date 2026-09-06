@@ -11,9 +11,10 @@ interface SkillsStepProps {
   testSkill: (skillId: string) => Promise<void>;
   testResults: any;
   currentUser?: any;
+  runtimeType?: string;
 }
 
-export function SkillsStep({ data, update, testSkill, testResults, currentUser }: SkillsStepProps) {
+export function SkillsStep({ data, update, testSkill, testResults, currentUser, runtimeType }: SkillsStepProps) {
   const { t } = useTranslation("deploy");
   const activeSkills = data.skills || [];
   const [confirmingSkill, setConfirmingSkill] = useState<string | null>(null);
@@ -34,6 +35,28 @@ export function SkillsStep({ data, update, testSkill, testResults, currentUser }
   }, []);
 
   const isAdmin = currentUser?.role === 'admin';
+  const isPiRuntime = String(runtimeType || "hermes").toLowerCase() === "pi";
+
+  if (isPiRuntime) {
+    return (
+      <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div className="border-b border-outline pb-3">
+          <h4 className="flex items-center gap-1.5 text-base font-bold text-content">
+            <Layers className="h-5 w-5 text-blue-600" />
+            <span>{t("wizardCopy.skills.title")}</span>
+          </h4>
+          <p className="mt-1 text-sm leading-normal text-content-muted">{t("wizardCopy.skills.description")}</p>
+        </div>
+        <div className="flex items-start gap-3 rounded-2xl border border-blue-200 bg-blue-50/60 p-4 text-blue-950 dark:border-blue-900/70 dark:bg-blue-950/30 dark:text-blue-100">
+          <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-blue-600 dark:text-blue-300" />
+          <div>
+            <p className="text-sm font-bold">{t("wizardCopy.skills.piManagedTitle")}</p>
+            <p className="mt-1 text-[13px] leading-relaxed text-blue-800 dark:text-blue-200">{t("wizardCopy.skills.piManagedDescription")}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const skillPolicies = Object.values(skillPolicyRegistry);
   const standardSkills = skillPolicies.filter(p => p.riskLevel === 'low' || p.riskLevel === 'medium');

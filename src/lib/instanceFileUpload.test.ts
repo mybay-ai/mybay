@@ -26,35 +26,36 @@ describe("file center upload transport", () => {
     const file = new File(["hello"], "中文.txt");
     const progress = vi.fn();
     let settled = false;
-    const upload = uploadInstanceFile("A", "/outputs/中文目录", file, new AbortController().signal, progress).then(value => { settled = true; return value; });
+    const upload = uploadInstanceFile("A", "/outputs/中文目录", file, "11111111-1111-4111-8111-111111111111", new AbortController().signal, progress).then(value => { settled = true; return value; });
     const request = UploadRequest.last;
     request.upload.onprogress?.({ lengthComputable: true, loaded: 5, total: 5 });
     await Promise.resolve();
     expect(settled).toBe(false); expect(progress).toHaveBeenCalledWith(100);
     expect(request.open).toHaveBeenCalledWith("POST", `/api/instances/A/files/upload?path=${encodeURIComponent("/outputs/中文目录")}&name=${encodeURIComponent("中文.txt")}`);
+    expect(request.setRequestHeader).toHaveBeenCalledWith("X-Upload-Id", "11111111-1111-4111-8111-111111111111");
     expect(request.send).toHaveBeenCalledWith(file);
     request.finish(201, { ok: true, path: "/outputs/中文目录/中文.txt" });
-    await expect(upload).resolves.toEqual({ path: "/outputs/中文目录/中文.txt" });
+    await expect(upload).resolves.toEqual({ path: "/outputs/中文目录/中文.txt", reused: false });
   });
   it("reports a same-name conflict rather than success", async () => {
     vi.stubGlobal("XMLHttpRequest", UploadRequest);
-    const promise = uploadInstanceFile("A", "/uploads", new File([], "empty.txt"), new AbortController().signal, () => {});
+    const promise = uploadInstanceFile("A", "/uploads", new File([], "empty.txt"), crypto.randomUUID(), new AbortController().signal, () => {});
     UploadRequest.last.finish(409, { code: "UPLOAD_EXISTS" });
     await expect(promise).rejects.toMatchObject({ code: "UPLOAD_EXISTS" });
   });
   it("aborts an in-flight transfer when the instance context is disposed", async () => {
     vi.stubGlobal("XMLHttpRequest", UploadRequest);
     const controller = new AbortController();
-    const promise = uploadInstanceFile("A", "/uploads", new File([], "empty.txt"), controller.signal, () => {});
+    const promise = uploadInstanceFile("A", "/uploads", new File([], "empty.txt"), crypto.randomUUID(), controller.signal, () => {});
     controller.abort();
     await expect(promise).rejects.toMatchObject({ code: "UPLOAD_ABORTED" });
   });
   it("preserves an unconfirmed result on network failure and rejects malformed success", async () => {
     vi.stubGlobal("XMLHttpRequest", UploadRequest);
-    const first = uploadInstanceFile("A", "/uploads", new File([], "empty.txt"), new AbortController().signal, () => {});
+    const first = uploadInstanceFile("A", "/uploads", new File([], "empty.txt"), crypto.randomUUID(), new AbortController().signal, () => {});
     UploadRequest.last.onerror?.(); UploadRequest.last.onloadend?.();
     await expect(first).rejects.toMatchObject({ code: "UPLOAD_NETWORK" });
-    const second = uploadInstanceFile("A", "/uploads", new File([], "empty.txt"), new AbortController().signal, () => {});
+    const second = uploadInstanceFile("A", "/uploads", new File([], "empty.txt"), crypto.randomUUID(), new AbortController().signal, () => {});
     UploadRequest.last.finish(201, { ok: false });
     await expect(second).rejects.toMatchObject({ code: "UPLOAD_FAILED" });
   });

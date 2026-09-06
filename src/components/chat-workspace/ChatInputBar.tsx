@@ -20,6 +20,8 @@ import { filterComposerSuggestions, findComposerTrigger, replaceComposerTrigger,
 import { useChatComposerPeers } from "./useChatComposerPeers";
 import { ChatGroupRoomControl } from "./ChatGroupRoomControl";
 import type { ChatGroupConfig } from "../../../shared/chatCollaboration";
+import type { LocalRunUsage } from "../../../shared/localRunUsage";
+import { ConversationContextStatus } from "./ConversationContextStatus";
 export type PendingAttachment = {
   id: string;
   originalName: string;
@@ -49,8 +51,10 @@ type ChatInputBarProps = {
   stopPending?: boolean;
   isChatReady: boolean;
   selectedChannel: string;
+  runtimeType?: string;
   selectedInstanceName?: string;
   runMetrics?: ChatRunMetrics | null;
+  contextUsage?: LocalRunUsage | null;
   hasActiveConversation?: boolean;
   chatMode: "quick" | "assist" | "agent";
   onChatModeChange: (mode: "quick" | "agent") => void;
@@ -83,8 +87,10 @@ export function ChatInputBar({
   stopPending = false,
   isChatReady,
   selectedChannel,
+  runtimeType,
   selectedInstanceName,
   runMetrics = null,
+  contextUsage = null,
   hasActiveConversation = true,
   chatMode,
   onChatModeChange,
@@ -122,22 +128,32 @@ export function ChatInputBar({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const a2aPeers = useChatComposerPeers(workspaceContext?.instanceId);
+  const collaborationSupported = ["hermes", "pi"].includes(String(runtimeType || "hermes").trim().toLowerCase());
   const composerTrigger = findComposerTrigger(input, composerCursor);
-  const commandSuggestions: ComposerCommandSuggestion[] = [
+  const commonCommandSuggestions: ComposerCommandSuggestion[] = [
     { kind: "command", id: "new", label: t("dashboard:chatWorkspace.composerCommandNew"), description: t("dashboard:chatWorkspace.composerCommandNewDesc") },
+    { kind: "command", id: "clear", label: t("dashboard:chatWorkspace.composerCommandClear"), description: t("dashboard:chatWorkspace.composerCommandClearDesc"), disabled: !hasActiveConversation },
+    { kind: "command", id: "files", label: t("dashboard:chatWorkspace.composerCommandFiles"), description: t("dashboard:chatWorkspace.composerCommandFilesDesc") },
+    { kind: "command", id: "status", label: t("dashboard:chatWorkspace.composerCommandStatus"), description: t("dashboard:chatWorkspace.composerCommandStatusDesc") },
     { kind: "command", id: "stop", label: t("dashboard:chatWorkspace.composerCommandStop"), description: t("dashboard:chatWorkspace.composerCommandStopDesc"), disabled: !sending },
     { kind: "command", id: "model", label: t("dashboard:chatWorkspace.composerCommandModel"), description: t("dashboard:chatWorkspace.composerCommandModelDesc") },
+    { kind: "command", id: "help", label: t("dashboard:chatWorkspace.composerCommandHelp"), description: t("dashboard:chatWorkspace.composerCommandHelpDesc") },
+  ];
+  const collaborationCommandSuggestions: ComposerCommandSuggestion[] = [
     { kind: "command", id: "agents", label: t("dashboard:chatWorkspace.composerCommandAgents"), description: t("dashboard:chatWorkspace.composerCommandAgentsDesc") },
     { kind: "command", id: "call", label: t("dashboard:chatWorkspace.composerCommandCall"), description: t("dashboard:chatWorkspace.composerCommandCallDesc") },
     { kind: "command", id: "all", label: t("dashboard:chatWorkspace.composerCommandAll"), description: t("dashboard:chatWorkspace.composerCommandAllDesc") },
-    { kind: "command", id: "help", label: t("dashboard:chatWorkspace.composerCommandHelp"), description: t("dashboard:chatWorkspace.composerCommandHelpDesc") },
   ];
+  const commandSuggestions = collaborationSupported
+    ? [...commonCommandSuggestions, ...collaborationCommandSuggestions]
+    : commonCommandSuggestions;
   const composerSuggestions: ComposerSuggestion[] = composerTrigger?.kind === "command"
     ? filterComposerSuggestions(commandSuggestions, composerTrigger.query)
-    : composerTrigger?.kind === "mention"
+    : composerTrigger?.kind === "mention" && collaborationSupported
       ? filterComposerSuggestions(a2aPeers.map(peer => ({ ...peer, kind: "mention" as const })), composerTrigger.query)
       : [];
-  const suggestionMenuOpen = Boolean(composerTrigger) && (composerTrigger?.kind === "mention" || composerSuggestions.length > 0);
+  const suggestionMenuOpen = Boolean(composerTrigger)
+    && (composerTrigger?.kind === "command" ? composerSuggestions.length > 0 : collaborationSupported);
   const composerText = serializeLongTextDraft(longTextComposer?.blocks || [], input);
   const composerCharacters = countChatMessageCharacters(composerText.trim());
   const messageTooLong = composerCharacters > MAX_CHAT_USER_MESSAGE_CHARS;
@@ -195,7 +211,7 @@ export function ChatInputBar({
     }
 
     if (suggestion.disabled) return;
-    if (["new", "stop", "model", "help"].includes(suggestion.id)) {
+    if (["new", "clear", "files", "status", "stop", "model", "help"].includes(suggestion.id)) {
       onInputChange("");
       setComposerCursor(0);
       onComposerCommand?.(suggestion.id);
@@ -215,7 +231,9 @@ export function ChatInputBar({
     ? (isCompactInput
       ? t("dashboard:chatWorkspace.notReadyPlaceholderMobile")
       : (selectedChannel === "web" || selectedChannel === "none"
-        ? t("dashboard:chatWorkspace.webOnlyNotReadyTooltip")
+        ? t(String(runtimeType || "").toLowerCase() === "pi"
+          ? "dashboard:chatWorkspace.piNotReadyTooltip"
+          : "dashboard:chatWorkspace.webOnlyNotReadyTooltip")
         : t("dashboard:chatWorkspace.externalNotReadyTooltip")))
     : (sending
       ? t(isCompactInput ? "dashboard:chatWorkspace.sendWhileRunningPlaceholderMobile" : "dashboard:chatWorkspace.sendWhileRunningPlaceholder")
@@ -373,12 +391,14 @@ export function ChatInputBar({
             canUpload={!attachmentDisabledReason} onUpload={() => fileInputRef.current?.click()}
             onChooseWorkspaceFiles={onAddWorkspaceFiles ? () => setWorkspacePickerOpen(true) : undefined}
           />
-          <ChatGroupRoomControl
-            peers={a2aPeers}
-            collaboration={collaboration}
-            disabled={!workspaceContext?.conversationId || !isChatReady || conversationUnavailable}
-            onChange={onCollaborationChange}
-          />
+          {collaborationSupported && (
+            <ChatGroupRoomControl
+              peers={a2aPeers}
+              collaboration={collaboration}
+              disabled={!workspaceContext?.conversationId || !isChatReady || conversationUnavailable}
+              onChange={onCollaborationChange}
+            />
+          )}
           </div>
           <div className="flex shrink-0 items-center gap-1.5 select-none">
             {sending && (
@@ -422,7 +442,8 @@ export function ChatInputBar({
         {conversationUnavailable && <p role="status" className="mt-2 px-2 text-xs text-content-muted">{conversationUnavailableMessage}</p>}
         {messageTooLong && <p role="alert" className="mt-2 px-2 text-xs text-red-600 dark:text-red-400">{t("dashboard:chatWorkspace.messageTooLong", { max: MAX_CHAT_USER_MESSAGE_CHARS.toLocaleString() })}</p>}
         {agentModeBlocked && <p role="status" className="mt-2 px-2 text-xs text-amber-700 dark:text-amber-300">{agentUnavailableMessage}</p>}
-        <div className={`mt-1.5 items-center gap-3 px-2 text-[11px] text-content-muted ${mobileKeyboardOpen ? "hidden" : "hidden md:flex"}`}>
+        <div className={`mt-1.5 items-center justify-between gap-2 px-1 text-[11px] text-content-muted sm:px-2 ${mobileKeyboardOpen ? "hidden" : "flex"}`}>
+          <div className="hidden min-w-0 items-center gap-3 md:flex">
           <div
             className="inline-flex min-w-0 items-center gap-1.5"
             title={`${t("dashboard:chatWorkspace.inputStatusInstance")}: ${selectedInstanceName?.trim() || t("dashboard:chatWorkspace.inputStatusNoInstance")}`}
@@ -440,6 +461,17 @@ export function ChatInputBar({
               <span className="min-w-0 truncate font-medium text-content-secondary">
                 {formatDuration(runMetrics?.durationMs)} · {formatTokens(runMetrics?.usageTotalTokens)} tokens
               </span>
+            </div>
+          )}
+          </div>
+          {workspaceContext?.instanceId && (
+            <div className="ml-auto min-w-0 max-w-full">
+              <ConversationContextStatus
+                usage={contextUsage}
+                instanceId={workspaceContext.instanceId}
+                conversationId={workspaceContext.conversationId}
+                disabled={sending || !isChatReady || conversationUnavailable}
+              />
             </div>
           )}
         </div>

@@ -14,7 +14,19 @@ const BACKUP_FORMAT_VERSION = 1;
 export const MAX_SUPPORTED_SCHEMA_VERSION = schemaVersion.current;
 const OWNER_DIRECTORY_MODE = 0o700;
 const OWNER_FILE_MODE = 0o600;
-const EXCLUDED_INSTANCE_DIRECTORIES = new Set(["logs", "cache", ".cache", "__pycache__", ".venv", "venv", "node_modules"]);
+const EXCLUDED_INSTANCE_DIRECTORIES = new Set([
+  "logs", "cache", ".cache", "audio_cache", "image_cache", "__pycache__",
+  ".venv", "venv", "pptx_env", "node_modules", "lazy-packages",
+]);
+const EXCLUDED_INSTANCE_RUNTIME_FILES = new Set(["gateway.pid", "gateway.lock", "gateway-starts.log"]);
+
+function isExcludedInstanceRuntimeFile(basename) {
+  return EXCLUDED_INSTANCE_RUNTIME_FILES.has(basename)
+    || basename.endsWith(".sock")
+    || basename.endsWith(".lock")
+    || basename.endsWith("-wal")
+    || basename.endsWith("-shm");
+}
 
 function parseArgs(argv) {
   const args = { command: argv[0] || "doctor", json: false, database: "", output: "", backup: "" };
@@ -125,6 +137,13 @@ function copyOptionalDataDirectory(name, destination, sourceDataRoot, skippedPat
   function copy(relative) {
     const current = path.join(sourceDataRoot, relative);
     const basename = path.basename(relative);
+    // Docker-created Unix sockets cannot be inspected from a Windows host and
+    // PID, lock, log, and SQLite sidecar files are all recreated by Hermes.
+    // Exclude them by name before lstat so a live gateway.sock cannot abort the backup.
+    if (name === "instances" && relative !== name && isExcludedInstanceRuntimeFile(basename)) {
+      skippedPaths.push(`data/${relative.replaceAll("\\", "/")}`);
+      return;
+    }
     const stat = fs.lstatSync(current);
     // Exclude before traversing: runtime virtualenvs may contain dangling or
     // platform-specific links. User uploads and instance .env files are retained.
@@ -210,7 +229,7 @@ export async function createBackup(options = {}) {
     mybayVersion: JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8")).version,
     schemaVersion: sqlite.schemaVersion,
     includes: ["data/mybay.sqlite", "data/instances (when present)", "data/uploads (when present)"],
-    excludes: ["instance directories named logs, cache, .cache, __pycache__, .venv, venv, node_modules", "runtime images", "control-plane .env (preserve separately)"],
+    excludes: ["regenerable instance cache, package, virtualenv, and node_modules directories", "instance runtime sockets, PID, lock, log, and SQLite sidecar files", "runtime images", "control-plane .env (preserve separately)"],
     skippedPaths,
     consistency: "SQLite snapshot; stop all control-plane and Agent writers for a coherent workspace backup",
     files,

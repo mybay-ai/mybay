@@ -5,8 +5,32 @@ import { decrypt } from '../crypto';
 import { getA2AInternalUrl } from '../../shared/a2aConfig';
 import { a2aRelayToken, a2aRelayUrl, a2aTrackingEnabled } from '../services/a2aRelayConfig';
 import { trackedA2ASend } from '../services/a2aTrackedTransport';
+import { readStoreCollections } from '../localStore';
+import { evaluateA2AGroupDispatch } from '../services/a2aGroupDispatchPolicy';
+import { isManagedRuntimeA2APeer, isNativeA2APeer, readManagedRuntimeA2ATask, sendManagedRuntimeA2A } from '../services/managedRuntimeA2A';
+import { readChatGroupRun } from '../../shared/chatCollaboration';
 
 const parseConfig = (row: any) => typeof row.config_json === 'string' ? JSON.parse(row.config_json) : row.config_json || {};
+export function bindActiveGroupContext(body: any, runs: any[], instanceId: string) {
+  const activeRooms = runs
+    .filter(run => String(run.instance_id) === instanceId && ['queued', 'running'].includes(String(run.status || '').toLowerCase()))
+    .map(run => readChatGroupRun(run.group_collaboration))
+    .filter(Boolean);
+  if (activeRooms.length !== 1 || !body?.params?.message) return body;
+  return { ...body, params: { ...body.params, message: { ...body.params.message, contextId: activeRooms[0]!.contextId } } };
+}
+async function readNativeA2ATask(url: string, encryptedToken: string, remoteId: string) {
+  const rpcId = crypto.randomUUID();
+  const response = await fetch(url, {
+    method: 'POST', redirect: 'error', signal: AbortSignal.timeout(5_000),
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${decrypt(encryptedToken)}` },
+    body: JSON.stringify({ jsonrpc: '2.0', id: rpcId, method: 'GetTask', params: { id: remoteId, historyLength: 0 } }),
+  });
+  if (!response.ok) throw Error(response.status === 404 ? 'A2A_TASK_NOT_FOUND' : 'A2A_RESULT_UNAVAILABLE');
+  const rpc = await response.json() as any;
+  if (rpc.id !== rpcId || rpc.error) throw Error('A2A_RESULT_UNAVAILABLE');
+  return rpc.result?.task || rpc.result;
+}
 export function createA2ARelayRouter() {
   const router = Router();
   const active = new Set<string>();
@@ -26,22 +50,44 @@ export function createA2ARelayRouter() {
       const peer = await dbAdapter.getInstanceById(peerId);
       if (!caller || !peer || !(caller.user_id || caller.owner_id) || (caller.user_id || caller.owner_id) !== (peer.user_id || peer.owner_id)) return res.sendStatus(403);
       const config = parseConfig(caller); const peerConfig = parseConfig(peer);
-      if (!config.a2aEnabled || !peerConfig.a2aEnabled || !config.a2aPeerIds?.includes(peerId) || !peerConfig.a2aBearerToken) return res.sendStatus(403);
+      const managedPeer = isManagedRuntimeA2APeer(peer);
+      const nativePeer = isNativeA2APeer(peer, peerConfig, true) && Boolean(peerConfig.a2aBearerToken);
+      if (!config.a2aEnabled || !config.a2aPeerIds?.includes(peerId) || (!managedPeer && !nativePeer)) return res.sendStatus(403);
       if (req.method === 'GET' && ['/.well-known/agent-card.json', '/.well-known/agent.json'].includes(req.path)) {
-        return res.json({ name: 'MyBay tracked A2A peer', description: 'Tracked internal collaboration', capabilities: { streaming: false }, supportedInterfaces: [{ protocolBinding: 'JSONRPC', protocolVersion: '1.0', url: a2aRelayUrl(instanceId, peerId) }], skills: [] });
+        return res.json({ name: managedPeer ? String(peer.name || 'Pi Agent') : 'MyBay tracked A2A peer', description: managedPeer ? 'MyBay managed Runtime collaboration peer' : 'Tracked internal collaboration', capabilities: { streaming: true }, supportedInterfaces: [{ protocolBinding: 'JSONRPC', protocolVersion: '1.0', url: a2aRelayUrl(instanceId, peerId) }], skills: [] });
       }
       if (req.method !== 'POST' || !['/', ''].includes(req.path)) return res.sendStatus(404);
-      const body = req.body;
+      const activityStore = readStoreCollections(['chatRuns', 'a2aTaskLinks']);
+      const body = bindActiveGroupContext(req.body, activityStore.chatRuns, instanceId);
       if (!body?.params?.message || Object.keys(body.params).some(key => key !== 'message')) return res.sendStatus(400);
+      const contextId = body.params.message.contextId;
+      const dispatchPolicy = evaluateA2AGroupDispatch({
+        runs: activityStore.chatRuns,
+        links: activityStore.a2aTaskLinks,
+        instanceId,
+        peerId,
+        contextId,
+        callerTaskId: body.id,
+      });
+      if (!dispatchPolicy.allowed) return res.status(409).json({ jsonrpc: '2.0', id: body.id ?? null, error: { code: -32010, message: dispatchPolicy.error } });
       // Bound sockets and model dispatches; no automatic retries on uncertainty.
       const activeKey = JSON.stringify([instanceId, peerId, body.id]);
       if (active.size >= 16 || active.has(activeKey)) return res.sendStatus(429);
       active.add(activeKey);
       try {
-        const result = await trackedA2ASend({ instanceId, peerId, body, send: request => fetch(getA2AInternalUrl(peerId), {
-          method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${decrypt(peerConfig.a2aBearerToken)}` },
-          body: JSON.stringify(request), redirect: 'error', signal: AbortSignal.timeout(180_000),
-        }) });
+        const result = await trackedA2ASend({
+          instanceId, peerId, body,
+          resumeLink: 'resumeLink' in dispatchPolicy ? dispatchPolicy.resumeLink : undefined,
+          read: remoteId => managedPeer
+            ? readManagedRuntimeA2ATask(peer, contextId, remoteId)
+            : readNativeA2ATask(getA2AInternalUrl(peerId), peerConfig.a2aBearerToken, remoteId),
+          send: managedPeer
+          ? request => sendManagedRuntimeA2A(peer, request)
+          : request => fetch(getA2AInternalUrl(peerId), {
+            method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${decrypt(peerConfig.a2aBearerToken)}` },
+            body: JSON.stringify(request), redirect: 'error', signal: AbortSignal.timeout(180_000),
+          }),
+        });
         if (!res.destroyed) res.json(result);
       } finally { active.delete(activeKey); }
     } catch (error: any) {

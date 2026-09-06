@@ -13,7 +13,8 @@ const requiredFiles = [
   "README.md", "README.zh-CN.md", "SECURITY.md", "THIRD_PARTY_NOTICES.md", "TRADEMARKS.md", "WINDOWS-README.md", "WINDOWS-README.zh-CN.md", "deploy/traefik/dynamic.yml",
   "docker-compose.server.yml", "docker-compose.windows.yml", "docker-compose.yml", "package-lock.json", "package.json", "quick-start.ps1", "quick-start.sh",
   "Repair-MyBay.bat", "Start-MyBay.bat", "Stop-MyBay.bat", "Uninstall-MyBay.bat", "View-Logs.bat", "scripts/quick-start-env.ps1", "scripts/quick-start-env.sh",
-  "scripts/windows-control.ps1", "scripts/windows-preflight.ps1", "scripts/windows-prerequisites.ps1",
+  "scripts/windows-control.ps1", "scripts/windows-preflight.ps1", "scripts/windows-prerequisites.ps1", "runtime/pi-bridge/Dockerfile",
+  "runtime/pi-bridge/package.json", "runtime/pi-bridge/package-lock.json", "runtime/pi-bridge/server.mjs",
 ];
 
 if (!fs.existsSync(archivePath)) throw new Error("Release archive not found: " + archivePath);

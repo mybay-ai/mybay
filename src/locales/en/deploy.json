@@ -272,9 +272,21 @@
     "quickDeploy":  {
                         "badge":  "Local quick deploy",
                         "title":  "Start your Agent in minutes",
-                        "description":  "Deploy a Hermes Agent with verified safe defaults and configure Web, Telegram, Feishu, or personal WeChat messaging directly.",
+                        "description":  "Choose Hermes Agent or Pi Agent and create a local Agent with verified safe defaults.",
                         "advanced":  "Switch to advanced setup",
                         "deploy":  "Deploy Agent now",
+                        "deployPi":  "Deploy Pi Agent now",
+                        "runtime":  {
+                                        "title":  "Choose an Agent Runtime",
+                                        "description":  "Hermes provides full channels and tools; Pi is optimized for lightweight Web conversations and file workflows.",
+                                        "loading":  "Loading deployable Runtimes…",
+                                        "loadError":  "Unable to load the Runtime catalog. Refresh and try again.",
+                                        "hermesBadge":  "Standard / full featured",
+                                        "piBadge":  "Lightweight / Web workspace",
+                                        "hermesDescription":  "Supports Dashboard, Web and external messaging channels, skills, and the full toolchain.",
+                                        "piDescription":  "An isolated runtime built on official Pi RPC with Web streaming, session recovery, and file workflows.",
+                                        "unavailable":  "Deployment is unavailable in this version"
+                                    },
                         "instance":  {
                                          "title":  "Agent information",
                                          "description":  "Give the instance a recognizable name and purpose.",
@@ -298,17 +310,21 @@
                         "channel":  {
                                         "title":  "Messaging channel",
                                         "description":  "Choose where the Agent receives messages. Feishu and personal WeChat support QR binding; Telegram uses a bot token.",
+                                        "piDescription":  "Pi Runtime currently runs conversations through the MyBay Web workspace.",
                                         "configurationHint":  "Credentials are filled automatically after a successful scan, or you can enter them manually. External channels use the safe bind-later access policy by default."
                                     },
                         "access":  {
                                        "title":  "Dashboard access protection",
                                        "description":  "Use this username and password for the first Agent Dashboard login. Store them securely.",
                                        "username":  "Access username",
-                                       "password":  "Access password"
+                                       "password":  "Access password",
+                                       "piTitle":  "Access through the MyBay workspace",
+                                       "piDescription":  "Pi Runtime has no standalone Dashboard, so no access username or password is needed. Use it from MyBay chat and files after deployment."
                                    },
                         "review":  {
                                        "title":  "Safe defaults",
                                        "description":  "Quick deploy uses Hermes Runtime, an automatic path, a protected Dashboard, and a safe channel access policy.",
+                                       "piDescription":  "Quick deploy uses Pi Runtime, an automatic path, and an isolated Web workspace without exposing a standalone Dashboard.",
                                        "runtime":  "Hermes Runtime",
                                        "resources":  "{{channel}} · 1 CPU · 1024 MB",
                                        "confirm":  "I reviewed the model and access settings and approve creating a local Agent with these permissions."
@@ -367,6 +383,7 @@
                                            "dashboardPasswordTooShort":  "The Dashboard password must contain at least 8 characters.",
                                            "providerRequired":  "Choose a model provider.",
                                            "providerUnavailable":  "The selected model provider is unavailable.",
+                                           "runtimeProviderUnsupported":  "The selected model provider is not supported by this Runtime. Choose another provider.",
                                            "modelRequired":  "Choose or enter a model.",
                                            "customBaseUrlRequired":  "A custom compatible model requires a Base URL.",
                                            "savedCredentialRequired":  "Choose a saved model credential.",
@@ -410,6 +427,7 @@
                           "dashboard_access":  "When Dashboard access is enabled, a Dashboard username and password are required",
                           "dashboard_access_configured":  "Dashboard access is enabled and protected by Basic Auth",
                           "dashboard_access_disabled":  "Dashboard access is disabled; the instance remains available through configured channels and the Agent workspace",
+                          "pi_workspace_ready":  "Pi runs through the MyBay Agent workspace and does not require Dashboard credentials",
                           "basic_format_error":  "Format error: Web session account name can only contain letters, numbers, and hyphens",
                           "basic_pwd_error":  "Protective password length must be at least 8 characters",
                           "basic_configured":  "Access protection and Basic Auth authentication parameters are configured",
@@ -505,6 +523,11 @@
                                "consent_checkbox":  "I am aware of and fully responsible for the system interfaces and potential external permission calls needed for this deployment model.",
                                "basic_protection_title":  "Basic Naming \u0026 Dashboard Access",
                                "basic_protection_desc":  "Assign a unique alias and choose whether to expose the Agent Runtime Dashboard.",
+                               "pi_basic_title":  "Pi Instance Basics",
+                               "pi_basic_desc":  "Set the instance name and internal route. Pi is managed through the MyBay Agent workspace.",
+                               "pi_workspace_title":  "Use through the MyBay Agent workspace",
+                               "pi_workspace_desc":  "Pi Runtime does not provide a standalone Dashboard, so no Dashboard username or password is required. Open the MyBay chat workspace after deployment.",
+                               "pi_workspace_notice":  "Pi exposes authenticated Runtime APIs and is managed through the MyBay Agent workspace. No standalone Dashboard login is published.",
                                "instance_alias":  "Agent Instance Alias",
                                "assigned_path":  "Auto-Assigned Security Router Path",
                                "access_username":  "Dashboard Username",
@@ -516,6 +539,8 @@
                                "dashboard_check_label":  "Dashboard Access Protection (Basic Auth)",
                                "dashboard_check_enabled":  "Enabled (username: {{username}})",
                                "dashboard_check_disabled":  "Disabled; no Dashboard entry point is exposed",
+                               "pi_workspace_check_label":  "Pi Management Entry",
+                               "pi_workspace_check_ready":  "MyBay Agent workspace ready",
                                "blueprint_business_title":  "Industry Solution Business Summary",
                                "workflow_business_title":  "Workflow Task Execution Rules",
                                "blueprint_desc_label":  "Solution Business Value Description",
@@ -711,6 +736,8 @@
                                       "confirm":  "Enable",
                                       "title":  "Enable skills and capabilities",
                                       "description":  "Add system-level skills to this Agent. Enable high-risk capabilities carefully; sensitive actions are logged.",
+                                      "piManagedTitle":  "Pi Runtime manages its own tools",
+                                      "piManagedDescription":  "Pi Runtime Beta uses its native RPC toolset with chat attachments, a persisted workspace, and generated-file tracking. Hermes skills and plugins are not loaded.",
                                       "hideAdvanced":  "Hide high-risk settings",
                                       "showAdvanced":  "Show high-risk capabilities",
                                       "credentialsTitle":  "Advanced capability credentials",
@@ -797,6 +824,7 @@
                        },
                        "channel":  {
                                        "restricted":  "This channel is disabled by the local configuration.",
+                                       "piWebOnly":  "Pi Runtime Beta currently supports Web console chat, chat attachments, a persisted workspace, and generated files.",
                                        "title":  "Agent conversations and messaging channels",
                                        "description":  "Connect messaging channels for conversations, task notifications, and command execution.",
                                        "hideGuide":  "Hide setup guide",
@@ -1255,12 +1283,12 @@
                                             "runtimeType":  "Agent runtime type",
                                             "hermesBadge":  "Standard / Full featured",
                                             "hermesDescription":  "Classic full-featured runtime with the 9119 control API, Python executor, and multiple messaging channels.",
-                                            "piBadge":  "Experimental preview / Coming soon",
-                                            "piDescription":  "Pi Agent is a specification-only integration and cannot be deployed yet. Select Hermes Agent instead.",
+                                            "piBadge":  "Experimental / Web chat",
+                                            "piDescription":  "An isolated runtime built on the official Pi RPC interface, currently supporting Web streaming, session recovery, tool progress, and stop.",
                                             "runtimeLoading":  "Loading verified runtime capabilities…",
                                             "runtimeLoadError":  "Runtime capabilities could not be verified. Deployment selection is disabled to prevent an unsupported runtime from being created.",
                                             "runtimeUnavailable":  "Runtime unavailable",
-                                            "runtimeSpecOnly":  "Specification only | Deployment disabled"
+                                            "runtimeSpecOnly":  "Experimental feature disabled"
                                         },
                        "preflight":  {
                                          "localRuntime":  "Local runtime",

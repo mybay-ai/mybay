@@ -1,35 +1,60 @@
+<div align="center">
+
 # 麦贝 MyBay
 
-**让 Agent 真正跑起来。**
+### 让多个 Agent 真正运行、协作并交付结果。
 
-在你自己的电脑或服务器上部署并运行多个相互隔离的 Hermes Agent 实例，统一管理生命周期、对话、文件、任务、消息渠道、诊断与备份。
+开源、本地优先的 Agent 控制面。在你自己的电脑或服务器上部署并管理多个相互隔离的 Agent Runtime。
 
-[快速开始](#快速开始) · [产品预览](#产品预览) · [文档](#文档) · [路线图](./ROADMAP.md)
+[快速开始](#快速开始) · [为什么选择 MyBay](#为什么选择-mybay) · [Agent 底座](#agent-底座) · [文档导航](#按需求查找文档) · [路线图](./ROADMAP.md)
 
 [![CI](https://github.com/mybay-ai/mybay/actions/workflows/ci.yml/badge.svg)](https://github.com/mybay-ai/mybay/actions/workflows/ci.yml)
 [![Security](https://github.com/mybay-ai/mybay/actions/workflows/security.yml/badge.svg)](https://github.com/mybay-ai/mybay/actions/workflows/security.yml)
+[![Release](https://img.shields.io/github/v/release/mybay-ai/mybay?display_name=tag)](https://github.com/mybay-ai/mybay/releases/latest)
 [![License: AGPL-3.0-only](https://img.shields.io/badge/license-AGPL--3.0--only-blue.svg)](./LICENSE)
 
-语言：[English](./README.md) | [简体中文](./README.zh-CN.md)
+[English](./README.md) · 简体中文
+
+</div>
 
 > **当前正式版：`v0.1.27`。** 在 0.x 阶段，公共接口、Runtime Adapter、部署细节与升级行为仍可能调整。
-
-Runtime 可用性和声明能力统一由共享目录生成，详见 [Runtime 能力矩阵](./docs/runtime-capability-matrix.md)。基于证据的认证状态单独发布在 [MyBay Runtime Certification](./docs/runtime-certification.md)，注册 Adapter 或声明能力不会被当成真实 Runtime 或产品 E2E 已通过。
 
 ![麦贝开源版概览](./docs/images/main-zh-open-source.png)
 
 ## 为什么选择 MyBay？
 
-启动一个 Agent 容器只是第一步。MyBay 补齐长期运行所需的管理层，让 Agent 实例可以在同一个本地控制台中被部署、观察、隔离和使用。
+能回答问题的 Agent 已经有用；可以部署、读取真实文件、与其他 Agent 协作、被持续观察、升级和恢复的 Agent，才能承担长期工作。MyBay 把这些环节收进一个可自托管的产品里。
 
-- **部署并管理 Agent**：完成环境预检、模型凭据配置、实例部署、健康与日志检查、重启和更新。
-- **对话与真实工作区联动**：在对话旁查看执行进度、生成文件、文件变更、预览和下载。
-- **运行多个隔离实例**：在同一台电脑或私有服务器上保留彼此独立的工作区与运行状态。
-- **连接消息渠道**：将飞书、Telegram、Discord、Slack 等支持的渠道连接到指定实例。
-- **本地优先与 BYOK**：平台状态、凭据、对话和文件都保存在你控制的基础设施中。
-- **面向长期运维**：内置诊断、一致性 SQLite 备份、HTTPS 服务器模式、CI、安全检查和发布产物。
+| 你的需求 | MyBay 提供的能力 |
+| --- | --- |
+| **统一管理 Agent** | 在一个控制台完成预检、部署、健康检查、日志、重启、升级、回滚和诊断。 |
+| **处理真实工作** | 对话旁直接管理上传、生成文件、变更摘要、预览、下载和持久化工作区。 |
+| **支持多个 Agent 底座** | 以一致的产品体验使用已认证的 Hermes Agent 与 Pi Agent。 |
+| **Agent 之间真实协作** | 通过 A2A 发现节点、鉴权调用、跟踪委派任务、查看证据、取消任务和恢复状态。 |
+| **掌控数据与模型** | 本地 SQLite、隔离 Docker 工作区、自托管部署，以及自带模型凭据。 |
+| **面向长期运维** | Runtime 认证、备份、安全守卫、HTTPS 服务器模式、CI 和带校验和的发布产物。 |
 
-MyBay 开源版完全独立运行，不依赖托管 SaaS、云端主节点、注册流程或付费额度。Docker 是当前 Runtime 的运行基础，SQLite 在本机保存控制面状态。
+MyBay 开源版不依赖托管 SaaS、云端主节点、账号注册或付费额度。Docker 承载 Runtime，SQLite 在你的设备上保存控制面状态。
+
+## 从任务到结果的完整流程
+
+1. **创建 Agent**：选择底座、模型供应商、资源限制和支持的消息渠道。
+2. **交给它真实任务**：对话、附加文件、审批敏感工具，并实时查看执行过程。
+3. **验收交付物**：预览和下载生成文件，同时保留可归属的运行证据。
+4. **需要时发起协作**：通过 A2A 委派任务，并把远端任务跟踪到真实终态。
+5. **持续稳定运行**：在控制面完成诊断、备份、升级、回滚和恢复。
+
+## Agent 底座
+
+MyBay 将产品控制面与 Agent Runtime 分离。你可以按任务选择合适的底座，同时保持一致的部署、对话、文件、协作和生命周期体验。
+
+| Agent 底座 | 发布状态 | 适合的工作 | 当前声明的产品能力 |
+| --- | --- | --- | --- |
+| **Hermes Agent** | 已认证、已验证 | 通用、工具丰富的 Agent 工作流 | 流式与批量对话、文件、Shell、浏览器、定时任务、Web 与已支持的消息渠道 |
+| **Pi Agent** | 已认证、已验证 | 编程和工作区类 Agent 工作流 | 流式对话、文件、Shell、停止、会话恢复、审批、用量和 Web 访问 |
+| **更多底座** | 路线图 | 更多开源 Agent Runtime | 通过 Runtime 清单、Adapter 契约、能力守卫和认证阶梯接入 |
+
+自动生成的 [Runtime 能力矩阵](./docs/runtime-capability-matrix.md) 是当前声明能力与渠道的事实来源。[MyBay Runtime Certification](./docs/runtime-certification.md) 单独发布基于证据的验证结果；仅注册 Adapter 或声明能力不代表产品 E2E 已通过。
 
 ## 快速开始
 
@@ -54,7 +79,7 @@ chmod +x quick-start.sh
 ./quick-start.sh
 ```
 
-打开 [http://localhost:3000](http://localhost:3000)，添加模型供应商，然后部署第一个 Hermes Agent 实例。不要分享或提交 `.env`。
+打开 [http://localhost:3000](http://localhost:3000)，添加模型供应商，然后选择 Hermes Agent 或 Pi Agent 底座部署第一个 Agent。不要分享或提交 `.env`。
 
 第一次尝试生成文件时，请在对话输入框旁切换为“Agent模式”。默认的“快速模式”只回复文字，不执行工具或保存文件。
 
@@ -62,27 +87,27 @@ chmod +x quick-start.sh
 
 ## 产品预览
 
-### 本地优先的 Agent 管理平台
+### 启动属于你的 Agent 控制面
 
 通过 Quick Start 或手动 Docker 部署，在自己的基础设施上运行和管理 AI Agent。
 
 ![麦贝开源版首页与部署方式](./docs/images/mybay-home-zh.png)
 
-### Agent 部署与实例管理
+### 部署并管理每一个实例
 
 在本地控制台中完成环境预检、模型凭据配置、Agent 部署、消息渠道连接和运行状态诊断。
 
 ![Agent 部署中心](./docs/images/agent-deployment-center-zh.png)
 
-### 实例对话与文件工作区
+### 让对话真正产出文件和结果
 
 在同一界面中与 Agent 对话，并查看执行进度、生成文件、文件变更摘要和支持的文件预览。
 
 ![实例对话与文件工作区](./docs/images/chat-file-workspace-zh.png)
 
-## 与 Hermes Agent 的项目关系
+## Runtime 项目与署名
 
-MyBay 是独立维护的开源项目，并非 Nous Research 官方产品，也不代表 Nous Research 对本项目的赞助、认可或维护。Hermes Agent 是由 Nous Research 维护、采用 MIT License 发布的独立项目。MyBay 仅通过其公开的 Runtime 与容器接口进行兼容集成。
+MyBay 是独立维护的开源项目。Hermes Agent 与 Pi Agent 是分别维护的第三方项目，MyBay 通过其公开软件包、Runtime 或容器接口进行集成。接入不代表任何赞助、认可或关联；MyBay 不是 Nous Research 或 Earendil Works 的官方产品。
 
 许可证与署名详情见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。[mybay.ai](https://mybay.ai) 提供的托管服务属于独立商业服务，安装和运行本仓库不需要注册或依赖该服务。
 
@@ -258,10 +283,10 @@ data/
 
 ## Runtime 支持状态
 
-- **Hermes Agent：** 当前 Preview 创建与生命周期链路支持的 Runtime。
-- **Pi Agent：** 仅提供接入规范。UI 无法提交 Pi 部署，API 对 `runtime_type=pi` 明确返回 `PI_RUNTIME_PREVIEW_ONLY`。仓库中的 Adapter 与 Manifest 只用于契约参考，不代表生产支持。
+- **Hermes Agent：** 当前可用、可部署，并已通过 MyBay `certified` 级验证。声明能力包括流式与批量对话、停止、文件、Shell、浏览器、定时任务、Web 和已支持的消息渠道。
+- **Pi Agent：** 当前可用、可部署，并已通过 MyBay `certified` 级验证。声明能力包括流式对话、停止、文件、Shell 和 Web 访问，同时已接通原生会话恢复、可归属用量、稳定工具事件、审批处理和持久化交付物。
 
-完整 Pi 后端部署链路计划在后续版本提供。
+控制面会依据所选 Runtime 的能力声明禁用不支持的功能。依赖具体消息渠道或对话模式前，请查看自动生成的 [Runtime 能力矩阵](./docs/runtime-capability-matrix.md)。
 
 ---
 ## 架构
@@ -272,7 +297,7 @@ flowchart TD
   C --> S[(SQLite)]
   C --> D[Docker Engine]
   C --> T[Traefik - server 模式]
-  D --> R[Hermes Agent Runtime 容器]
+  D --> R[Hermes 或 Pi Agent Runtime 容器]
   R --> A[Runtime API 与 UI]
   R --> M[模型提供商]
 ```
@@ -300,31 +325,29 @@ desktop、LAN、server 三种模式的 Webhook 默认都要求 secret。历史�
 
 ## Agent 运行态接入规范 (`mybay.runtime.yaml`)
 
-MyBay 提供可扩展的 **Agent Runtime Specification（运行态接入规范）**，用于未来接入更多开源 Agent。当前支持的 Runtime 为 Hermes Agent；Pi 规范仅是实验参考：
+MyBay 提供可扩展的 **Agent Runtime Specification（运行态接入规范）**，用于接入更多开源 Agent。当前仓库证据中，Hermes Agent 与 Pi Agent 均已通过认证：
 
 - **JSON Schema 校验规范**：`/public/schemas/mybay.runtime.schema.json`
 - **运行态规格声明示例**：
   - Hermes Agent：`/public/specs/mybay.runtime.yaml`
-  - Pi Agent 规范参考：`/public/specs/pi.runtime.yaml`
+  - Pi Agent 运行时清单：`/public/specs/pi.runtime.yaml`
 
 通过定义 `mybay.runtime.yaml` 规格文件，开发者可以标准化声明 Agent 容器端口、健康检查 Endpoint、挂载卷路径及支持的通讯渠道（飞书、Telegram、Discord、Slack、微信等）。
 
 ---
 
-## 更多文档
+## 按需求查找文档
 
-- `docs/QUICKSTART.zh-CN.md`：10 分钟部署第一个本地 Agent（[English](./docs/QUICKSTART.md)）
-- `docs/troubleshooting.zh-CN.md`：部署、聊天、飞书和文件预览的故障索引（[English](./docs/troubleshooting.md)）
-- `docs/local-deployment.zh-CN.md`：本地部署详细流程
-- `docs/env.zh-CN.md`：环境变量详细说明
-- `docs/docker-image-cache.zh-CN.md`：Hermes Agent 镜像拉取、存储位置与清理说明
-- `docs/security.zh-CN.md`：安全架构与注意事项
-
-英文文档：
-- `docs/local-deployment.md`
-- `docs/env.md`
-- `docs/docker-image-cache.md`
-- `docs/security.md`
+| 我想要…… | 从这里开始 |
+| --- | --- |
+| 部署第一个本地 Agent | [10 分钟快速开始](./docs/QUICKSTART.zh-CN.md) · [English](./docs/QUICKSTART.md) |
+| 选择和比较 Agent 底座 | [Runtime 能力矩阵](./docs/runtime-capability-matrix.md) · [Runtime 认证报告](./docs/runtime-certification.md) |
+| 部署到本机或服务器 | [本地部署](./docs/local-deployment.zh-CN.md) · [环境变量](./docs/env.zh-CN.md) |
+| 排查部署、对话、渠道或预览故障 | [故障排查](./docs/troubleshooting.zh-CN.md) · [English](./docs/troubleshooting.md) |
+| 备份、恢复和维护本地部署 | [本地运维](./docs/self-host-operations.md) |
+| 了解信任边界和暴露风险 | [安全说明](./docs/security.zh-CN.md) · [English](./docs/security.md) |
+| 管理本地 Runtime 镜像与磁盘占用 | [Docker 镜像缓存](./docs/docker-image-cache.zh-CN.md) · [English](./docs/docker-image-cache.md) |
+| 了解系统设计 | [架构](./docs/architecture.md) · [路线图](./ROADMAP.md) |
 
 ---
 

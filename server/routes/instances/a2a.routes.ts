@@ -1,4 +1,4 @@
-import { getA2ATaskLink, a2aTaskResultText, updateA2ATaskLink } from '../../services/a2aTaskLinks';
+import { getA2ATaskLink, a2aTaskResultText, selectA2ATaskLinksForRefresh, updateA2ATaskLink } from '../../services/a2aTaskLinks';
 import { readA2ADiskResult } from '../../services/a2aDiskResult';
 import { cancelA2ATask } from '../../services/a2aTaskCancel';
 import { readStoreCollections } from "../../localStore";
@@ -23,9 +23,18 @@ import {
 } from "../../../shared/a2aConfig";
 import { ensureA2ABearerToken } from "../../services/a2aRuntimeConfig";
 import { probeA2AAgentCard } from "../../services/a2aProbe";
-import { groupA2AOrchestrations, readA2AActivities } from "../../services/a2aActivity";
+import { applyA2ARemoteTaskEvidence, groupA2AOrchestrations, mergeA2ATaskLinkActivities, readA2AActivities } from "../../services/a2aActivity";
 import { docker } from "../../lib/docker";
 import { probeA2ATools } from "../../services/a2aToolProbe";
+import { a2aTrackingEnabled } from "../../services/a2aRelayConfig";
+import {
+  cancelManagedRuntimeA2ATask,
+  isManagedRuntimeA2ACaller,
+  isManagedRuntimeA2APeer,
+  probeManagedRuntimeA2ACaller,
+  probeManagedRuntimeA2APeer,
+  readManagedRuntimeA2ATask,
+} from "../../services/managedRuntimeA2A";
 
 function parseConfig(instance: any): any {
   try {
@@ -59,6 +68,37 @@ function getStoredPeerTransport(peer: any): { peerId: string; url: string } | nu
   return { peerId, url: getA2AInternalUrl(peerId) };
 }
 
+async function readRemoteA2ATask(url: string, encryptedToken: string, remoteId: string) {
+  const rpcId = crypto.randomUUID();
+  const response = await fetch(url, {
+    method: "POST",
+    redirect: "error",
+    signal: AbortSignal.timeout(5000),
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${decrypt(encryptedToken)}` },
+    body: JSON.stringify({ jsonrpc: "2.0", id: rpcId, method: "GetTask", params: { id: remoteId, historyLength: 0 } }),
+  });
+  if (!response.ok || !response.body) throw Error("A2A_RESULT_UNAVAILABLE");
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let bytes = 0;
+  try {
+    while (true) {
+      const next = await reader.read();
+      if (next.done) break;
+      bytes += next.value.length;
+      if (bytes > 2 * 1024 * 1024) throw Error("A2A_RESPONSE_LIMIT");
+      chunks.push(next.value);
+    }
+  } finally {
+    await reader.cancel().catch(() => {});
+    reader.releaseLock();
+  }
+  const rpc = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  if (rpc.id !== rpcId) throw Error("A2A_RESULT_UNAVAILABLE");
+  if (rpc.error) throw Error(rpc.error.code === -32001 ? "A2A_TASK_NOT_FOUND" : "A2A_RESULT_UNAVAILABLE");
+  return rpc.result?.task || rpc.result;
+}
+
 function safeA2ARoute(
   handler: (req: AuthenticatedRequest, res: Response) => Promise<unknown>,
 ) {
@@ -83,12 +123,15 @@ async function buildA2AView(instance: any, req: AuthenticatedRequest) {
     .map((item: any) => {
       const peerConfig = parseConfig(item);
       const version = resolveVersion(item);
+      const managed = a2aTrackingEnabled(String(instance.id)) && isManagedRuntimeA2APeer(item);
       return {
         id: item.id,
         name: normalizeA2AAgentName(item.name, peerConfig.a2aAgentName || item.id),
         version,
-        supported: supportsA2AByVersion(version, item.capabilities),
-        enabled: peerConfig.a2aEnabled === true,
+        supported: managed || supportsA2AByVersion(version, item.capabilities),
+        enabled: managed || peerConfig.a2aEnabled === true,
+        transport: managed ? "mybay_runtime" : "a2a",
+        runtimeType: String(item.runtime_type || "hermes").trim().toLowerCase(),
         status: item.status,
         capabilities: configuredPeerCapabilities[item.id] || [],
       };
@@ -97,7 +140,7 @@ async function buildA2AView(instance: any, req: AuthenticatedRequest) {
   return {
     instanceId: instance.id,
     version,
-    supported: supportsA2AByVersion(version, instance.capabilities),
+    supported: (isManagedRuntimeA2ACaller(instance) && a2aTrackingEnabled(String(instance.id))) || supportsA2AByVersion(version, instance.capabilities),
     enabled: config.a2aEnabled === true,
     applicationState: await getApplicationState(instance),
     agentName: normalizeA2AAgentName(config.a2aAgentName, instance.name || instance.id),
@@ -136,11 +179,13 @@ export function createA2ARoutes() {
     const peer: any = available.find((item: any) => String(item.id) === source.peerId);
     if (!config.a2aEnabled || !normalizeA2APeerIds(config.a2aPeerIds, instance.id).includes(source.peerId) || !peer || !isSelectablePeer(peer) || getOwnerId(peer) !== getOwnerId(instance)) return res.status(403).json({ code: 'FORBIDDEN' });
     const peerConfig = parseConfig(peer);
+    const managed = a2aTrackingEnabled(String(instance.id)) && isManagedRuntimeA2APeer(peer);
     const transport = getStoredPeerTransport(peer);
     const link = getA2ATaskLink(String(instance.id), source.peerId, source.taskId);
-    if (!transport || !peerConfig.a2aEnabled || !peerConfig.a2aBearerToken || !link?.remoteTaskId || link.contextId !== source.contextId) return res.status(409).json({ code: 'A2A_CANCEL_UNCONFIRMED' });
+    if (!transport || (!managed && (!peerConfig.a2aEnabled || !peerConfig.a2aBearerToken)) || !link?.remoteTaskId || link.contextId !== source.contextId) return res.status(409).json({ code: 'A2A_CANCEL_UNCONFIRMED' });
     try {
       await cancelA2ATask(link, async remoteId => {
+        if (managed) return cancelManagedRuntimeA2ATask(peer, link.contextId, remoteId);
         const id = crypto.randomUUID();
         const response = await fetch(transport.url, { method: 'POST', redirect: 'error', signal: AbortSignal.timeout(5000), headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${decrypt(peerConfig.a2aBearerToken)}` }, body: JSON.stringify({ jsonrpc: '2.0', id, method: 'CancelTask', params: { id: remoteId } }) });
         if (!response.ok || !response.body) throw Error('A2A_CANCEL_UNCONFIRMED');
@@ -174,22 +219,28 @@ export function createA2ARoutes() {
     const config = parseConfig(instance);
     const applicationState = await getApplicationState(instance);
     if (config.a2aEnabled !== true) return res.json({ state: "disabled", applicationState });
-    const ownStatus = await probeA2AAgentCard(instance.id);
-    const toolState = ownStatus.state === "ready" ? await probeA2ATools(instance) : "unknown";
+    const managedCaller = isManagedRuntimeA2ACaller(instance) && a2aTrackingEnabled(String(instance.id));
+    const managedStatus = managedCaller ? await probeManagedRuntimeA2ACaller(instance) : null;
+    const ownStatus = managedStatus || await probeA2AAgentCard(instance.id);
+    const toolState = managedStatus?.toolState || (ownStatus.state === "ready" ? await probeA2ATools(instance) : "unknown");
     const trustedPeerIds = normalizeA2APeerIds(config.a2aPeerIds, instance.id);
     const available = await dbAdapter.getInstances(req.user.id, req.user.role);
     const peers = await Promise.all(trustedPeerIds.map(async (peerId) => {
       const peer = available.find((item: any) => item.id === peerId && getOwnerId(item) === getOwnerId(instance) && isSelectablePeer(item));
       if (!peer) return { id: peerId, state: "unknown", setupIssue: "unavailable" };
       const peerConfig = parseConfig(peer);
-      const peerApplicationState = await getApplicationState(peer);
-      const setupIssue = !supportsA2AByVersion(resolveVersion(peer), peer.capabilities) ? "unsupported"
-        : peerConfig.a2aEnabled !== true ? "disabled"
+      const managed = a2aTrackingEnabled(String(instance.id)) && isManagedRuntimeA2APeer(peer);
+      const peerApplicationState = managed ? "applied" : await getApplicationState(peer);
+      const live = managed ? await probeManagedRuntimeA2APeer(peer) : peerConfig.a2aEnabled === true ? await probeA2AAgentCard(peerId) : { state: "disabled" };
+      // Older deployments can be fully live without the revision marker added
+      // by newer control planes. A successful protocol probe is authoritative
+      // for that legacy case; an explicit pending revision still requires apply.
+      const setupIssue = !managed && !supportsA2AByVersion(resolveVersion(peer), peer.capabilities) ? "unsupported"
+        : !managed && peerConfig.a2aEnabled !== true ? "disabled"
         : peerApplicationState === "pending" ? "pending"
         : peer.status !== "running" ? "not_running"
-        : peerApplicationState === "unknown" ? "unknown" : null;
-      const live = peerConfig.a2aEnabled === true ? await probeA2AAgentCard(peerId) : { state: "disabled" };
-      return { id: peerId, ...live, enabled: peerConfig.a2aEnabled === true, applicationState: peerApplicationState, setupIssue };
+        : peerApplicationState === "unknown" && live.state !== "ready" ? "unknown" : null;
+      return { id: peerId, ...live, enabled: managed || peerConfig.a2aEnabled === true, applicationState: peerApplicationState, setupIssue };
     }));
     return res.json({ ...ownStatus, peers, applicationState, toolState, generatedAt: new Date().toISOString() });
   }));
@@ -216,52 +267,71 @@ export function createA2ARoutes() {
         // Activity history remains readable with its raw peer identity when Docker is unavailable.
       }
     }));
-    const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 12));
-    const activities = readA2AActivities({ instanceId: String(instance.id), includeAll: true, peerNames, peerIpToId, trustedPeerIds: [...trustedPeerIds] });
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 12));
+    const activityStore = readStoreCollections(["chatRuns", "a2aTaskLinks"]);
+    const activities = mergeA2ATaskLinkActivities(
+      readA2AActivities({ instanceId: String(instance.id), includeAll: true, peerNames, peerIpToId, trustedPeerIds: [...trustedPeerIds] }),
+      activityStore.a2aTaskLinks,
+      String(instance.id),
+      peerNames,
+    );
+    const refreshLink = async (currentLink: any) => {
+      const peer = peers.find((row: any) => row.id === currentLink.peerId);
+      const peerConfig = peer ? parseConfig(peer) : null;
+      const managed = a2aTrackingEnabled(String(instance.id)) && isManagedRuntimeA2APeer(peer);
+      const transport = getStoredPeerTransport(peer);
+      if (!transport || (!managed && (!peerConfig?.a2aEnabled || !peerConfig.a2aBearerToken))) return currentLink;
+      try {
+        return await refreshMappedA2ATask(currentLink, remoteId => managed
+          ? readManagedRuntimeA2ATask(peer, currentLink.contextId, remoteId)
+          : readRemoteA2ATask(transport.url, peerConfig.a2aBearerToken, remoteId));
+      } catch (error: any) {
+        const notFound = error.message === "A2A_TASK_NOT_FOUND";
+        const diskResult = notFound ? readA2ADiskResult(currentLink) : undefined;
+        return updateA2ATaskLink(currentLink.id, {
+          lookupState: diskResult ? "disk_reply" : notFound ? "not_found" : "unavailable",
+          checkedAt: new Date().toISOString(),
+          diskResult,
+        });
+      }
+    };
+    const visibleTasks = new Set(activities.slice(0, limit).map(activity => `${activity.peerId || ""}\n${activity.taskId}\n${activity.contextId}`));
+    const refreshBefore = Date.now() - 10_000;
+    const pendingLinks = selectA2ATaskLinksForRefresh({
+      links: readStoreCollections(["a2aTaskLinks"]).a2aTaskLinks,
+      instanceId: String(instance.id),
+      trustedPeerIds,
+      visibleTasks,
+      refreshBefore,
+    });
+    await Promise.allSettled(pendingLinks.map(refreshLink));
     const hasSource = ['taskId', 'contextId', 'peerId'].some(key => req.query[key] !== undefined);
     const source = readA2ARecoverySource(req.query);
     if (hasSource && !source) return res.status(400).json({ code: "INVALID_REQUEST" });
     const recoveryEvidence = source ? resolveA2ARecoveryEvidence(source, activities) : null;
     let link = source ? getA2ATaskLink(String(instance.id), source.peerId, source.taskId) : undefined;
     if (source && link?.remoteTaskId && link.contextId === source.contextId && req.query.refreshRemote === '1' && trustedPeerIds.has(source.peerId)) {
-      const peer = peers.find((row: any) => row.id === source.peerId);
-      const peerConfig = peer ? parseConfig(peer) : null;
-      const transport = getStoredPeerTransport(peer);
-      if (transport && peerConfig?.a2aEnabled && peerConfig.a2aBearerToken) {
-        try {
-          link = await refreshMappedA2ATask(link, async remoteId => {
-            const rpcId = crypto.randomUUID();
-            const response = await fetch(transport.url, { method: 'POST', redirect: 'error', signal: AbortSignal.timeout(5000), headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${decrypt(peerConfig.a2aBearerToken)}` }, body: JSON.stringify({ jsonrpc: '2.0', id: rpcId, method: 'GetTask', params: { id: remoteId, historyLength: 0 } }) });
-            if (!response.ok || !response.body) throw Error('A2A_RESULT_UNAVAILABLE');
-            const reader = response.body.getReader(); const chunks: Uint8Array[] = []; let bytes = 0;
-            try { while (true) { const next = await reader.read(); if (next.done) break; bytes += next.value.length; if (bytes > 2 * 1024 * 1024) throw Error('A2A_RESPONSE_LIMIT'); chunks.push(next.value); } }
-            finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
-            const rpc = JSON.parse(Buffer.concat(chunks).toString('utf8'));
-            if (rpc.id !== rpcId) throw Error('A2A_RESULT_UNAVAILABLE');
-            if (rpc.error) throw Error(rpc.error.code === -32001 ? 'A2A_TASK_NOT_FOUND' : 'A2A_RESULT_UNAVAILABLE');
-            return rpc.result?.task || rpc.result;
-          });
-        } catch (error: any) {
-          const notFound = error.message === 'A2A_TASK_NOT_FOUND';
-          const diskResult = notFound ? readA2ADiskResult(link) : undefined;
-          link = updateA2ATaskLink(link.id, { lookupState: diskResult ? 'disk_reply' : notFound ? 'not_found' : 'unavailable', checkedAt: new Date().toISOString(), diskResult });
-          // Preserve the last remote status; a disk reply is not a TaskStore terminal state.
-        }
-      }
+      link = await refreshLink(link);
     }
     if (recoveryEvidence && link?.remoteTaskId && link.contextId === source!.contextId) recoveryEvidence.remoteMapping = {
       remoteTaskId: link.remoteTaskId, remoteState: link.remoteState || 'unknown', recordState: link.state, updatedAt: link.updatedAt, result: a2aTaskResultText(link.task), lookupState: link.lookupState, checkedAt: link.checkedAt, diskResult: link.diskResult,
     };
-    const activityStore = readStoreCollections(["chatRuns", "a2aTaskLinks"]);
     const mappingFor = (activity: any) => {
-      const saved = activity.direction === "outbound" && activityStore.a2aTaskLinks.find(row => row.instanceId === instance.id && row.peerId === activity.peerId && row.callerTaskId === activity.taskId && row.contextId === activity.contextId);
-      return saved?.remoteTaskId ? { remoteTaskId: saved.remoteTaskId, remoteState: saved.remoteState || "unknown", recordState: saved.state, updatedAt: saved.updatedAt, result: a2aTaskResultText(saved.task), lookupState: saved.lookupState, checkedAt: saved.checkedAt, diskResult: saved.diskResult } : null;
+      const saved = activity.direction === "outbound" && activityStore.a2aTaskLinks.find(row => row.instanceId === instance.id && row.peerId === activity.peerId && row.callerTaskId === activity.taskId);
+      return saved?.remoteTaskId ? { contextId: saved.contextId, mapping: { remoteTaskId: saved.remoteTaskId, remoteState: saved.remoteState || "unknown", recordState: saved.state, updatedAt: saved.updatedAt, result: a2aTaskResultText(saved.task), lookupState: saved.lookupState, checkedAt: saved.checkedAt, diskResult: saved.diskResult } } : null;
     };
     const recoveryRuns = activityStore.chatRuns.filter(run => run.instance_id === instance.id && run.user_id === ownerId && run.a2a_recovery_source);
+    const enrichedActivities = activities.map(activity => {
+      const saved = mappingFor(activity);
+      const remoteMapping = saved?.mapping || null;
+      return { ...applyA2ARemoteTaskEvidence(activity, remoteMapping), contextId: saved?.contextId || activity.contextId, remoteMapping };
+    });
     return res.json({
       ...(recoveryEvidence ? { recoveryEvidence } : {}),
-      activities: activities.slice(0, limit).map(activity => ({ ...activity, remoteMapping: mappingFor(activity), recoveryAttempts: recoveryRuns.filter(run => sameA2ARecoverySource(run.a2a_recovery_source, { contextId: activity.contextId, taskId: activity.taskId, peerId: activity.peerId || "" })).sort((a,b) => String(b.created_at).localeCompare(String(a.created_at))).slice(0,3).map(run => ({ runId: run.id, status: run.status, createdAt: run.created_at })) })),
-      orchestrations: groupA2AOrchestrations(activities).slice(0, limit),
+      activities: enrichedActivities.slice(0, limit).map(activity => ({ ...activity, recoveryAttempts: recoveryRuns.filter(run => sameA2ARecoverySource(run.a2a_recovery_source, { contextId: activity.contextId, taskId: activity.taskId, peerId: activity.peerId || "" })).sort((a,b) => String(b.created_at).localeCompare(String(a.created_at))).slice(0,3).map(run => ({ runId: run.id, status: run.status, createdAt: run.created_at })) })),
+      orchestrations: groupA2AOrchestrations(enrichedActivities).slice(0, limit),
+      total: activities.length,
+      hasMore: activities.length > limit && limit < 100,
       generatedAt: new Date().toISOString(),
     });
   }));
@@ -271,7 +341,7 @@ export function createA2ARoutes() {
     if (!instance) return res.status(404).json({ code: "INSTANCE_NOT_FOUND" });
     if (!canAccess(instance, req)) return res.status(403).json({ code: "FORBIDDEN" });
     const version = resolveVersion(instance);
-    if (!supportsA2AByVersion(version, instance.capabilities)) {
+    if (!(isManagedRuntimeA2ACaller(instance) && a2aTrackingEnabled(String(instance.id))) && !supportsA2AByVersion(version, instance.capabilities)) {
       return res.status(409).json({ code: "A2A_VERSION_UNSUPPORTED", params: { version } });
     }
     const enabled = req.body?.enabled === true;

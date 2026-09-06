@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
-import { classifyA2AFailure, groupA2AOrchestrations, readA2AActivities } from "./a2aActivity";
+import { applyA2ARemoteTaskEvidence, classifyA2AFailure, groupA2AOrchestrations, mergeA2ATaskLinkActivities, readA2AActivities } from "./a2aActivity";
 
 const roots: string[] = [];
 
@@ -292,6 +292,50 @@ describe("A2A activity reader", () => {
     const rows=readA2AActivities({instanceId:'agent-1',dataRoot:root});
     expect(rows.find(r=>r.contextId==='ctx-bounded')?.requestText).toBe('original request '+'x'.repeat(600));
     expect(rows.find(r=>r.contextId==='ctx-long')?.requestText).toBeNull();
+  });
+
+  it("uses a persisted remote terminal state to close an interrupted outbound activity", () => {
+    const activity = {
+      contextId: "ctx-recovered", taskId: "caller-task", direction: "outbound" as const,
+      peerId: "agent-2", peerName: "Agent Two", status: "in_progress" as const,
+      startedAt: "2026-01-01T00:00:00.000Z", completedAt: null, durationMs: null,
+      summary: "research", result: null, failureReason: null,
+    };
+    const recovered = applyA2ARemoteTaskEvidence(activity, {
+      remoteState: "TASK_STATE_COMPLETED", recordState: "finished",
+      result: "verified result", updatedAt: "2026-01-01T00:00:04.000Z",
+    });
+    expect(recovered).toMatchObject({ status: "completed", completedAt: "2026-01-01T00:00:04.000Z", durationMs: 4000, result: "verified result" });
+    expect(groupA2AOrchestrations([recovered, { ...recovered, taskId: "caller-task-2" }])[0]).toMatchObject({ status: "completed", completed: 2 });
+  });
+
+  it("does not promote nonterminal, unconfirmed, or inbound evidence", () => {
+    const activity = {
+      contextId: "ctx-active", taskId: "caller-task", direction: "outbound" as const,
+      peerId: "agent-2", peerName: "Agent Two", status: "in_progress" as const,
+      startedAt: "2026-01-01T00:00:00.000Z", completedAt: null, durationMs: null,
+      summary: "research", result: null, failureReason: null,
+    };
+    expect(applyA2ARemoteTaskEvidence(activity, { remoteState: "TASK_STATE_WORKING", recordState: "mapped" })).toBe(activity);
+    expect(applyA2ARemoteTaskEvidence(activity, { remoteState: "TASK_STATE_COMPLETED", recordState: "mapped" })).toBe(activity);
+    expect(applyA2ARemoteTaskEvidence({ ...activity, direction: "inbound" }, { remoteState: "TASK_STATE_COMPLETED", recordState: "finished" }).status).toBe("in_progress");
+    expect(applyA2ARemoteTaskEvidence(activity, { remoteState: "TASK_STATE_CANCELED", recordState: "finished", updatedAt: "2026-01-01T00:00:02.000Z" })).toMatchObject({ status: "cancelled", durationMs: 2000 });
+    expect(applyA2ARemoteTaskEvidence(activity, { remoteState: "TASK_STATE_FAILED", recordState: "finished", updatedAt: "2026-01-01T00:00:03.000Z" })).toMatchObject({ status: "failed", failureReason: null });
+  });
+
+  it("turns persisted managed Runtime task links into refresh-safe group activities", () => {
+    const activities = mergeA2ATaskLinkActivities([], [{
+      id: "link-1", instanceId: "pi-host", peerId: "peer-1", contextId: "ctx-room", callerTaskId: "caller-1",
+      fingerprint: "hash", remoteTaskId: "remote-1", remoteState: "TASK_STATE_COMPLETED", state: "finished",
+      task: { artifacts: [{ parts: [{ kind: "text", text: "PI_GROUP_OK" }] }] },
+      createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:03.000Z",
+    }], "pi-host", new Map([["peer-1", "Peer One"]]));
+    expect(activities).toEqual([expect.objectContaining({
+      contextId: "ctx-room", taskId: "caller-1", peerId: "peer-1", peerName: "Peer One",
+      direction: "outbound", status: "completed", result: "PI_GROUP_OK", durationMs: 3000,
+    })]);
+    expect(groupA2AOrchestrations([...activities, { ...activities[0], peerId: "peer-2", peerName: "Peer Two", taskId: "caller-2" }])[0])
+      .toMatchObject({ status: "completed", total: 2 });
   });
 
 });

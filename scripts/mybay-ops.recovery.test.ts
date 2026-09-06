@@ -69,11 +69,14 @@ describe("backup exclusions and isolated restore", () => {
 
   it("excludes regenerable runtime directories but preserves workspace files and instance configuration", async () => {
     const f = fixture();
-    for (const directory of [".cache", "cache", "logs", "__pycache__", ".venv", "node_modules"]) {
+    for (const directory of [".cache", "cache", "audio_cache", "image_cache", "logs", "__pycache__", ".venv", "pptx_env", "node_modules", "lazy-packages"]) {
       f.write(`instances/agent/.hermes/${directory}/ignored.txt`, "transient");
     }
     f.write("instances/agent/.env", "SYNTHETIC_PROVIDER_KEY=test-only");
     f.write("instances/agent/report.html", "artifact");
+    for (const runtimeFile of ["gateway.sock", "gateway.pid", "auth.lock", "state.db-wal", "state.db-shm", "gateway-starts.log"]) {
+      f.write(`instances/agent/${runtimeFile}`, "regenerable");
+    }
     f.write("uploads/document.txt", "upload");
     await createBackup({ database: f.database, output: f.backup });
     const manifest = JSON.parse(fs.readFileSync(path.join(f.backup, "manifest.json"), "utf8"));
@@ -81,6 +84,14 @@ describe("backup exclusions and isolated restore", () => {
       "data/instances/agent/.env", "data/instances/agent/report.html", "data/mybay.sqlite", "data/uploads/document.txt",
     ]);
     expect(manifest.skippedPaths).toContain("data/instances/agent/.hermes/.venv");
+    expect(manifest.skippedPaths).toEqual(expect.arrayContaining([
+      "data/instances/agent/gateway.sock",
+      "data/instances/agent/gateway.pid",
+      "data/instances/agent/auth.lock",
+      "data/instances/agent/state.db-wal",
+      "data/instances/agent/state.db-shm",
+      "data/instances/agent/gateway-starts.log",
+    ]));
     expect(verifyBackup({ backup: f.backup }).ok).toBe(true);
   });
 

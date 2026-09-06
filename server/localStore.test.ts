@@ -191,7 +191,7 @@ describe("local SQLite store", () => {
     closeLocalDatabase();
 
     const verified = new DatabaseSync(sqlitePath);
-    expect((verified.prepare("SELECT value FROM localMetadata WHERE key = ?").get("schema_version") as { value: string }).value).toBe("6");
+    expect((verified.prepare("SELECT value FROM localMetadata WHERE key = ?").get("schema_version") as { value: string }).value).toBe("7");
     expect(JSON.parse((verified.prepare("SELECT data FROM chatRuns WHERE id = ?").get("run-old") as { data: string }).data)).toEqual(migrated);
     verified.close();
 

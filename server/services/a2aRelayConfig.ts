@@ -3,7 +3,7 @@ export function a2aTrackingEnabled(instanceId?: string) {
   if (process.env.MYBAY_A2A_TASK_TRACKING !== 'true') return false;
   const instances = (process.env.MYBAY_A2A_TRACKED_INSTANCES || '').split(',').map(id => id.trim()).filter(Boolean);
   // An empty scope never enables all instances implicitly.
-  return instanceId ? instances.includes(instanceId) : instances.length > 0;
+  return instanceId ? instances.includes('*') || instances.includes(instanceId) : instances.length > 0;
 }
 export function a2aRelayToken(instanceId: string) {
   const secret = process.env.MYBAY_INTERNAL_ROUTING_SECRET;

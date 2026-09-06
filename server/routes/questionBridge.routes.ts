@@ -18,9 +18,10 @@ export function createQuestionBridgeRouter() {
     catch (error) { return res.status(error instanceof QuestionError ? error.status : 500).json({ success: false, error: error instanceof QuestionError ? error.code : "INTERNAL_ERROR" }); }
   });
   router.get("/:instanceId/:questionId", (req, res) => {
-    const { nativeRunId, sessionId } = req.query;
-    if (typeof nativeRunId !== "string" || !QUESTION_ID.test(nativeRunId) || typeof sessionId !== "string" || !QUESTION_ID.test(sessionId) || !QUESTION_ID.test(req.params.questionId)) return res.status(400).json({ success: false, error: "INVALID_REQUEST" });
-    try { return res.json({ success: true, question: runQuestionsRepo.poll(req.params.instanceId, nativeRunId, sessionId, req.params.questionId) }); }
+    const { nativeRunId, sessionId, runtimeType } = req.query;
+    const runtime = runtimeType === "pi" ? "pi" : "hermes";
+    if ((runtime === "hermes" && (typeof nativeRunId !== "string" || !QUESTION_ID.test(nativeRunId))) || typeof sessionId !== "string" || !QUESTION_ID.test(sessionId) || !QUESTION_ID.test(req.params.questionId)) return res.status(400).json({ success: false, error: "INVALID_REQUEST" });
+    try { return res.json({ success: true, question: runQuestionsRepo.poll(req.params.instanceId, typeof nativeRunId === "string" ? nativeRunId : undefined, sessionId, req.params.questionId, runtime) }); }
     catch (error) { return res.status(error instanceof QuestionError ? error.status : 500).json({ success: false, error: error instanceof QuestionError ? error.code : "INTERNAL_ERROR" }); }
   });
   return router;

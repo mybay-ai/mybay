@@ -1,6 +1,6 @@
 import { getAuthToken } from "./auth";
 
-export function uploadInstanceFile(instanceId: string, directory: string, file: File, signal: AbortSignal, progress: (percent: number) => void): Promise<{ path: string }> {
+export function uploadInstanceFile(instanceId: string, directory: string, file: File, uploadId: string, signal: AbortSignal, progress: (percent: number) => void): Promise<{ path: string; reused: boolean }> {
   return new Promise((resolve, reject) => {
     const request = new XMLHttpRequest();
     const fail = (code: string) => reject(Object.assign(new Error(code), { code }));
@@ -9,13 +9,14 @@ export function uploadInstanceFile(instanceId: string, directory: string, file: 
     request.withCredentials = true;
     request.timeout = 120000;
     request.setRequestHeader("Content-Type", "application/octet-stream");
+    request.setRequestHeader("X-Upload-Id", uploadId);
     const token = getAuthToken();
     if (token) request.setRequestHeader("Authorization", `Bearer ${token}`);
     request.upload.onprogress = event => { if (event.lengthComputable) progress(Math.round(event.loaded / event.total * 100)); };
     request.onload = () => {
-      let body: { code?: string; ok?: boolean; path?: string } = {};
+      let body: { code?: string; ok?: boolean; path?: string; reused?: boolean } = {};
       try { body = JSON.parse(request.responseText); } catch { /* A proxy may return HTML. */ }
-      if (request.status === 201 && body.ok && typeof body.path === "string") resolve({ path: body.path });
+      if ([200, 201].includes(request.status) && body.ok && typeof body.path === "string") resolve({ path: body.path, reused: body.reused === true });
       else fail(body.code || (request.status === 401 || request.status === 403 ? "UPLOAD_ACCESS_DENIED" : "UPLOAD_FAILED"));
     };
     request.onerror = () => fail("UPLOAD_NETWORK");

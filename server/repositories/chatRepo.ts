@@ -11,6 +11,7 @@ import { readLocalRunTimeline, type LocalRunTimeline } from "../../shared/localR
 import type { LocalRunFileDiffs } from "../../shared/localRunFileDiff";
 import type { ChatGroupConfig, ChatGroupRun } from "../../shared/chatCollaboration";
 import { pruneRunFileDiffs, validateRunFileDiffs } from "../services/runs/runFileSnapshots";
+import { confirmFileChangesWithSnapshots } from "../services/runs/runFileEvidence";
 import { randomUUID } from "crypto";
 import {
   mutateStore,
@@ -406,10 +407,24 @@ export const chatRepo = {
   },
 
   async listMessages(conversationId: string, limit = 50, beforeSeq?: number): Promise<ChatMessage[]> {
-    let rows = readStoreCollections(["chatMessages"] as const).chatMessages.filter((m) => m.conversation_id === conversationId);
+    const store = readStoreCollections(["chatMessages", "chatRuns"] as const);
+    let rows = store.chatMessages.filter((m) => m.conversation_id === conversationId);
     if (beforeSeq !== undefined && beforeSeq !== null) rows = rows.filter((m) => Number(m.sequence_no || 0) < beforeSeq);
     rows.sort((a, b) => Number(b.sequence_no || 0) - Number(a.sequence_no || 0));
-    return rows.slice(0, limit).reverse();
+    const runsById = new Map(store.chatRuns.filter(run => run.conversation_id === conversationId).map(run => [run.id, run]));
+    return rows.slice(0, limit).reverse().map(message => {
+      const runId = typeof message.metadata?.run_id === "string" ? message.metadata.run_id : null;
+      const run = runId ? runsById.get(runId) : null;
+      const changes = readLocalFileEvidence(message.metadata?.file_evidence, runId);
+      if (!runId || !run || changes.length === 0) return message;
+      const fileDiffs = validateRunFileDiffs(run.file_diffs, runId, conversationId);
+      const confirmed = confirmFileChangesWithSnapshots(changes, fileDiffs);
+      if (confirmed.every((change, index) => change.kind === changes[index]?.kind)) return message;
+      return {
+        ...message,
+        metadata: { ...message.metadata, file_evidence: { version: 1, runId, changes: confirmed } },
+      };
+    });
   },
 
   async getLatestCompletedMessagesForContext(

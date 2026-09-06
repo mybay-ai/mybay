@@ -17,7 +17,7 @@ export type RunCompletionClaimV1 =
 export type RunCompletionVerificationAuditV1 = {
   schemaVersion: "mybay.run-completion-verification.v1";
   runId: string;
-  runtimeType: "hermes";
+  runtimeType: string;
   source: RunCompletionClaimV1["source"];
   verifiedAt: string;
   assistantContentSha256: string;
@@ -76,10 +76,13 @@ export function verifyRunCompletionV1(
   }
 
   const assistantContentSha256 = sha256(claim.assistantContent);
+  const runtimeType = typeof run.runtime_type === "string" && /^[a-z0-9][a-z0-9._-]{0,79}$/.test(run.runtime_type)
+    ? run.runtime_type
+    : "hermes";
   const audit: RunCompletionVerificationAuditV1 = Object.freeze({
     schemaVersion: "mybay.run-completion-verification.v1",
     runId: claim.runId,
-    runtimeType: "hermes",
+    runtimeType,
     source: claim.source,
     verifiedAt: new Date(nowMs).toISOString(),
     assistantContentSha256,

@@ -33,8 +33,9 @@ import tar from "tar-fs";
 import { skillPolicyRegistry } from "../shared/skillPolicyRegistry";
 import { assertRuntimeSatisfiesSkillPolicy, createRuntimeSecurityManifest } from "./services/skillPolicyEnforcer";
 import { resolveHermesProvider, VALID_HERMES_PROVIDERS } from "./providerEnv";
-import { getDockerProfile, getResourceLimits } from "./services/docker/dockerResourcePolicy";
+import { getAgentContainerSecurityProfile, getDockerProfile, getResourceLimits } from "./services/docker/dockerResourcePolicy";
 import { ensureLocalFeishuRuntimeImage, requiresLocalFeishuRuntime } from "./services/localFeishuRuntime";
+import { ensureSelectedPiRuntimeImage } from "./services/localPiRuntime";
 import {
   connectControlPlaneToNetwork,
   connectTraefikToNetwork,
@@ -42,6 +43,16 @@ import {
 } from "./services/docker/dockerNetworkManager";
 
 export async function ensureFrontendBuilt(docker: any, baseImage: string, instanceId: string, io: SocketIOServer, config?: any): Promise<string> {
+  if (String(config?.runtime_type || "hermes").trim().toLowerCase() === "pi") {
+    return ensureSelectedPiRuntimeImage({
+      dockerClient: docker,
+      imageRef: baseImage,
+      onLog: (message) => io.emit(`deploy_log_${instanceId}`, {
+        timestamp: new Date().toISOString(),
+        message: `[Pi Runtime] ${message}`,
+      }),
+    });
+  }
   if (requiresLocalFeishuRuntime(config)) {
     const lastSlash = baseImage.lastIndexOf("/");
     const lastColon = baseImage.lastIndexOf(":");
@@ -113,7 +124,9 @@ export async function buildDockerHostConfig(
   }
 ): Promise<any> {
   const runtimeType = options.runtimeType || "mybay-agent-runtime";
-  const profile = getDockerProfile(runtimeType);
+  const profile = runtimeType === "mybay-agent-runtime"
+    ? getAgentContainerSecurityProfile(options.config?.runtime_type)
+    : getDockerProfile(runtimeType);
 
   // Refined binds: only map the essential data volume
   const binds = [
@@ -185,7 +198,7 @@ export async function buildDockerHostConfig(
     runtimeType,
     user: profile.User,
     capDrop: profile.CapDrop,
-    capAdd: ["CHOWN", "SETUID", "SETGID"],
+    capAdd: profile.CapAdd ?? ["CHOWN", "SETUID", "SETGID"],
     securityOpt: securityOpts,
     readonlyRootfs: profile.ReadonlyRootfs,
     binds,
@@ -213,7 +226,10 @@ export async function buildDockerHostConfig(
     ReadonlyRootfs: profile.ReadonlyRootfs,
     SecurityOpt: securityOpts,
     CapDrop: profile.CapDrop || [],
-    CapAdd: ["CHOWN", "SETUID", "SETGID"],
+    CapAdd: profile.CapAdd ?? ["CHOWN", "SETUID", "SETGID"],
+    ...(String(options.config?.runtime_type || "").trim().toLowerCase() === "pi"
+      ? { Tmpfs: { "/tmp": "rw,noexec,nosuid,nodev,size=64m,mode=1777" } }
+      : {}),
     Privileged: false // Ensure regular containers are never running as privileged
   };
 }
@@ -240,11 +256,10 @@ export function createDashboardContainer(
     Labels?: any;
     HostConfig: any;
     User?: string;
+    RuntimeType?: string;
+    Cmd?: string[];
   }
 ): Promise<any> {
-  const runtimeType = "mybay-agent-runtime";
-  const profile = getDockerProfile(runtimeType);
-
   let internalWebPort = 9119;
   if (options.Env) {
     const portEnv = options.Env.find(e => e.startsWith("PORT="));
@@ -267,19 +282,20 @@ export function createDashboardContainer(
       }
     }
 
+    const isPiRuntime = options.RuntimeType === "pi";
+    const runtimeProfile = getAgentContainerSecurityProfile(options.RuntimeType);
     dockerInstance.createContainer({
       Image: options.Image,
       name: options.name,
-      Cmd: ["gateway", "run"], // Restore critical execution command
+      ...(options.Cmd ? { Cmd: options.Cmd } : isPiRuntime ? {} : { Cmd: ["gateway", "run"] }),
       Env: options.Env,
       Labels: options.Labels,
       ExposedPorts: {
         [`${targetPort}/tcp`]: {},
-        "8642/tcp": {},
-        "8644/tcp": {}
+        ...(!isPiRuntime ? { "8642/tcp": {}, "8644/tcp": {} } : {}),
       },
       HostConfig: options.HostConfig,
-      User: options.User !== undefined ? options.User : profile.User
+      User: options.User !== undefined ? options.User : runtimeProfile.User
     }, (err, container) => {
       if (err) {
         console.error(`[Docker] Failed to create container ${options.name}:`, err);

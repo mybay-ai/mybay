@@ -20,7 +20,7 @@ import { findAvailablePort } from "../../utils";
 import { execFile } from "child_process";
 import { runInstanceHealthChecks } from "../../healthCheck";
 import { startPeriodicAgentDbSync } from "../../sqliteAgentSync";
-import { isSensitiveFile, getMimeType, validateFileAccess, validateFileForDeletion } from "../../services/instances/instanceFileSecurityService";
+import { classifyInstanceFilePath, isSensitiveFile, getMimeType, readValidatedDirectory, validateFileAccess, validateFileForDeletion } from "../../services/instances/instanceFileSecurityService";
 import { guardFileExport } from "../../services/instances/instanceFileLeakGuard";
 import { validateUploadedFilePath } from "../../utils/uploadSecurity";
 import { checkInstanceStorageQuota, resolveInstanceDiskLimitMb, formatDiskLimitLabel } from "../../services/instances/instanceStorageQuotaService";
@@ -317,51 +317,43 @@ export function createFilesRoutes(deps: RouterDependencies) {
 
   router.get("/:id/files", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const instance = await dbAdapter.getInstanceById(req.params.id);
       const requestedPath = (req.query.path as string) || "/";
-      const validation = await validateFileAccess(req, req.params.id, requestedPath);
+      const view = req.query.view === "advanced" ? "advanced" : "files";
+      const validation = await validateFileAccess(req, req.params.id, requestedPath, { view });
       
       if ("error" in validation) {
         return res.status(validation.status).json({ error: validation.error });
       }
 
       const { absolutePath, rootDir } = validation;
-      const stats = fs.statSync(absolutePath);
+      const directory = readValidatedDirectory(rootDir, absolutePath);
+      const stats = directory.stats;
 
       if (!stats.isDirectory()) {
         return res.status(400).json({ error: "请求的路径不是一个目录" });
       }
 
-      const files = fs.readdirSync(absolutePath);
-      const items = files
-        .filter(f => !isSensitiveFile(f))
-        .map(f => {
-          const fPath = path.join(absolutePath, f);
-          const fStats = fs.lstatSync(fPath);
-          const isSymlink = fStats.isSymbolicLink();
-          let actualStats = fStats;
-          if (isSymlink) {
-            try {
-               actualStats = fs.statSync(fPath);
-            } catch(e) {
-               actualStats = fStats; // fallback if broken link
-            }
-          }
-          const virtualPath = path.join(requestedPath, f).replace(/\\/g, "/");
+      const items = directory.entries
+        .filter(entry => !isSensitiveFile(entry.name))
+        .filter(entry => view === "advanced" || classifyInstanceFilePath(path.posix.join(requestedPath.replace(/\\/g, "/"), entry.name)) === "artifact")
+        .map(entry => {
+          const virtualPath = path.join(requestedPath, entry.name).replace(/\\/g, "/");
           
           return {
-            name: f,
+            name: entry.name,
             path: virtualPath,
-            type: actualStats.isDirectory() ? "directory" : "file",
-            isSymlink,
-            mime: actualStats.isDirectory() ? null : getMimeType(f),
-            size: actualStats.isDirectory() ? null : actualStats.size,
-            updatedAt: actualStats.mtime.toISOString()
+            type: entry.stats.isDirectory() ? "directory" : "file",
+            isSymlink: entry.isSymlink,
+            mime: entry.stats.isDirectory() ? null : getMimeType(entry.name),
+            size: entry.stats.isDirectory() ? null : entry.stats.size,
+            updatedAt: entry.stats.mtime.toISOString()
           };
         });
 
       res.json({
         path: requestedPath.replace(/\\/g, "/"),
+        view,
+        readOnly: view === "advanced",
         items: items.sort((a, b) => {
           // Directories first, then alphabetical
           if (a.type !== b.type) return a.type === "directory" ? -1 : 1;

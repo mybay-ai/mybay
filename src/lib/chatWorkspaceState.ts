@@ -13,6 +13,8 @@ export interface ChatMessage {
   usage_completion_tokens?: number | null;
   usage_total_tokens?: number | null;
   duration_ms?: number | null;
+  created_at?: string | null;
+  updated_at?: string | null;
   credits_charged?: number | null;
   credit_balance_after?: number | null;
   user_feedback?: "like" | "dislike" | null;

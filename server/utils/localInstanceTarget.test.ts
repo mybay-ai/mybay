@@ -44,6 +44,28 @@ describe("local instance target resolution", () => {
     expect(docker.getNetwork).not.toHaveBeenCalled();
   });
 
+  it("routes a labeled Pi runtime to its bridge port", async () => {
+    const agentInspect = inspect({
+      Config: {
+        Labels: { "com.mybay.pi.runtime": "true" },
+        ExposedPorts: { "8080/tcp": {} },
+      },
+      NetworkSettings: { Networks: { "mybay-net-instance-pi": { IPAddress: "172.34.0.2" } } },
+    });
+    const controlInspect = inspect({
+      NetworkSettings: { Networks: { "mybay-net-instance-pi": { IPAddress: "172.34.0.3" } } },
+    });
+    docker.getContainer.mockImplementation((name: string) => ({
+      inspect: name === "mybay-agent-instance-pi" ? agentInspect : controlInspect,
+    }));
+
+    await expect(resolveLocalInstanceTarget("instance-pi")).resolves.toEqual({
+      hostname: "mybay-agent-instance-pi",
+      port: 8080,
+      protocol: "http:",
+    });
+  });
+
   it("coalesces concurrent Docker inspections and reconnects the control plane once", async () => {
     const connect = vi.fn().mockResolvedValue(undefined);
     const agentInspect = inspect({

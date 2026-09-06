@@ -5,7 +5,9 @@ import { useTranslation } from "react-i18next";
 import { VersionCapabilityBadges } from "./VersionCapabilityBadges";
 
 interface VersionRepositoryPreviewProps {
+  runtimeType: "hermes" | "pi";
   versions: any[];
+  piVersions: any[];
   currentUser: any;
   latestOfficialVer: string;
   loadingVersions: boolean;
@@ -15,7 +17,9 @@ interface VersionRepositoryPreviewProps {
 }
 
 export function VersionRepositoryPreview({
+  runtimeType,
   versions,
+  piVersions,
   currentUser,
   latestOfficialVer,
   loadingVersions,
@@ -53,7 +57,8 @@ export function VersionRepositoryPreview({
   };
 
   return (
-      <Card className="p-0 border border-outline rounded-2xl overflow-hidden shadow-sm bg-surface">
+    <div className="space-y-4">
+      {runtimeType === "hermes" && <Card className="p-0 border border-outline rounded-2xl overflow-hidden shadow-sm bg-surface">
         <div className="px-5 py-4 bg-surface-muted border-b border-outline flex items-center justify-between">
           <div>
             <h4 className="text-sm font-bold text-content flex items-center gap-2">
@@ -134,7 +139,43 @@ export function VersionRepositoryPreview({
             </tbody>
           </table>
         </div>
-      </Card>
-
+      </Card>}
+      {runtimeType === "pi" && <Card className="p-0 border border-violet-200/60 dark:border-violet-800/60 rounded-2xl overflow-hidden shadow-sm bg-surface">
+        <div className="px-5 py-4 bg-violet-50/50 dark:bg-violet-950/20 border-b border-outline flex items-center justify-between gap-3">
+          <div>
+            <h4 className="text-sm font-bold text-content flex items-center gap-2">
+              <Layers className="w-4 h-4 text-violet-600" />
+              {t("versionRepository.piTitle")}
+            </h4>
+            <p className="text-[13px] text-content-muted mt-0.5">{t("versionRepository.piSubtitle")}</p>
+          </div>
+          <span className="shrink-0 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
+            {t("versionRepository.runtime.certified")}
+          </span>
+        </div>
+        <div className="divide-y divide-outline">
+          {piVersions.map((version) => (
+            <article key={`${version.version}-${version.tag}`} className="p-4 sm:p-5">
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.4fr)_minmax(0,1fr)] lg:items-center">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-mono text-sm font-bold text-content">Pi {version.version}</span>
+                    {version.is_latest && <span className="rounded bg-violet-100 px-1.5 py-0.5 text-[9px] font-black uppercase text-violet-700 dark:bg-violet-950/50 dark:text-violet-300">{t("versionRepository.latest")}</span>}
+                    <span className="rounded bg-surface-muted px-1.5 py-0.5 text-[10px] font-semibold text-content-muted">{version.channel}</span>
+                  </div>
+                  <p className="mt-1 text-[11px] text-content-muted">{version.releaseAt}</p>
+                </div>
+                <div>{renderOfficialImageCell(version, true)}</div>
+                <VersionCapabilityBadges capabilities={version.capabilities} compact />
+              </div>
+              {version.desc && <p className="mt-3 text-[13px] leading-relaxed text-content-muted">{version.desc}</p>}
+            </article>
+          ))}
+          {!loadingVersions && piVersions.length === 0 && (
+            <p className="p-5 text-[13px] text-content-muted">{t("versionRepository.notDiscovered")}</p>
+          )}
+        </div>
+      </Card>}
+    </div>
   );
 }

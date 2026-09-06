@@ -38,6 +38,7 @@ import { canonicalJson, checkLimitOrSkipAdmin } from "./create/createRequestPoli
 import { resolveCreateTemplateContext } from "./createTemplateContext";
 import { resolveCreateRuntimeImage } from "./createRuntimeImageSelection";
 import { initializeTemplateWorkflow } from "./createTemplateWorkflowInitialization";
+import { runtimeRegistry } from "../../runtime/runtimeRegistry";
 
 export { createInstanceLimiter, checkLimitOrSkipAdmin } from "./create/createRequestPolicy";
 
@@ -74,6 +75,7 @@ export function createInstanceHandler(deps: RouterDependencies) {
     try {
       const runtimeBoundary = getRuntimeReleaseBoundary(req.body?.runtime_type);
       if (runtimeBoundary) return res.status(runtimeBoundary.status).json(runtimeBoundary);
+      const requestedRuntimeType = runtimeRegistry.resolveRuntimeType(req.body?.runtime_type);
 
       const { deploymentEventsRepo } = await import("../../repositories/deploymentEventsRepo");
       // 1. Strong Backend Quota Limit Check
@@ -348,11 +350,27 @@ export function createInstanceHandler(deps: RouterDependencies) {
         return res.status(403).json({ error: error.code, message: error.message, detail: error.detail });
       }
 
+      data.runtime_type = requestedRuntimeType;
+      if (requestedRuntimeType === "pi") {
+        const requestedChannels = Array.isArray(data.channel) ? data.channel : [data.channel || "web"];
+        if (requestedChannels.some((value: unknown) => String(value).trim().toLowerCase() !== "web")) {
+          return res.status(400).json({ code: "PI_WEB_CHANNEL_ONLY", error: "Pi Runtime Beta currently supports the Web channel only." });
+        }
+        if ((data.skills || []).length > 0 || data.template_id || data.blueprint_id) {
+          return res.status(400).json({ code: "PI_BASIC_CHAT_ONLY", error: "Pi Runtime Beta supports Web chat, attachments, and persisted workspace files without MyBay skills, templates, or blueprints." });
+        }
+        data.channel = "web";
+        data.enableDashboard = false;
+        data.a2aEnabled = false;
+      }
+
       // Auto port allocation logic under single-container architecture
       const { isTraefik } = parseTraefikEnv(process.env);
 
       // Default internal web port (default 9119 as required)
-      data.internal_web_port = data.internal_web_port ? parseInt(String(data.internal_web_port), 10) : 9119;
+      data.internal_web_port = requestedRuntimeType === "pi"
+        ? 8080
+        : data.internal_web_port ? parseInt(String(data.internal_web_port), 10) : 9119;
 
       // Find or assign the debugging/local host port
       let assignedPort = data.port ? parseInt(String(data.port), 10) : null;
@@ -559,6 +577,7 @@ export function createInstanceHandler(deps: RouterDependencies) {
       }
 
 
+      const runtimeBinding = runtimeRegistry.createBindingForInstance({ runtime_type: requestedRuntimeType });
       let newInstance = {
         id: generatedId,
         name: data.name,
@@ -574,6 +593,9 @@ export function createInstanceHandler(deps: RouterDependencies) {
         agent_image_tag,
         agent_version,
         resolved_version,
+        runtime_type: runtimeBinding.runtimeType,
+        runtime_provider_key: runtimeBinding.providerKey,
+        runtime_contract_version: runtimeBinding.contractVersion,
         model_provider: data.provider || null,
         model_name: data.model || null,
         model_base_url: data.baseUrl || null,

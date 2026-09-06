@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 2,
+  "runtime": {
+    "type": "pi",
+    "providerKey": "pi-rpc",
+    "contractVersion": 1,
+    "version": "0.85.1",
+    "imageRef": "mybay/pi-runtime:0.85.1"
+  },
+  "checks": [
+    { "requirementId": "runtime-install", "status": "passed", "scope": "runtime", "observedAt": "2026-09-06T08:20:00.000Z", "environment": "Windows + Docker Desktop; MyBay OSS local worktree; Pi bridge 0.1.1-beta; Pi coding agent 0.85.1", "evidenceRefs": ["certification/artifacts/pi-0.85.1-acceptance-20260906.json#observations.runtimeInstall"] },
+    { "requirementId": "task-submit", "status": "passed", "scope": "runtime", "observedAt": "2026-09-06T08:15:00.000Z", "environment": "Five authenticated warm conversation tasks on the isolated Pi 0.85.1 instance", "evidenceRefs": ["certification/artifacts/pi-0.85.1-acceptance-20260906.json#observations.warmPerformance"] },
+    { "requirementId": "streaming-output", "status": "passed", "scope": "runtime", "observedAt": "2026-09-06T08:15:00.000Z", "environment": "Persisted MyBay Runtime event waterfall for five Pi 0.85.1 tasks", "evidenceRefs": ["certification/artifacts/pi-0.85.1-acceptance-20260906.json#observations.warmPerformance"] },
+    { "requirementId": "cancellation", "status": "passed", "scope": "runtime", "observedAt": "2026-09-06T08:18:00.000Z", "environment": "Authenticated localhost browser and Pi 0.85.1 Runtime cancellation path", "evidenceRefs": ["certification/artifacts/pi-0.85.1-acceptance-20260906.json#observations.cancellation"] },
+    { "requirementId": "session-recovery", "status": "passed", "scope": "e2e", "observedAt": "2026-09-06T08:20:00.000Z", "environment": "Authenticated browser follow-up in the original conversation after an isolated Pi 0.85.1 container restart", "evidenceRefs": ["certification/artifacts/pi-0.85.1-acceptance-20260906.json#observations.restartRecovery"] },
+    { "requirementId": "file-artifact", "status": "passed", "scope": "e2e", "observedAt": "2026-09-06T07:58:00.000Z", "environment": "Authenticated localhost browser and persisted Pi 0.85.1 instance workspace", "evidenceRefs": ["certification/artifacts/pi-0.85.1-acceptance-20260906.json#observations.fileWorkflow"] },
+    { "requirementId": "usage-reporting", "status": "passed", "scope": "runtime", "observedAt": "2026-09-06T08:20:00.000Z", "environment": "Persisted terminal Runtime evidence and browser usage display from Pi 0.85.1", "evidenceRefs": ["certification/artifacts/pi-0.85.1-acceptance-20260906.json#observations.warmPerformance"] },
+    { "requirementId": "tool-events", "status": "passed", "scope": "runtime", "observedAt": "2026-09-06T07:58:00.000Z", "environment": "Persisted write-file lifecycle emitted by Pi 0.85.1", "evidenceRefs": ["certification/artifacts/pi-0.85.1-acceptance-20260906.json#observations.fileWorkflow"] },
+    { "requirementId": "restart-recovery", "status": "passed", "scope": "runtime", "observedAt": "2026-09-06T08:20:00.000Z", "environment": "Controlled restart of only the isolated Pi 0.85.1 Runtime container", "evidenceRefs": ["certification/artifacts/pi-0.85.1-acceptance-20260906.json#observations.restartRecovery"] },
+    { "requirementId": "control-plane-deploy", "status": "passed", "scope": "e2e", "observedAt": "2026-09-06T07:45:00.000Z", "environment": "MyBay Quick Deploy product path; isolated Pi 0.85.1 instance", "evidenceRefs": ["certification/artifacts/pi-0.85.1-acceptance-20260906.json#observations.runtimeInstall"] },
+    { "requirementId": "upgrade", "status": "passed", "scope": "e2e", "observedAt": "2026-09-06T08:28:00.000Z", "environment": "Authenticated MyBay Agent version repository; Pi instance upgraded from 0.1.0-beta to 0.85.1 and returned to running", "evidenceRefs": ["certification/artifacts/pi-0.85.1-acceptance-20260906.json#observations.upgrade"] },
+    { "requirementId": "rollback", "status": "passed", "scope": "e2e", "observedAt": "2026-09-06T08:32:00.000Z", "environment": "Authenticated MyBay Agent version repository; Pi rollback to 0.1.0-beta completed and the instance was restored to 0.85.1", "evidenceRefs": ["certification/artifacts/pi-0.85.1-acceptance-20260906.json#observations.rollback"] },
+    { "requirementId": "security", "status": "passed", "scope": "e2e", "observedAt": "2026-09-06T08:20:00.000Z", "environment": "Deployed Pi 0.85.1 container inspection on Windows Docker Desktop", "evidenceRefs": ["certification/artifacts/pi-0.85.1-acceptance-20260906.json#observations.security"] },
+    { "requirementId": "backup-restore", "status": "passed", "scope": "e2e", "observedAt": "2026-09-06T08:50:00.000Z", "environment": "Authenticated MyBay export/import path; restored Pi 0.85.1 clone, browser-previewed its restored artifact, rebound its saved credential, and completed a real Runtime task", "evidenceRefs": ["certification/artifacts/pi-0.85.1-acceptance-20260906.json#observations.backupRestore"] },
+    { "requirementId": "real-e2e", "status": "passed", "scope": "e2e", "observedAt": "2026-09-06T08:20:00.000Z", "environment": "Authenticated MyBay browser to Pi 0.85.1 Runtime using a credentialed DeepSeek model", "evidenceRefs": ["certification/artifacts/pi-0.85.1-acceptance-20260906.json#observations.warmPerformance"] }
+  ]
+}

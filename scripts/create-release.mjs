@@ -6,7 +6,7 @@ import { execFileSync } from "node:child_process";
 
 const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const EXCLUDED_ROOT_DIRECTORIES = new Set([
-  ".git", ".idea", ".vscode", ".codex-worktrees", "backups", "build", "coverage", "data", "dist", "logs", "node_modules", "release", "runtime", "secrets", "tmp", "uploads"
+  ".git", ".idea", ".vscode", ".codex-worktrees", "backups", "build", "coverage", "data", "dist", "logs", "node_modules", "release", "secrets", "tmp", "uploads"
 ]);
 const EXCLUDED_SUFFIXES = [
   ".bak", ".cer", ".crt", ".db", ".dump", ".jks", ".key", ".keystore", ".log", ".migration-complete", ".p12", ".pem", ".pfx",
@@ -18,6 +18,7 @@ export function shouldIncludeReleasePath(relativePath) {
   const segments = normalized.split("/").filter(Boolean);
   if (!normalized || normalized.startsWith("/") || segments.includes("..")) return false;
   if (EXCLUDED_ROOT_DIRECTORIES.has(segments[0])) return false;
+  if (segments[0] === "runtime" && segments[1] !== "pi-bridge") return false;
   const name = segments.at(-1) || "";
   if (name === ".env.example") return true;
   if (name === ".env" || name.startsWith(".env.")) return false;

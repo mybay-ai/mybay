@@ -4,6 +4,8 @@ import { Button, Card } from "../../components/ui";
 import { useNavigate } from "react-router-dom";
 import { InstanceReadinessNotice } from "../../components/instance-runtime/InstanceReadinessNotice";
 import type { AgentInstance } from "../../types";
+import { AgentRuntimeIcon } from "../../components/brand/AgentRuntimeIcon";
+import { ChannelBrandIcon } from "../../components/brand/ChannelBrandIcon";
 
 interface DeployReviewStepProps {
   step: number;
@@ -293,6 +295,7 @@ const getIconComponent = (iconName: string) => {
 };
 
 export function DeployReviewStep({ step, data, createdInstance, testResults, onSuccess, submitError, onRetry, isTraefik, onViewGuide, activeWorkflowTemplate, activeBlueprint, permissionConfirmed = false, onPermissionConfirmedChange }: DeployReviewStepProps) {
+  const isPiRuntime = String(data?.runtime_type || "hermes").trim().toLowerCase() === "pi";
   const navigate = useNavigate();
   const { t } = useTranslation("deploy");
   const isReview = step === 6;
@@ -487,6 +490,18 @@ export function DeployReviewStep({ step, data, createdInstance, testResults, onS
           <div className="p-4 border border-outline bg-surface rounded-xl shadow-sm flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <div className="p-1 px-1.5 rounded-lg bg-surface-muted text-content-secondary shrink-0">
+                <AgentRuntimeIcon runtimeType={data.runtime_type} className="h-5 w-5" />
+              </div>
+              <span className="text-content-muted font-sans font-medium">{t("wizardCopy.instanceInfo.runtimeType")}</span>
+            </div>
+            <span className="font-bold text-content-secondary">
+              {isPiRuntime ? "Pi Agent" : "Hermes Agent"}
+            </span>
+          </div>
+
+          <div className="p-4 border border-outline bg-surface rounded-xl shadow-sm flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <div className="p-1 px-1.5 rounded-lg bg-surface-muted text-content-secondary shrink-0">
                 <Globe className="w-4 h-4" />
               </div>
               <span className="text-content-muted font-sans font-medium">{t("wizardCopy.review.route")}</span>
@@ -521,12 +536,14 @@ export function DeployReviewStep({ step, data, createdInstance, testResults, onS
           <div className="p-4 border border-outline bg-surface rounded-xl shadow-sm flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <div className="p-1 px-1.5 rounded-lg bg-surface-muted text-content-secondary shrink-0">
-                <Terminal className="w-4 h-4" />
+                <ChannelBrandIcon channelId={data.channel} className="h-5 w-5" />
               </div>
               <span className="text-content-muted font-sans font-medium">{t("wizardCopy.review.channel")}</span>
             </div>
             <span className="font-bold text-purple-600">
-              {data.channel === "none" ? t("wizardCopy.review.localOnly") : `${data.channel?.toUpperCase()} (${data.channelMode || 'testing'})`}
+              {data.channel === "none"
+                ? t("wizardCopy.review.localOnly")
+                : `${t(`wizardCopy.channelSelector.channels.${data.channel}.name`)} (${data.channelMode || "testing"})`}
             </span>
           </div>
         </div>
@@ -650,8 +667,12 @@ export function DeployReviewStep({ step, data, createdInstance, testResults, onS
 
         <div className="space-y-4 text-[13px] sm:text-sm leading-normal">
           <div className="flex justify-between border-b border-outline pb-2">
-            <span className="text-content-muted">{t("template_selection.dashboard_check_label")}</span>
-            {data.enableDashboard === false ? (
+            <span className="text-content-muted">{isPiRuntime ? t("template_selection.pi_workspace_check_label") : t("template_selection.dashboard_check_label")}</span>
+            {isPiRuntime ? (
+              <span className="rounded bg-purple-50 px-2 py-0.5 font-mono font-bold text-purple-600 dark:bg-purple-950/40 dark:text-purple-300">
+                {t("template_selection.pi_workspace_check_ready")}
+              </span>
+            ) : data.enableDashboard === false ? (
               <span className="font-mono text-content-muted font-bold bg-surface-muted px-2 py-0.5 rounded">
                 {t("template_selection.dashboard_check_disabled")}
               </span>

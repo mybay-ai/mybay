@@ -2,48 +2,67 @@
 specVersion: 1.0.0
 name: pi-agent
 displayName: Pi Agent
-version: spec-only
-description: Pi Agent integration specification. Deployment and runtime capabilities are not implemented.
+version: 0.85.1
+description: Certified MyBay integration for Pi Agent 0.85.1, with isolated web conversations and persisted file workflows.
 release:
-  supportStatus: spec-only
-  certificationLevel: spec-only
-  deploymentSupported: false
+  supportStatus: available
+  certificationLevel: certified
+  deploymentSupported: true
 runtime:
   type: pi
-  image: ghcr.io/mybay-ai/pi-agent
-  tag: latest
+  image: mybay/pi-runtime
+  tag: 0.85.1
   internalPort: 8080
-  environmentVariables: []
+  environmentVariables:
+    - name: PI_BRIDGE_API_KEY
+      description: Authentication token for internal REST endpoints
+      required: true
+      sensitive: true
+    - name: PI_PROVIDER
+      description: Pi model provider identifier
+      required: true
+      sensitive: false
+    - name: PI_MODEL
+      description: Pi model identifier
+      required: true
+      sensitive: false
 health:
   endpoint: /health
   intervalSeconds: 20
   timeoutSeconds: 5
   expectedStatusCode: 200
 storage:
-  dataPath: /opt/pi/data
-  configPath: /opt/pi/config
+  dataPath: /opt/data
+  configPath: /opt/data/pi
   volumeNamePrefix: mybay-pi-data
 capabilities:
-  chat: false
-  fileUpload: false
+  chat: true
+  fileUpload: true
   scheduledTasks: false
   browser: false
-  shell: false
-  imChannels: []
+  shell: true
+  imChannels:
+    - web
 lifecycle:
   conversation:
-    modes: []
+    modes:
+      - streaming
   cancellation:
-    supported: false
+    supported: true
+    granularity: run
   terminal:
-    observation: unsupported
+    observation: events
   interactions:
-    approvals: false
-    questions: false
+    approvals: true
+    questions: true
 resources:
   minimumMemory: 512Mi
   recommendedMemory: 1Gi
   minimumCpu: 0.5
 backup:
-  includePaths: []
-  excludePatterns: []
+  includePaths:
+    - /opt/data/pi
+    - /opt/data/workspace
+  excludePatterns:
+    - '*.log'
+    - tmp/*

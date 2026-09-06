@@ -482,6 +482,31 @@ describe("chatRepo local status contract", () => {
     expect((await chatRepo.getChatRun("proof-run")).file_evidence).toEqual(evidence);
   });
 
+  it("corrects legacy ambiguous file evidence from persisted snapshots without rewriting history", async () => {
+    const conversation = await chatRepo.createConversation("user", "agent", "Legacy evidence");
+    await chatRepo.beginChatRun({ conversationId: conversation.id, userId: "user", instanceId: "agent", content: "create", requestId: "legacy-proof-request", runId: "legacy-proof-run" });
+    await chatRepo.finishChatRun({
+      runId: "legacy-proof-run",
+      status: "completed",
+      assistantContent: "done",
+      fileEvidence: { version: 1, runId: "legacy-proof-run", changes: [{ path: "report.txt", kind: "unknown" }] },
+      fileDiffs: {
+        version: 1,
+        runId: "legacy-proof-run",
+        conversationId: conversation.id,
+        capturedBefore: "2026-09-05T08:00:00.000Z",
+        capturedAfter: "2026-09-05T08:00:01.000Z",
+        files: [{ path: "report.txt", before: null, after: "created" }],
+      },
+    });
+    closeLocalDatabase();
+
+    const assistant = (await chatRepo.listMessages(conversation.id, 10)).find(message => message.role === "assistant");
+    expect(assistant?.metadata?.file_evidence.changes).toEqual([{ path: "report.txt", kind: "added" }]);
+    expect(readStore().chatMessages.find(message => message.role === "assistant")?.metadata.file_evidence.changes)
+      .toEqual([{ path: "report.txt", kind: "unknown" }]);
+  });
+
   it("places relative to the complete persisted history and survives reopening", async () => {
     const rows = [];
     for (let i = 0; i < 25; i++) rows.push(await chatRepo.createConversation("u", "i", `Chat ${i}`));

@@ -10,7 +10,7 @@ import { decrypt, tryResolvePlainInstancePassword } from "./crypto";
 import { isMaskedSecretPlaceholder, redactSecretsDeep } from "./utils/sanitizer";
 import { buildInstancePublicUrl } from "./utils/publicUrl";
 import { ensureEncryptedDashboardAuthSecret } from "./utils/dashboardAuthSecret";
-import { MANAGED_OPERATION_SYSTEM_POLICY } from "./utils/managedOperationGuard";
+import { managedOperationSystemPolicy } from "./utils/managedOperationGuard";
 import { buildA2AYamlConfig } from "./services/a2aRuntimeConfig";
 
 export const DEFAULT_AGENT_MAX_TURNS = 60;
@@ -745,9 +745,10 @@ ${(config.skills || []).map((s: string) => `      - ${s}`).join('\n') || '      
       finalPrompt = String(config.blueprint_snapshot.system_context_preview);
     }
 
+    const managedPolicy = managedOperationSystemPolicy(config.runtime_type);
     finalPrompt = finalPrompt
-      ? `${finalPrompt.trim()}\n\n${MANAGED_OPERATION_SYSTEM_POLICY}`
-      : MANAGED_OPERATION_SYSTEM_POLICY;
+      ? `${finalPrompt.trim()}\n\n${managedPolicy}`
+      : managedPolicy;
     fs.writeFileSync(path.join(instanceDir, "SOUL.md"), finalPrompt, "utf8");
     fs.writeFileSync(path.join(instanceDir, "mybay.system.md"), finalPrompt, "utf8");
 

@@ -23,11 +23,13 @@ function evidenceFor(level: "experimental" | "beta" | "certified"): RuntimeCerti
       evidenceRefs: [`artifacts/${requirement.id}.json`],
     }));
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     runtime: {
       type: HERMES_RUNTIME_DEFINITION.runtime.type,
       providerKey: HERMES_RUNTIME_DEFINITION.providerKey,
       contractVersion: HERMES_RUNTIME_DEFINITION.contractVersion,
+      version: HERMES_RUNTIME_DEFINITION.version,
+      imageRef: `${HERMES_RUNTIME_DEFINITION.runtime.image}:${HERMES_RUNTIME_DEFINITION.runtime.tag}`,
     },
     checks,
   };
@@ -73,15 +75,31 @@ describe("Runtime certification evaluator", () => {
     }, { now });
     expect(report.publicationStatus).toBe("invalid");
     expect(report.errors).toContain("Certification evidence Runtime Binding does not match the catalog.");
-    expect(report.requirements[0]).toMatchObject({ status: "invalid" });
+    expect(report.requirements[0]).toMatchObject({ status: "missing" });
   });
 
-  it("keeps specification-only Runtimes outside the executable certification ladder", () => {
+  it("keeps a Certified Runtime pending until live evidence is supplied", () => {
     expect(evaluateRuntimeCertification(PI_RUNTIME_DEFINITION, undefined, { now })).toMatchObject({
-      declaredLevel: "spec-only",
-      verifiedLevel: "spec-only",
-      publicationStatus: "spec-only",
-      requirements: [],
+      declaredLevel: "certified",
+      verifiedLevel: "unverified",
+      publicationStatus: "pending",
     });
+  });
+
+  it("rejects evidence captured for a different Runtime version or image", () => {
+    const bundle = evidenceFor("certified");
+    const versionMismatch = evaluateRuntimeCertification(HERMES_RUNTIME_DEFINITION, {
+      ...bundle,
+      runtime: { ...bundle.runtime, version: "older-version" },
+    }, { now });
+    const imageMismatch = evaluateRuntimeCertification(HERMES_RUNTIME_DEFINITION, {
+      ...bundle,
+      runtime: { ...bundle.runtime, imageRef: "example.invalid/runtime:other" },
+    }, { now });
+
+    expect(versionMismatch).toMatchObject({ verifiedLevel: "unverified", publicationStatus: "invalid" });
+    expect(imageMismatch).toMatchObject({ verifiedLevel: "unverified", publicationStatus: "invalid" });
+    expect(versionMismatch.errors).toContain("Certification evidence Runtime Binding does not match the catalog.");
+    expect(imageMismatch.errors).toContain("Certification evidence Runtime Binding does not match the catalog.");
   });
 });

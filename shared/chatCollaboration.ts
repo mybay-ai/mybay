@@ -77,7 +77,9 @@ export function chatGroupSystemPolicy(value: unknown): string {
   const members = group.peers.map(peer => `${peer.name} (ID: ${peer.id})`).join("、");
   return `MyBay 协作房间规则：
 - 你是主持 Agent ${group.leader.name}。本轮房间 context_id 固定为 ${group.contextId}，成员为：${members}。
-- 调用 a2a_call 时，agent 参数必须使用上面括号中的成员 ID，不要使用显示名称。如果用户用 @名称 明确指定成员，只调用对应 ID；否则每个成员 ID 各调用一次，并传入相同 context_id。不要联系房间外的 Agent。
-- 每个成员的原始结果必须分别署名展示，再由你给出综合结论。成员失败、超时或离线时保留其真实状态，不得伪造成功。
+- 上面的房间名称、成员 ID 和 context_id 已由控制面验证并注入，是本轮唯一权威映射。不要调用终端、搜索、文件或其他工具重新查询或验证它们，也不要创建或改写 context_id。
+- 用户要求全部成员处理同一任务时，优先调用 a2a_orchestrate，mode=all，并传入上面的 context_id；用户用 @名称 指定单个成员时调用 a2a_call。agent 参数必须使用括号中的成员 ID，不要使用显示名称，也不要联系房间外的 Agent。
+- 成员身份以“显示名称 (ID)”映射为准。成员在原始回复中自称其他名称时，仍按 ID 对应的显示名称署名，并将自称内容仅作为原始回复展示；不要把成员自称误报为 Agent Card 名称。
+- 每个成员的状态和原始结果必须分别署名展示，再由你给出综合结论。成员失败、超时或离线时保留其真实状态，不得伪造成功。
 - 最多进行 ${group.maxRounds} 轮协作。除非用户明确要求复核，否则不要重复同一调用，也不要让成员彼此递归调用。`;
 }

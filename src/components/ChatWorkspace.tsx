@@ -55,8 +55,20 @@ import { createChatSelectionPersistence } from "./chat-workspace/chatSelectionPe
 import { createChatModePreference, type PreferredChatMode } from "./chat-workspace/chatModePreference";
 import { readA2ARetryNavigationState } from "./chat-workspace/a2aRetryNavigation";
 import type { ChatGroupConfig } from "../../shared/chatCollaboration";
+import type { GroupRunActivity, GroupRunMissingMember } from "./chat-workspace/ChatGroupRunSummary";
+import { readLocalRunUsage } from "../../shared/localRunUsage";
 
 export { generateUUIDv4 } from "./chat-workspace/chatWorkspaceSendPolicy";
+
+export function selectConversationContextUsage(messages: ChatMessage[]) {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (message.role !== "assistant" || message.status === "pending") continue;
+    const usage = readLocalRunUsage(message.metadata?.usage_evidence);
+    if (usage && (usage.contextTokens !== null || usage.contextWindow !== null || usage.contextPercent !== null || usage.compactionStatus !== null)) return usage;
+  }
+  return null;
+}
 
 export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType | null; socket?: Socket | null }) {
   const { t } = useTranslation(["dashboard", "common"]);
@@ -107,6 +119,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
   const [reasoningEffort, setReasoningEffort] = useState<ChatReasoningEffort>("balanced");
   const [chatMode, setChatMode] = useState<"quick" | "assist" | "agent">("quick");
   const [selectedSkillId, setSelectedSkillId] = useState<string>("model_config_diagnosis");
+  const [desktopWorkspaceTab, setDesktopWorkspaceTab] = useState<WorkspaceTab>("result");
   const [mobileWorkspaceTab, setMobileWorkspaceTab] = useState<WorkspaceTab>("result");
 
   // Refs
@@ -149,6 +162,42 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     modePreference.remember(selectedId, "agent");
     navigate(`${location.pathname}${location.search}${location.hash}`, { replace: true, state: null });
   }, [location.hash, location.key, location.pathname, location.search, location.state, modePreference, navigate, selectedId, setInput]);
+
+  const prepareGroupRecovery = useCallback((activity: GroupRunActivity) => {
+    if (!selectedId || !activity.peerId) return;
+    const draft = t("dashboard:a2a.recoveryDraft", {
+      peerId: activity.peerId,
+      contextId: activity.contextId,
+      taskId: activity.taskId,
+      status: activity.status,
+      request: activity.requestText || t("dashboard:a2a.recoveryRequestPlaceholder"),
+      summary: activity.requestText ? "" : activity.summary || "",
+    });
+    a2aRecoveryDraftRef.current = {
+      a2aRetryDraft: draft,
+      a2aRetryInstanceId: selectedId,
+      a2aRecoverySource: { contextId: activity.contextId, taskId: activity.taskId, peerId: activity.peerId },
+    };
+    setInput(draft);
+    setChatMode("agent");
+    modePreference.remember(selectedId, "agent");
+    showToast(t("dashboard:chatWorkspace.groupRunRecoveryPrepared"), "success");
+  }, [modePreference, selectedId, setInput, showToast, t]);
+
+  const prepareMissingGroupMember = useCallback((member: GroupRunMissingMember) => {
+    if (!selectedId) return;
+    const draft = t("dashboard:chatWorkspace.groupRunMissingDraft", {
+      peerName: member.peerName,
+      peerId: member.peerId,
+      contextId: member.contextId,
+      request: member.requestText || t("dashboard:a2a.recoveryRequestPlaceholder"),
+    });
+    a2aRecoveryDraftRef.current = null;
+    setInput(draft);
+    setChatMode("agent");
+    modePreference.remember(selectedId, "agent");
+    showToast(t("dashboard:chatWorkspace.groupRunMissingPrepared"), "success");
+  }, [modePreference, selectedId, setInput, showToast, t]);
 
   const {
     attachmentConfig,
@@ -597,6 +646,8 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
             usage_completion_tokens: m.usage_completion_tokens ?? null,
             usage_total_tokens: m.usage_total_tokens ?? null,
             duration_ms: m.duration_ms ?? null,
+            created_at: m.created_at ?? null,
+            updated_at: m.updated_at ?? null,
             user_feedback: m.user_feedback || undefined
           }));
 
@@ -763,6 +814,8 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
           usage_completion_tokens: m.usage_completion_tokens ?? null,
           usage_total_tokens: m.usage_total_tokens ?? null,
           duration_ms: m.duration_ms ?? null,
+          created_at: m.created_at ?? null,
+          updated_at: m.updated_at ?? null,
           user_feedback: m.user_feedback || undefined
         }));
         
@@ -822,6 +875,8 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
           usage_completion_tokens: m.usage_completion_tokens ?? null,
           usage_total_tokens: m.usage_total_tokens ?? null,
           duration_ms: m.duration_ms ?? null,
+          created_at: m.created_at ?? null,
+          updated_at: m.updated_at ?? null,
           user_feedback: m.user_feedback || undefined
         }));
         const optimisticContext = optimisticChatContextRef.current?.conversationId === convId
@@ -1029,6 +1084,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
     () => conversations.find(conversation => conversation.id === selectedConversationId) || null,
     [conversations, selectedConversationId],
   );
+  const conversationContextUsage = useMemo(() => selectConversationContextUsage(messages), [messages]);
 
   const handleCollaborationChange = async (collaboration: ChatGroupConfig | null) => {
     if (!selectedId || !selectedConversationId) return;
@@ -1345,6 +1401,9 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
                 message.id === messageId ? { ...message, user_feedback: feedback } : message
               )));
             }}
+            onPrepareGroupRecovery={prepareGroupRecovery}
+            onPrepareMissingGroupMember={prepareMissingGroupMember}
+            onRefreshGeneratedArtifacts={refreshGeneratedArtifacts}
             highlightedMessageId={selectedSearch?.messageId ?? null}
           />
 
@@ -1370,8 +1429,10 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
               isChatReady={isChatReady}
               hasActiveConversation={Boolean(selectedConversationId)}
               selectedChannel={selectedInstance?.configSummary?.channel || "web"}
+              runtimeType={selectedInstance?.runtime_type}
               selectedInstanceName={selectedInstance?.name}
               runMetrics={selectedRunMetrics}
+              contextUsage={conversationContextUsage}
               chatMode={chatMode}
               onChatModeChange={handleChatModeChange}
               reasoningEffort={reasoningEffort}
@@ -1395,13 +1456,25 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
               onComposerCommand={command => {
                 if (command === "new") {
                   void handleCreateConversation();
+                } else if (command === "clear") {
+                  void handleClear();
+                } else if (command === "files" || command === "status") {
+                  const tab = command === "files" ? "files" : "steps";
+                  setDesktopWorkspaceTab(tab);
+                  setMobileWorkspaceTab(tab);
+                  if (typeof window !== "undefined" && shouldUseOverlayWorkspace(window.innerWidth)) {
+                    setShowSettings(false);
+                    setMobileOverlay("workspace");
+                  }
                 } else if (command === "stop") {
                   void handleCancelOrStop();
                 } else if (command === "model") {
                   setMobileOverlay(null);
                   setShowSettings(true);
                 } else if (command === "help") {
-                  showToast(t("dashboard:chatWorkspace.composerCommandHelpMessage"), "info");
+                  showToast(t(String(selectedInstance?.runtime_type || "hermes").toLowerCase() === "pi"
+                    ? "dashboard:chatWorkspace.composerCommandHelpMessagePi"
+                    : "dashboard:chatWorkspace.composerCommandHelpMessage"), "info");
                 }
               }}
               collaboration={selectedConversation?.collaboration || null}
@@ -1415,6 +1488,8 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
           )}
         </div>
         <ChatWorkspacePanel
+          activeTab={desktopWorkspaceTab}
+          onActiveTabChange={setDesktopWorkspaceTab}
           selectedId={selectedId}
           selectedConversationId={selectedConversationId}
           conversationFiles={conversationFiles}

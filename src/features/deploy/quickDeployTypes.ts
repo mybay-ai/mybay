@@ -20,7 +20,7 @@ export type QuickDeployChannel = "web" | "telegram" | "feishu" | "weixin";
 
 export interface QuickDeployDraft {
   schemaVersion: 1;
-  runtimeType: "hermes";
+  runtimeType: "hermes" | "pi";
   entrypoint: "web";
   name: string;
   purpose: string;
@@ -55,6 +55,7 @@ export type QuickDeployValidationCode =
   | "dashboardPasswordTooShort"
   | "providerRequired"
   | "providerUnavailable"
+  | "runtimeProviderUnsupported"
   | "modelRequired"
   | "customBaseUrlRequired"
   | "savedCredentialRequired"

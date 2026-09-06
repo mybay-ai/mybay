@@ -1,76 +1,29 @@
 import type {
   RuntimeDriver,
-  RuntimeRunEventController,
-  RuntimeRunEventDependencies,
-  RuntimeRunEventProvider,
-  RuntimeRunEventTracker,
   RuntimeRunExecutionController,
   RuntimeRunExecutionDependencies,
   RuntimeRunExecutionProvider,
-  RuntimeRunPreparationController,
-  RuntimeRunPreparationDependencies,
-  RuntimeRunPreparationProvider,
 } from "../../contracts";
 import { defineRuntimeCapabilities } from "../../contracts";
-import { PI_RUNTIME_RELEASE_CODE } from "../../../utils/runtimeReleaseBoundary";
 import { PI_RUNTIME_DEFINITION } from "../../../../shared/runtimeCatalog";
+import { requestInternalRuntimeAPI, streamInternalRuntimeEventsAPI } from "../../transports/InternalRuntimeTransport";
+import { piRunPreparationProvider } from "./PiRunPreparation";
+import { hermesRunEventProvider as normalizedRuntimeRunEventProvider } from "../hermes/HermesRunEvents";
 
-function previewOnlyError(): Error {
-  return new Error(PI_RUNTIME_RELEASE_CODE);
-}
-
-class PiPreviewPreparationProvider implements RuntimeRunPreparationProvider {
-  public createController(
-    _dependencies: RuntimeRunPreparationDependencies,
-  ): RuntimeRunPreparationController {
-    return {
-      createSessionBinding: async () => { throw previewOnlyError(); },
-      ensureSessionForConversation: async () => { throw previewOnlyError(); },
-      buildRunPayload: () => { throw previewOnlyError(); },
-    };
-  }
-}
-
-class PiPreviewEventProvider implements RuntimeRunEventProvider {
-  public createController(_dependencies: RuntimeRunEventDependencies): RuntimeRunEventController {
-    const trackers = new Map<string, RuntimeRunEventTracker>();
-    const getOrCreate = (runId: string, initialPartialOutput: unknown = "") => {
-      let tracker = trackers.get(runId);
-      if (!tracker) {
-        tracker = {
-          lastPartialOutput: typeof initialPartialOutput === "string" ? initialPartialOutput : "",
-          sentSteps: new Map(),
-          activeToolIds: new Map(),
-        };
-        trackers.set(runId, tracker);
-      }
-      return tracker;
-    };
-    return {
-      get: (runId) => trackers.get(runId),
-      getOrCreate,
-      clear: (runId) => trackers.delete(runId),
-      emitStep: () => {},
-      handle: () => {},
-      completeTerminalEvent: async () => false,
-    };
-  }
-}
-
-class PiPreviewExecutionProvider implements RuntimeRunExecutionProvider {
+class PiExecutionProvider implements RuntimeRunExecutionProvider {
   public createController(
     dependencies: RuntimeRunExecutionDependencies,
   ): RuntimeRunExecutionController {
     return {
-      sessionCreateFailureCode: PI_RUNTIME_RELEASE_CODE,
-      sessionRebindFailureCode: PI_RUNTIME_RELEASE_CODE,
+      sessionCreateFailureCode: "PI_SESSION_CREATE_FAILED",
+      sessionRebindFailureCode: "PI_SESSION_REBIND_FAILED",
       shouldPreferBatch: () => false,
-      isStaleSessionError: () => false,
+      isStaleSessionError: (statusCode, error) => statusCode === 404 || String(error || "").includes("SESSION_NOT_FOUND"),
       shouldFallbackDispatch: () => false,
       shouldFallbackStreaming: () => false,
-      staleSessionRecoveryEnabled: () => false,
+      staleSessionRecoveryEnabled: () => true,
       executeBatch: async (run) => {
-        await dependencies.completeRun(run.id, "failed", "", PI_RUNTIME_RELEASE_CODE);
+        await dependencies.completeRun(run.id, "failed", "", "PI_BATCH_MODE_UNSUPPORTED");
         return false;
       },
     };
@@ -85,11 +38,12 @@ export const piRuntimeDriver: RuntimeDriver = Object.freeze({
   providerKey: PI_RUNTIME_DEFINITION.providerKey,
   contractVersion: PI_RUNTIME_DEFINITION.contractVersion,
   capabilities: PI_RUNTIME_CAPABILITIES,
-  preparation: Object.freeze(new PiPreviewPreparationProvider()),
-  events: Object.freeze(new PiPreviewEventProvider()),
-  execution: Object.freeze(new PiPreviewExecutionProvider()),
+  preparation: piRunPreparationProvider,
+  // The bridge emits the normalized MyBay Runs v1 event vocabulary.
+  events: normalizedRuntimeRunEventProvider,
+  execution: Object.freeze(new PiExecutionProvider()),
   runs: Object.freeze({
-    request: async () => ({ ok: false, statusCode: 501, error: PI_RUNTIME_RELEASE_CODE }),
-    streamEvents: async () => {},
+    request: requestInternalRuntimeAPI,
+    streamEvents: streamInternalRuntimeEventsAPI,
   }),
 });

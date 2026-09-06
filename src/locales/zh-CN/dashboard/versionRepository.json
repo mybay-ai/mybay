@@ -1,6 +1,8 @@
 {
   "title": "镜像仓库",
   "subtitle": "查看官方版本、能力矩阵及其本地 Docker 缓存状态",
+  "piTitle": "Pi Runtime 版本库",
+  "piSubtitle": "查看可升级的 Pi Agent 与桥接镜像版本；升级与回滚均保留实例数据",
   "refresh": "刷新本地列表",
   "refreshTitle": "重新载入本地已发现的版本列表",
   "versionFamily": "版本 / 家族",
@@ -15,6 +17,12 @@
   "capabilityMatrix": {
     "items": {
       "core": { "label": "核心", "description": "基础对话、工具和运行时能力" },
+      "streaming": { "label": "流式输出", "description": "实时返回 Agent 运行过程和结果" },
+      "cancellation": { "label": "任务停止", "description": "可停止排队中或运行中的任务" },
+      "files": { "label": "文件", "description": "生成文件可持久化、预览和下载" },
+      "backup": { "label": "备份恢复", "description": "备份、克隆恢复并保留 Runtime 绑定" },
+      "upgrade": { "label": "升级", "description": "通过版本库执行受控 Runtime 升级" },
+      "rollback": { "label": "回滚", "description": "升级失败或手动操作时恢复上一版本" },
       "feishu": { "label": "飞书/Lark", "description": "原生飞书与 Lark 通道支持" },
       "a2a": { "label": "A2A", "description": "A2A v1.0 Agent 发现、调用和任务协议" },
       "outbound_webhooks": { "label": "事件 Webhook", "description": "向外部系统推送带签名的运行事件" },
@@ -33,6 +41,11 @@
   "feishuUnsupported": "不支持飞书/Lark",
   "followLatest": "跟随最新",
   "loadingImages": "正在载入镜像仓库...",
+  "runtime": {
+    "hermes": "Hermes",
+    "pi": "Pi",
+    "certified": "已认证"
+  },
   "preflight": {
     "title": "升级前安全检查",
     "subtitle": "提交前核对目标版本、运行环境、数据与回滚条件",
@@ -108,6 +121,10 @@
     "bulk": {
       "submitFailedTitle": "提交失败",
       "selectAtLeastOne": "请至少选择一个实例进行批量调度。",
+      "runtimeMismatchTitle": "请选择同一种 Runtime",
+      "runtimeMismatch": "Hermes 与 Pi 使用不同的镜像和升级链路，不能放在同一批升级任务中。",
+      "runtimeSelectionReset": "已切换 Runtime，并重新开始本批次选择。",
+      "filterRuntimeFirst": "当前列表同时包含 Hermes 与 Pi。请先用系统标记筛选 Runtime，再执行全选。",
       "feishuUnsupported": "所选实例中包含已启用飞书/Lark 通道的实例：{{names}}，但目标版本 [{{tag}}] 不支持飞书能力。请重新选择兼容版本，或从批量更新列表中移除这些实例。",
       "confirmMessage": "确定要将当前选中的 {{count}} 个实例批量更新到 [{{tag}}] 版本吗？任务将并发平滑处理。",
       "confirmAction": "确定更新",
@@ -126,6 +143,10 @@
     "latestProtection": {
       "title": "智能路由解析防护已启用：",
       "description": "当前目标版本为 <latest>latest</latest>。普通实例将自动升级至最新主线官方版；对于<feishu>已启用飞书/Lark 通道</feishu>的实例，后端会<routed>自动路由至支持 Feishu 能力的最新专属稳定版</routed>，避免因依赖缺失导致通信中断。"
+    },
+    "piProtection": {
+      "title": "Pi 专属升级链路已启用",
+      "description": "只能选择版本库中受支持的 Pi Runtime 版本；当前推荐 {{version}}，目录保留最近三个版本，实例仍可使用自己的回滚点恢复。"
     }
   }
 }

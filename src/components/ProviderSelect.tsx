@@ -13,6 +13,7 @@ interface ProviderSelectProps {
   placeholder?: string;
   className?: string;
   legacyOption?: { id: string; label: string };
+  allowedProviderIds?: readonly string[];
 }
 
 const badgeClassName = "rounded-full border border-outline bg-surface-muted px-2 py-0.5 text-[10px] font-medium text-content-muted";
@@ -24,7 +25,8 @@ export function ProviderSelect({
   disabled = false,
   placeholder,
   className,
-  legacyOption
+  legacyOption,
+  allowedProviderIds,
 }: ProviderSelectProps) {
   const { t } = useTranslation("common");
   const [open, setOpen] = useState(false);
@@ -32,10 +34,12 @@ export function ProviderSelect({
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const selected = providerRegistry[value];
-  const groups = useMemo(
-    () => getProviderDisplayGroups({ query, includeOAuth }),
-    [includeOAuth, query]
-  );
+  const groups = useMemo(() => {
+    const allowed = allowedProviderIds ? new Set(allowedProviderIds) : null;
+    return getProviderDisplayGroups({ query, includeOAuth })
+      .map((group) => ({ ...group, providers: allowed ? group.providers.filter((provider) => allowed.has(provider.id)) : group.providers }))
+      .filter((group) => group.providers.length > 0);
+  }, [allowedProviderIds, includeOAuth, query]);
 
   useEffect(() => {
     if (!open) return;

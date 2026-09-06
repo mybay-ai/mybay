@@ -47,11 +47,13 @@ export interface RuntimeCertificationEvidenceCheck {
 }
 
 export interface RuntimeCertificationEvidenceBundle {
-  readonly schemaVersion: 1;
+  readonly schemaVersion: 2;
   readonly runtime: {
     readonly type: string;
     readonly providerKey: string;
     readonly contractVersion: number;
+    readonly version: string;
+    readonly imageRef: string;
   };
   readonly checks: readonly RuntimeCertificationEvidenceCheck[];
 }
@@ -265,6 +267,7 @@ export function evaluateRuntimeCertification(
 ): RuntimeCertificationReport {
   const errors: string[] = [];
   const declaredLevel = definition.release.certificationLevel;
+  let runtimeBindingMatches = true;
 
   if (declaredLevel === "spec-only") {
     if (bundle) errors.push("Spec-only Runtimes cannot publish certification evidence.");
@@ -281,16 +284,19 @@ export function evaluateRuntimeCertification(
   }
 
   if (bundle) {
-    if (bundle.schemaVersion !== 1) errors.push("Certification evidence schemaVersion must be 1.");
+    if (bundle.schemaVersion !== 2) errors.push("Certification evidence schemaVersion must be 2.");
     if (bundle.runtime.type !== definition.runtime.type
       || bundle.runtime.providerKey !== definition.providerKey
-      || bundle.runtime.contractVersion !== definition.contractVersion) {
+      || bundle.runtime.contractVersion !== definition.contractVersion
+      || bundle.runtime.version !== definition.version
+      || bundle.runtime.imageRef !== `${definition.runtime.image}:${definition.runtime.tag}`) {
+      runtimeBindingMatches = false;
       errors.push("Certification evidence Runtime Binding does not match the catalog.");
     }
   }
 
   const evidenceByRequirement = new Map<RuntimeCertificationRequirementId, RuntimeCertificationEvidenceCheck>();
-  for (const evidence of bundle?.checks ?? []) {
+  for (const evidence of runtimeBindingMatches ? (bundle?.checks ?? []) : []) {
     if (!REQUIREMENT_IDS.has(evidence.requirementId)) {
       errors.push(`Certification evidence requirement is unknown: ${String(evidence.requirementId)}`);
       continue;

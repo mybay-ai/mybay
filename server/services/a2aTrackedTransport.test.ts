@@ -64,3 +64,50 @@ it('recovers by the saved remote ID after an interrupted stream and rejects anot
   expect(read).toHaveBeenCalledWith('task-remote');
   expect(recovered).toMatchObject({ state: 'finished', remoteTaskId: task.id, remoteState: 'TASK_STATE_COMPLETED' });
 });
+it('reattaches a restarted caller to the saved remote task without redispatching', async () => {
+  const s = stream(); const send = vi.fn(async () => s.response);
+  const pending = trackedA2ASend({ ...opts, send });
+  s.emit(frame({ task })); s.end();
+  await expect(pending).rejects.toThrow('A2A_STREAM_INCOMPLETE');
+  closeLocalDatabase();
+  const resumeLink = getA2ATaskLink('caller', 'peer', body.id)!;
+  const read = vi.fn(async () => ({ ...task, status: { state: 'TASK_STATE_COMPLETED' } }));
+  const recovered = await trackedA2ASend({
+    ...opts,
+    body: { ...body, id: 'task-after-restart' },
+    send,
+    read,
+    resumeLink,
+  });
+  expect(recovered).toMatchObject({ id: 'task-after-restart', result: { task: { id: task.id, status: { state: 'TASK_STATE_COMPLETED' } } } });
+  expect(read).toHaveBeenCalledWith(task.id);
+  expect(send).toHaveBeenCalledTimes(1);
+});
+it('accepts a final SSE frame at EOF without a trailing blank separator', async () => {
+  const s = stream();
+  const pending = trackedA2ASend({ ...opts, send: async () => s.response });
+  s.emit(frame({ task }));
+  s.emit(`data: ${JSON.stringify({ jsonrpc: '2.0', id: body.id, result: done })}`);
+  s.end();
+  await expect(pending).resolves.toMatchObject({ result: { task: { status: { state: 'TASK_STATE_COMPLETED' } } } });
+  expect(getA2ATaskLink('caller', 'peer', body.id)).toMatchObject({ state: 'finished', remoteState: 'TASK_STATE_COMPLETED' });
+});
+it.each(['TASK_STATE_INPUT_REQUIRED', 'TASK_STATE_AUTH_REQUIRED'])('returns %s without permanently finishing a resumable task', async state => {
+  const s = stream();
+  const pending = trackedA2ASend({ ...opts, send: async () => s.response });
+  s.emit(frame({ task }));
+  s.emit(frame({ statusUpdate: { taskId: task.id, contextId: task.contextId, status: { state } } }));
+  s.end();
+  await expect(pending).resolves.toMatchObject({ result: { task: { status: { state } } } });
+  expect(getA2ATaskLink('caller', 'peer', body.id)).toMatchObject({ state: 'mapped', remoteState: state });
+});
+it('preserves exact terminal evidence when malformed trailing data makes the relay response fail', async () => {
+  const s = stream();
+  const pending = trackedA2ASend({ ...opts, send: async () => s.response });
+  s.emit(frame({ task }));
+  s.emit(frame(done));
+  s.emit('data: {not-json}\n\n');
+  s.end();
+  await expect(pending).rejects.toThrow();
+  expect(getA2ATaskLink('caller', 'peer', body.id)).toMatchObject({ state: 'finished', remoteState: 'TASK_STATE_COMPLETED' });
+});

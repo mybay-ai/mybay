@@ -13,6 +13,13 @@ export interface LocalRunUsage {
   model: string | null;
   durationMs: number | null;
   durationSource: "runtime" | "local_elapsed" | "unknown";
+  contextTokens: number | null;
+  contextWindow: number | null;
+  contextPercent: number | null;
+  compactionStatus: "completed" | "aborted" | "failed" | null;
+  compactionReason: "manual" | "threshold" | "overflow" | null;
+  compactionTokensBefore: number | null;
+  compactionEstimatedTokensAfter: number | null;
 }
 
 export function usageNumber(value: unknown): number | null {
@@ -20,6 +27,17 @@ export function usageNumber(value: unknown): number | null {
 }
 function record(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+function usagePercent(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 100
+    ? Math.round(value * 100) / 100
+    : null;
+}
+function compactionStatus(value: unknown): LocalRunUsage["compactionStatus"] {
+  return value === "completed" || value === "aborted" || value === "failed" ? value : null;
+}
+function compactionReason(value: unknown): LocalRunUsage["compactionReason"] {
+  return value === "manual" || value === "threshold" || value === "overflow" ? value : null;
 }
 export function usageModel(value: unknown): string | null {
   return typeof value === "string" && value.length <= 160 && /^[a-zA-Z0-9][a-zA-Z0-9._:/-]*$/.test(value)
@@ -45,6 +63,13 @@ export function createLocalRunUsage(raw: unknown, options: {
     model: usageModel(item.model),
     durationMs: usageNumber(options.durationMs),
     durationSource: usageNumber(options.durationMs) === null ? "unknown" : options.durationSource ?? "runtime",
+    contextTokens: first(item.context_tokens, item.contextTokens),
+    contextWindow: first(item.context_window, item.contextWindow),
+    contextPercent: usagePercent(item.context_percent ?? item.contextPercent),
+    compactionStatus: compactionStatus(item.compaction_status ?? item.compactionStatus),
+    compactionReason: compactionReason(item.compaction_reason ?? item.compactionReason),
+    compactionTokensBefore: first(item.compaction_tokens_before, item.compactionTokensBefore),
+    compactionEstimatedTokensAfter: first(item.compaction_estimated_tokens_after, item.compactionEstimatedTokensAfter),
   };
 }
 
@@ -61,6 +86,10 @@ export function readLocalRunUsage(raw: unknown): LocalRunUsage | null {
     scope: item.scope, input_tokens: item.inputTokens, output_tokens: item.outputTokens,
     total_tokens: item.totalTokens, cache_read_tokens: item.cacheReadTokens,
     cache_write_tokens: item.cacheWriteTokens, api_calls: item.modelCalls, model: item.model,
+    context_tokens: item.contextTokens, context_window: item.contextWindow, context_percent: item.contextPercent,
+    compaction_status: item.compactionStatus, compaction_reason: item.compactionReason,
+    compaction_tokens_before: item.compactionTokensBefore,
+    compaction_estimated_tokens_after: item.compactionEstimatedTokensAfter,
   }, { source: item.source as LocalRunUsage["source"], durationMs: item.durationMs,
     durationSource: item.durationSource === "runtime" || item.durationSource === "local_elapsed" ? item.durationSource : "unknown" });
 }

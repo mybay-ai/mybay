@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "artifactType": "runtime-beta-live-evidence",
+  "generatedAt": "2026-09-05T12:21:00.000Z",
+  "sanitization": {
+    "identifiers": "omitted",
+    "promptsAndResponses": "omitted; deterministic marker matches only",
+    "credentials": "not collected",
+    "database": "parameterized read-only queries limited to the disposable Pi acceptance instance"
+  },
+  "environment": {
+    "host": "Windows with Docker Desktop",
+    "application": "MyBay OSS local branch on localhost",
+    "runtime": {
+      "type": "pi",
+      "providerKey": "pi-rpc",
+      "contractVersion": 1,
+      "release": "0.1.0-beta",
+      "agentVersion": "0.85.0",
+      "containerStatus": "running",
+      "healthStatus": "healthy",
+      "chatReady": true
+    }
+  },
+  "observations": {
+    "runtimeInstall": { "observedAt": "2026-09-05T12:20:06.879Z", "result": "passed", "details": { "packagedBridgeImageBuilt": true, "deployedImageTag": "0.1.0-beta", "persistedImageTagMatched": true, "managedContainerRunning": true, "authenticatedCapabilitiesReady": true, "publishedPort": "loopback-only" } },
+    "taskSubmit": { "observedAt": "2026-09-05T11:25:26.756Z", "result": "passed", "details": { "productPath": "authenticated browser Agent mode", "runtimeType": "pi", "upstreamRunBindingPersisted": true, "terminalStatus": "completed" } },
+    "streamingOutput": { "observedAt": "2026-09-05T11:26:00.644Z", "result": "passed", "details": { "browserObservedActiveState": true, "orderedRuntimeEvents": true, "persistedNonEmptyOutput": true, "reloadRestoredResult": true } },
+    "cancellation": { "observedAt": "2026-09-05T11:26:21.118Z", "result": "passed", "details": { "stopRequestedThroughProductUi": true, "terminalStatus": "cancelled", "terminalErrorCode": "CANCELLED_UPSTREAM", "reloadRetainedStoppedState": true } },
+    "sessionRecovery": { "observedAt": "2026-09-05T12:20:33.403Z", "result": "passed", "details": { "nativeSessionPersisted": true, "preRestartMarkerRecalled": true, "conversationContinuityAfterBetaRedeploy": true } },
+    "fileArtifact": { "observedAt": "2026-09-05T11:53:55.776Z", "result": "passed", "details": { "fileCreatedByRuntime": true, "addedEvidencePersisted": true, "chatAttachmentReady": true, "previewVerified": true, "fileCenterDownloadAvailable": true, "contentHashPersisted": true } },
+    "usageReporting": { "observedAt": "2026-09-05T12:20:33.403Z", "result": "passed", "details": { "source": "runtime_terminal", "modelAttributed": true, "totalTokens": 9696, "durationMilliseconds": 5120 } },
+    "toolEvents": { "observedAt": "2026-09-05T12:20:33.403Z", "result": "passed", "details": { "stableIdentifierAcrossStartAndCompletion": true, "terminalOutcomePersisted": true, "safeRelativeFileMetadataPersisted": true, "rawArgumentsAndResultsOmitted": true } },
+    "restartRecovery": { "observedAt": "2026-09-05T12:20:33.403Z", "result": "passed", "details": { "productRedeployUsed": true, "betaImageAndPersistedTagMatched": true, "containerReturnedHealthy": true, "retainedRunsRestored": true, "sessionAndFileRecovered": true, "postRestartRunCompleted": true, "completionAuditRuntimeType": "pi" } }
+  }
+}

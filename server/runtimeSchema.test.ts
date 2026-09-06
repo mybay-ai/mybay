@@ -35,6 +35,8 @@ describe("MyBay Runtime JSON Schema Tests", () => {
   it("keeps the certification evidence schema aligned with executable requirements", () => {
     const schemaPath = path.resolve(process.cwd(), "public/schemas/mybay.runtime-certification-evidence.schema.json");
     const schema = JSON.parse(fs.readFileSync(schemaPath, "utf8"));
+    expect(schema.properties.schemaVersion.const).toBe(2);
+    expect(schema.properties.runtime.required).toEqual(expect.arrayContaining(["version", "imageRef"]));
     const requirementIds = schema.properties.checks.items.properties.requirementId.enum;
     expect(requirementIds).toEqual(RUNTIME_CERTIFICATION_REQUIREMENTS.map(({ id }) => id));
     expect(schema.properties.checks.items.properties.scope.enum).toEqual(["contract", "runtime", "e2e"]);

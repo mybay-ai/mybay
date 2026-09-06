@@ -35,8 +35,10 @@ import tar from "tar-fs";
 import { skillPolicyRegistry } from "../shared/skillPolicyRegistry";
 import { assertRuntimeSatisfiesSkillPolicy, createRuntimeSecurityManifest } from "./services/skillPolicyEnforcer";
 import { resolveHermesProvider, VALID_HERMES_PROVIDERS } from "./providerEnv";
+import { writePiRuntimeEnvironment } from "./runtime/adapters/pi/PiRuntimeEnvironment";
 import { getDockerProfile, getResourceLimits } from "./services/docker/dockerResourcePolicy";
 import { ensureLocalFeishuRuntimeImage, requiresLocalFeishuRuntime } from "./services/localFeishuRuntime";
+import { ensurePiRuntimeDataOwnership, parsePiRuntimeImageRef } from "./services/localPiRuntime";
 import {
   connectControlPlaneToNetwork,
   connectTraefikToNetwork,
@@ -142,6 +144,7 @@ export async function recreateInstance(
 ): Promise<{ gateway: any; dashboard: any }> {
   const { io } = options;
   const instanceId = String(instance.id);
+  const runtimeType = String(options.config?.runtime_type || instance.runtime_type || "hermes").trim().toLowerCase();
 
   // 1. Clean up old/leftover containers sequentially and wait
   await cleanOldContainersOfInstance(instanceId, io);
@@ -172,6 +175,14 @@ export async function recreateInstance(
     requestUser: options.requestUser,
     systemTrustedContext: options.systemTrustedContext
   });
+
+  if (runtimeType === "pi") {
+    await ensurePiRuntimeDataOwnership({
+      dockerClient: docker,
+      image,
+      hostInstanceDataDir: options.hostInstanceDataDir,
+    });
+  }
 
   // 3. Create and start the single main MyBay container (historically referred to as dashboard container name but running elements of both)
   const limits = getResourceLimits(options.config);
@@ -216,10 +227,11 @@ export async function recreateInstance(
     name: options.dashboardContainerName,
     Env: finalEnv,
     Labels: options.dashboardLabels,
-    HostConfig: hostConfig
+    HostConfig: hostConfig,
+    RuntimeType: runtimeType,
   });
 
-  if (options.config?.a2aEnabled === true) {
+  if (runtimeType === "hermes" && options.config?.a2aEnabled === true) {
     await connectContainerToA2ANetwork(docker, dashboard.id);
     io.emit(`deploy_log_${instanceId}`, {
       timestamp: new Date().toISOString(),
@@ -435,7 +447,7 @@ export async function recreateInstance(
   }
 
   // Automatically pre-seed and align the model provider configuration inside the Agent's SQLite databases as soon as they are booted/created.
-  startPeriodicAgentDbSync(instanceId, options.config);
+  if (runtimeType === "hermes") startPeriodicAgentDbSync(instanceId, options.config);
 
   // Return the same container in both keys to remain backward compatible
   return { gateway: dashboard, dashboard };
@@ -587,6 +599,8 @@ export async function executeDeployment(instance: any, io: SocketIOServer, updat
 
   const ctx = buildDeploymentContext(instance, config);
   const instanceId = ctx.instanceId;
+  const runtimeType = String(config?.runtime_type || instance.runtime_type || "hermes").trim().toLowerCase();
+  const isPiRuntime = runtimeType === "pi";
   const containerName = ctx.gatewayContainerName.replace("-gateway", "");
 
   // Clear any existing deployment error at start of execution
@@ -631,7 +645,7 @@ export async function executeDeployment(instance: any, io: SocketIOServer, updat
 
   // If MyBay provider is openai and Base URL is official, runtime provider MUST be openai-api
   const isOfficial = !baseUrl || baseUrl.includes("api.openai.com");
-  if (mybayProvider.toLowerCase() === "openai" && isOfficial && runtimeProvider !== "openai-api") {
+  if (!isPiRuntime && mybayProvider.toLowerCase() === "openai" && isOfficial && runtimeProvider !== "openai-api") {
     const errorMsg = `MyBay provider "openai" has not been mapped to a valid Hermes runtime provider. Expected runtime provider: "openai-api".`;
     io.emit(`deploy_log_${instanceId}`, {
       timestamp: new Date().toISOString(),
@@ -664,7 +678,7 @@ export async function executeDeployment(instance: any, io: SocketIOServer, updat
     return;
   }
 
-  if (!VALID_HERMES_PROVIDERS.has(runtimeProvider)) {
+  if (!isPiRuntime && !VALID_HERMES_PROVIDERS.has(runtimeProvider)) {
     const errorMsg = `Unsupported Hermes runtime provider: "${runtimeProvider}" (from MyBay provider "${mybayProvider}").`;
     io.emit(`deploy_log_${instanceId}`, {
       timestamp: new Date().toISOString(),
@@ -709,7 +723,7 @@ export async function executeDeployment(instance: any, io: SocketIOServer, updat
   // Validate historical instance password compatibility using strict helper
   const plainPassword = tryResolvePlainInstancePassword(config);
 
-  if (config.webPasswordHash && !plainPassword) {
+  if (!isPiRuntime && config.webPasswordHash && !plainPassword) {
     let passwordConfigSummary: any = {};
     try {
       passwordConfigSummary = buildPasswordConfigSummary(config);
@@ -757,7 +771,7 @@ export async function executeDeployment(instance: any, io: SocketIOServer, updat
     return;
   }
 
-  if (config.enableDashboard !== false) {
+  if (!isPiRuntime && config.enableDashboard !== false) {
     const dashboardSecretChanged = ensureEncryptedDashboardAuthSecret(config);
     if (dashboardSecretChanged) {
       try {
@@ -792,7 +806,7 @@ export async function executeDeployment(instance: any, io: SocketIOServer, updat
   }
 
   // Check if current instance supports native dashboard basic auth
-  const nativeDashboardAuthSupported = supportsNativeDashboardBasicAuth({
+  const nativeDashboardAuthSupported = !isPiRuntime && supportsNativeDashboardBasicAuth({
     agentImage: instance.agent_image,
     agentImageTag: instance.agent_image_tag,
     agentVersion: instance.agent_version || instance.resolved_version,
@@ -879,21 +893,30 @@ export async function executeDeployment(instance: any, io: SocketIOServer, updat
 
   let generatedEnvMap: any = {};
   let hermesModelConfigResult: any = null;
+  let piRuntimeConfigResult: any = null;
 
   try {
     await hydrateA2ARuntimePeers(instanceId, config);
-    const configResult = writePhysicalConfigs(instanceId, config);
-    generatedEnvMap = configResult.finalEnvMap;
-    hermesModelConfigResult = configResult.hermesModelConfigResult;
+    if (isPiRuntime) {
+      const configResult = writePiRuntimeEnvironment(instanceId, config);
+      generatedEnvMap = configResult.finalEnvMap;
+      piRuntimeConfigResult = configResult.piRuntimeConfigResult;
+    } else {
+      const configResult = writePhysicalConfigs(instanceId, config);
+      generatedEnvMap = configResult.finalEnvMap;
+      hermesModelConfigResult = configResult.hermesModelConfigResult;
+    }
 
     // --- Add config.yaml validation (File size / existence check) ---
-    const configYamlPath = path.join(process.cwd(), "data", "instances", instanceId, "config.yaml");
-    if (!fs.existsSync(configYamlPath)) {
-      throw new Error("运行时配置文件 config.yaml 写入失败，物理文件不存在。");
-    }
-    const stats = fs.statSync(configYamlPath);
-    if (stats.size === 0) {
-      throw new Error("运行时配置文件 config.yaml 写入失败，物理文件为空 (0字节)。");
+    if (!isPiRuntime) {
+      const configYamlPath = path.join(process.cwd(), "data", "instances", instanceId, "config.yaml");
+      if (!fs.existsSync(configYamlPath)) {
+        throw new Error("运行时配置文件 config.yaml 写入失败，物理文件不存在。");
+      }
+      const stats = fs.statSync(configYamlPath);
+      if (stats.size === 0) {
+        throw new Error("运行时配置文件 config.yaml 写入失败，物理文件为空 (0字节)。");
+      }
     }
 
     // Log configurations write success
@@ -902,7 +925,9 @@ export async function executeDeployment(instance: any, io: SocketIOServer, updat
       owner_id: ownerId,
       step: "write_config",
       status: "success",
-      message: "运行时环境变量成功汇编，集成环境安全配置 config.yaml 写入磁盘"
+      message: isPiRuntime
+        ? "Pi Runtime 环境变量与运行标识已安全写入实例目录"
+        : "运行时环境变量成功汇编，集成环境安全配置 config.yaml 写入磁盘"
     }).catch(() => {});
   } catch (err: any) {
     const rawErrMsg = err.message || String(err);
@@ -995,6 +1020,12 @@ agent.gateway_timeout=${DEFAULT_AGENT_GATEWAY_TIMEOUT}
 agent.restart_drain_timeout=${DEFAULT_AGENT_RESTART_DRAIN_TIMEOUT}
 agent.tool_use_enforcement=auto
 agent.task_completion_guidance=true`
+    });
+  }
+  if (piRuntimeConfigResult) {
+    io.emit(`deploy_log_${instanceId}`, {
+      timestamp: new Date().toISOString(),
+      message: `[Pi Runtime Beta]\nprovider=${piRuntimeConfigResult.provider}\nmodel=${piRuntimeConfigResult.model}\ntransport=rpc-jsonl\nconversation=streaming`,
     });
   }
 
@@ -1239,7 +1270,8 @@ agent.task_completion_guidance=true`
 
              const gatewayEnv: string[] = [
                "TZ=Asia/Shanghai",
-               "HERMES_HOME=/opt/data"
+               "MYBAY_AGENT_HOME=/opt/data",
+               isPiRuntime ? "PI_HOME=/opt/data" : "HERMES_HOME=/opt/data"
              ];
              Object.entries(envVars).forEach(([k, v]) => {
                gatewayEnv.push(`${k}=${v}`);
@@ -1270,6 +1302,19 @@ agent.task_completion_guidance=true`
                  requestUser,
                  systemTrustedContext
                 });
+
+               if (isPiRuntime) {
+                 const actualImage = parsePiRuntimeImageRef(finalImageName);
+                 config.image = actualImage.image;
+                 config.imageTag = actualImage.tag;
+                 await Promise.all([
+                   dbAdapter.updateInstanceConfig(instanceId, JSON.stringify(config)),
+                   dbAdapter.updateInstanceVersionInfo(instanceId, {
+                     agent_image: actualImage.image,
+                     agent_image_tag: actualImage.tag,
+                   }),
+                 ]);
+               }
                
                deploymentEventsRepo.create({
                  instance_id: instanceId,

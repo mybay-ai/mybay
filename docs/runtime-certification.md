@@ -9,7 +9,7 @@ A declared certification level is a release target. A verified level is granted 
 | Runtime | Declared level | Verified level | Publication status | Evidence bundle |
 | --- | --- | --- | --- | --- |
 | hermes | certified | certified | verified | certification/evidence/hermes.certification.json |
-| pi | spec-only | spec-only | spec-only | none |
+| pi | certified | certified | verified | certification/evidence/pi.certification.json |
 
 ## Certification ladder
 

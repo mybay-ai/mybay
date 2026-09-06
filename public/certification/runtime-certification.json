@@ -434,14 +434,300 @@
     },
     {
       "runtimeType": "pi",
-      "providerKey": "pi-preview",
+      "providerKey": "pi-rpc",
       "contractVersion": 1,
-      "declaredLevel": "spec-only",
-      "verifiedLevel": "spec-only",
-      "publicationStatus": "spec-only",
-      "requirements": [],
+      "declaredLevel": "certified",
+      "verifiedLevel": "certified",
+      "publicationStatus": "verified",
+      "requirements": [
+        {
+          "id": "runtime-install",
+          "level": "experimental",
+          "title": "Runtime installation",
+          "description": "Install or initialize the Runtime in a real Runtime environment.",
+          "minimumEvidenceScope": "runtime",
+          "status": "passed",
+          "detail": "Evidence satisfies this requirement.",
+          "evidence": {
+            "requirementId": "runtime-install",
+            "status": "passed",
+            "scope": "runtime",
+            "observedAt": "2026-09-06T08:20:00.000Z",
+            "environment": "Windows + Docker Desktop; MyBay OSS local worktree; Pi bridge 0.1.1-beta; Pi coding agent 0.85.1",
+            "evidenceRefs": [
+              "certification/artifacts/pi-0.85.1-acceptance-20260906.json#observations.runtimeInstall"
+            ]
+          }
+        },
+        {
+          "id": "task-submit",
+          "level": "experimental",
+          "title": "Task submission",
+          "description": "Submit a real task and receive a Runtime-owned run identifier.",
+          "minimumEvidenceScope": "runtime",
+          "status": "passed",
+          "detail": "Evidence satisfies this requirement.",
+          "evidence": {
+            "requirementId": "task-submit",
+            "status": "passed",
+            "scope": "runtime",
+            "observedAt": "2026-09-06T08:15:00.000Z",
+            "environment": "Five authenticated warm conversation tasks on the isolated Pi 0.85.1 instance",
+            "evidenceRefs": [
+              "certification/artifacts/pi-0.85.1-acceptance-20260906.json#observations.warmPerformance"
+            ]
+          }
+        },
+        {
+          "id": "streaming-output",
+          "level": "experimental",
+          "title": "Streaming output",
+          "description": "Observe non-empty incremental output from a real Runtime run.",
+          "minimumEvidenceScope": "runtime",
+          "status": "passed",
+          "detail": "Evidence satisfies this requirement.",
+          "evidence": {
+            "requirementId": "streaming-output",
+            "status": "passed",
+            "scope": "runtime",
+            "observedAt": "2026-09-06T08:15:00.000Z",
+            "environment": "Persisted MyBay Runtime event waterfall for five Pi 0.85.1 tasks",
+            "evidenceRefs": [
+              "certification/artifacts/pi-0.85.1-acceptance-20260906.json#observations.warmPerformance"
+            ]
+          }
+        },
+        {
+          "id": "cancellation",
+          "level": "experimental",
+          "title": "Cancellation",
+          "description": "Stop an active Runtime run and observe a terminal cancelled state.",
+          "minimumEvidenceScope": "runtime",
+          "status": "passed",
+          "detail": "Evidence satisfies this requirement.",
+          "evidence": {
+            "requirementId": "cancellation",
+            "status": "passed",
+            "scope": "runtime",
+            "observedAt": "2026-09-06T08:18:00.000Z",
+            "environment": "Authenticated localhost browser and Pi 0.85.1 Runtime cancellation path",
+            "evidenceRefs": [
+              "certification/artifacts/pi-0.85.1-acceptance-20260906.json#observations.cancellation"
+            ]
+          }
+        },
+        {
+          "id": "session-recovery",
+          "level": "beta",
+          "title": "Session recovery",
+          "description": "Resume a persisted native session without losing conversation continuity.",
+          "minimumEvidenceScope": "runtime",
+          "status": "passed",
+          "detail": "Evidence satisfies this requirement.",
+          "evidence": {
+            "requirementId": "session-recovery",
+            "status": "passed",
+            "scope": "e2e",
+            "observedAt": "2026-09-06T08:20:00.000Z",
+            "environment": "Authenticated browser follow-up in the original conversation after an isolated Pi 0.85.1 container restart",
+            "evidenceRefs": [
+              "certification/artifacts/pi-0.85.1-acceptance-20260906.json#observations.restartRecovery"
+            ]
+          }
+        },
+        {
+          "id": "file-artifact",
+          "level": "beta",
+          "title": "File artifact",
+          "description": "Create, persist, and retrieve a file artifact produced by the Runtime.",
+          "minimumEvidenceScope": "runtime",
+          "status": "passed",
+          "detail": "Evidence satisfies this requirement.",
+          "evidence": {
+            "requirementId": "file-artifact",
+            "status": "passed",
+            "scope": "e2e",
+            "observedAt": "2026-09-06T07:58:00.000Z",
+            "environment": "Authenticated localhost browser and persisted Pi 0.85.1 instance workspace",
+            "evidenceRefs": [
+              "certification/artifacts/pi-0.85.1-acceptance-20260906.json#observations.fileWorkflow"
+            ]
+          }
+        },
+        {
+          "id": "usage-reporting",
+          "level": "beta",
+          "title": "Usage reporting",
+          "description": "Persist attributable usage evidence for a completed Runtime run.",
+          "minimumEvidenceScope": "runtime",
+          "status": "passed",
+          "detail": "Evidence satisfies this requirement.",
+          "evidence": {
+            "requirementId": "usage-reporting",
+            "status": "passed",
+            "scope": "runtime",
+            "observedAt": "2026-09-06T08:20:00.000Z",
+            "environment": "Persisted terminal Runtime evidence and browser usage display from Pi 0.85.1",
+            "evidenceRefs": [
+              "certification/artifacts/pi-0.85.1-acceptance-20260906.json#observations.warmPerformance"
+            ]
+          }
+        },
+        {
+          "id": "tool-events",
+          "level": "beta",
+          "title": "Tool events",
+          "description": "Observe tool lifecycle events with stable identifiers and terminal outcomes.",
+          "minimumEvidenceScope": "runtime",
+          "status": "passed",
+          "detail": "Evidence satisfies this requirement.",
+          "evidence": {
+            "requirementId": "tool-events",
+            "status": "passed",
+            "scope": "runtime",
+            "observedAt": "2026-09-06T07:58:00.000Z",
+            "environment": "Persisted write-file lifecycle emitted by Pi 0.85.1",
+            "evidenceRefs": [
+              "certification/artifacts/pi-0.85.1-acceptance-20260906.json#observations.fileWorkflow"
+            ]
+          }
+        },
+        {
+          "id": "restart-recovery",
+          "level": "beta",
+          "title": "Restart recovery",
+          "description": "Recover persisted Runtime state after a controlled process restart.",
+          "minimumEvidenceScope": "runtime",
+          "status": "passed",
+          "detail": "Evidence satisfies this requirement.",
+          "evidence": {
+            "requirementId": "restart-recovery",
+            "status": "passed",
+            "scope": "runtime",
+            "observedAt": "2026-09-06T08:20:00.000Z",
+            "environment": "Controlled restart of only the isolated Pi 0.85.1 Runtime container",
+            "evidenceRefs": [
+              "certification/artifacts/pi-0.85.1-acceptance-20260906.json#observations.restartRecovery"
+            ]
+          }
+        },
+        {
+          "id": "control-plane-deploy",
+          "level": "certified",
+          "title": "Control-plane deployment",
+          "description": "Deploy through the supported MyBay product path and pass health checks.",
+          "minimumEvidenceScope": "e2e",
+          "status": "passed",
+          "detail": "Evidence satisfies this requirement.",
+          "evidence": {
+            "requirementId": "control-plane-deploy",
+            "status": "passed",
+            "scope": "e2e",
+            "observedAt": "2026-09-06T07:45:00.000Z",
+            "environment": "MyBay Quick Deploy product path; isolated Pi 0.85.1 instance",
+            "evidenceRefs": [
+              "certification/artifacts/pi-0.85.1-acceptance-20260906.json#observations.runtimeInstall"
+            ]
+          }
+        },
+        {
+          "id": "upgrade",
+          "level": "certified",
+          "title": "Upgrade",
+          "description": "Upgrade a deployed Runtime while preserving supported state.",
+          "minimumEvidenceScope": "e2e",
+          "status": "passed",
+          "detail": "Evidence satisfies this requirement.",
+          "evidence": {
+            "requirementId": "upgrade",
+            "status": "passed",
+            "scope": "e2e",
+            "observedAt": "2026-09-06T08:28:00.000Z",
+            "environment": "Authenticated MyBay Agent version repository; Pi instance upgraded from 0.1.0-beta to 0.85.1 and returned to running",
+            "evidenceRefs": [
+              "certification/artifacts/pi-0.85.1-acceptance-20260906.json#observations.upgrade"
+            ]
+          }
+        },
+        {
+          "id": "rollback",
+          "level": "certified",
+          "title": "Rollback",
+          "description": "Roll back a failed or incompatible upgrade and restore service.",
+          "minimumEvidenceScope": "e2e",
+          "status": "passed",
+          "detail": "Evidence satisfies this requirement.",
+          "evidence": {
+            "requirementId": "rollback",
+            "status": "passed",
+            "scope": "e2e",
+            "observedAt": "2026-09-06T08:32:00.000Z",
+            "environment": "Authenticated MyBay Agent version repository; Pi rollback to 0.1.0-beta completed and the instance was restored to 0.85.1",
+            "evidenceRefs": [
+              "certification/artifacts/pi-0.85.1-acceptance-20260906.json#observations.rollback"
+            ]
+          }
+        },
+        {
+          "id": "security",
+          "level": "certified",
+          "title": "Security controls",
+          "description": "Verify authentication, isolation, secret handling, and privileged capability guards.",
+          "minimumEvidenceScope": "e2e",
+          "status": "passed",
+          "detail": "Evidence satisfies this requirement.",
+          "evidence": {
+            "requirementId": "security",
+            "status": "passed",
+            "scope": "e2e",
+            "observedAt": "2026-09-06T08:20:00.000Z",
+            "environment": "Deployed Pi 0.85.1 container inspection on Windows Docker Desktop",
+            "evidenceRefs": [
+              "certification/artifacts/pi-0.85.1-acceptance-20260906.json#observations.security"
+            ]
+          }
+        },
+        {
+          "id": "backup-restore",
+          "level": "certified",
+          "title": "Backup and restore",
+          "description": "Restore a supported backup and verify Runtime data through the product path.",
+          "minimumEvidenceScope": "e2e",
+          "status": "passed",
+          "detail": "Evidence satisfies this requirement.",
+          "evidence": {
+            "requirementId": "backup-restore",
+            "status": "passed",
+            "scope": "e2e",
+            "observedAt": "2026-09-06T08:50:00.000Z",
+            "environment": "Authenticated MyBay export/import path; restored Pi 0.85.1 clone, browser-previewed its restored artifact, rebound its saved credential, and completed a real Runtime task",
+            "evidenceRefs": [
+              "certification/artifacts/pi-0.85.1-acceptance-20260906.json#observations.backupRestore"
+            ]
+          }
+        },
+        {
+          "id": "real-e2e",
+          "level": "certified",
+          "title": "Real end-to-end acceptance",
+          "description": "Complete a credentialed browser-to-Runtime task on a supported target platform.",
+          "minimumEvidenceScope": "e2e",
+          "status": "passed",
+          "detail": "Evidence satisfies this requirement.",
+          "evidence": {
+            "requirementId": "real-e2e",
+            "status": "passed",
+            "scope": "e2e",
+            "observedAt": "2026-09-06T08:20:00.000Z",
+            "environment": "Authenticated MyBay browser to Pi 0.85.1 Runtime using a credentialed DeepSeek model",
+            "evidenceRefs": [
+              "certification/artifacts/pi-0.85.1-acceptance-20260906.json#observations.warmPerformance"
+            ]
+          }
+        }
+      ],
       "errors": [],
-      "evidenceFile": null
+      "evidenceFile": "certification/evidence/pi.certification.json"
     }
   ]
 }

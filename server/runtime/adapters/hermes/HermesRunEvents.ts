@@ -200,11 +200,17 @@ export class HermesRunEventProvider implements RuntimeRunEventProvider {
 
       if (eventType === "tool.started" || eventType === "tool.start") {
         const tool = String(event.tool || event.name || event.tool_name || "other");
-        const id = `step-${dependencies.randomUUID()}`;
+        const nativeCallId = String(event.tool_call_id || event.toolCallId || "");
+        const hasNativeCallId = /^[A-Za-z0-9_.:-]{1,80}$/.test(nativeCallId);
+        const id = hasNativeCallId
+          ? `step-${nativeCallId}`
+          : `step-${dependencies.randomUUID()}`;
         const queue = tracker.activeToolIds.get(tool) || [];
-        // Native events have no call id: concurrent same-tool completions cannot
+        // Events without a call id cannot safely pair concurrent same-tool
         // be safely paired by FIFO. Drop their path evidence conservatively.
-        if (queue.length) {
+        if (hasNativeCallId) {
+          tracker.activeToolFileMetadata?.set(id, safeFileOperationMetadata(event));
+        } else if (queue.length) {
           for (const activeId of queue) tracker.activeToolFileMetadata?.delete(activeId);
         } else {
           tracker.activeToolFileMetadata?.set(id, safeFileOperationMetadata(event));
@@ -229,7 +235,13 @@ export class HermesRunEventProvider implements RuntimeRunEventProvider {
       if (eventType === "tool.completed" || eventType === "tool.complete") {
         const tool = String(event.tool || event.name || event.tool_name || "other");
         const queue = tracker.activeToolIds.get(tool) || [];
-        const id = queue.shift() || `step-${dependencies.randomUUID()}`;
+        const nativeCallId = String(event.tool_call_id || event.toolCallId || "");
+        const nativeId = /^[A-Za-z0-9_.:-]{1,80}$/.test(nativeCallId) ? `step-${nativeCallId}` : "";
+        const id = nativeId || queue.shift() || `step-${dependencies.randomUUID()}`;
+        if (nativeId) {
+          const nativeIndex = queue.indexOf(nativeId);
+          if (nativeIndex >= 0) queue.splice(nativeIndex, 1);
+        }
         tracker.activeToolIds.set(tool, queue);
         const metadata = { ...tracker.activeToolFileMetadata?.get(id), ...safeFileOperationMetadata(event) };
         tracker.activeToolFileMetadata?.delete(id);

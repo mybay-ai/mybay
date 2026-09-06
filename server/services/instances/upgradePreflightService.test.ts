@@ -20,4 +20,11 @@ describe("upgrade preflight", () => {
     const result = buildUpgradePreflight({ ...base, disk: { totalBytes: 10 * 1024 ** 3, freeBytes: 100 * 1024 ** 2 } });
     expect(result.checks.find(check => check.code === "DISK_SPACE")?.status).toBe("blocker");
   });
+
+  it("blocks upgrades without a running container and rollback point", () => {
+    const result = buildUpgradePreflight({ ...base, currentContainerRunning: false });
+    expect(result.allowed).toBe(false);
+    expect(result.checks.find(check => check.code === "INSTANCE_STATE")?.status).toBe("blocker");
+    expect(result.checks.find(check => check.code === "ROLLBACK_READY")?.status).toBe("blocker");
+  });
 });

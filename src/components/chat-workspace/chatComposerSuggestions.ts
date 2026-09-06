@@ -1,4 +1,4 @@
-export type ComposerCommandId = "new" | "stop" | "model" | "agents" | "call" | "all" | "help";
+export type ComposerCommandId = "new" | "clear" | "files" | "model" | "status" | "stop" | "agents" | "call" | "all" | "help";
 
 export type ComposerPeer = {
   id: string;

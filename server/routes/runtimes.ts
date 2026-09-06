@@ -1,12 +1,21 @@
 import { Router } from "express";
 import { runtimeRegistry } from "../runtime/runtimeRegistry";
+import { isPiRuntimeBetaEnabled } from "../utils/runtimeReleaseBoundary";
 
 const router = Router();
 
-export function buildRuntimeCatalogResponse() {
+export function buildRuntimeCatalogResponse(piEnabled = isPiRuntimeBetaEnabled()) {
   return {
     schemaVersion: 1 as const,
-    runtimes: runtimeRegistry.listRuntimeDefinitions(),
+    runtimes: runtimeRegistry.listRuntimeDefinitions().map((definition) => definition.runtime.type !== "pi"
+      ? definition
+      : {
+          ...definition,
+          release: {
+            ...definition.release,
+            deploymentSupported: piEnabled && definition.release.deploymentSupported,
+          },
+        }),
   };
 }
 

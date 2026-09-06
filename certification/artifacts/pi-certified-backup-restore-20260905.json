@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "artifactType": "runtime-certified-backup-restore-live-evidence",
+  "generatedAt": "2026-09-05T13:13:28.079Z",
+  "sanitization": {
+    "credentials": "API keys, passwords, cookies, tokens, and credential values were not collected",
+    "identifiers": "the disposable source and clone identifiers are omitted",
+    "filesystem": "host absolute paths are omitted; only the harmless proof file path and digest are retained"
+  },
+  "environment": {
+    "host": "Windows with Docker Desktop",
+    "application": "MyBay OSS local branch on localhost",
+    "runtime": {
+      "type": "pi",
+      "providerKey": "pi-rpc",
+      "contractVersion": 1,
+      "image": "mybay/pi-runtime:0.1.0-beta"
+    }
+  },
+  "observations": {
+    "backupRestore": {
+      "observedAt": "2026-09-05T13:13:28.079Z",
+      "result": "passed",
+      "productPath": "Authenticated MyBay UI -> export backup -> import preview -> clone import -> bind saved credential -> start -> file preview -> Agent-mode Runtime task",
+      "archive": {
+        "sha256": "2a26d8884f884af54815c5c5bee0f7919d66f675345bf4c556dea4d58995b0a9",
+        "entryCount": 6,
+        "entries": [
+          "manifest.json",
+          "config.redacted.json",
+          "business-config.json",
+          "template-inputs.json",
+          "README.txt",
+          "outputs/pi-restore-proof.txt"
+        ],
+        "unsafeEntryCount": 0,
+        "uiPreviewValid": true,
+        "uiPreviewReportedSecretsRedacted": true
+      },
+      "clone": {
+        "createdStopped": true,
+        "credentialStateBeforeExplicitRebind": "pending",
+        "savedCredentialReboundExplicitly": true,
+        "statusAfterStart": "running",
+        "healthAfterStart": "healthy",
+        "chatReady": true,
+        "runtimeBinding": {
+          "runtimeType": "pi",
+          "providerKey": "pi-rpc",
+          "contractVersion": 1
+        },
+        "image": "mybay/pi-runtime:0.1.0-beta"
+      },
+      "artifactVerification": {
+        "path": "outputs/pi-restore-proof.txt",
+        "expectedContent": "PI_RESTORE_PROOF_OK",
+        "sourceSha256": "108b41dd0cd3e8b9a20e468b4ebc05368083fd00a5ec2b3412be730cb7b593bf",
+        "cloneSha256": "108b41dd0cd3e8b9a20e468b4ebc05368083fd00a5ec2b3412be730cb7b593bf",
+        "browserPreviewMatched": true
+      },
+      "runtimeVerification": {
+        "runRef": "sha256:7ed8013210902924c36255df02545e85565759fd7c05641f4e3d39f2fafe7461",
+        "status": "completed",
+        "runtimeType": "pi",
+        "providerKey": "pi-rpc",
+        "contractVersion": 1,
+        "dispatchAttempts": 1,
+        "lastEventSequence": 21,
+        "expectedOutput": "PI_RESTORE_PROOF_OK",
+        "actualOutput": "PI_RESTORE_PROOF_OK"
+      }
+    }
+  },
+  "boundary": "The backup intentionally excludes credentials, passwords, conversations, and native Runtime sessions. The restored clone required an explicit saved-credential rebind before start. The disposable clone is retained for the remaining upgrade and rollback acceptance work."
+}

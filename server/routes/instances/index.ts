@@ -20,6 +20,9 @@ import { createChatRoutes } from "./chat.routes";
 import { createChatFilesRoutes } from "./chatFiles.routes";
 import { createEventsRoutes } from "./events.routes";
 import { createA2ARoutes } from "./a2a.routes";
+import { createAvatarRoutes } from "./avatar.routes";
+import { createApprovalPolicyRoutes } from "./approvalPolicy.routes";
+import { createContextCompactionRoutes } from "./contextCompaction.routes";
 import templateFilesRouter from "./templateFiles.routes";
 import { checkAccessBridgeCompatibility } from "./helpers";
 
@@ -59,6 +62,9 @@ export function createInstancesRouter(io: SocketIOServer) {
   router.use(createActionsRoutes(deps));
   router.use(createEventsRoutes({ docker }));
   router.use(createA2ARoutes());
+  router.use(createAvatarRoutes(deps));
+  router.use(createApprovalPolicyRoutes(deps));
+  router.use(createContextCompactionRoutes(deps));
   router.use(createFilesRoutes(deps));
   router.use(createConfigRoutes(deps));
   router.use(createTemplatesRoutes(deps));

@@ -14,7 +14,10 @@
 /logs
 /tmp
 /backups
-/runtime
+/runtime/*
+!/runtime/pi-bridge/
+!/runtime/pi-bridge/**
+**/node_modules
 /secrets
 
 .env

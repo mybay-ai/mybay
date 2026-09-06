@@ -1,9 +1,11 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "runtime": {
     "type": "hermes",
     "providerKey": "hermes-core",
-    "contractVersion": 1
+    "contractVersion": 1,
+    "version": "latest",
+    "imageRef": "nousresearch/hermes-agent:latest"
   },
   "checks": [
     {

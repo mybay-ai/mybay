@@ -20,6 +20,13 @@ describe("quick deployment defaults", () => {
     });
   });
 
+  it("can initialize a Pi quick-deployment draft", () => {
+    const draft = createQuickDeployDraft({ runtimeType: "pi", suffix: "PI-123" });
+    expect(draft.runtimeType).toBe("pi");
+    expect(draft.channel).toBe("web");
+    expect(draft.name).toBe("mybay-agent-pi123");
+  });
+
   it("creates a stable Docker-safe path without trusting the display name", () => {
     expect(buildQuickDeployPath("  My First Agent!  ", "Run_456")).toBe("my-first-agent-run456");
     expect(buildQuickDeployPath("中文名称", "***")).toBe("agent-local");

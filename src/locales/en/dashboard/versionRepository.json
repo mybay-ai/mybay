@@ -1,6 +1,8 @@
 {
   "title": "Image registry",
   "subtitle": "Official releases, capability matrix, and local Docker cache status",
+  "piTitle": "Pi Runtime releases",
+  "piSubtitle": "Upgradeable Pi Agent and bridge images with data-preserving upgrade and rollback",
   "refresh": "Refresh local list",
   "refreshTitle": "Reload the locally discovered release list",
   "versionFamily": "Version / family",
@@ -15,6 +17,12 @@
   "capabilityMatrix": {
     "items": {
       "core": { "label": "Core", "description": "Core chat, tools, and runtime capabilities" },
+      "streaming": { "label": "Streaming", "description": "Stream Agent progress and results in real time" },
+      "cancellation": { "label": "Cancellation", "description": "Stop queued or running tasks" },
+      "files": { "label": "Files", "description": "Persist, preview, and download generated files" },
+      "backup": { "label": "Backup", "description": "Restore backups and clones with the Runtime binding" },
+      "upgrade": { "label": "Upgrade", "description": "Run controlled Runtime upgrades from the repository" },
+      "rollback": { "label": "Rollback", "description": "Restore the previous release after failure or on request" },
       "feishu": { "label": "Feishu/Lark", "description": "Native Feishu and Lark channel support" },
       "a2a": { "label": "A2A", "description": "A2A v1.0 agent discovery, calls, and task protocol" },
       "outbound_webhooks": { "label": "Event webhooks", "description": "Signed runtime events delivered to external systems" },
@@ -33,6 +41,11 @@
   "feishuUnsupported": "Feishu/Lark unsupported",
   "followLatest": "follow latest",
   "loadingImages": "Loading image registry...",
+  "runtime": {
+    "hermes": "Hermes",
+    "pi": "Pi",
+    "certified": "Certified"
+  },
   "preflight": {
     "title": "Pre-upgrade safety check",
     "subtitle": "Verify the target release, runtime, data, and rollback conditions before submission",
@@ -108,6 +121,10 @@
     "bulk": {
       "submitFailedTitle": "Submission failed",
       "selectAtLeastOne": "Select at least one instance for bulk scheduling.",
+      "runtimeMismatchTitle": "Select one Runtime type",
+      "runtimeMismatch": "Hermes and Pi use different images and upgrade paths, so they cannot share one bulk upgrade task.",
+      "runtimeSelectionReset": "The Runtime type changed, so the batch selection was restarted.",
+      "filterRuntimeFirst": "This list contains both Hermes and Pi. Filter by Runtime system tag before selecting all.",
       "feishuUnsupported": "The selection includes instances with Feishu/Lark channels: {{names}}, but target version [{{tag}}] does not support Feishu. Select a compatible image or remove those instances.",
       "confirmMessage": "Upgrade the selected {{count}} instance(s) to [{{tag}}]? The tasks will run concurrently as rolling upgrades.",
       "confirmAction": "Confirm upgrade",
@@ -126,6 +143,10 @@
     "latestProtection": {
       "title": "Smart release routing is enabled:",
       "description": "The target is <latest>latest</latest>. Standard instances will upgrade to the newest official mainline release. Instances with <feishu>Feishu/Lark channels enabled</feishu> are <routed>automatically routed to the newest stable Feishu-compatible release</routed>, preventing outages caused by missing dependencies."
+    },
+    "piProtection": {
+      "title": "Pi-specific upgrade path enabled",
+      "description": "Only supported Pi Runtime releases in this repository can be selected. The latest three are retained, and each instance keeps its own rollback point."
     }
   }
 }

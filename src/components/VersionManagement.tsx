@@ -13,6 +13,7 @@ import { VersionMobileInstanceCards } from "./version-management/VersionMobileIn
 import { VersionDesktopInstanceTable } from "./version-management/VersionDesktopInstanceTable";
 import { UpgradePreflightDialog } from "./version-management/UpgradePreflightDialog";
 import { compareHermesVersions } from "../../shared/version";
+import { PI_RUNTIME_DEFINITION } from "../../shared/runtimeCatalog";
 
 interface VersionItem {
   tag: string;
@@ -27,6 +28,9 @@ interface VersionItem {
   capabilities?: string[];
   coreVariant?: any;
   feishuVariant?: any;
+  runtime_type?: "hermes" | "pi";
+  certification_level?: string;
+  channel?: string;
 }
 
 interface VersionManagementProps {
@@ -37,9 +41,10 @@ interface VersionManagementProps {
 }
 
 export function VersionManagement({ instances, currentUser, fetchInstances, socket }: VersionManagementProps) {
-  const { t } = useTranslation("dashboard");
+  const { t, i18n } = useTranslation("dashboard");
   const { showToast, showAlert, showConfirm } = useFeedback();
   const [versions, setVersions] = useState<VersionItem[]>([]);
+  const [piVersions, setPiVersions] = useState<VersionItem[]>([]);
   const [loadingVersions, setLoadingVersions] = useState(true);
   const [selectedInstances, setSelectedInstances] = useState<string[]>([]);
   const [targetTag, setTargetTag] = useState<string>("latest");
@@ -59,6 +64,7 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
   const [statusFilter, setStatusFilter] = useState("all");
   const [systemTagFilter, setSystemTagFilter] = useState("all");
   const [preflight, setPreflight] = useState<any>({ open: false, loading: false, report: null, mode: null, ids: [], tag: "latest" });
+  const [activeRuntime, setActiveRuntime] = useState<"hermes" | "pi">("hermes");
   const debounceTimeoutRef = useRef<any>(null);
 
   const handleRefreshInstances = async () => {
@@ -73,18 +79,36 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
   const isLowerVersion = (v1?: string, v2?: string): boolean =>
     !!v1 && !!v2 && compareHermesVersions(v1, v2) < 0;
 
+  const getRuntimeType = (inst: any): "hermes" | "pi" =>
+    String(inst?.runtime_type || "hermes").trim().toLowerCase() === "pi" ? "pi" : "hermes";
+
   // The API is already sorted and marks the synchronized upstream latest.
   const latestOfficial = versions.find((version: any) => version.is_latest) || versions[0];
   const latestOfficialVer = latestOfficial?.version || "";
+  const latestPi = piVersions.find((version: any) => version.is_latest) || piVersions[0];
+  const runtimeInstances = useMemo(
+    () => instances.filter((instance) => getRuntimeType(instance) === activeRuntime),
+    [instances, activeRuntime],
+  );
 
   // Check if a given inst needs update using semver rules
   const doesInstanceNeedUpdate = (inst: any) => {
+    if (getRuntimeType(inst) === "pi") {
+      const imageTag = String(inst.agent_image_tag || "").trim();
+      const runtimeVersion = String(inst.agent_version || "").trim();
+      if (!latestPi) return false;
+      return imageTag !== "latest"
+        && imageTag !== latestPi.tag
+        && runtimeVersion !== latestPi.version;
+    }
     const cur = inst.resolved_version || inst.agent_version || inst.agent_image_tag || "latest";
     if (cur === "latest") return false;
     return isLowerVersion(cur, latestOfficialVer);
   };
 
-  const getActiveVersion = (inst: any) => inst.resolved_version || inst.agent_version || inst.agent_image_tag || "latest";
+  const getActiveVersion = (inst: any) => getRuntimeType(inst) === "pi"
+    ? inst.agent_image_tag || latestPi?.tag || PI_RUNTIME_DEFINITION.runtime.tag
+    : inst.resolved_version || inst.agent_version || inst.agent_image_tag || "latest";
 
   const getInstanceSystemTags = (inst: any): string[] => {
     const tags = new Set<string>();
@@ -145,19 +169,19 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
 
   const visibleVersions = useMemo(() => {
     const values = new Set<string>();
-    instances.forEach(inst => values.add(getActiveVersion(inst)));
+    runtimeInstances.forEach(inst => values.add(getActiveVersion(inst)));
     return Array.from(values).filter(Boolean).sort();
-  }, [instances]);
+  }, [runtimeInstances, latestPi]);
 
   const visibleSystemTags = useMemo(() => {
     const values = new Set<string>();
-    instances.forEach(inst => getInstanceSystemTags(inst).forEach(tag => values.add(tag)));
+    runtimeInstances.forEach(inst => getInstanceSystemTags(inst).forEach(tag => values.add(tag)));
     return Array.from(values).sort();
-  }, [instances]);
+  }, [runtimeInstances]);
 
   const filteredInstances = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    return instances.filter((inst) => {
+    return runtimeInstances.filter((inst) => {
       const activeVersion = getActiveVersion(inst);
       const systemTags = getInstanceSystemTags(inst);
       const matchesStatus = matchesStatusFilter(inst, statusFilter);
@@ -183,13 +207,13 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
       if (systemTagFilter !== "all" && !systemTags.includes(systemTagFilter)) return false;
       return true;
     });
-  }, [instances, latestOfficialVer, searchQuery, versionFilter, statusFilter, systemTagFilter]);
+  }, [runtimeInstances, latestOfficialVer, latestPi, searchQuery, versionFilter, statusFilter, systemTagFilter]);
 
-  const totalInstances = instances.length;
-  const latestInstances = instances.filter(inst => inst.upgrade_status !== "failed" && !doesInstanceNeedUpdate(inst)).length;
-  const needUpdateInstances = instances.filter(inst => inst.upgrade_status !== "failed" && doesInstanceNeedUpdate(inst)).length;
-  const abnormalInstances = instances.filter(inst => inst.upgrade_status === "failed" || inst.status === "unhealthy" || inst.status === "error").length;
-  const latestBatchUpgradeAt = instances
+  const totalInstances = runtimeInstances.length;
+  const latestInstances = runtimeInstances.filter(inst => inst.upgrade_status !== "failed" && !doesInstanceNeedUpdate(inst)).length;
+  const needUpdateInstances = runtimeInstances.filter(inst => inst.upgrade_status !== "failed" && doesInstanceNeedUpdate(inst)).length;
+  const abnormalInstances = runtimeInstances.filter(inst => inst.upgrade_status === "failed" || inst.status === "unhealthy" || inst.status === "error").length;
+  const latestBatchUpgradeAt = runtimeInstances
     .map(inst => inst.last_upgrade_at ? new Date(inst.last_upgrade_at).getTime() : 0)
     .filter(time => Number.isFinite(time) && time > 0)
     .sort((a, b) => b - a)[0];
@@ -198,6 +222,15 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
     filteredInstances.filter(inst => selectedInstances.includes(inst.id))
   ), [filteredInstances, selectedInstances]);
   const selectedVisibleInstanceIds = useMemo(() => selectedVisibleInstances.map(inst => inst.id), [selectedVisibleInstances]);
+  const selectedRuntimeType: "hermes" | "pi" = activeRuntime;
+  const handleRuntimeChange = (runtimeType: "hermes" | "pi") => {
+    setActiveRuntime(runtimeType);
+    setSelectedInstances([]);
+    setTargetTag("latest");
+    setVersionFilter("all");
+    setStatusFilter("all");
+    setSystemTagFilter("all");
+  };
   const detailsInstance = useMemo(() => (
     detailsInstanceId ? instances.find(inst => inst.id === detailsInstanceId) || null : null
   ), [detailsInstanceId, instances]);
@@ -287,15 +320,14 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
       if (token && token !== "null" && token !== "undefined") {
         headers["Authorization"] = `Bearer ${token}`;
       }
-      const res = await fetch("/api/mybay-versions", {
-        headers
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setVersions(data.map((v: any) => ({
+      const [hermesResponse, piResponse] = await Promise.all([
+        fetch("/api/mybay-versions?runtimeType=hermes", { headers }),
+        fetch("/api/mybay-versions?runtimeType=pi", { headers }),
+      ]);
+      const mapVersions = (data: any[]): VersionItem[] => data.map((v: any) => ({
            tag: v.image_tag || v.tag || v.familyVersion || v.version,
            version: v.familyVersion || v.version,
-           desc: v.changelog || "",
+           desc: (i18n.language.startsWith("zh") ? v.changelog_zh : v.changelog) || v.changelog || "",
            releaseAt: v.published_at ? v.published_at.substring(0, 10) : "",
            image: v.image || "nousresearch/hermes-agent",
            is_prewarmed: v.is_prewarmed,
@@ -304,12 +336,19 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
            capabilities: v.capabilities,
            feishu_capable: v.feishu_capable,
            coreVariant: v.coreVariant,
-           feishuVariant: v.feishuVariant
-        })));
+           feishuVariant: v.feishuVariant,
+           runtime_type: v.runtime_type,
+           certification_level: v.certification_level,
+           channel: v.channel,
+        }));
+      if (hermesResponse.ok) {
+        const data = await hermesResponse.json();
+        setVersions(mapVersions(data));
         if (data.length > 0) {
           setTargetTag(data[0].familyVersion || data[0].image_tag || data[0].tag || data[0].version);
         }
       }
+      if (piResponse.ok) setPiVersions(mapVersions(await piResponse.json()));
     } catch (e) {
       console.error("Failed to fetch agent versions:", e);
     } finally {
@@ -333,9 +372,14 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
         body: JSON.stringify({ 
           version: v.version,
           image: v.image,
-          tag: v.tag
+          tag: v.tag,
+          runtime_type: v.runtime_type
         })
       });
+      if (res.ok && v.runtime_type === "pi") {
+        await fetchVersions();
+        setPrewarmingVersion(null);
+      }
       if (!res.ok) {
         const data = await res.json();
         showAlert({
@@ -575,6 +619,16 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
       return;
     }
 
+    const runtimeTypes = new Set(selectedVisibleInstances.map(getRuntimeType));
+    if (runtimeTypes.size > 1) {
+      showAlert({
+        title: t("versionRepository.management.bulk.runtimeMismatchTitle"),
+        message: t("versionRepository.management.bulk.runtimeMismatch"),
+        type: "warning"
+      });
+      return;
+    }
+
     // Check Feishu upgrade compatibility for all selected instances
     const selectedFeishuInsts = selectedVisibleInstances.filter(inst =>
       (inst.configuredChannels?.includes("feishu") || inst.configuredChannels?.includes("lark") || inst.channel === "feishu" || inst.channel === "lark")
@@ -653,13 +707,33 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
   };
 
   const toggleSelectInstance = (id: string) => {
-    setSelectedInstances(prev => 
-      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
-    );
+    const nextInstance = instances.find(instance => instance.id === id);
+    if (!nextInstance) return;
+    if (selectedInstances.includes(id)) {
+      setSelectedInstances(prev => prev.filter(item => item !== id));
+      return;
+    }
+    const existingRuntime = instances.find(instance => selectedInstances.includes(instance.id));
+    if (existingRuntime && getRuntimeType(existingRuntime) !== getRuntimeType(nextInstance)) {
+      showToast(t("versionRepository.management.bulk.runtimeSelectionReset"), "info");
+      setSelectedInstances([id]);
+      return;
+    }
+    setSelectedInstances(prev => [...prev, id]);
   };
 
   const toggleSelectAll = () => {
-    const visibleIds = filteredInstanceIds;
+    const visibleRuntimeTypes = new Set(filteredInstances.map(getRuntimeType));
+    if (!selectedRuntimeType && visibleRuntimeTypes.size > 1) {
+      showAlert({
+        title: t("versionRepository.management.bulk.runtimeMismatchTitle"),
+        message: t("versionRepository.management.bulk.filterRuntimeFirst"),
+        type: "info"
+      });
+      return;
+    }
+    const runtimeType = selectedRuntimeType || getRuntimeType(filteredInstances[0]);
+    const visibleIds = filteredInstances.filter(instance => getRuntimeType(instance) === runtimeType).map(instance => instance.id);
     const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedInstances.includes(id));
     if (allVisibleSelected) {
       setSelectedInstances(prev => prev.filter(id => !visibleIds.includes(id)));
@@ -670,6 +744,28 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
 
   return (
     <div className="space-y-6">
+      <div className="inline-flex w-full rounded-2xl border border-outline bg-surface-muted p-1 sm:w-auto" role="tablist" aria-label={t("versionManagement.runtimeTabs.label")}>
+        {(["hermes", "pi"] as const).map((runtimeType) => (
+          <button
+            key={runtimeType}
+            type="button"
+            role="tab"
+            aria-selected={activeRuntime === runtimeType}
+            onClick={() => handleRuntimeChange(runtimeType)}
+            className={cn(
+              "flex-1 rounded-xl px-5 py-2.5 text-sm font-bold transition-colors sm:flex-none",
+              activeRuntime === runtimeType
+                ? "bg-surface text-content shadow-sm ring-1 ring-outline"
+                : "text-content-muted hover:text-content",
+            )}
+          >
+            {t(`versionManagement.runtimeTabs.${runtimeType}`)}
+            <span className="ml-2 text-xs font-semibold text-content-muted">
+              {instances.filter((instance) => getRuntimeType(instance) === runtimeType).length}
+            </span>
+          </button>
+        ))}
+      </div>
       <VersionOverviewCards
         totalInstances={totalInstances}
         latestInstances={latestInstances}
@@ -680,12 +776,13 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
         onRefreshInstances={handleRefreshInstances}
       />
       <VersionOfficialCard
+        runtimeType={activeRuntime}
         currentUser={currentUser}
-        latestOfficial={latestOfficial}
-        latestOfficialVer={latestOfficialVer}
+        latestOfficial={activeRuntime === "pi" ? latestPi : latestOfficial}
+        latestOfficialVer={activeRuntime === "pi" ? `Pi ${latestPi?.version || PI_RUNTIME_DEFINITION.version}` : latestOfficialVer}
         syncingOfficial={syncingOfficial}
         prewarmingVersion={prewarmingVersion}
-        onSyncOfficial={handleSyncOfficial}
+        onSyncOfficial={activeRuntime === "pi" ? fetchVersions : handleSyncOfficial}
         onPrewarm={handlePrewarm}
       />
       <VersionFilters
@@ -722,8 +819,18 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
                 onChange={(e) => setTargetTag(e.target.value)}
                 className="bg-slate-800 border border-slate-700 text-white px-3 py-2 pr-8 rounded-xl text-[13px] font-bold w-full sm:w-48 outline-none appearance-none cursor-pointer focus:border-blue-500 transition-colors"
               >
-                <option value="latest">latest ({t("versionRepository.followLatest")})</option>
-                {loadingVersions ? (
+                <option value="latest">
+                  {selectedRuntimeType === "pi"
+                    ? `${latestPi?.tag || PI_RUNTIME_DEFINITION.runtime.tag} (${t("versionRepository.followLatest")})`
+                    : `latest (${t("versionRepository.followLatest")})`}
+                </option>
+                {selectedRuntimeType === "pi" ? (
+                  piVersions.map((ver) => (
+                    <option key={ver.tag} value={ver.tag}>
+                      {ver.tag} · Pi {ver.version} {ver.is_latest ? `(${t("versionRepository.recommended")})` : ""}
+                    </option>
+                  ))
+                ) : loadingVersions ? (
                   <option>{t("versionRepository.loadingImages")}</option>
                 ) : (
                   versions.map((ver) => {
@@ -797,7 +904,19 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
           </Button>
         </div>
 
-        {targetTag === "latest" && (
+        {targetTag === "latest" && selectedRuntimeType === "pi" && (
+          <div className="text-left bg-slate-900 border border-violet-700/50 p-3 rounded-xl flex items-start gap-2.5 text-[13px] text-slate-300">
+            <span className="text-violet-400 text-base shrink-0 select-none">PI</span>
+            <div>
+              <span className="text-violet-300 font-bold block mb-0.5">{t("versionRepository.management.piProtection.title")}</span>
+              <p className="text-content-muted leading-relaxed">
+                {t("versionRepository.management.piProtection.description", { version: latestPi?.tag || PI_RUNTIME_DEFINITION.runtime.tag })}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {targetTag === "latest" && selectedRuntimeType !== "pi" && (
           <div className="text-left bg-slate-900 border border-slate-800/80 p-3 rounded-xl flex items-start gap-2.5 text-[13px] text-slate-300">
             <span className="text-amber-400 text-base shrink-0 select-none">💡</span>
             <div>
@@ -822,6 +941,7 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
         filteredInstances={filteredInstances}
         selectedInstances={selectedInstances}
         versions={versions}
+        piVersions={piVersions}
         rollingBackId={rollingBackId}
         doesInstanceNeedUpdate={doesInstanceNeedUpdate}
         toggleSelectInstance={toggleSelectInstance}
@@ -832,7 +952,9 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
       />
 
       <VersionRepositoryPreview
+        runtimeType={activeRuntime}
         versions={versions}
+        piVersions={piVersions}
         currentUser={currentUser}
         latestOfficialVer={latestOfficialVer}
         loadingVersions={loadingVersions}
@@ -845,6 +967,7 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
         filteredInstances={filteredInstances}
         selectedInstances={selectedInstances}
         versions={versions}
+        piVersions={piVersions}
         latestOfficialVer={latestOfficialVer}
         doesInstanceNeedUpdate={doesInstanceNeedUpdate}
         toggleSelectInstance={toggleSelectInstance}

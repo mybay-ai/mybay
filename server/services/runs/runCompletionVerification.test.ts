@@ -26,6 +26,19 @@ describe("run completion verification", () => {
     expect(() => assertVerifiedRunCompletionV1(decision.verification, "run-1", "changed")).toThrow("RUN_COMPLETION_VERIFICATION_REQUIRED");
   });
 
+  it("records the Runtime binding used by a verified completion", () => {
+    const decision = verifyRunCompletionV1({ ...run, runtime_type: "pi" }, {
+      source: "runtime_status",
+      runId: "run-1",
+      upstreamRunId: "upstream-1",
+      assistantContent: "done",
+      observedAtMs: now,
+    }, "owner-1", now);
+    expect(decision.verified).toBe(true);
+    if (!decision.verified) return;
+    expect(decision.verification.audit.runtimeType).toBe("pi");
+  });
+
   it("fails closed for a mismatched binding, lost lease, or empty answer", () => {
     expect(verifyRunCompletionV1(run, {
       source: "runtime_status", runId: "run-1", upstreamRunId: "wrong", assistantContent: "done", observedAtMs: now,

@@ -7,6 +7,7 @@ import http from "node:http";
 import type { AddressInfo } from "node:net";
 import { createInstanceFileUploadRoutes } from "./fileUpload.routes";
 import { INSTANCE_UPLOAD_MAX_BYTES } from "../../../shared/instanceFileUpload";
+import { closeLocalDatabase } from "../../localStore";
 
 describe("instance file center upload HTTP boundary", () => {
   let root: string;
@@ -37,7 +38,7 @@ describe("instance file center upload HTTP boundary", () => {
   });
   afterAll(async () => { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); });
   const url = (name: string, directory = "/outputs", id = "A") => `${base}/${id}/files/upload?path=${encodeURIComponent(directory)}&name=${encodeURIComponent(name)}`;
-  const send = (name: string, body: string | Uint8Array = "hello", directory = "/outputs", id = "A", auth = true) => fetch(url(name, directory, id), { method: "POST", headers: { "content-type": "application/octet-stream", ...(auth ? { authorization: "Bearer test" } : {}) }, body });
+  const send = (name: string, body: string | Uint8Array = "hello", directory = "/outputs", id = "A", auth = true, uploadId?: string) => fetch(url(name, directory, id), { method: "POST", headers: { "content-type": "application/octet-stream", ...(auth ? { authorization: "Bearer test" } : {}), ...(uploadId ? { "x-upload-id": uploadId } : {}) }, body });
 
   it("saves Chinese filenames and raw bytes, without leaving staging files", async () => {
     const response = await send("中文代码.py", 'print("本地上传")\n');
@@ -56,6 +57,30 @@ describe("instance file center upload HTTP boundary", () => {
     expect(response.status).toBe(409);
     expect((await response.json()).code).toBe("UPLOAD_EXISTS");
     expect(fs.readFileSync(path.join(root, "outputs/existing.txt"), "utf8")).toBe("original");
+  });
+  it("returns the durable receipt after a lost response and rejects stale or conflicting reuse", async () => {
+    const uploadId = crypto.randomUUID();
+    const first = await send("durable.txt", "saved once", "/outputs", "A", true, uploadId);
+    expect(first.status).toBe(201);
+    expect(await first.json()).toMatchObject({ ok: true, reused: false, uploadId });
+    closeLocalDatabase();
+
+    const recovered = await send("durable.txt", "ignored retry body", "/outputs", "A", true, uploadId);
+    expect(recovered.status).toBe(200);
+    expect(await recovered.json()).toMatchObject({ ok: true, reused: true, uploadId, size: 10 });
+    expect(fs.readFileSync(path.join(root, "outputs/durable.txt"), "utf8")).toBe("saved once");
+
+    expect((await send("other.txt", "saved once", "/outputs", "A", true, uploadId)).status).toBe(409);
+    fs.writeFileSync(path.join(root, "outputs/durable.txt"), "changed");
+    const stale = await send("durable.txt", "saved once", "/outputs", "A", true, uploadId);
+    expect(stale.status).toBe(409);
+    expect((await stale.json()).code).toBe("UPLOAD_RECEIPT_STALE");
+  });
+  it("rejects malformed upload receipt identifiers before writing", async () => {
+    const response = await send("safe.txt", "x", "/outputs", "A", true, "not-a-uuid");
+    expect(response.status).toBe(400);
+    expect((await response.json()).code).toBe("INVALID_UPLOAD_ID");
+    expect(fs.readdirSync(path.join(root, "outputs"))).toEqual([]);
   });
   it.each(["../escape.txt", "a%2ftest.txt", "CON.txt", ".env", "secret.txt", "binary.exe"])("rejects unsafe or unsupported name %s", async name => {
     expect((await send(name)).status).toBe(400);

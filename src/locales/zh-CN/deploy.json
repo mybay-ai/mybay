@@ -272,9 +272,21 @@
     "quickDeploy":  {
                         "badge":  "本地快速部署",
                         "title":  "几分钟内启动你的 Agent",
-                        "description":  "使用经过验证的安全默认值部署 Hermes Agent，并可直接配置 Web、Telegram、飞书或个人微信消息渠道。",
+                        "description":  "选择 Hermes Agent 或 Pi Agent，使用经过验证的安全默认值快速创建本地 Agent。",
                         "advanced":  "切换到高级配置",
                         "deploy":  "立即部署 Agent",
+                        "deployPi":  "立即部署 Pi Agent",
+                        "runtime":  {
+                                        "title":  "选择 Agent Runtime",
+                                        "description":  "Hermes 提供完整渠道与工具能力；Pi 适合轻量 Web 对话和文件工作流。",
+                                        "loading":  "正在读取可部署的 Runtime…",
+                                        "loadError":  "无法读取 Runtime 目录，请刷新后重试。",
+                                        "hermesBadge":  "标准 / 全功能",
+                                        "piBadge":  "轻量 / Web 工作区",
+                                        "hermesDescription":  "支持 Dashboard、Web 与外部消息渠道、技能和完整工具链。",
+                                        "piDescription":  "基于官方 Pi RPC 的隔离运行时，支持 Web 流式对话、会话恢复和文件工作流。",
+                                        "unavailable":  "当前版本暂不可部署"
+                                    },
                         "instance":  {
                                          "title":  "Agent 信息",
                                          "description":  "为实例设置一个便于识别的名称和用途。",
@@ -298,17 +310,21 @@
                         "channel":  {
                                         "title":  "消息渠道",
                                         "description":  "选择 Agent 接收消息的入口。飞书和个人微信支持扫码绑定，Telegram 使用 Bot Token。",
+                                        "piDescription":  "Pi Runtime 当前通过 MyBay Web 工作区进行对话。",
                                         "configurationHint":  "完成扫码后凭证会自动填入；你也可以手动填写。外部渠道默认采用“稍后绑定”的安全访问策略。"
                                     },
                         "access":  {
                                        "title":  "Dashboard 访问保护",
                                        "description":  "该账号和密码用于首次访问 Agent Dashboard，请妥善保存。",
                                        "username":  "访问账号",
-                                       "password":  "访问密码"
+                                       "password":  "访问密码",
+                                       "piTitle":  "通过 MyBay 工作区访问",
+                                       "piDescription":  "Pi Runtime 不提供独立 Dashboard，无需设置访问账号和密码。部署后直接在 MyBay 对话与文件页面使用。"
                                    },
                         "review":  {
                                        "title":  "安全默认配置",
                                        "description":  "快速部署固定使用 Hermes Runtime、自动路径、受保护的 Dashboard 和安全的渠道访问策略。",
+                                       "piDescription":  "快速部署使用 Pi Runtime、自动路径和隔离的 Web 工作区，不会开放独立 Dashboard。",
                                        "runtime":  "Hermes Runtime",
                                        "resources":  "{{channel}} · 1 CPU · 1024 MB",
                                        "confirm":  "我已检查模型与访问配置，并同意使用以上权限创建本地 Agent。"
@@ -367,6 +383,7 @@
                                            "dashboardPasswordTooShort":  "Dashboard 密码至少需要 8 个字符。",
                                            "providerRequired":  "请选择模型提供商。",
                                            "providerUnavailable":  "所选模型提供商当前不可用。",
+                                           "runtimeProviderUnsupported":  "所选模型提供商不受当前 Runtime 支持，请更换提供商。",
                                            "modelRequired":  "请选择或填写模型。",
                                            "customBaseUrlRequired":  "自定义兼容模型必须填写 Base URL。",
                                            "savedCredentialRequired":  "请选择一个已保存的模型凭证。",
@@ -410,6 +427,7 @@
                           "dashboard_access":  "启用 Dashboard 访问时，需填写 Dashboard 访问账号与密码",
                           "dashboard_access_configured":  "Dashboard 访问已启用，账号与 Basic Auth 密码已配置",
                           "dashboard_access_disabled":  "Dashboard 访问已关闭，实例仍会通过已配置渠道及 Agent 工作区运行",
+                          "pi_workspace_ready":  "Pi 将通过 MyBay Agent 工作区运行，无需 Dashboard 登录账号",
                           "basic_format_error":  "格式错误：Web 会话账号名仅能支持英文、数字与短横线",
                           "basic_pwd_error":  "安全密码长度最少要 8 字节",
                           "basic_configured":  "访问保护与 Basic Auth 验证参数已配置",
@@ -505,6 +523,11 @@
                                "consent_checkbox":  "我已知晓并对该部署模型所需的系统接口及可能产生的外部权限调用完全负责。",
                                "basic_protection_title":  "基础命名与 Dashboard 访问",
                                "basic_protection_desc":  "设置实例别名，并决定是否开放该 Agent Runtime 自带的 Dashboard 访问入口。",
+                               "pi_basic_title":  "Pi 实例基础信息",
+                               "pi_basic_desc":  "设置实例名称与内部路由。Pi 由 MyBay Agent 工作区统一管理。",
+                               "pi_workspace_title":  "通过 MyBay Agent 工作区使用",
+                               "pi_workspace_desc":  "Pi Runtime 不提供独立 Dashboard，因此无需设置 Dashboard 账号和密码。部署后可直接进入 MyBay 对话工作台使用。",
+                               "pi_workspace_notice":  "Pi 实例仅开放经过鉴权的 Runtime API，并通过 MyBay Agent 工作区管理，不会暴露独立 Dashboard 登录入口。",
                                "instance_alias":  "智能实例别名",
                                "assigned_path":  "自动分配安全路由路径",
                                "access_username":  "Dashboard 访问账号",
@@ -516,6 +539,8 @@
                                "dashboard_check_label":  "Dashboard 访问防护 (Basic Auth)",
                                "dashboard_check_enabled":  "已启用（账号：{{username}}）",
                                "dashboard_check_disabled":  "已关闭，不开放 Dashboard 访问入口",
+                               "pi_workspace_check_label":  "Pi 管理入口",
+                               "pi_workspace_check_ready":  "MyBay Agent 工作区已就绪",
                                "blueprint_business_title":  "行业解决方案业务摘要",
                                "workflow_business_title":  "自动化任务执行规则",
                                "blueprint_desc_label":  "行业方案业务价值描述",
@@ -711,6 +736,8 @@
                                       "confirm":  "确认启用",
                                       "title":  "启用技能与能力",
                                       "description":  "为 Agent 配置系统级技能。请谨慎启用高风险能力，敏感操作会被记录。",
+                                      "piManagedTitle":  "Pi Runtime 使用自身工具集",
+                                      "piManagedDescription":  "Pi Runtime Beta 使用自身 RPC 工具集，支持聊天附件、持久化工作区和生成文件追踪；暂不加载 Hermes 技能与插件。",
                                       "hideAdvanced":  "收起高风险安全设置",
                                       "showAdvanced":  "展开高风险安全能力",
                                       "credentialsTitle":  "高级能力凭据设置",
@@ -797,6 +824,7 @@
                        },
                        "channel":  {
                                        "restricted":  "本地配置已禁用此渠道。",
+                                       "piWebOnly":  "Pi Runtime Beta 当前支持 Web 控制台对话、聊天附件、持久化工作区和生成文件。",
                                        "title":  "Agent 对话与消息渠道",
                                        "description":  "绑定 Agent 使用的消息渠道，用于对话、任务通知和指令执行。",
                                        "hideGuide":  "隐藏配置指南",
@@ -1255,12 +1283,12 @@
                                             "runtimeType":  "Agent 运行时类型",
                                             "hermesBadge":  "标准 / 全功能",
                                             "hermesDescription":  "经典全功能运行时，包含 9119 控制接口、Python 执行器和多种消息渠道。",
-                                            "piBadge":  "实验预览 / 即将推出",
-                                            "piDescription":  "Pi Agent 当前仅提供接入规范，尚未实现部署；请改用 Hermes Agent。",
+                                            "piBadge":  "实验版 / Web 对话",
+                                            "piDescription":  "基于官方 Pi RPC 的隔离运行时，当前支持 Web 流式对话、会话恢复、工具进度与停止。",
                                             "runtimeLoading":  "正在加载已验证的运行时能力…",
                                             "runtimeLoadError":  "无法验证运行时能力。为避免创建不受支持的运行时，部署选择已关闭。",
                                             "runtimeUnavailable":  "运行时不可用",
-                                            "runtimeSpecOnly":  "仅提供规范 | 已禁用部署"
+                                            "runtimeSpecOnly":  "实验功能未启用"
                                         },
                        "preflight":  {
                                          "localRuntime":  "本地运行环境",

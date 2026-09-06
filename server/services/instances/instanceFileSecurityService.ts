@@ -33,6 +33,8 @@ export const isSensitiveFile = (filename: string) => {
     /^mybay\.system\.md$/i,
     /^soul\.md$/i,
     /^auth\.(?:json|lock)$/i,
+    /\.(?:lock|pid|sock)$/i,
+    /-(?:wal|shm|journal)$/i,
     /^spawn-ledger\.json$/i,
     /^(?:backup|backups|home|log|logs|pairing|session|sessions|state)$/i,
     /\.(?:sqlite|db)(?:-(?:wal|shm|journal))?$/i,
@@ -40,6 +42,35 @@ export const isSensitiveFile = (filename: string) => {
   ];
   return sensitivePatterns.some(pattern => pattern.test(filename));
 };
+
+export type InstanceFileView = "files" | "advanced";
+export type InstanceFilePathClass = "artifact" | "runtime" | "hidden";
+
+export type ValidatedDirectoryEntry = {
+  name: string;
+  stats: fs.Stats;
+  isSymlink: boolean;
+};
+
+const ARTIFACT_ROOTS = new Set(["workspace", "outputs", "uploads", "documents", "reports", "tmp", "plans"]);
+const RUNTIME_ROOTS = new Set([
+  "a2a_conversations", "audio_cache", "bin", "cache", "cron", "hooks", "image_cache",
+  "kanban", "lazy-packages", "memories", "pending_messages", "platforms", "sandboxes", "skills", "skins",
+]);
+const RUNTIME_ROOT_FILE = /^(?:a2a_audit\.jsonl|channel_directory\.json|gateway(?:[-_.].*)?|install_id|main_mybay_run\.sh|models_dev_cache(?:\..*)?|state(?:[-_.].*)?)$/i;
+
+export function classifyInstanceFilePath(requestedPathRaw: string): InstanceFilePathClass {
+  const normalized = String(requestedPathRaw || "").replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
+  if (!normalized) return "artifact";
+  const segments = normalized.split("/").filter(Boolean);
+  if (segments.some(isSensitiveFile)) return "hidden";
+  const rootName = segments[0].toLowerCase();
+  if (ARTIFACT_ROOTS.has(rootName)) return "artifact";
+  if (RUNTIME_ROOTS.has(rootName) || (segments.length === 1 && RUNTIME_ROOT_FILE.test(rootName))) return "runtime";
+  // Agents may create deliverables directly in the data root. Unknown names are
+  // treated as user artifacts while known Runtime paths stay in diagnostics.
+  return "artifact";
+}
 
 export const getMimeType = (filename: string) => {
   const ext = path.extname(filename).toLowerCase();
@@ -99,14 +130,47 @@ function resolveExistingDirectory(candidate: unknown): string | null {
   }
 }
 
-export const validateFileAccess = async (req: AuthenticatedRequest, instanceId: string, requestedPathRaw: string) => {
-  if (!/^[A-Za-z0-9_-]{1,128}$/.test(instanceId)) {
+export function readValidatedDirectory(rootDir: string, absolutePath: string): { stats: fs.Stats; entries: ValidatedDirectoryEntry[] } {
+  const canonicalRoot = fs.realpathSync(path.resolve(rootDir));
+  const canonicalDirectory = fs.realpathSync(path.resolve(absolutePath));
+  const isInside = canonicalDirectory === canonicalRoot || canonicalDirectory.startsWith(canonicalRoot + path.sep);
+  if (!isInside) throw Object.assign(new Error("FILE_PATH_OUTSIDE_INSTANCE"), { code: "FILE_PATH_OUTSIDE_INSTANCE" });
+
+  const stats = fs.statSync(canonicalDirectory);
+  if (!stats.isDirectory()) return { stats, entries: [] };
+
+  const entries = fs.readdirSync(canonicalDirectory).flatMap((entryName): ValidatedDirectoryEntry[] => {
+    const safeName = path.basename(entryName);
+    if (safeName !== entryName) return [];
+    const entryPath = path.resolve(canonicalDirectory, safeName);
+    if (path.dirname(entryPath) !== canonicalDirectory) return [];
+    const linkStats = fs.lstatSync(entryPath);
+    if (!linkStats.isSymbolicLink()) return [{ name: safeName, stats: linkStats, isSymlink: false }];
+    try {
+      const canonicalTarget = fs.realpathSync(entryPath);
+      const targetInside = canonicalTarget === canonicalRoot || canonicalTarget.startsWith(canonicalRoot + path.sep);
+      return [{ name: safeName, stats: targetInside ? fs.statSync(canonicalTarget) : linkStats, isSymlink: true }];
+    } catch {
+      return [{ name: safeName, stats: linkStats, isSymlink: true }];
+    }
+  });
+  return { stats, entries };
+}
+
+export const validateFileAccess = async (
+  req: AuthenticatedRequest,
+  instanceId: string,
+  requestedPathRaw: string,
+  options: { view?: InstanceFileView } = {},
+) => {
+  const safeInstanceId = path.basename(instanceId);
+  if (safeInstanceId !== instanceId || !/^[A-Za-z0-9_-]{1,128}$/.test(safeInstanceId)) {
     return { error: "无效的实例标识", status: 400 };
   }
   if (typeof requestedPathRaw !== "string" || requestedPathRaw.length > 4096 || /[\0-\x1f\x7f]/.test(requestedPathRaw)) {
     return { error: "无效的文件路径", status: 400 };
   }
-  const instance: any = await dbAdapter.getInstanceById(instanceId);
+  const instance: any = await dbAdapter.getInstanceById(safeInstanceId);
   if (!instance) return { error: "实例不存在", status: 404 };
   
   let isOwner = false;
@@ -116,8 +180,12 @@ export const validateFileAccess = async (req: AuthenticatedRequest, instanceId: 
     isOwner = instance.user_id === req.user.id;
   }
 
-  if (!isOwner && req.user.role !== 'admin') {
+  const isAdmin = req.user.role === "admin" || req.user.role === "super_admin";
+  if (!isOwner && !isAdmin) {
     return { error: "无权访问此实例的文件", status: 403 };
+  }
+  if (options.view === "advanced" && !isAdmin) {
+    return { error: "高级文件视图仅管理员可用", status: 403 };
   }
 
   let requestedPath = "";
@@ -136,7 +204,15 @@ export const validateFileAccess = async (req: AuthenticatedRequest, instanceId: 
     return { error: "禁止访问敏感配置文件或目录", status: 403 };
   }
 
-  const localDir = path.resolve(process.cwd(), "data", "instances", instanceId);
+  const pathClass = classifyInstanceFilePath(requestedPath);
+  if (pathClass === "hidden") {
+    return { error: "禁止访问敏感配置文件或运行时临时文件", status: 403 };
+  }
+  if (pathClass === "runtime" && (options.view !== "advanced" || !isAdmin)) {
+    return { error: "该路径仅在管理员高级文件视图中可见", status: 403 };
+  }
+
+  const localDir = path.resolve(process.cwd(), "data", "instances", safeInstanceId);
   let rootDir = resolveExistingDirectory(localDir) || resolveExistingDirectory(instance.data_volume_path);
 
   if (!rootDir) {
@@ -168,12 +244,12 @@ export const validateFileAccess = async (req: AuthenticatedRequest, instanceId: 
           || resolveExistingDirectory(hostPathFound)
           || resolveExistingDirectory(localDir);
         
-        dbAdapter.updateInstanceVersionInfo(instanceId, { data_volume_path: hostPathFound }).catch((e: any) => {
-          console.warn("[File Manager] Failed to auto-heal data_volume_path", { instanceId, error: e.message });
+        dbAdapter.updateInstanceVersionInfo(safeInstanceId, { data_volume_path: hostPathFound }).catch((e: any) => {
+          console.warn("[File Manager] Failed to auto-heal data_volume_path", { instanceId: safeInstanceId, error: e.message });
         });
       }
     } catch (e: any) {
-      console.warn("[File Manager] Docker inspect fallback failed", { instanceId, error: e.message });
+      console.warn("[File Manager] Docker inspect fallback failed", { instanceId: safeInstanceId, error: e.message });
     }
   }
 

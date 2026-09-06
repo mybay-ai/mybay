@@ -11,7 +11,7 @@ const APPROVED_RELATIVE_ROOTS = [
 ] as const;
 
 export const GENERATED_FILE_PATH_PATTERN = new RegExp(
-  `(?<![A-Za-z0-9_./:\\\\-])(?:(?:\\/?opt\\/data\\/|\\.\\/|${APPROVED_RELATIVE_ROOTS.map(root => root.replace("/", "\\/")).join("|")})[^\\s<>\"']+?\\.(?:${GENERATED_FILE_EXTENSIONS}))(?![A-Za-z0-9])`,
+  `(?<![A-Za-z0-9_./:\\\\-])(?:(?:\\/?opt\\/data\\/|\\.\\/|${APPROVED_RELATIVE_ROOTS.map(root => root.replace("/", "\\/")).join("|")})[^\\s<>\"'\u0060]+?\\.(?:${GENERATED_FILE_EXTENSIONS}))(?![A-Za-z0-9])`,
   "giu"
 );
 

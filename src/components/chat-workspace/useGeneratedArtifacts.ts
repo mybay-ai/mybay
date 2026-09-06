@@ -9,6 +9,7 @@ import {
 import { buildWorkspaceFileContextKey } from "./workspaceFileContext";
 
 type ArtifactVerification = Partial<GeneratedArtifact> & { status: GeneratedArtifact["status"] };
+type ArtifactVerificationResult = readonly [string, ArtifactVerification];
 
 type UseGeneratedArtifactsOptions = {
   selectedId: string;
@@ -20,6 +21,21 @@ type UseGeneratedArtifactsOptions = {
 const VERIFY_RETRY_MS = 1200;
 const MAX_VERIFY_ATTEMPTS = 4;
 const READY_RECHECK_MS = 15_000;
+
+export function isPendingGeneratedArtifactVerification(status: GeneratedArtifact["status"]) {
+  return status === "generating" || status === "checking";
+}
+
+export function mergeArtifactVerificationResults(
+  previous: Record<string, ArtifactVerification>,
+  results: readonly ArtifactVerificationResult[]
+) {
+  const next = { ...previous };
+  for (const [filePath, verification] of results) {
+    next[filePath] = { ...previous[filePath], ...verification };
+  }
+  return next;
+}
 
 export function useGeneratedArtifacts({
   selectedId,
@@ -48,6 +64,7 @@ export function useGeneratedArtifacts({
           size: typeof metadata?.size === "number" ? metadata.size : null,
           mimeType: typeof metadata?.mime === "string" ? metadata.mime : null,
           updatedAt: typeof metadata?.updatedAt === "string" ? metadata.updatedAt : null,
+          checkedAt: typeof metadata?.artifact?.checkedAt === "string" ? metadata.artifact.checkedAt : new Date().toISOString(),
           error: null,
           previewStatus: metadata?.artifact?.previewStatus === "incomplete" ? "incomplete" as const : "ready" as const,
           previewError: typeof metadata?.artifact?.previewError === "string" ? metadata.artifact.previewError : null,
@@ -55,21 +72,22 @@ export function useGeneratedArtifacts({
         }] as const;
       } catch (error: any) {
         const missing = error?.status === 404;
-        const shouldRetry = (artifact.status === "generating" || artifact.status === "checking")
+        const shouldRetry = isPendingGeneratedArtifactVerification(artifact.status)
           && attempt < MAX_VERIFY_ATTEMPTS - 1;
         return [artifact.path, {
           status: shouldRetry ? artifact.status : (missing ? "missing" as const : "failed" as const),
+          checkedAt: new Date().toISOString(),
           error: missing ? "FILE_NOT_FOUND" : (error?.code || error?.message || "FILE_CHECK_FAILED"),
         }] as const;
       }
     }));
 
     if (generationRef.current !== generation || buildWorkspaceFileContextKey(selectedId, selectedConversationId) !== capturedContextKey) return;
-    setVerificationByPath(previous => ({ ...previous, ...Object.fromEntries(results) }));
+    setVerificationByPath(previous => mergeArtifactVerificationResults(previous, results));
 
     const retryArtifacts = artifacts.filter((artifact) => {
       const result = results.find(([filePath]) => filePath === artifact.path)?.[1];
-      return result?.status === "generating";
+      return Boolean(result && isPendingGeneratedArtifactVerification(result.status));
     });
     if (retryArtifacts.length > 0 && attempt < MAX_VERIFY_ATTEMPTS - 1) {
       window.setTimeout(() => {

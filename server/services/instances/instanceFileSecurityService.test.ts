@@ -17,7 +17,7 @@ vi.mock("../../db", () => ({
 vi.mock("../../routes/instances/index", () => ({ docker: {} }));
 vi.mock("../../deploymentContext", () => ({ getValidatedContainer: vi.fn() }));
 
-import { isSensitiveFile, validateFileAccess } from "./instanceFileSecurityService";
+import { classifyInstanceFilePath, isSensitiveFile, readValidatedDirectory, validateFileAccess } from "./instanceFileSecurityService";
 
 const requestFor = (userId: string) => ({ user: { id: userId, role: "user" } }) as any;
 
@@ -26,6 +26,7 @@ describe("instance file preview path isolation", () => {
     dbMocks.getInstanceById.mockResolvedValue({ id: instanceId, user_id: ownerId, data_volume_path: testRoot });
     fs.mkdirSync(path.join(testRoot, "outputs"), { recursive: true });
     fs.mkdirSync(path.join(testRoot, "sessions"), { recursive: true });
+    fs.mkdirSync(path.join(testRoot, "cache"), { recursive: true });
     fs.writeFileSync(path.join(testRoot, "outputs", "report.html"), "<h1>Report</h1>");
     fs.writeFileSync(path.join(testRoot, ".env"), "SECRET=value");
     fs.writeFileSync(path.join(testRoot, "auth.json"), "{}");
@@ -84,5 +85,39 @@ describe("instance file preview path isolation", () => {
     expect(isSensitiveFile("config.yml.bak.1")).toBe(true);
     expect(isSensitiveFile("response_store.db-shm")).toBe(true);
     expect(isSensitiveFile("backups")).toBe(true);
+    expect(isSensitiveFile("gateway.pid")).toBe(true);
+    expect(isSensitiveFile("gateway.sock")).toBe(true);
+    expect(classifyInstanceFilePath("outputs/report.json")).toBe("artifact");
+    expect(classifyInstanceFilePath("workspace/project/readme.md")).toBe("artifact");
+    expect(classifyInstanceFilePath("report-at-root.pdf")).toBe("artifact");
+    expect(classifyInstanceFilePath("plans/today.md")).toBe("artifact");
+    expect(classifyInstanceFilePath("cache/models.json")).toBe("runtime");
+    expect(classifyInstanceFilePath("gateway_state.json")).toBe("runtime");
+    expect(classifyInstanceFilePath("gateway.pid")).toBe("hidden");
+  });
+
+  it("allows Runtime diagnostics only to admins using the advanced view", async () => {
+    await expect(validateFileAccess(requestFor(ownerId), instanceId, "cache"))
+      .resolves.toMatchObject({ status: 403 });
+    await expect(validateFileAccess(requestFor(ownerId), instanceId, "cache", { view: "advanced" }))
+      .resolves.toMatchObject({ status: 403 });
+    await expect(validateFileAccess(requestFor(ownerId), instanceId, "/", { view: "advanced" }))
+      .resolves.toMatchObject({ status: 403 });
+    const adminRequest = { user: { id: "admin", role: "admin" } } as any;
+    await expect(validateFileAccess(adminRequest, instanceId, "cache", { view: "advanced" }))
+      .resolves.not.toHaveProperty("error");
+  });
+
+  it("lists entries without following a symlink outside the instance root", () => {
+    const link = path.join(testRoot, "outputs", "outside-link");
+    fs.symlinkSync(os.tmpdir(), link, process.platform === "win32" ? "junction" : "dir");
+    const result = readValidatedDirectory(testRoot, path.join(testRoot, "outputs"));
+    const entry = result.entries.find(item => item.name === "outside-link");
+    expect(entry).toMatchObject({ name: "outside-link", isSymlink: true });
+    expect(entry?.stats.isDirectory()).toBe(false);
+  });
+
+  it("refuses to list a directory outside the validated instance root", () => {
+    expect(() => readValidatedDirectory(testRoot, os.tmpdir())).toThrow("FILE_PATH_OUTSIDE_INSTANCE");
   });
 });

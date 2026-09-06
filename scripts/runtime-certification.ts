@@ -41,12 +41,16 @@ function parseEvidence(relativePath: string): RuntimeCertificationEvidenceBundle
   if (!fs.existsSync(absolutePath)) return undefined;
   try {
     const value: unknown = JSON.parse(fs.readFileSync(absolutePath, "utf8"));
-    if (!isRecord(value) || value.schemaVersion !== 1 || !isRecord(value.runtime) || !Array.isArray(value.checks)) {
+    if (!isRecord(value) || value.schemaVersion !== 2 || !isRecord(value.runtime) || !Array.isArray(value.checks)) {
       throw new Error("root, runtime, or checks structure is invalid");
     }
     if (typeof value.runtime.type !== "string"
       || typeof value.runtime.providerKey !== "string"
-      || !Number.isSafeInteger(value.runtime.contractVersion)) {
+      || !Number.isSafeInteger(value.runtime.contractVersion)
+      || typeof value.runtime.version !== "string"
+      || value.runtime.version.trim() === ""
+      || typeof value.runtime.imageRef !== "string"
+      || value.runtime.imageRef.trim() === "") {
       throw new Error("runtime binding is invalid");
     }
     for (const [index, check] of value.checks.entries()) {

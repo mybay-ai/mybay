@@ -78,16 +78,29 @@ async function inspectLocalQuestionBridgeUncached(instance: any): Promise<Questi
     container = docker.getContainer(instance.container_id || `mybay-agent-${id}`);
     [agent, controller] = await Promise.all([container.inspect(), docker.getContainer(os.hostname()).inspect()]);
   } catch { return unavailable("container_unavailable", null); }
-  const supported = SUPPORTED_IMAGES.has(agent.Image);
+  const runtimeType = String(instance.runtime_type || "hermes").toLowerCase();
+  const labels = agent.Config?.Labels || {};
+  const piRuntime = runtimeType === "pi" && labels["com.mybay.pi.runtime"] === "true";
+  const supported = piRuntime || SUPPORTED_IMAGES.has(agent.Image);
   if (!supported) return unavailable("unsupported_image", false);
   if (!agent.State.Running) return unavailable("container_stopped", true);
   const sharedNetwork = Object.keys(agent.NetworkSettings.Networks).some(network => controller.NetworkSettings.Networks[network]);
   if (!sharedNetwork) return unavailable("network_unavailable", true);
-  if (!configured) return unavailable("not_configured", true, true);
+  if (!configured) return unavailable("not_configured", true, !piRuntime);
   try {
     const name = controller.Name.replace(/^\//, "");
     const port = Number(process.env.PORT || 3000);
     if (!/^[A-Za-z0-9_.-]+$/.test(name) || !Number.isInteger(port) || port < 1 || port > 65535) return unavailable("network_unavailable", true);
+    if (piRuntime) {
+      const values = new Map((agent.Config?.Env || []).map((entry: string) => {
+        const separator = entry.indexOf("=");
+        return separator > 0 ? [entry.slice(0, separator), entry.slice(separator + 1)] : [entry, ""];
+      }));
+      const expectedUrl = `http://${name}:${port}/internal/questions/${id}`;
+      const token = values.get("MYBAY_QUESTION_BRIDGE_TOKEN");
+      if (values.get("MYBAY_QUESTION_BRIDGE_URL") !== expectedUrl || !authenticateQuestionBridge(id, `Bearer ${token || ""}`)) return unavailable("plugin_unavailable", true);
+      return { configured: true, supported: true, healthy: true, installable: false, repairable: false, reason: "healthy" };
+    }
     const root = path.resolve("data", "instances", id);
     const bridgeFile = path.join(root, "plugins", PLUGIN, "bridge.json");
     safePath(bridgeFile);

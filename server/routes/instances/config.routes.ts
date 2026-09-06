@@ -49,6 +49,11 @@ import {
   disableCredentiallessA2AForRestore,
   isContainerlessInstanceEligibleForDeployment,
 } from "../../utils/configArchiveRestorePolicy";
+import { supportsRuntimeDashboard } from "../../../shared/runtimeAccessPolicy";
+import {
+  INSTANCE_OPERATION_IN_PROGRESS,
+  instanceOperationCoordinator,
+} from "../../services/instances/instanceOperationCoordinator";
 
 export function createConfigRoutes(deps: RouterDependencies) {
   const router = Router();
@@ -197,6 +202,8 @@ export function createConfigRoutes(deps: RouterDependencies) {
       const expectedName = instance.container_name || `mybay-agent-${instance.id}`;
 
       const config = parseInstanceConfigJson(instance.config_json);
+      const dashboardSupported = supportsRuntimeDashboard(instance.runtime_type || config.runtime_type);
+      if (!dashboardSupported) data.enableDashboard = false;
       const previousChannelConfig = { ...config };
       const credentialSelection = resolveProviderCredentialSelection(data, config);
       const { selectedCredentialId } = credentialSelection;
@@ -273,6 +280,7 @@ export function createConfigRoutes(deps: RouterDependencies) {
 
       const dashboardAccessEnabled = config.enableDashboard !== false;
       if (!dashboardAccessEnabled) {
+        if (!dashboardSupported) delete config.username;
         delete config.password;
         delete config.webPasswordHash;
         delete config.dashboardAuthSecret;
@@ -600,39 +608,59 @@ export function createConfigRoutes(deps: RouterDependencies) {
         nextAgentImageTag = matchingVersion.image_tag || matchingVersion.tag || matchingVersion.version;
       }
 
-      await dbAdapter.updateInstanceConfig(req.params.id, JSON.stringify(normalizedConfig));
-      await dbAdapter.updateInstanceVersionInfo(req.params.id, {
-        model_provider: normalizedConfig.provider || null,
-        model_name: normalizedConfig.model || null,
-        model_base_url: normalizedConfig.baseUrl || null,
-        model_config_status: 'pending',
-        model_config_error: null,
-        limitsCpu: parseFloat(resolvedLimits.limitsCpu),
-        limitsMemory: resolvedLimits.limitsMem,
-        limitsMemoryMb: resolvedLimits.limitsMemoryMb,
-        agent_image: nextAgentImage,
-        agent_image_tag: nextAgentImageTag
-      });
-      
-      await dbAdapter.insertAuditLog({
-        instance_id: req.params.id,
-        action: "update_config",
-        user_id: req.user.id,
-        timestamp: new Date().toISOString(),
-        details: "Updated instance configuration"
-      });
-      
-      await wrappedUpdateStatus.run({ status: "restarting", id: req.params.id });
-      
-      const instanceFull: any = await dbAdapter.getInstanceById(req.params.id);
-      if (instanceFull) {
-        const { cleanOldContainersOfInstance } = await import("../../deployment");
-        cleanOldContainersOfInstance(req.params.id, io).then(() => {
-          executeDeployment(instanceFull, io, wrappedUpdateStatus, normalizedConfig, req.user);
-        }).catch((err) => {
-          console.error("Clean old containers failed:", err);
-          executeDeployment(instanceFull, io, wrappedUpdateStatus, normalizedConfig, req.user);
+      const operation = instanceOperationCoordinator.tryAcquire(req.params.id, "restart");
+      if (operation.acquired === false) {
+        return res.status(409).json({
+          error: INSTANCE_OPERATION_IN_PROGRESS,
+          code: INSTANCE_OPERATION_IN_PROGRESS,
+          message: `实例正在执行 ${operation.active.operation}，请等待当前操作完成后重试。`,
+          activeOperation: operation.active.operation,
+          startedAt: operation.active.startedAt,
         });
+      }
+
+      try {
+        await dbAdapter.updateInstanceConfig(req.params.id, JSON.stringify(normalizedConfig));
+        await dbAdapter.updateInstanceVersionInfo(req.params.id, {
+          model_provider: normalizedConfig.provider || null,
+          model_name: normalizedConfig.model || null,
+          model_base_url: normalizedConfig.baseUrl || null,
+          model_config_status: 'pending',
+          model_config_error: null,
+          limitsCpu: parseFloat(resolvedLimits.limitsCpu),
+          limitsMemory: resolvedLimits.limitsMem,
+          limitsMemoryMb: resolvedLimits.limitsMemoryMb,
+          agent_image: nextAgentImage,
+          agent_image_tag: nextAgentImageTag
+        });
+
+        await dbAdapter.insertAuditLog({
+          instance_id: req.params.id,
+          action: "update_config",
+          user_id: req.user.id,
+          timestamp: new Date().toISOString(),
+          details: "Updated instance configuration"
+        });
+
+        await wrappedUpdateStatus.run({ status: "restarting", id: req.params.id });
+
+        const instanceFull: any = await dbAdapter.getInstanceById(req.params.id);
+        if (instanceFull) {
+          const { cleanOldContainersOfInstance } = await import("../../deployment");
+          const restartPromise = cleanOldContainersOfInstance(req.params.id, io)
+            .catch((err) => {
+              console.error("Clean old containers failed:", err);
+            })
+            .then(() => executeDeployment(instanceFull, io, wrappedUpdateStatus, normalizedConfig, req.user));
+          void restartPromise
+            .catch((err) => console.error("[Instance Config] Restart failed for %s:", req.params.id, err))
+            .finally(() => instanceOperationCoordinator.release(operation.lease));
+        } else {
+          instanceOperationCoordinator.release(operation.lease);
+        }
+      } catch (error) {
+        instanceOperationCoordinator.release(operation.lease);
+        throw error;
       }
 
       res.json({

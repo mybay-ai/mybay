@@ -7,6 +7,7 @@ import type { SetupFormData } from "../../types";
 import { useInstanceQuota } from "../../hooks/useInstanceQuota";
 import { api } from "../../lib/api";
 import { sanitizeDeployPayload } from "./sanitizeDeployPayload";
+import { normalizeRuntimeAccessDraft } from "../../../shared/runtimeAccessPolicy";
 import { buildLocalDeploymentRequest } from "./localDeploymentRequestAdapter";
 import { isDeploymentSuccessful, isDeploymentTerminal } from "./deploymentUiState";
 import { hasBasicStepError, hasModelStepError, requiresPredeployModelTest } from "./deployStepValidation";
@@ -86,7 +87,7 @@ export function DeployWizard({
   const isChannelAllowedByPlan = (channel: any) => isDeployChannelAllowedByEntitlement(channel, externalChannelsAllowed);
   const planChannelRestrictionMessage = t("validation.plan_channel_restricted");
 
-  const [data, setData] = useState<Partial<SetupFormData>>({
+  const [data, setData] = useState<Partial<SetupFormData>>(() => normalizeRuntimeAccessDraft({
     id: Math.random().toString(36).substring(7),
     runtime_type: "hermes",
     path: `agent-${Math.random().toString(36).substring(2, 8)}`,
@@ -99,7 +100,20 @@ export function DeployWizard({
     limitsCpu: "1",
     limitsMem: "1024MB",
     ...initialData,
-  });
+  }));
+  const isPiRuntime = String(data.runtime_type || "hermes").toLowerCase() === "pi";
+  const isChannelAllowedForRuntime = (channel: any) => (
+    isChannelAllowedByPlan(channel)
+    && (!isPiRuntime || channel === "web" || channel === "none")
+  );
+  const channelRestrictionMessage = isPiRuntime
+    ? t("wizardCopy.channel.piWebOnly")
+    : planChannelRestrictionMessage;
+
+  useEffect(() => {
+    if (!isPiRuntime) return;
+    setData(current => normalizeRuntimeAccessDraft(current));
+  }, [isPiRuntime]);
 
   const trustPermissionFingerprint = JSON.stringify({
     provider: data.provider,
@@ -358,12 +372,12 @@ export function DeployWizard({
   };
 
   const handleChannelChange = (id: string) => {
-    if (!isChannelAllowedByPlan(id)) {
+    if (!isChannelAllowedForRuntime(id)) {
       setTestResults((tr: any) => ({
         ...tr,
         channel: {
           loading: false,
-          result: { success: false, error: planChannelRestrictionMessage }
+          result: { success: false, error: channelRestrictionMessage }
         }
       }));
       return;
@@ -418,10 +432,10 @@ export function DeployWizard({
   };
 
   const update = (k: keyof SetupFormData, v: any) => {
-    if (k === "channel" && !isChannelAllowedByPlan(v)) {
+    if (k === "channel" && !isChannelAllowedForRuntime(v)) {
       setTestResults((tr: any) => ({
         ...tr,
-        channel: { loading: false, result: { success: false, error: planChannelRestrictionMessage } }
+        channel: { loading: false, result: { success: false, error: channelRestrictionMessage } }
       }));
       return;
     }
@@ -469,10 +483,10 @@ export function DeployWizard({
   };
 
   useEffect(() => {
-    if (!isChannelAllowedByPlan(data.channel)) {
+    if (!isChannelAllowedForRuntime(data.channel)) {
       handleChannelChange("web");
     }
-  }, [externalChannelsAllowed, data.channel]);
+  }, [externalChannelsAllowed, data.channel, data.runtime_type]);
 
   const submit = async () => {
     if (quota.entitlementsReady && !quota.canCreateInstance) {
@@ -480,20 +494,21 @@ export function DeployWizard({
       return;
     }
 
-    if (!isChannelAllowedByPlan(data.channel)) {
-      setSubmitError(planChannelRestrictionMessage);
+    if (!isChannelAllowedForRuntime(data.channel)) {
+      setSubmitError(channelRestrictionMessage);
       return;
     }
     setLoading(true);
     setSubmitError(null);
     try {
+      const deploymentDraft = normalizeRuntimeAccessDraft(data);
       const request = buildLocalDeploymentRequest({
-        draft: data,
+        draft: deploymentDraft,
         idempotencyKey,
         permissionConfirmed: trustPermissionConfirmed,
       });
       const result = await api.post(request.path, request.body, request.options);
-      if (result && result.initialDashboardCredentials) {
+      if (!isPiRuntime && result && result.initialDashboardCredentials) {
         sessionStorage.setItem(
           "one_time_credentials_instance_" + result.id,
           JSON.stringify(result.initialDashboardCredentials)
@@ -541,7 +556,7 @@ export function DeployWizard({
       disableReason = t("validation.preflight_fail");
     }
   } else if (step === 1) {
-    const dashboardAccessEnabled = data.enableDashboard !== false;
+    const dashboardAccessEnabled = !isPiRuntime && data.enableDashboard !== false;
     if (!data.name) {
       nextDisabled = true;
       disableReason = t("validation.basic_name_missing");
@@ -733,8 +748,9 @@ export function DeployWizard({
             onViewGuide={onViewGuide}
             versions={versions}
             handleChannelChange={handleChannelChange}
-            isChannelAllowed={isChannelAllowedByPlan}
+            isChannelAllowed={isChannelAllowedForRuntime}
             externalChannelsAllowed={externalChannelsAllowed}
+            channelRestrictionMessage={channelRestrictionMessage}
           />
         );
       case 5:
@@ -745,6 +761,7 @@ export function DeployWizard({
             testSkill={testSkill} 
             testResults={testResults} 
             currentUser={currentUser}
+            runtimeType={data.runtime_type}
           />
         );
       case 6:
@@ -796,7 +813,7 @@ export function DeployWizard({
       }
     }
   } else if (step === 1) {
-    const dashboardAccessEnabled = data.enableDashboard !== false;
+    const dashboardAccessEnabled = !isPiRuntime && data.enableDashboard !== false;
     if (!data.name) {
       footerStatus = { text: t("footer_status.basic_name"), type: "info" };
     } else if (dashboardAccessEnabled && (!data.username || !data.password)) {
@@ -806,7 +823,7 @@ export function DeployWizard({
     } else if (dashboardAccessEnabled && (data.password || "").length < 8) {
       footerStatus = { text: t("footer_status.basic_pwd_error"), type: "error" };
     } else {
-      footerStatus = { text: dashboardAccessEnabled ? t("footer_status.dashboard_access_configured") : t("footer_status.dashboard_access_disabled"), type: "success" };
+      footerStatus = { text: isPiRuntime ? t("footer_status.pi_workspace_ready") : dashboardAccessEnabled ? t("footer_status.dashboard_access_configured") : t("footer_status.dashboard_access_disabled"), type: "success" };
     }
   } else if (step === 2) {
     footerStatus = { text: isTraefik ? t("footer_status.container_traefik") : t("footer_status.container_port"), type: "success" };

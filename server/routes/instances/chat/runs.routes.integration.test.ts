@@ -19,7 +19,9 @@ const requestRunReconcile = vi.hoisted(() => vi.fn(() => true));
 const primeRunFileSnapshot = vi.hoisted(() => vi.fn());
 const discardRunFileSnapshot = vi.hoisted(() => vi.fn());
 const isQuestionBridgeInstalling = vi.hoisted(() => vi.fn(() => false));
+const cancelMappedA2AGroupTasks = vi.hoisted(() => vi.fn());
 vi.mock("../../../services/runs/questionBridgeInstaller", () => ({ isQuestionBridgeInstalling }));
+vi.mock("../../../services/a2aTaskCancel", () => ({ cancelMappedA2AGroupTasks }));
 
 vi.mock("../../../middlewares/auth", () => ({
   authenticateToken: (req: any, _res: any, next: any) => {
@@ -110,6 +112,9 @@ describe("Interactive Agent POST /runs integration", () => {
   });
   afterEach(() => {
     delete process.env.MYBAY_ASYNC_CHAT_RUNS_ENABLED;
+    delete process.env.MYBAY_A2A_TASK_TRACKING;
+    delete process.env.MYBAY_INTERNAL_ROUTING_SECRET;
+    delete process.env.MYBAY_A2A_TRACKED_INSTANCES;
     vi.clearAllMocks();
   });
 
@@ -238,6 +243,55 @@ describe("Interactive Agent POST /runs integration", () => {
     } finally { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); }
   });
 
+  it("accepts a running Pi Runtime as a managed collaboration-room member", async () => {
+    process.env.MYBAY_ASYNC_CHAT_RUNS_ENABLED = "true";
+    process.env.MYBAY_A2A_TASK_TRACKING = "true";
+    process.env.MYBAY_INTERNAL_ROUTING_SECRET = "test-relay-secret";
+    process.env.MYBAY_A2A_TRACKED_INSTANCES = instanceId;
+    const peerId = "77777777-7777-4777-8777-777777777777";
+    getInstanceById.mockResolvedValue({ id: instanceId, name: "主持", user_id: userId, owner_id: userId, config_json: JSON.stringify({ a2aEnabled: true, a2aPeerIds: [peerId] }) });
+    getInstances.mockResolvedValue([{
+      id: peerId, name: "Pi 审核", user_id: userId, owner_id: userId, status: "running",
+      runtime_type: "pi", runtime_provider_key: "pi-rpc", runtime_contract_version: 1, config_json: "{}",
+    }]);
+    getConversationForOwnerAndInstance.mockResolvedValue({ id: conversationId, user_id: userId, instance_id: instanceId, collaboration: { mode: "group", peerIds: [peerId], maxRounds: 1 } });
+    probeCapabilities.mockResolvedValue("supported");
+    beginChatRun.mockResolvedValue({ status: "success", user_message_id: "44444444-4444-4444-8444-444444444444", sequence_no: 1 });
+    const app = express(); app.use(express.json());
+    const router = express.Router(); registerRunRoutes(router); app.use("/api/instances", router);
+    const server = app.listen(0);
+    try {
+      await new Promise<void>(resolve => server.once("listening", resolve));
+      const response = await fetch(`http://127.0.0.1:${(server.address() as any).port}/api/instances/${instanceId}/runs`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ conversationId, content: "一起审核", requestId: "pi-group-request" }) });
+      expect(response.status).toBe(202);
+      expect(beginChatRun).toHaveBeenCalledWith(expect.objectContaining({
+        groupCollaboration: expect.objectContaining({ peers: [{ id: peerId, name: "Pi 审核" }] }),
+      }));
+    } finally { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); }
+  });
+
+  it("rejects a Pi collaboration-room member outside the tracked caller scope", async () => {
+    process.env.MYBAY_ASYNC_CHAT_RUNS_ENABLED = "true";
+    const peerId = "77777777-7777-4777-8777-777777777777";
+    getInstanceById.mockResolvedValue({ id: instanceId, name: "主持", user_id: userId, owner_id: userId, config_json: JSON.stringify({ a2aEnabled: true, a2aPeerIds: [peerId] }) });
+    getInstances.mockResolvedValue([{
+      id: peerId, name: "Pi 审核", user_id: userId, owner_id: userId, status: "running",
+      runtime_type: "pi", runtime_provider_key: "pi-rpc", runtime_contract_version: 1, config_json: "{}",
+    }]);
+    getConversationForOwnerAndInstance.mockResolvedValue({ id: conversationId, user_id: userId, instance_id: instanceId, collaboration: { mode: "group", peerIds: [peerId], maxRounds: 1 } });
+    probeCapabilities.mockResolvedValue("supported");
+    const app = express(); app.use(express.json());
+    const router = express.Router(); registerRunRoutes(router); app.use("/api/instances", router);
+    const server = app.listen(0);
+    try {
+      await new Promise<void>(resolve => server.once("listening", resolve));
+      const response = await fetch(`http://127.0.0.1:${(server.address() as any).port}/api/instances/${instanceId}/runs`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ conversationId, content: "越界协作", requestId: "pi-untracked-request" }) });
+      expect(response.status).toBe(409);
+      await expect(response.json()).resolves.toMatchObject({ success: false, error: "GROUP_ROOM_MEMBER_UNAVAILABLE" });
+      expect(beginChatRun).not.toHaveBeenCalled();
+    } finally { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); }
+  });
+
   it("releases the initial lease before falling back when targeted dispatch is unavailable", async () => {
     process.env.MYBAY_ASYNC_CHAT_RUNS_ENABLED = "true";
     getInstanceById.mockResolvedValue({ id: instanceId, user_id: userId, owner_id: userId, config_json: "{}" });
@@ -280,16 +334,20 @@ describe("Interactive Agent POST /runs integration", () => {
   });
 
   it("wakes the reconciler immediately after a stop request is accepted", async () => {
+    const peerId = "66666666-6666-4666-8666-666666666666";
     getInstanceById.mockResolvedValue({ id: instanceId, user_id: userId, owner_id: userId, config_json: "{}" });
+    getInstances.mockResolvedValue([{ id: peerId, user_id: userId, owner_id: userId, config_json: JSON.stringify({ a2aEnabled: true, a2aBearerToken: "encrypted-token" }) }]);
     getConversationForOwnerAndInstance.mockResolvedValue({ id: conversationId, user_id: userId, instance_id: instanceId });
     getChatRun.mockResolvedValue({
       id: "55555555-5555-4555-8555-555555555555",
       instance_id: instanceId,
       user_id: userId,
       conversation_id: conversationId,
-      status: "queued"
+      status: "queued",
+      group_collaboration: { version: 1, mode: "group", contextId: "ctx-mybay-room-stoptest", leader: { id: instanceId, name: "Host" }, peers: [{ id: peerId, name: "Peer" }], maxRounds: 1 },
     });
     requestStopChatRun.mockResolvedValue({ status: "stop_requested", run_status: "stopping" });
+    cancelMappedA2AGroupTasks.mockResolvedValue({ attempted: 2, confirmed: 1, unconfirmed: 1 });
 
     const app = express();
     app.use(express.json());
@@ -308,8 +366,9 @@ describe("Interactive Agent POST /runs integration", () => {
       );
 
       expect(response.status).toBe(200);
-      await expect(response.json()).resolves.toMatchObject({ success: true, status: "stopping" });
+      await expect(response.json()).resolves.toMatchObject({ success: true, status: "stopping", groupCancellation: { attempted: 2, confirmed: 1, unconfirmed: 1 } });
       expect(requestRunsReconcile).toHaveBeenCalledOnce();
+      expect(cancelMappedA2AGroupTasks).toHaveBeenCalledWith(expect.objectContaining({ instanceId, contextId: "ctx-mybay-room-stoptest", peerIds: [peerId] }));
     } finally {
       await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     }

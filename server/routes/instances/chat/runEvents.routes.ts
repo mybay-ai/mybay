@@ -55,6 +55,7 @@ export function registerRunEventRoutes(router: Router) {
         path: `/v1/runs/${run.upstream_run_id}/approval`,
         body: {
           choice,
+          approval_id: typeof req.body?.approvalId === "string" ? req.body.approvalId : undefined,
           resolve_all: req.body?.resolveAll === true || req.body?.all === true
         },
         timeoutMs: 10000

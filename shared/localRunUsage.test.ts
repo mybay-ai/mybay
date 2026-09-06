@@ -21,4 +21,28 @@ describe("local usage evidence", () => {
     expect(JSON.stringify(readLocalRunUsage(raw))).not.toContain("PRIVATE");
     expect(readLocalRunUsage({ version: 2 })).toBeNull();
   });
+  it("preserves bounded Pi context and compaction evidence", () => {
+    const usage = createLocalRunUsage({
+      context_tokens: 90000,
+      context_window: 128000,
+      context_percent: 70.31,
+      compaction_status: "completed",
+      compaction_reason: "threshold",
+      compaction_tokens_before: 111000,
+      compaction_estimated_tokens_after: 24000,
+    });
+    expect(readLocalRunUsage(usage)).toMatchObject({
+      contextTokens: 90000,
+      contextWindow: 128000,
+      contextPercent: 70.31,
+      compactionStatus: "completed",
+      compactionReason: "threshold",
+      compactionTokensBefore: 111000,
+      compactionEstimatedTokensAfter: 24000,
+    });
+    expect(createLocalRunUsage({ context_percent: 101, compaction_status: "invented" })).toMatchObject({
+      contextPercent: null,
+      compactionStatus: null,
+    });
+  });
 });

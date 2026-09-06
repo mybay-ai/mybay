@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "verifiedAt": "2026-09-06T11:51:10.085Z",
+  "instanceRef": "sha256:2370a902e42bfcf23481a1427cdce1e060503b7d72d168e5324d4ed80334eaa6",
+  "runtime": "pi",
+  "runtimeVersion": "0.85.1",
+  "runtimeImageId": "sha256:ba13496ef3ec320f75e30f8570e265495fd06be687cbb1a0ac6adb540f624b71",
+  "currentlyDeployedRuntimeImageId": "sha256:2238c8ad731eea99d15ce63c73ba9e59108472edfa4ad500e7cd21a5498f7f73",
+  "browserVerified": true,
+  "run": {
+    "runRef": "sha256:b382bcae999dfab8f02ba686991948d4ae7a8d7dbb9c5bd1682fb807792009e4",
+    "upstreamRunRef": "sha256:26f499e7727e747dcef17d9596c14c807664631b8ee9cf378c8bb53d04084f9a",
+    "output": "PI_CONTEXT_STATS_OK",
+    "status": "completed",
+    "runtimeDurationMs": 4048
+  },
+  "contextEvidence": {
+    "source": "pi_get_session_stats",
+    "scope": "session",
+    "contextTokens": 10990,
+    "contextWindow": 1000000,
+    "contextPercent": 1.1,
+    "browserSummaryVisible": true,
+    "browserDetailsVisible": true
+  },
+  "compaction": {
+    "autoCompactionExplicitlyEnabled": true,
+    "nativeEventsHandled": [
+      "compaction_start",
+      "compaction_end"
+    ],
+    "completedCompactionObservedInThisAcceptance": false,
+    "truthfulUnknownBoundary": "No compaction status is shown until Pi emits a compaction_end event."
+  },
+  "verification": {
+    "piNodeTests": 23,
+    "targetedVitestTests": 17,
+    "typecheck": true,
+    "productionBuild": true,
+    "runtimeCertification": "verified"
+  }
+}

@@ -13,3 +13,7 @@ export function buildInstanceFilesNavigationUrl(instanceId?: string): string {
   const baseUrl = `${APP_ROUTES.DASHBOARD}?tab=instance-files`;
   return instanceId ? `${baseUrl}&instanceId=${encodeURIComponent(instanceId)}` : baseUrl;
 }
+
+export function buildA2ATaskRecordUrl(instanceId: string, taskId: string): string {
+  return `${APP_ROUTES.INSTANCES}?id=${encodeURIComponent(instanceId)}&tab=collaboration#a2a-activity-${encodeURIComponent(taskId)}`;
+}

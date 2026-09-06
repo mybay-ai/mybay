@@ -25,6 +25,8 @@ import {
   instanceOperationCoordinator,
 } from "../../services/instances/instanceOperationCoordinator";
 import { buildUpgradePreflight } from "../../services/instances/upgradePreflightService";
+import { isPiRuntimeInstance, resolvePiRuntimeUpgradeSelection } from "../../services/instances/runtimeUpgradeSelection";
+import { enrichRuntimeVersionCacheStatus, listManagedRuntimeVersions } from "../../services/runtimeVersionCatalog";
 
 function respondIfInstanceOperationActive(res: Response, instanceIds: string[]): boolean {
   for (const instanceId of instanceIds) {
@@ -55,6 +57,14 @@ export function createVersionsRoutes(deps: RouterDependencies) {
 
   router.get("/agent-versions", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
+      const runtimeType = String(req.query.runtimeType || "hermes").trim().toLowerCase();
+      if (runtimeType === "pi") {
+        res.setHeader("Cache-Control", "no-store");
+        return res.json(await enrichRuntimeVersionCacheStatus(listManagedRuntimeVersions("pi"), docker));
+      }
+      if (runtimeType !== "hermes") {
+        return res.status(400).json({ code: "UNSUPPORTED_RUNTIME_TYPE", error: "Unsupported Runtime type." });
+      }
       const raw = await dbAdapter.getMyBayVersions();
       const families = buildVersionFamilies(raw).slice(0, 3);
       const mapped = families.map((v: any) => {
@@ -100,7 +110,12 @@ export function createVersionsRoutes(deps: RouterDependencies) {
         const resolvedTag = validation.resolvedTag || tag;
         const versions = await dbAdapter.getMyBayVersions();
         const version = versions.find((item: any) => [item.version, item.image_tag, item.tag].includes(resolvedTag));
-        const targetImage = `${version?.image || instance.agent_image || process.env.MY_BAY_IMAGE || "nousresearch/hermes-agent"}:${version?.image_tag || version?.tag || resolvedTag}`;
+        const piSelection = isPiRuntimeInstance(instance)
+          ? resolvePiRuntimeUpgradeSelection({ instance, targetTag: resolvedTag })
+          : null;
+        const targetImage = piSelection?.ok
+          ? piSelection.selection.imageRef
+          : `${version?.image || instance.agent_image || process.env.MY_BAY_IMAGE || "nousresearch/hermes-agent"}:${version?.image_tag || version?.tag || resolvedTag}`;
         const imageInspect: any = await docker.getImage(targetImage).inspect().catch(() => null);
         const context = buildDeploymentContext(instance);
         const containerInspect: any = await docker.getContainer(context.dashboardContainerName).inspect().catch(() => null);

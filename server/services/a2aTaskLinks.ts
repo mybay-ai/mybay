@@ -41,3 +41,20 @@ export function updateA2ATaskLink(id: string, update: Partial<Pick<A2ATaskLink, 
     return row;
   });
 }
+
+export function selectA2ATaskLinksForRefresh(options: {
+  links: A2ATaskLink[];
+  instanceId: string;
+  trustedPeerIds: Set<string>;
+  visibleTasks: Set<string>;
+  refreshBefore: number;
+  limit?: number;
+}) {
+  return options.links.filter(row => row.instanceId === options.instanceId
+    && Boolean(row.remoteTaskId)
+    && row.state !== 'finished'
+    && options.trustedPeerIds.has(row.peerId)
+    && options.visibleTasks.has(`${row.peerId}\n${row.callerTaskId}\n${row.contextId}`)
+    && (!row.checkedAt || new Date(row.checkedAt).getTime() < options.refreshBefore))
+    .slice(0, Math.min(10, Math.max(1, options.limit || 3)));
+}

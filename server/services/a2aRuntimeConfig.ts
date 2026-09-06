@@ -32,6 +32,15 @@ export function buildA2ARuntimeEnv(config: any): Record<string, string> {
   if (config?.a2aEnabled !== true) return revisionEnv;
   const token = config.a2aBearerToken ? decrypt(config.a2aBearerToken) : "";
   if (!token) throw new Error("A2A_TOKEN_REQUIRED");
+  const peers = (Array.isArray(config.a2aResolvedPeers) ? config.a2aResolvedPeers : [])
+    .map((peer: ResolvedA2APeer) => ({
+      id: peer.instanceId,
+      name: peer.name,
+      url: peer.url,
+      token: peer.encryptedToken ? decrypt(peer.encryptedToken) : "",
+      capabilities: peer.capabilities || [],
+    }))
+    .filter((peer: any) => peer.id && peer.url && peer.token);
   return {
     ...revisionEnv,
     A2A_BEARER_TOKEN: token,
@@ -41,6 +50,7 @@ export function buildA2ARuntimeEnv(config: any): Record<string, string> {
     A2A_PUBLIC_URL: String(config.a2aPublicUrl || getA2AInternalUrl(config.instanceId || config.id || "agent")),
     A2A_RATE_LIMIT: String(Math.min(600, Math.max(1, Number(config.a2aRateLimit) || 60))),
     A2A_MAX_PINGPONG_TURNS: String(Math.min(20, Math.max(1, Number(config.a2aMaxPingPongTurns) || 5))),
+    ...(peers.length ? { MYBAY_A2A_PEERS_JSON: JSON.stringify(peers) } : {}),
   };
 }
 
@@ -60,12 +70,15 @@ export async function hydrateA2ARuntimePeers(instanceId: string, config: any): P
     } catch {
       continue;
     }
-    if (peerConfig.a2aEnabled !== true || !peerConfig.a2aBearerToken) continue;
+    const managedRuntimePeer = String(peer.runtime_type || "hermes").trim().toLowerCase() === "pi"
+      && String(peer.status || "").trim().toLowerCase() === "running"
+      && a2aTrackingEnabled(instanceId);
+    if (!managedRuntimePeer && (peerConfig.a2aEnabled !== true || !peerConfig.a2aBearerToken)) continue;
     resolved.push({
       instanceId: peerId,
       name: normalizeA2AAgentName(peerConfig.a2aAgentName, peer.name || peerId),
-      url: a2aTrackingEnabled(instanceId) ? a2aRelayUrl(instanceId, peerId) : getA2AInternalUrl(peerId),
-      encryptedToken: a2aTrackingEnabled(instanceId) ? encrypt(a2aRelayToken(instanceId)) : peerConfig.a2aBearerToken,
+      url: managedRuntimePeer || a2aTrackingEnabled(instanceId) ? a2aRelayUrl(instanceId, peerId) : getA2AInternalUrl(peerId),
+      encryptedToken: managedRuntimePeer || a2aTrackingEnabled(instanceId) ? encrypt(a2aRelayToken(instanceId)) : peerConfig.a2aBearerToken,
       capabilities: peerCapabilities[peerId] || [],
     });
   }
