@@ -17,7 +17,7 @@
 
 </div>
 
-> **当前正式版：`v0.1.27`。** 在 0.x 阶段，公共接口、Runtime Adapter、部署细节与升级行为仍可能调整。
+> **当前正式版：`v0.1.27.1`。** 在 0.x 阶段，公共接口、Runtime Adapter、部署细节与升级行为仍可能调整。
 
 ![麦贝开源版概览](./docs/images/main-zh-open-source.png)
 

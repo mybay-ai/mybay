@@ -16,6 +16,20 @@ describe("release version consistency", () => {
     expect(checkVersionConsistency(packageJson, packageLock, publicMetadata)).toEqual([]);
   });
 
+  it("accepts a four-part maintenance release version", () => {
+    const maintenancePackage = { ...packageJson, version: "0.1.27.1" };
+    const maintenanceLock = {
+      ...packageLock,
+      version: "0.1.27.1",
+      packages: { "": { ...packageLock.packages[""], version: "0.1.27.1" } },
+    };
+    const maintenanceMetadata = {
+      readmes: [{ name: "README.md", content: "Release status: v0.1.27.1" }],
+      changelogs: [{ name: "marketing.json", releases: [{ version: "v0.1.27.1" }] }],
+    };
+    expect(checkVersionConsistency(maintenancePackage, maintenanceLock, maintenanceMetadata)).toEqual([]);
+  });
+
   it("reports mismatched lockfile metadata", () => {
     const errors = checkVersionConsistency(packageJson, { ...packageLock, version: "0.0.9" }, publicMetadata);
     expect(errors).toContain("package-lock.json version (0.0.9) does not match package.json (0.1.0-preview)");

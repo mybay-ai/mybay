@@ -26,4 +26,9 @@ describe("sanitized local diagnostic export", () => {
     expect(report.applicationVersion).toBe("0.1.27-rc.1");
     expect(readLocalDiagnosticExport(report)?.applicationVersion).toBe("0.1.27-rc.1");
   });
+  it("retains a four-part maintenance release version", () => {
+    const report = buildLocalDiagnosticExport({}, "0.1.27.1", null);
+    expect(report.applicationVersion).toBe("0.1.27.1");
+    expect(readLocalDiagnosticExport(report)?.applicationVersion).toBe("0.1.27.1");
+  });
 });

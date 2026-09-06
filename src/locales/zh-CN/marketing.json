@@ -1060,10 +1060,10 @@
     "timelineTip": "正式版",
     "releases": [
       {
-        "version": "v0.1.27",
-        "date": "2026.09.05",
+        "version": "v0.1.27.1",
+        "date": "2026.09.07",
         "badge": "正式版",
-        "summary": "麦贝开源版 v0.1.27 闭环 A2A 协作流程，增加持久化多 Agent 房间与新版 Hermes 模型选项，并优化聊天和 Windows 启动体验。",
+        "summary": "麦贝开源版 v0.1.27.1 完成 Pi Runtime 接入，强化 A2A 与文件流程，并完善 Agent 部署、身份、上下文和响应式聊天体验。",
         "sections": [
           {
             "title": "A2A 协作闭环",

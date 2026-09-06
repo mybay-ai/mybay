@@ -33,8 +33,8 @@ export function checkVersionConsistency(packageJson, packageLock, publicMetadata
   const version = String(packageJson.version || "");
   const rootLock = packageLock.packages?.[""];
 
-  if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(version)) {
-    errors.push("package.json has an invalid SemVer version: " + (version || "<missing>"));
+  if (!/^\d+\.\d+\.\d+(?:\.\d+|-[0-9A-Za-z.-]+)?$/.test(version)) {
+    errors.push("package.json has an invalid supported release version: " + (version || "<missing>"));
   }
   if (packageLock.name !== packageJson.name) {
     errors.push("package-lock.json name (" + packageLock.name + ") does not match package.json (" + packageJson.name + ")");

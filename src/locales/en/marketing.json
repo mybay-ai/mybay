@@ -1060,10 +1060,10 @@
     "timelineTip": "Stable release",
     "releases": [
       {
-        "version": "v0.1.27",
-        "date": "2026.09.05",
+        "version": "v0.1.27.1",
+        "date": "2026.09.07",
         "badge": "Stable",
-        "summary": "MyBay Open Source v0.1.27 closes the A2A collaboration workflow, adds persistent multi-Agent rooms, expands current Hermes model choices, and refines chat and Windows startup UX.",
+        "summary": "MyBay Open Source v0.1.27.1 completes the Pi Runtime integration, hardens A2A and file workflows, and refines Agent deployment, identity, context, and responsive chat UX.",
         "sections": [
           {
             "title": "A2A collaboration closure",
