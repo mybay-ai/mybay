@@ -46,6 +46,12 @@ export const isSensitiveFile = (filename: string) => {
 export type InstanceFileView = "files" | "advanced";
 export type InstanceFilePathClass = "artifact" | "runtime" | "hidden";
 
+export type ValidatedDirectoryEntry = {
+  name: string;
+  stats: fs.Stats;
+  isSymlink: boolean;
+};
+
 const ARTIFACT_ROOTS = new Set(["workspace", "outputs", "uploads", "documents", "reports", "tmp", "plans"]);
 const RUNTIME_ROOTS = new Set([
   "a2a_conversations", "audio_cache", "bin", "cache", "cron", "hooks", "image_cache",
@@ -122,6 +128,33 @@ function resolveExistingDirectory(candidate: unknown): string | null {
   } catch {
     return null;
   }
+}
+
+export function readValidatedDirectory(rootDir: string, absolutePath: string): { stats: fs.Stats; entries: ValidatedDirectoryEntry[] } {
+  const canonicalRoot = fs.realpathSync(path.resolve(rootDir));
+  const canonicalDirectory = fs.realpathSync(path.resolve(absolutePath));
+  const isInside = canonicalDirectory === canonicalRoot || canonicalDirectory.startsWith(canonicalRoot + path.sep);
+  if (!isInside) throw Object.assign(new Error("FILE_PATH_OUTSIDE_INSTANCE"), { code: "FILE_PATH_OUTSIDE_INSTANCE" });
+
+  const stats = fs.statSync(canonicalDirectory);
+  if (!stats.isDirectory()) return { stats, entries: [] };
+
+  const entries = fs.readdirSync(canonicalDirectory).flatMap((entryName): ValidatedDirectoryEntry[] => {
+    const safeName = path.basename(entryName);
+    if (safeName !== entryName) return [];
+    const entryPath = path.resolve(canonicalDirectory, safeName);
+    if (path.dirname(entryPath) !== canonicalDirectory) return [];
+    const linkStats = fs.lstatSync(entryPath);
+    if (!linkStats.isSymbolicLink()) return [{ name: safeName, stats: linkStats, isSymlink: false }];
+    try {
+      const canonicalTarget = fs.realpathSync(entryPath);
+      const targetInside = canonicalTarget === canonicalRoot || canonicalTarget.startsWith(canonicalRoot + path.sep);
+      return [{ name: safeName, stats: targetInside ? fs.statSync(canonicalTarget) : linkStats, isSymlink: true }];
+    } catch {
+      return [{ name: safeName, stats: linkStats, isSymlink: true }];
+    }
+  });
+  return { stats, entries };
 }
 
 export const validateFileAccess = async (

@@ -20,6 +20,11 @@ function reject(status: number, code: string): never { throw Object.assign(new E
 const validUploadId = (value: unknown): value is string => typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 const sha256 = (value: Buffer | string) => createHash("sha256").update(value).digest("hex");
 
+function getSingleSearchParameter(req: Request, key: string): string {
+  const values = new URL(req.originalUrl, "http://localhost").searchParams.getAll(key);
+  return values.length === 1 ? values[0] : "";
+}
+
 function validateContent(buffer: Buffer, name: string) {
   const extension = path.extname(name).toLowerCase();
   if (INSTANCE_UPLOAD_TEXT_EXTENSIONS.includes(extension)) {
@@ -59,8 +64,8 @@ export function createInstanceFileUploadRoutes(deps: Dependencies) {
   const parse = express.raw({ type: "application/octet-stream", limit: INSTANCE_UPLOAD_MAX_BYTES });
   router.post("/:id/files/upload", deps.authenticate, async (req: Request, res: Response) => {
     const id = req.params.id;
-    const directory = typeof req.query.path === "string" ? req.query.path : "";
-    const name = typeof req.query.name === "string" ? req.query.name : "";
+    const directory = getSingleSearchParameter(req, "path");
+    const name = getSingleSearchParameter(req, "name");
     const uploadId = req.get("X-Upload-Id");
     const fail = (error: any) => {
       if (res.headersSent || res.destroyed) return;
@@ -72,6 +77,9 @@ export function createInstanceFileUploadRoutes(deps: Dependencies) {
     try {
       if (!/^[A-Za-z0-9_-]{1,128}$/.test(id) || !isInstanceUploadDirectory(directory) || directory.split("/").some(deps.isSensitive)) reject(403, "UPLOAD_DIRECTORY_INVALID");
       if (!isInstanceUploadFilename(name) || deps.isSensitive(name)) reject(400, "UPLOAD_NAME_INVALID");
+      const safeName = path.basename(name);
+      if (safeName !== name) reject(400, "UPLOAD_NAME_INVALID");
+      const artifactPath = path.posix.join(directory, safeName);
       if (uploadId && !validUploadId(uploadId)) reject(400, "INVALID_UPLOAD_ID");
       if (!req.is("application/octet-stream")) reject(415, "UPLOAD_CONTENT_TYPE");
       if (Number(req.headers["content-length"]) > INSTANCE_UPLOAD_MAX_BYTES) reject(413, "UPLOAD_TOO_LARGE");
@@ -81,9 +89,10 @@ export function createInstanceFileUploadRoutes(deps: Dependencies) {
       if (uploadId) {
         const receipt = getInstanceFileUploadReceipt(id, uploadId);
         if (receipt) {
-          const expectedPath = `${directory}/${name}`;
+          const expectedPath = artifactPath;
           if (receipt.directory !== directory || receipt.name !== name || receipt.path !== expectedPath) reject(409, "UPLOAD_REQUEST_CONFLICT");
-          const target = path.join(root, receipt.path.slice(1));
+          const target = path.resolve(root, receipt.path.slice(1));
+          if (!target.startsWith(root + path.sep)) reject(409, "UPLOAD_RECEIPT_STALE");
           try {
             const stat = fs.lstatSync(target);
             if (stat.isSymbolicLink() || !stat.isFile() || stat.size !== receipt.size || sha256(fs.readFileSync(target)) !== receipt.sha256) reject(409, "UPLOAD_RECEIPT_STALE");
@@ -104,7 +113,9 @@ export function createInstanceFileUploadRoutes(deps: Dependencies) {
       if (!fs.existsSync(first)) fs.mkdirSync(first, { mode: 0o755 });
       const targetDirectory = assertDirectory(root, directory);
       const initialIdentity = fs.statSync(targetDirectory);
-      if (fs.existsSync(path.join(targetDirectory, name))) reject(409, "UPLOAD_EXISTS");
+      const initialTarget = path.resolve(targetDirectory, safeName);
+      if (path.dirname(initialTarget) !== targetDirectory) reject(400, "UPLOAD_NAME_INVALID");
+      if (fs.existsSync(initialTarget)) reject(409, "UPLOAD_EXISTS");
       const before = await deps.checkQuota(validation.instance, root);
       if (before.storageUsedBytes === null || before.storageStatus === "unknown") reject(503, "UPLOAD_QUOTA_UNKNOWN");
       if (before.storageExceeded || before.storageStatus === "exceeded") reject(413, "UPLOAD_QUOTA_EXCEEDED");
@@ -122,7 +133,8 @@ export function createInstanceFileUploadRoutes(deps: Dependencies) {
       const currentIdentity = fs.statSync(checkedDirectory);
       if (currentIdentity.ino !== initialIdentity.ino || currentIdentity.dev !== initialIdentity.dev) reject(409, "UPLOAD_DIRECTORY_CHANGED");
       const temporary = path.join(checkedDirectory, `.mybay-upload-${randomUUID()}.part`);
-      const target = path.join(checkedDirectory, name);
+      const target = path.resolve(checkedDirectory, safeName);
+      if (path.dirname(target) !== checkedDirectory) reject(400, "UPLOAD_NAME_INVALID");
       let ownedTemporary = false;
       let published = false;
       try {
@@ -133,7 +145,7 @@ export function createInstanceFileUploadRoutes(deps: Dependencies) {
         // Hard-link publication is atomic and never replaces an existing name.
         fs.linkSync(temporary, target);
         published = true;
-        if (uploadId) commitInstanceFileUploadReceipt({ uploadId, instanceId: id, directory, name, path: `${directory}/${name}`, size: bytes.length, sha256: contentSha256 });
+        if (uploadId) commitInstanceFileUploadReceipt({ uploadId, instanceId: id, directory, name: safeName, path: artifactPath, size: bytes.length, sha256: contentSha256 });
       } catch (error) {
         // A receipt and its published file are one logical commit. If durable
         // receipt persistence fails, remove only the hard link made here so a
@@ -143,7 +155,7 @@ export function createInstanceFileUploadRoutes(deps: Dependencies) {
       } finally {
         if (ownedTemporary) { try { fs.unlinkSync(temporary); } catch { /* Only remove this request's staging file. */ } }
       }
-      res.status(201).json({ ok: true, reused: false, ...(uploadId ? { uploadId } : {}), name, size: bytes.length, path: `${directory}/${name}` });
+      res.status(201).json({ ok: true, reused: false, ...(uploadId ? { uploadId } : {}), name: safeName, size: bytes.length, path: artifactPath });
     } catch (error) { fail(error); }
     finally { if (locked) active.delete(id); }
   });

@@ -653,7 +653,7 @@ export function createConfigRoutes(deps: RouterDependencies) {
             })
             .then(() => executeDeployment(instanceFull, io, wrappedUpdateStatus, normalizedConfig, req.user));
           void restartPromise
-            .catch((err) => console.error(`[Instance Config] Restart failed for ${req.params.id}:`, err))
+            .catch((err) => console.error("[Instance Config] Restart failed for %s:", req.params.id, err))
             .finally(() => instanceOperationCoordinator.release(operation.lease));
         } else {
           instanceOperationCoordinator.release(operation.lease);

@@ -17,7 +17,7 @@ vi.mock("../../db", () => ({
 vi.mock("../../routes/instances/index", () => ({ docker: {} }));
 vi.mock("../../deploymentContext", () => ({ getValidatedContainer: vi.fn() }));
 
-import { classifyInstanceFilePath, isSensitiveFile, validateFileAccess } from "./instanceFileSecurityService";
+import { classifyInstanceFilePath, isSensitiveFile, readValidatedDirectory, validateFileAccess } from "./instanceFileSecurityService";
 
 const requestFor = (userId: string) => ({ user: { id: userId, role: "user" } }) as any;
 
@@ -106,5 +106,18 @@ describe("instance file preview path isolation", () => {
     const adminRequest = { user: { id: "admin", role: "admin" } } as any;
     await expect(validateFileAccess(adminRequest, instanceId, "cache", { view: "advanced" }))
       .resolves.not.toHaveProperty("error");
+  });
+
+  it("lists entries without following a symlink outside the instance root", () => {
+    const link = path.join(testRoot, "outputs", "outside-link");
+    fs.symlinkSync(os.tmpdir(), link, process.platform === "win32" ? "junction" : "dir");
+    const result = readValidatedDirectory(testRoot, path.join(testRoot, "outputs"));
+    const entry = result.entries.find(item => item.name === "outside-link");
+    expect(entry).toMatchObject({ name: "outside-link", isSymlink: true });
+    expect(entry?.stats.isDirectory()).toBe(false);
+  });
+
+  it("refuses to list a directory outside the validated instance root", () => {
+    expect(() => readValidatedDirectory(testRoot, os.tmpdir())).toThrow("FILE_PATH_OUTSIDE_INSTANCE");
   });
 });
