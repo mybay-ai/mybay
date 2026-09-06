@@ -49,6 +49,7 @@ import {
   disableCredentiallessA2AForRestore,
   isContainerlessInstanceEligibleForDeployment,
 } from "../../utils/configArchiveRestorePolicy";
+import { supportsRuntimeDashboard } from "../../../shared/runtimeAccessPolicy";
 
 export function createConfigRoutes(deps: RouterDependencies) {
   const router = Router();
@@ -197,6 +198,8 @@ export function createConfigRoutes(deps: RouterDependencies) {
       const expectedName = instance.container_name || `mybay-agent-${instance.id}`;
 
       const config = parseInstanceConfigJson(instance.config_json);
+      const dashboardSupported = supportsRuntimeDashboard(instance.runtime_type || config.runtime_type);
+      if (!dashboardSupported) data.enableDashboard = false;
       const previousChannelConfig = { ...config };
       const credentialSelection = resolveProviderCredentialSelection(data, config);
       const { selectedCredentialId } = credentialSelection;
@@ -273,6 +276,7 @@ export function createConfigRoutes(deps: RouterDependencies) {
 
       const dashboardAccessEnabled = config.enableDashboard !== false;
       if (!dashboardAccessEnabled) {
+        if (!dashboardSupported) delete config.username;
         delete config.password;
         delete config.webPasswordHash;
         delete config.dashboardAuthSecret;

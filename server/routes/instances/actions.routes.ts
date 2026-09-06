@@ -32,6 +32,7 @@ import { evaluateInstanceWorkflowReadiness } from "../../services/workflowReadin
 import { executeTaskInBackground } from "../../workers/taskRunner";
 import { isTemplateWorkflowsEnabled } from "../../utils/templateWorkflowsFeature";
 import { requiresDashboardCredentialsForRedeploy } from "./redeployValidation";
+import { supportsRuntimeDashboard } from "../../../shared/runtimeAccessPolicy";
 import {
   INSTANCE_OPERATION_IN_PROGRESS,
   instanceOperationCoordinator,
@@ -748,6 +749,9 @@ export function createActionsRoutes(deps: RouterDependencies) {
       }
 
       const config = typeof instance.config_json === 'string' ? JSON.parse(instance.config_json) : (instance.config_json || {});
+      if (!supportsRuntimeDashboard(instance.runtime_type || config.runtime_type)) {
+        return res.status(409).json({ code: "RUNTIME_DASHBOARD_UNSUPPORTED", configured: false });
+      }
       const isConfigured = !!(
         config.webPasswordHash &&
         config.dashboardAuthSecret &&
@@ -773,13 +777,16 @@ export function createActionsRoutes(deps: RouterDependencies) {
         return res.status(403).json({ error: "Forbidden: Access denied" });
       }
 
+      const config = typeof instance.config_json === 'string' ? JSON.parse(instance.config_json) : (instance.config_json || {});
+      if (!supportsRuntimeDashboard(instance.runtime_type || config.runtime_type)) {
+        return res.status(409).json({ code: "RUNTIME_DASHBOARD_UNSUPPORTED", error: "This Runtime does not provide a standalone Dashboard." });
+      }
+
       const { password } = req.body;
       if (!password || typeof password !== "string" || password.trim() === "") {
         return res.status(400).json({ error: "密码不能为空" });
       }
 
-      const config = typeof instance.config_json === 'string' ? JSON.parse(instance.config_json) : (instance.config_json || {});
-      
       // Update config with new password encrypted and hashed
       config.webPasswordHash = bcrypt.hashSync(password, 10);
       config.password = encrypt(password);

@@ -855,6 +855,8 @@
   "settings_dashboard_reenable_password_required": "Set a Dashboard access password of at least 8 characters before re-enabling Dashboard access.",
   "settings_dashboard_enable_label": "Enable Dashboard Access",
   "settings_dashboard_enable_desc": "When enabled, the Agent Runtime Dashboard is available at the instance URL. When disabled, the instance still runs through configured channels and the Agent workspace.",
+  "settings_pi_workspace_title": "Pi is managed through the MyBay Agent workspace",
+  "settings_pi_workspace_desc": "Pi Runtime does not provide a standalone Dashboard. This instance runs through MyBay chat and protected Runtime APIs, with no Dashboard switch or login password required.",
   "dashboard_access_disabled_title": "Dashboard access is disabled",
   "dashboard_access_disabled_desc": "This instance does not expose a Dashboard URL. It remains available through configured channels and the Agent workspace.",
   "settings_provider_invalid": "Save failed: The model provider \"{{provider}}\" has been deprecated or taken offline. Please select a supported provider (such as Google Gemini or OpenAI) in the configuration card.",

@@ -293,6 +293,7 @@ const getIconComponent = (iconName: string) => {
 };
 
 export function DeployReviewStep({ step, data, createdInstance, testResults, onSuccess, submitError, onRetry, isTraefik, onViewGuide, activeWorkflowTemplate, activeBlueprint, permissionConfirmed = false, onPermissionConfirmedChange }: DeployReviewStepProps) {
+  const isPiRuntime = String(data?.runtime_type || "hermes").trim().toLowerCase() === "pi";
   const navigate = useNavigate();
   const { t } = useTranslation("deploy");
   const isReview = step === 6;
@@ -650,8 +651,12 @@ export function DeployReviewStep({ step, data, createdInstance, testResults, onS
 
         <div className="space-y-4 text-[13px] sm:text-sm leading-normal">
           <div className="flex justify-between border-b border-outline pb-2">
-            <span className="text-content-muted">{t("template_selection.dashboard_check_label")}</span>
-            {data.enableDashboard === false ? (
+            <span className="text-content-muted">{isPiRuntime ? t("template_selection.pi_workspace_check_label") : t("template_selection.dashboard_check_label")}</span>
+            {isPiRuntime ? (
+              <span className="rounded bg-purple-50 px-2 py-0.5 font-mono font-bold text-purple-600 dark:bg-purple-950/40 dark:text-purple-300">
+                {t("template_selection.pi_workspace_check_ready")}
+              </span>
+            ) : data.enableDashboard === false ? (
               <span className="font-mono text-content-muted font-bold bg-surface-muted px-2 py-0.5 rounded">
                 {t("template_selection.dashboard_check_disabled")}
               </span>

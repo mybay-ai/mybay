@@ -855,6 +855,8 @@
   "settings_dashboard_reenable_password_required": "重新启用 Dashboard 访问时，请设置至少 8 位的 Dashboard 访问密码。",
   "settings_dashboard_enable_label": "启用 Dashboard 访问",
   "settings_dashboard_enable_desc": "开启后可通过实例 URL 访问 Agent Runtime Dashboard；关闭后实例仍可通过已配置渠道和 Agent 工作区运行。",
+  "settings_pi_workspace_title": "Pi 由 MyBay Agent 工作区管理",
+  "settings_pi_workspace_desc": "Pi Runtime 不提供独立 Dashboard。该实例通过 MyBay 对话工作台和受保护的 Runtime API 运行，无需配置 Dashboard 开关或登录密码。",
   "dashboard_access_disabled_title": "Dashboard 访问已关闭",
   "dashboard_access_disabled_desc": "当前实例不会开放 Dashboard URL；实例仍可通过已配置渠道和 Agent 工作区运行。",
   "settings_provider_invalid": "保存失败：底层模型提供商 \"{{provider}}\" 已被系统废弃或下线，请在配置卡片中重新选择支持的提供商（如 Google Gemini 或 OpenAI 等）。",

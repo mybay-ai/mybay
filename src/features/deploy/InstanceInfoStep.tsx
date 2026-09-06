@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import type { RuntimeDefinition } from "../../../shared/runtimeCatalog";
 import { fetchRuntimeCatalog } from "./runtimeCatalogClient";
+import { supportsRuntimeDashboard } from "../../../shared/runtimeAccessPolicy";
 
 interface InstanceInfoStepProps {
   data: any;
@@ -46,7 +47,9 @@ export function InstanceInfoStep({ data, update, updateTemplateInput, applyTempl
   const [jsonErrors, setJsonErrors] = useState<{ [key: string]: string }>({});
   const [runtimeDefinitions, setRuntimeDefinitions] = useState<RuntimeDefinition[]>([]);
   const [runtimeCatalogState, setRuntimeCatalogState] = useState<"loading" | "ready" | "error">("loading");
-  const isDashboardAccessEnabled = data.enableDashboard !== false;
+  const isPiRuntime = String(data.runtime_type || "hermes").trim().toLowerCase() === "pi";
+  const dashboardSupported = supportsRuntimeDashboard(data.runtime_type);
+  const isDashboardAccessEnabled = dashboardSupported && data.enableDashboard !== false;
 
   const handleDashboardAccessChange = (enabled: boolean) => {
     update("enableDashboard", enabled);
@@ -737,10 +740,10 @@ export function InstanceInfoStep({ data, update, updateTemplateInput, applyTempl
         <div className="border-b border-outline pb-2">
           <h4 className="text-sm font-black text-content flex items-center gap-2 tracking-tight">
             <Shield className="w-4 h-4 text-indigo-650" />
-            <span>{t("template_selection.basic_protection_title")}</span>
+            <span>{isPiRuntime ? t("template_selection.pi_basic_title") : t("template_selection.basic_protection_title")}</span>
           </h4>
           <p className="text-[13px] font-medium text-content-muted mt-0.5">
-            {t("template_selection.basic_protection_desc")}
+            {isPiRuntime ? t("template_selection.pi_basic_desc") : t("template_selection.basic_protection_desc")}
           </p>
         </div>
 
@@ -762,7 +765,7 @@ export function InstanceInfoStep({ data, update, updateTemplateInput, applyTempl
           style={{ position: 'absolute', top: '-1000px', left: '-1000px', width: '1px', height: '1px', opacity: 0.01, overflow: 'hidden' }}
         />
 
-        <label className="flex items-start gap-3 rounded-xl border border-outline bg-surface-muted/30 p-4 cursor-pointer">
+        {dashboardSupported ? <label className="flex items-start gap-3 rounded-xl border border-outline bg-surface-muted/30 p-4 cursor-pointer">
           <input
             type="checkbox"
             checked={isDashboardAccessEnabled}
@@ -773,7 +776,15 @@ export function InstanceInfoStep({ data, update, updateTemplateInput, applyTempl
             <span className="block text-[13px] font-bold text-content">{t("template_selection.enable_dashboard_label")}</span>
             <span className="block text-[11px] leading-relaxed text-content-muted">{t("template_selection.enable_dashboard_desc")}</span>
           </span>
-        </label>
+        </label> : (
+          <div className="flex items-start gap-3 rounded-xl border border-purple-200 bg-purple-50/60 p-4 dark:border-purple-800/70 dark:bg-purple-950/30">
+            <Zap className="mt-0.5 h-4 w-4 shrink-0 text-purple-600 dark:text-purple-300" />
+            <span className="space-y-1">
+              <span className="block text-[13px] font-bold text-content">{t("template_selection.pi_workspace_title")}</span>
+              <span className="block text-[11px] leading-relaxed text-content-muted">{t("template_selection.pi_workspace_desc")}</span>
+            </span>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
@@ -804,7 +815,7 @@ export function InstanceInfoStep({ data, update, updateTemplateInput, applyTempl
             />
           </div>
 
-          {isDashboardAccessEnabled && (
+          {dashboardSupported && isDashboardAccessEnabled && (
             <>
           <div className="space-y-1.5">
             <Label className="text-[13px] font-bold text-content-secondary uppercase tracking-wider">
@@ -864,9 +875,11 @@ export function InstanceInfoStep({ data, update, updateTemplateInput, applyTempl
         <div className="p-3 bg-surface-muted border border-outline/60 text-content-secondary rounded-xl text-[10.5px] leading-relaxed shadow-sm flex gap-2">
           <Shield className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
           <p className="font-medium">
-            {isDashboardAccessEnabled
-              ? t("template_selection.protection_warning", { path: data.path })
-              : t("template_selection.dashboard_access_disabled_notice")}
+            {isPiRuntime
+              ? t("template_selection.pi_workspace_notice")
+              : isDashboardAccessEnabled
+                ? t("template_selection.protection_warning", { path: data.path })
+                : t("template_selection.dashboard_access_disabled_notice")}
           </p>
         </div>
       </div>

@@ -12,6 +12,7 @@ import { AppSettingsSkillsSection } from "./AppSettingsSkillsSection";
 import { useInstanceQuota } from "../hooks/useInstanceQuota";
 import { isDeployChannelAllowedByEntitlement } from "@/shared/planChannelAccess";
 import { skillPolicyRegistry } from "@/shared/skillPolicyRegistry";
+import { supportsRuntimeDashboard } from "../../shared/runtimeAccessPolicy";
 
 import { api } from "../lib/api";
 
@@ -19,6 +20,8 @@ export function InstanceSettingsModal({ instance: initialInstance, onClose, onSa
   const { t } = useTranslation("dashboard");
   const { showToast, showAlert, showConfirm } = useFeedback();
   const [instance, setInstance] = useState<AgentInstance>(initialInstance);
+  const runtimeType = instance.runtime_type || instance.config?.runtime_type || "hermes";
+  const dashboardSupported = supportsRuntimeDashboard(runtimeType);
   const [credentials, setCredentials] = useState<Credential[]>([]);
   const [loadingDetail, setLoadingDetail] = useState(true);
 
@@ -72,7 +75,7 @@ export function InstanceSettingsModal({ instance: initialInstance, onClose, onSa
   const [providerCredentialId, setProviderCredentialId] = useState(instance.config?.providerCredentialId || instance.configSummary?.providerCredentialId || "");
   const [channel, setChannel] = useState(instance.config?.channel || instance.configSummary?.channel || "");
   const [agentPrompt, setAgentPrompt] = useState(instance.config?.agentPrompt || instance.configSummary?.agentPrompt || "");
-  const [enableDashboard, setEnableDashboard] = useState(instance.config?.enableDashboard ?? instance.configSummary?.enableDashboard ?? true);
+  const [enableDashboard, setEnableDashboard] = useState(dashboardSupported && (instance.config?.enableDashboard ?? instance.configSummary?.enableDashboard ?? true));
   const [limitsCpu, setLimitsCpu] = useState(instance.config?.limitsCpu || instance.configSummary?.limitsCpu || "0.5");
   const [limitsMem, setLimitsMem] = useState(instance.config?.limitsMem || instance.configSummary?.limitsMem || "512MB");
 
@@ -91,7 +94,7 @@ export function InstanceSettingsModal({ instance: initialInstance, onClose, onSa
       setProviderCredentialId(instance.config?.providerCredentialId || instance.configSummary?.providerCredentialId || "");
       setChannel(instance.config?.channel || instance.configSummary?.channel || "");
       setAgentPrompt(instance.config?.agentPrompt || instance.configSummary?.agentPrompt || "");
-      setEnableDashboard(instance.config?.enableDashboard ?? instance.configSummary?.enableDashboard ?? true);
+      setEnableDashboard(dashboardSupported && (instance.config?.enableDashboard ?? instance.configSummary?.enableDashboard ?? true));
       setLimitsCpu(instance.config?.limitsCpu || instance.configSummary?.limitsCpu || "0.5");
       setLimitsMem(instance.config?.limitsMem || instance.configSummary?.limitsMem || "512MB");
 
@@ -220,8 +223,8 @@ export function InstanceSettingsModal({ instance: initialInstance, onClose, onSa
         return;
       }
 
-      const dashboardWasEnabled = (instance.config?.enableDashboard ?? instance.configSummary?.enableDashboard ?? true) !== false;
-      if (enableDashboard && !dashboardWasEnabled && !password.trim()) {
+      const dashboardWasEnabled = dashboardSupported && (instance.config?.enableDashboard ?? instance.configSummary?.enableDashboard ?? true) !== false;
+      if (dashboardSupported && enableDashboard && !dashboardWasEnabled && !password.trim()) {
         showAlert({
           title: t("settings_validation_failed"),
           message: t("settings_dashboard_reenable_password_required"),
@@ -269,7 +272,7 @@ export function InstanceSettingsModal({ instance: initialInstance, onClose, onSa
 
       const payload: any = {
         provider, model, baseUrl, channel, agentPrompt,
-        enableDashboard,
+        enableDashboard: dashboardSupported && enableDashboard,
         telegramAllowedUsers, discordAllowedGuilds, feishuAppId, feishuRegion, qqBotAppId, qqBotAllowedUsers,
         qqBotAllowedGuilds, qqBotAllowedChannels, whatsappPhoneNumberId, whatsappAllowedUsers,
         whatsappAllowedChannels, dingtalkAppKey, dingtalkAllowedUsers, dingtalkAllowedChats,
@@ -575,7 +578,7 @@ export function InstanceSettingsModal({ instance: initialInstance, onClose, onSa
             )}
           </div>
 
-          <div className="p-5 bg-surface border border-slate-200/60 dark:border-slate-800 rounded-xl space-y-4 shadow-2xs">
+          {dashboardSupported ? <div className="p-5 bg-surface border border-slate-200/60 dark:border-slate-800 rounded-xl space-y-4 shadow-2xs">
             <h4 className="text-[11px] font-semibold uppercase tracking-wider text-content-muted">Web UI (Dashboard)</h4>
 
             <div className="flex items-center justify-between">
@@ -590,7 +593,15 @@ export function InstanceSettingsModal({ instance: initialInstance, onClose, onSa
                 <div className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform ${enableDashboard ? 'translate-x-5' : 'translate-x-0'}`} />
               </div>
             </div>
-          </div>
+          </div> : (
+            <div className="flex items-start gap-3 rounded-xl border border-purple-200 bg-purple-50/60 p-5 dark:border-purple-800/70 dark:bg-purple-950/30">
+              <Info className="mt-0.5 h-4 w-4 shrink-0 text-purple-600 dark:text-purple-300" />
+              <div>
+                <h4 className="text-[13px] font-semibold text-content">{t("settings_pi_workspace_title")}</h4>
+                <p className="mt-1 text-[12px] leading-relaxed text-content-muted">{t("settings_pi_workspace_desc")}</p>
+              </div>
+            </div>
+          )}
 
           {advancedResourceConfigEnabled && currentUser?.role === 'admin' && (
             <div className="p-5 bg-surface border border-slate-200/60 dark:border-slate-800 rounded-xl space-y-3.5 shadow-2xs">

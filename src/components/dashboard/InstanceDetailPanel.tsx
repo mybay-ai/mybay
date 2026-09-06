@@ -42,6 +42,7 @@ import { useFeedback } from "../FeedbackProvider";
 import { getRefinedStatusLabel } from "./instanceStatus";
 import { APP_ROUTES } from "../../constants/routes";
 import { InstanceA2ACollaboration } from "./InstanceA2ACollaboration";
+import { supportsRuntimeDashboard } from "../../../shared/runtimeAccessPolicy";
 
 interface InstanceDetailPanelProps {
   activeLogs: string | null;
@@ -97,6 +98,7 @@ export function InstanceDetailPanel({
   }, [activeLogs, setDetailTab]);
 
   const selectedInstance = instances.find(i => i.id === activeLogs);
+  const dashboardSupported = supportsRuntimeDashboard(selectedInstance?.runtime_type || selectedInstance?.config?.runtime_type);
 
   // Fetch health data & check for one-time credentials
   React.useEffect(() => {
@@ -419,6 +421,20 @@ export function InstanceDetailPanel({
             && healthData?.gateway_ready
             && healthData?.dashboard?.isAuthConfigured
           );
+
+          if (!dashboardSupported) {
+            return (
+              <div className="border-b border-outline px-4 py-3.5 text-left md:px-6">
+                <div className="flex items-start gap-2.5 rounded-xl border border-purple-200 bg-purple-50/60 p-3.5 shadow-2xs dark:border-purple-800/70 dark:bg-purple-950/30">
+                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-purple-600 dark:text-purple-300" />
+                  <div>
+                    <p className="text-[13px] font-bold text-content">{t("settings_pi_workspace_title")}</p>
+                    <p className="mt-1 text-[12px] leading-relaxed text-content-muted">{t("settings_pi_workspace_desc")}</p>
+                  </div>
+                </div>
+              </div>
+            );
+          }
 
           if (!dashboardAccessEnabled) {
             return (
