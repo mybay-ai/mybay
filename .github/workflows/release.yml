@@ -22,10 +22,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Verify tag matches package version
+        id: release_version
         shell: bash
         run: |
           PACKAGE_VERSION="$(node -p "require('./package.json').version")"
           test "$GITHUB_REF_NAME" = "v$PACKAGE_VERSION"
+          echo "version=$PACKAGE_VERSION" >> "$GITHUB_OUTPUT"
+          echo "series=$(echo "$PACKAGE_VERSION" | awk -F. '{print $1"."$2}')" >> "$GITHUB_OUTPUT"
       - name: Run release quality gate
         run: npm run check
       - name: Create clean source archive
@@ -62,8 +65,8 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=${{ steps.release_version.outputs.version }}
+            type=raw,value=${{ steps.release_version.outputs.series }}
             type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
       - name: Build and push multi-architecture image
         uses: docker/build-push-action@v7
