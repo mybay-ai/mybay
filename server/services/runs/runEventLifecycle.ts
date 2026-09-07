@@ -76,6 +76,24 @@ export function createRunEventCacheController(
     rawData: string,
     ownerId?: string,
   ): { added: boolean; event?: CachedRunEvent } => {
+    if (eventName === "text" && Buffer.byteLength(rawData) > policy.singleEventMaxBytes) {
+      // Iterate code points: byte slicing can split a UTF-8 character or surrogate pair.
+      let chunk = "";
+      let bytes = 0;
+      let result: { added: boolean; event?: CachedRunEvent } = { added: true };
+      for (const character of rawData) {
+        const size = Buffer.byteLength(character);
+        if (chunk && bytes + size > policy.singleEventMaxBytes) {
+          result = add(runId, eventName, chunk, ownerId);
+          if (!result.added) return result;
+          chunk = "";
+          bytes = 0;
+        }
+        chunk += character;
+        bytes += size;
+      }
+      return chunk ? add(runId, eventName, chunk, ownerId) : result;
+    }
     touch(runId);
     const data = Buffer.byteLength(rawData) > policy.singleEventMaxBytes
       ? JSON.stringify({
@@ -155,8 +173,8 @@ export function createRunEventCacheController(
     get: (runId, lastEventId) => {
       touch(runId);
       const events = eventsByRun.get(runId) || [];
-      if (events.length === 0) return { events: [] };
-      if (lastEventId > 0 && events[0].id > lastEventId + 1) {
+      if (events.length === 0) return { events: [], ...(lastEventId > 0 ? { recoveryOutOfBounds: true } : {}) };
+      if (events[0].id > lastEventId + 1 || lastEventId > events[events.length - 1].id) {
         return { events: [], recoveryOutOfBounds: true };
       }
       return { events: events.filter((event) => event.id > lastEventId) };
@@ -186,33 +204,33 @@ export interface RunSseStreamController {
 
 export function createRunSseStreamController(maxBufferCharacters = 1024 * 1024): RunSseStreamController {
   const activeStreams = new Map<string, AbortController>();
-  const buffers = new Map<string, string>();
-
-  const consume = (runId: string, chunk: string, onEvent: (event: unknown) => void): void => {
-    let buffer = (buffers.get(runId) || "") + chunk;
-    if (buffer.length > maxBufferCharacters) buffer = buffer.slice(-maxBufferCharacters);
-    const frames = buffer.split(/\r?\n\r?\n/);
-    buffers.set(runId, frames.pop() || "");
-    for (const frame of frames) {
-      const data = frame.split(/\r?\n/)
-        .filter((line) => line.startsWith("data:"))
-        .map((line) => line.slice(5).trimStart())
-        .join("\n");
-      if (!data || data === "[DONE]") continue;
-      try {
-        onEvent(JSON.parse(data));
-      } catch {}
-    }
-  };
 
   return {
     ensure: (runId, start, onEvent, onChunkObserved) => {
       if (activeStreams.has(runId)) return false;
       const controller = new AbortController();
       activeStreams.set(runId, controller);
+      let buffer = "";
       void start(controller.signal, (chunk) => {
+        if (controller.signal.aborted || activeStreams.get(runId) !== controller) return;
         onChunkObserved?.();
-        consume(runId, chunk, onEvent);
+        buffer += chunk;
+        const frames = buffer.split(/\r?\n\r?\n/);
+        buffer = frames.pop() || "";
+        if (buffer.length > maxBufferCharacters) {
+          controller.abort();
+          buffer = "";
+          return;
+        }
+        for (const frame of frames) {
+          if (frame.length > maxBufferCharacters) { controller.abort(); return; }
+          const data = frame.split(/\r?\n/)
+            .filter(line => line.startsWith("data:"))
+            .map(line => line.slice(5).replace(/^ /, ""))
+            .join("\n");
+          if (!data || data === "[DONE]") continue;
+          try { onEvent(JSON.parse(data)); } catch {}
+        }
       })
         .catch(() => {})
         .finally(() => {
@@ -223,7 +241,6 @@ export function createRunSseStreamController(maxBufferCharacters = 1024 * 1024):
     clear: (runId) => {
       activeStreams.get(runId)?.abort();
       activeStreams.delete(runId);
-      buffers.delete(runId);
     },
     clearAll: () => {
       for (const controller of activeStreams.values()) controller.abort();

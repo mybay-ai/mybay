@@ -34,7 +34,7 @@ import { getStoredFileDiff } from "../../../services/runs/runFileSnapshots";
 import { isQuestionBridgeInstalling } from "../../../services/runs/questionBridgeInstaller";
 import { createConfiguredModelEvidence } from "../../../../shared/localModelEvidence";
 import { DEFAULT_RUN_LEASE_POLICY } from "../../../services/runs/runLease";
-import { createChatGroupRun, readChatGroupConfig, readChatGroupRun } from "../../../../shared/chatCollaboration";
+import { createChatGroupRun, readChatGroupConfig, readChatGroupRun, selectChatGroupPeers } from "../../../../shared/chatCollaboration";
 import { getA2AInternalUrl, normalizeA2AAgentName, normalizeA2APeerIds, supportsA2AByVersion } from "../../../../shared/a2aConfig";
 import { dbAdapter } from "../../../db";
 import { decrypt } from "../../../crypto";
@@ -42,6 +42,7 @@ import { readStoreCollections } from "../../../localStore";
 import { cancelMappedA2AGroupTasks } from "../../../services/a2aTaskCancel";
 import { cancelManagedRuntimeA2ATask, isManagedRuntimeA2APeer, isNativeA2APeer } from "../../../services/managedRuntimeA2A";
 import { a2aTrackingEnabled } from "../../../services/a2aRelayConfig";
+import { isA2AGroupTransportApplied } from "../../../services/a2aGroupReadiness";
 
 async function cancelRunGroupTasks(run: any, instance: any, req: AuthenticatedRequest) {
   const group = readChatGroupRun(run?.group_collaboration);
@@ -286,8 +287,19 @@ export function registerRunRoutes(router: Router) {
           return res.status(409).json({ success: false, error: "GROUP_ROOM_CONFIGURATION_STALE" });
         }
         const availableInstances = await dbAdapter.getInstances(req.user.id, req.user.role);
+        const ownerId = instance.user_id || instance.owner_id;
+        const ownedPeers = availableInstances.filter((peer: any) => ownerId && (peer.user_id || peer.owner_id) === ownerId);
+        const groupInstances = [instance, ...groupConfig.peerIds.map(peerId => ownedPeers.find((peer: any) => peer.id === peerId))];
+        if (groupInstances.some(row => !row) || !(await Promise.all(groupInstances.map(row => isA2AGroupTransportApplied(row)))).every(Boolean)) {
+          return res.status(409).json({
+            success: false,
+            code: "GROUP_ROOM_CONFIGURATION_STALE",
+            error: "GROUP_ROOM_CONFIGURATION_STALE",
+            message: "群聊成员未就绪，或任务跟踪配置尚未应用。请确认主持及所有成员正在运行，并已启用任务跟踪、应用最新协作配置。",
+          });
+        }
         const peers = groupConfig.peerIds.flatMap(peerId => {
-          const peer: any = availableInstances.find((candidate: any) => candidate.id === peerId);
+          const peer: any = ownedPeers.find((candidate: any) => candidate.id === peerId);
           if (!peer) return [];
           let peerConfig: any = {};
           try { peerConfig = typeof peer.config_json === "string" ? JSON.parse(peer.config_json) : (peer.config_json || {}); } catch {}
@@ -303,6 +315,7 @@ export function registerRunRoutes(router: Router) {
           runId,
           leader: { id, name: normalizeA2AAgentName(instance.name, config.a2aAgentName || id) },
           peers,
+          selectedPeerIds: selectChatGroupPeers(content, peers),
           maxRounds: groupConfig.maxRounds,
         });
         if (!groupCollaboration) return res.status(409).json({ success: false, error: "GROUP_ROOM_CONFIGURATION_STALE" });

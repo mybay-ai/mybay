@@ -1,3 +1,4 @@
+import { encodeRunSseEvent } from "../../../../shared/runSseProtocol";
 import { Router, Response } from "express";
 import { AuthenticatedRequest, authenticateToken } from "../../../middlewares/auth";
 import { getEventsFromCache, requestRunsAPI, runsEventsEmitter } from "../../../services/runsReconciler";
@@ -119,7 +120,7 @@ export function registerRunEventRoutes(router: Router) {
     const handler = (evt: { id: number; event: string; data: string }) => {
       if (terminalSent) return;
 
-      writeAndFlushSse(res, `id: ${evt.id}\nevent: ${evt.event}\ndata: ${evt.data}\n\n`);
+      writeAndFlushSse(res, encodeRunSseEvent(evt));
 
       if (evt.event === 'status') {
         try {
@@ -162,14 +163,14 @@ export function registerRunEventRoutes(router: Router) {
 
       if (!isNaN(lastEventId)) {
         const { events: cachedEvts, recoveryOutOfBounds } = getEventsFromCache(runId, lastEventId);
-        if (recoveryOutOfBounds) {
+        if (recoveryOutOfBounds || (cachedEvts.length === 0 && Number(run.last_event_seq) > lastEventId)) {
           writeAndFlushSse(res, `event: error\ndata: ${JSON.stringify({ errorCode: "RECOVERY_OUT_OF_BOUNDS" })}\n\n`);
           res.end();
           cleanup();
           return;
         }
         for (const evt of cachedEvts) {
-          writeAndFlushSse(res, `id: ${evt.id}\nevent: ${evt.event}\ndata: ${evt.data}\n\n`);
+          writeAndFlushSse(res, encodeRunSseEvent(evt));
           if (evt.event === 'status') {
             try {
               const parsed = JSON.parse(evt.data);

@@ -48,7 +48,7 @@ function indexLatestActivityByPeer(activities: GroupRunActivity[]) {
 
 export function shouldPollGroupActivities(group: ChatGroupRun, activities: GroupRunActivity[]) {
   const byPeer = indexLatestActivityByPeer(activities);
-  return group.peers.some(peer => {
+  return group.peers.filter(peer => !group.selectedPeerIds || group.selectedPeerIds.includes(peer.id)).some(peer => {
     const activity = byPeer.get(peer.id);
     return !activity || !TERMINAL_ACTIVITY_STATUSES.has(activity.status);
   });
@@ -105,7 +105,7 @@ export function ChatGroupRunSummary({ instanceId, value, hostTerminal = false, r
       attempts += 1;
       setRefreshing(true);
       try {
-        const response = await api.get<{ activities?: GroupRunActivity[] }>(`/api/instances/${encodeURIComponent(instanceId)}/a2a/activity?limit=100`, { signal: controller.signal });
+        const response = await api.get<{ activities?: GroupRunActivity[] }>(`/api/instances/${encodeURIComponent(instanceId)}/a2a/activity?limit=100&roomContextId=${encodeURIComponent(group.contextId)}`, { signal: controller.signal });
         const matching = (response.activities || []).filter(activity => activity.contextId === group.contextId);
         setActivities(matching);
         setLoadFailed(false);
@@ -142,10 +142,11 @@ export function ChatGroupRunSummary({ instanceId, value, hostTerminal = false, r
       <div className="grid gap-1.5 p-2 sm:grid-cols-2">
         {group.peers.map(peer => {
           const activity = byPeer.get(peer.id);
+          const selected = !group.selectedPeerIds || group.selectedPeerIds.includes(peer.id);
           const peerFiles = extractGroupActivityFiles(activity?.result);
           const completed = activity?.status === "completed";
           const failed = Boolean(activity && TERMINAL_ACTIVITY_STATUSES.has(activity.status) && !completed);
-          const notDispatched = !activity && pollExhausted && hostTerminal && !loadFailed;
+          const notDispatched = selected && !activity && pollExhausted && hostTerminal && !loadFailed;
           const canPrepareRecovery = Boolean(activity && onPrepareRecovery && canReviewA2ARecovery({ direction: "outbound", peerId: activity.peerId, status: activity.status }));
           const canPrepareMissing = Boolean(notDispatched && onPrepareMissing);
           const StatusIcon = completed ? CheckCircle2 : failed || notDispatched ? XCircle : Clock3;
@@ -158,7 +159,7 @@ export function ChatGroupRunSummary({ instanceId, value, hostTerminal = false, r
                 {activity && <span className="shrink-0 text-[10px] font-normal text-content-muted">{t(`a2a.activityStatuses.${activity.status}`, { defaultValue: activity.status })} · {duration}</span>}
                 {notDispatched && <span className="shrink-0 text-[10px] font-normal text-rose-600 dark:text-rose-300">{t("chatWorkspace.groupRunNotDispatched")}</span>}
               </div>
-              <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-content-muted">{activity?.result || activity?.failureReason || t(notDispatched ? "chatWorkspace.groupRunNotDispatchedHint" : activity ? "chatWorkspace.groupRunNoResult" : "chatWorkspace.groupRunNoActivity")}</p>
+              <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-content-muted">{activity?.result || activity?.failureReason || t(!selected ? "chatWorkspace.groupRunNotSelected" : notDispatched ? "chatWorkspace.groupRunNotDispatchedHint" : activity ? "chatWorkspace.groupRunNoResult" : "chatWorkspace.groupRunNoActivity")}</p>
               {peerFiles.length > 0 && <div className="mt-1.5 flex flex-wrap gap-1.5">{peerFiles.map(file => (
                 <a key={file.path} href={buildInstanceFilesNavigationUrl(peer.id)} title={file.path} className="inline-flex max-w-full items-center gap-1 rounded-md border border-violet-200 bg-violet-50 px-2 py-1 text-[11px] font-semibold text-violet-700 hover:bg-violet-100 dark:border-violet-400/25 dark:bg-violet-950/20 dark:text-violet-200 dark:hover:bg-violet-950/40">
                   <FileText className="h-3 w-3 shrink-0" /><span className="truncate">{file.name}</span><span className="sr-only">{t("chatWorkspace.groupRunOpenPeerFile")}</span><ExternalLink className="h-3 w-3 shrink-0" />

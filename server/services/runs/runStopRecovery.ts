@@ -98,7 +98,9 @@ export async function recoverStoppingRun(
     timeoutMs: 10_000,
   });
   const durationMs = (dependencies.now?.() ?? Date.now()) - probeStartedAt;
-  const recovery = resolveStopRecoveryWindow(run.stop_attempts, run.stop_requested_at, now);
+  // Once the Runtime accepts a stop, poll its terminal state within the time
+  // window. Poll frequency must not exhaust the dispatch retry budget.
+  const recovery = resolveStopRecoveryWindow(run.stop_accepted_at ? 0 : run.stop_attempts, run.stop_requested_at, now);
 
   if (statusResult.ok && statusResult.json) {
     const convergence = await convergeRunTerminalProbe(
@@ -125,6 +127,8 @@ export async function recoverStoppingRun(
     return;
   }
 
+  if (run.stop_accepted_at) return;
+
   const cancellation = resolveRunCancellationCapability(capabilities);
   if (cancellation.supported === false) {
     await dependencies.completeRun(run.id, "failed", "", cancellation.errorCode);
@@ -148,6 +152,11 @@ export async function recoverStoppingRun(
       await dependencies.completeRun(run.id, "cancelled", "", "CANCELLED_UPSTREAM");
     }
     return;
+  }
+  if (stopResult.ok) {
+    failOnLeaseLoss(await dependencies.updateRun(run.id, {
+      stop_accepted_at: new Date(dependencies.now?.() ?? Date.now()).toISOString(),
+    }, dependencies.ownerId));
   }
 
   dependencies.log?.({

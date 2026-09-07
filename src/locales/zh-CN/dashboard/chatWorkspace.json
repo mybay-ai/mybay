@@ -893,6 +893,7 @@
   "groupRoomRequiresAgent": "协作房间需要使用 Agent 模式。退出群聊后才能切换为直接回答。",
   "groupRunTitle": "群聊执行 · {{count}} 位 Agent",
   "groupRunNoActivity": "尚未记录到该成员的协作调用",
+  "groupRunNotSelected": "本轮未选择该成员",
   "groupRunNoResult": "协作调用已记录，暂无可显示结果",
   "groupRunNotDispatched": "未派发",
   "groupRunNotDispatchedHint": "主持任务已经结束，但没有发现发给该成员的调用记录。",

@@ -4,37 +4,51 @@
   "title": "MyBay Runtime Certification Evidence",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "runtime", "checks"],
+  "required": ["schemaVersion", "runtime", "environments", "artifacts", "checks"],
   "properties": {
-    "schemaVersion": {
-      "const": 2
-    },
+    "schemaVersion": { "const": 2 },
     "runtime": {
       "type": "object",
       "additionalProperties": false,
       "required": ["type", "providerKey", "contractVersion", "version", "imageRef"],
       "properties": {
-        "type": {
-          "type": "string",
-          "pattern": "^[a-z0-9][a-z0-9._-]{0,79}$"
-        },
-        "providerKey": {
-          "type": "string",
-          "pattern": "^[a-z0-9][a-z0-9._-]{0,79}$"
-        },
-        "contractVersion": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "version": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 128
-        },
-        "imageRef": {
-          "type": "string",
-          "minLength": 3,
-          "maxLength": 512
+        "type": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,79}$" },
+        "providerKey": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,79}$" },
+        "contractVersion": { "type": "integer", "minimum": 1 },
+        "version": { "type": "string", "minLength": 1 },
+        "imageRef": { "type": "string", "minLength": 1 }
+      }
+    },
+    "environments": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "platform", "platformVersion", "architecture", "containerEngine", "containerEngineVersion", "runtimeVersion", "mybayVersion", "headless"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,79}$" },
+          "platform": { "enum": ["windows", "linux", "macos"] },
+          "platformVersion": { "type": ["string", "null"] },
+          "architecture": { "type": ["string", "null"] },
+          "containerEngine": { "enum": ["docker-desktop", "docker-engine", "other"] },
+          "containerEngineVersion": { "type": ["string", "null"] },
+          "runtimeVersion": { "type": "string", "minLength": 1 },
+          "mybayVersion": { "type": "string", "minLength": 1 },
+          "headless": { "type": "boolean" }
+        }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1, "maxLength": 1000 },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
         }
       }
     },
@@ -45,63 +59,15 @@
         "additionalProperties": false,
         "required": ["requirementId", "status", "scope", "observedAt", "environment", "evidenceRefs"],
         "properties": {
-          "requirementId": {
-            "enum": [
-              "runtime-install",
-              "task-submit",
-              "streaming-output",
-              "cancellation",
-              "session-recovery",
-              "file-artifact",
-              "usage-reporting",
-              "tool-events",
-              "restart-recovery",
-              "control-plane-deploy",
-              "upgrade",
-              "rollback",
-              "security",
-              "backup-restore",
-              "real-e2e"
-            ]
-          },
-          "status": {
-            "enum": ["passed", "failed"]
-          },
-          "scope": {
-            "enum": ["contract", "runtime", "e2e"]
-          },
-          "observedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "validUntil": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "environment": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 200
-          },
-          "command": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 1000
-          },
-          "evidenceRefs": {
-            "type": "array",
-            "minItems": 1,
-            "uniqueItems": true,
-            "items": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 1000
-            }
-          },
-          "note": {
-            "type": "string",
-            "maxLength": 2000
-          }
+          "requirementId": { "enum": ["runtime-install", "task-submit", "streaming-output", "cancellation", "session-recovery", "file-artifact", "usage-reporting", "tool-events", "restart-recovery", "control-plane-deploy", "upgrade", "rollback", "security", "backup-restore", "real-e2e"] },
+          "status": { "enum": ["passed", "failed"] },
+          "scope": { "enum": ["contract", "runtime", "e2e"] },
+          "observedAt": { "type": "string", "format": "date-time" },
+          "validUntil": { "type": "string", "format": "date-time" },
+          "environment": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "command": { "type": "string", "minLength": 1, "maxLength": 1000 },
+          "evidenceRefs": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 1000 } },
+          "note": { "type": "string", "maxLength": 2000 }
         }
       }
     }

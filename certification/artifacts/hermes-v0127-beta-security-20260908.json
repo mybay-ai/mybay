@@ -1,0 +1,159 @@
+{
+  "schemaVersion": 1,
+  "artifactType": "runtime-v0127-beta-security-live-evidence",
+  "generatedAt": "2026-09-07T17:04:47.578Z",
+  "sanitization": {
+    "identifiers": "SHA-256 references only",
+    "credentials": "values, cookies, tokens, passwords, encryption material, prompts, and tool commands omitted",
+    "fileContent": "only fixed harmless expected text, size, and SHA-256 retained"
+  },
+  "environment": {
+    "host": "Windows 10 Pro with Docker Desktop 29.7.2",
+    "application": "MyBay OSS 0.1.27 isolated production build on localhost:4337",
+    "runtime": {
+      "type": "hermes",
+      "providerKey": "hermes-core",
+      "contractVersion": 1,
+      "image": "nousresearch/hermes-agent:v2026.8.27",
+      "healthReportedVersion": "0.20.6"
+    },
+    "instanceRef": "sha256:04cc9948540838a572e61a69efc45baf452fda1b6bde2aac34fabce15b2017ed",
+    "containerRef": "sha256:868512a4378f3eb12a22a2bf94a34854792a53965b60054832fd3bb39174c3f9"
+  },
+  "observations": {
+    "sessionRecovery": {
+      "result": "passed",
+      "conversationRef": "sha256:a569efdf30963cc10805b0d1138b89e0612f9d09d0476d03792805a70c825ac8",
+      "nativeSessionRef": "sha256:336be6cf09c8e8eed2a6655a9cce9b06c92b4cbf54a7fdec38f479895f2391de",
+      "sameConversationUsedAfterControlledRuntimeRestart": true,
+      "mybayHistoryBridgedToPostRestartRun": true,
+      "harmlessFactsMatched": true,
+      "postRestartOutputSha256": "sha256:c5f7d27fd3cb273dbe12859f9fca6f3947775cb24be1332266d827cc43e6de6b"
+    },
+    "fileArtifact": {
+      "result": "passed",
+      "runRef": "sha256:d97e6db2ed64aeeeaba5b357230390313bb63cd9fa54e482c6545ac9100fd164",
+      "upstreamRunRef": "sha256:1cc5aba44fc4caa6a28aca1f8882fa52d87a372adfd2ca9478ff0267a3338bdf",
+      "terminalStatus": "completed",
+      "file": {
+        "path": "CERT_0918.txt",
+        "sizeBytes": 32,
+        "sha256": "891fe7d65cf789f1c08a2b3d20912b84935f5aed1cf85145ea2766d0d69e8c9c",
+        "expectedTwoLinesVerified": true
+      },
+      "browser": {
+        "fileCenterListed": true,
+        "previewMatchedBeforeRestart": true,
+        "previewMatchedAfterReload": true,
+        "previewMatchedAfterRuntimeRestart": true
+      },
+      "evidenceBoundary": "The task explicitly used terminal. Shell previews are intentionally excluded from automatic file_evidence, so persistence is established independently by the file-center product path and host SHA-256."
+    },
+    "usageReporting": {
+      "result": "passed",
+      "runRef": "sha256:d97e6db2ed64aeeeaba5b357230390313bb63cd9fa54e482c6545ac9100fd164",
+      "source": "runtime_terminal",
+      "counter": "snapshot",
+      "scope": "unknown",
+      "totalTokens": 24989,
+      "browserDisplayedTotalTokens": 24989,
+      "browserMatchesPersistedRun": true
+    },
+    "toolEvents": {
+      "result": "passed",
+      "runRef": "sha256:d97e6db2ed64aeeeaba5b357230390313bb63cd9fa54e482c6545ac9100fd164",
+      "stableStepRef": "sha256:761cc982ac7bab12a17f33a3cd13cfd92db5286926ed25729e0f4d0349df0fc7",
+      "eventSequence": {
+        "started": 9,
+        "completed": 10
+      },
+      "stableIdentifierAcrossLifecycle": true,
+      "startedStatus": "running",
+      "completedStatus": "completed",
+      "browserExecutionSummaryVisibleAfterReload": true,
+      "fileEvidenceConfirmed": false,
+      "fileEvidenceBoundary": "Expected for terminal tool events; arbitrary shell commands are not interpreted as trustworthy file mutations."
+    },
+    "restartRecovery": {
+      "result": "passed",
+      "operation": "Authenticated MyBay product action: restart",
+      "container": {
+        "containerRefBefore": "sha256:868512a4378f3eb12a22a2bf94a34854792a53965b60054832fd3bb39174c3f9",
+        "containerRefAfter": "sha256:868512a4378f3eb12a22a2bf94a34854792a53965b60054832fd3bb39174c3f9",
+        "identityPreserved": true,
+        "startedAtBefore": "2026-09-07T16:44:03.44445839Z",
+        "startedAtAfter": "2026-09-07T16:57:26.905426102Z",
+        "runningAfterRestart": true
+      },
+      "persistedState": {
+        "conversationRef": "sha256:a569efdf30963cc10805b0d1138b89e0612f9d09d0476d03792805a70c825ac8",
+        "nativeSessionRef": "sha256:336be6cf09c8e8eed2a6655a9cce9b06c92b4cbf54a7fdec38f479895f2391de",
+        "fileSha256Before": "891fe7d65cf789f1c08a2b3d20912b84935f5aed1cf85145ea2766d0d69e8c9c",
+        "fileSha256After": "891fe7d65cf789f1c08a2b3d20912b84935f5aed1cf85145ea2766d0d69e8c9c",
+        "filePreserved": true
+      },
+      "postRestartRun": {
+        "runRef": "sha256:06938a78d5b3e106b8c1acb6abcaddd9cfa87476660ad6a2f8bb9318fd188930",
+        "upstreamRunRef": "sha256:874cdc83035f5a0da354806cbe30205742fd9537c2f9d62673641a61c6edcc6e",
+        "startedAt": "2026-09-07T16:58:59.454Z",
+        "completedAt": "2026-09-07T16:59:18.027Z",
+        "terminalStatus": "completed",
+        "totalTokens": 13314,
+        "expectedOutputVerified": true
+      },
+      "isolation": {
+        "mainControlStartedAtUnchanged": "2026-09-07T07:20:24.849219208Z",
+        "otherAgentContainersRestarted": 0
+      }
+    },
+    "security": {
+      "result": "passed",
+      "authentication": {
+        "anonymousProtectedHttpStatuses": {
+          "instances": 401,
+          "credentials": 401,
+          "systemSettings": 401,
+          "filePreview": 401
+        },
+        "authenticatedBrowserSessionWorked": true
+      },
+      "filePolicy": {
+        "blockedHttpStatuses": {
+          "auth.json": 403,
+          ".env": 403,
+          "../isolated.sqlite": 403,
+          "sessions": 403
+        },
+        "ordinaryArtifactPreviewHttpStatus": 200
+      },
+      "container": {
+        "privileged": false,
+        "capAdd": [
+          "CHOWN",
+          "SETUID",
+          "SETGID"
+        ],
+        "dockerSocketMounted": false,
+        "mountDestinations": [
+          "/opt/data"
+        ],
+        "ipcMode": "private",
+        "cgroupnsMode": "private",
+        "hostPidNamespace": false,
+        "memoryLimitBytes": 1073741824,
+        "nanoCpus": 1000000000,
+        "pidsLimit": 512,
+        "hostBinding": "127.0.0.1:10108"
+      },
+      "verification": {
+        "securityTestFilesPassed": 24,
+        "securityTestsPassed": 127
+      },
+      "boundary": "The ordinary Hermes Runtime is not asserted to be a full sandbox. This evidence covers the authenticated local control plane, fail-closed file policy, targeted policy tests, and deployed container restrictions."
+    }
+  },
+  "limitations": [
+    "This artifact does not cover cancellation, upgrade, rollback, or backup-restore; those remain separate certification requirements.",
+    "The Runtime reports usage scope as unknown and MyBay preserves that limitation."
+  ]
+}

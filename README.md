@@ -17,7 +17,7 @@ English · [简体中文](./README.zh-CN.md)
 
 </div>
 
-> **Current release: `v0.1.27.1`.** Public interfaces, Runtime adapters, deployment details, and upgrade behavior may still change during the 0.x series.
+> **Current release: `v0.1.28`.** Public interfaces, Runtime adapters, deployment details, and upgrade behavior may still change during the 0.x series.
 
 ![MyBay Open Source overview](./docs/images/main-open-source.png)
 

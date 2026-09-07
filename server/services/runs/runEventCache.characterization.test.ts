@@ -43,10 +43,10 @@ describe("run event cache characterization", () => {
     ]);
   });
 
-  it("replaces payloads larger than 32KB with the fixed safe summary", () => {
+  it("replaces oversized structured payloads with the fixed safe summary", () => {
     vi.spyOn(chatRepo, "updateChatRun").mockResolvedValue(true);
 
-    const result = addEventToCache(runId, "text", "x".repeat(32 * 1024 + 1));
+    const result = addEventToCache(runId, "step", "x".repeat(32 * 1024 + 1));
 
     expect(result.added).toBe(true);
     expect(JSON.parse(result.event?.data || "{}")).toEqual({
@@ -62,8 +62,8 @@ describe("run event cache characterization", () => {
       addEventToCache(runId, "text", String(index));
     }
 
-    expect(getEventsFromCache(runId, 0).events).toHaveLength(200);
-    expect(getEventsFromCache(runId, 0).events[0].id).toBe(3);
+    expect(getEventsFromCache(runId, 0)).toEqual({ events: [], recoveryOutOfBounds: true });
+    expect(getEventsFromCache(runId, 2).events).toHaveLength(200);
     expect(getEventsFromCache(runId, 1)).toEqual({ events: [], recoveryOutOfBounds: true });
     expect(getEventsFromCache(runId, 2).events[0].id).toBe(3);
   });

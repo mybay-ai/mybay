@@ -1,5 +1,6 @@
 import { a2aRecoveryTaskPolicy } from "../../shared/a2aRecovery";
 import { chatGroupSystemPolicy } from "../../shared/chatCollaboration";
+import { startA2AGroupCancellationWorker, stopA2AGroupCancellationWorker } from "./a2aGroupCancellation";
 import { mergeLocalFileChanges } from "../../shared/localRunFileEvidence";
 import { confirmFileChangesWithSnapshots } from "./runs/runFileEvidence";
 import { createLocalTimelineCollector } from "../../shared/localRunTimeline";
@@ -127,6 +128,8 @@ const runReconcileScheduler = createRunReconcileScheduler({
     },
   }),
   emitClaimed: (run) => {
+    // Restore the persisted event frontier before emitting anything in a new process.
+    initRunSequence(run.id, Number(run.last_event_seq) || 0);
     // Running tasks are reclaimed for status polling after each short lease.
     // Only the initial queued claim belongs in the user-visible timeline.
     if (run.status !== "queued") return;
@@ -400,11 +403,16 @@ export async function startRunsReconciler(
   intervalMs = 5000,
   options: StartRunReconcileSchedulerOptions = {}
 ) {
-  return runReconcileScheduler.start(intervalMs, options);
+  const result = await runReconcileScheduler.start(intervalMs, options);
+  if ((process.env.NODE_ENV !== "test" && process.env.VITEST !== "true") || options.allowInTest) {
+    startA2AGroupCancellationWorker();
+  }
+  return result;
 }
 
 export function stopRunsReconciler() {
   runReconcileScheduler.stop();
+  stopA2AGroupCancellationWorker();
 }
 function normalizeDispatchError(statusCode: number, rawError?: unknown): string {
   return normalizeRunDispatchError(statusCode, rawError);
@@ -1019,6 +1027,7 @@ export async function processSingleRun(
       return;
     }
 
+    const outputBeforeProbe = tracker.lastPartialOutput;
     const startTime = Date.now();
     const statusRes = await requestRunsForRun({
       instanceId: run.instance_id,
@@ -1114,9 +1123,17 @@ export async function processSingleRun(
         });
       } else {
         // Stream / parse partial outputs incrementally
-        const partialOutput = resolvePartialOutput(tracker.lastPartialOutput, statusRes.json.partial_output);
+        // A live delta observed while the unversioned status request was in flight
+        // is newer than that snapshot. Reconcile it on the next probe.
+        const partialOutput = resolvePartialOutput(
+          tracker.lastPartialOutput,
+          tracker.lastPartialOutput === outputBeforeProbe ? statusRes.json.partial_output : undefined,
+        );
         const newOutput = partialOutput.newOutput;
         if (partialOutput.changed) {
+          if (!newOutput.startsWith(tracker.lastPartialOutput)) {
+            addEventToCache(run.id, "error", JSON.stringify({ errorCode: "RECOVERY_OUT_OF_BOUNDS" }));
+          }
           tracker.lastPartialOutput = newOutput;
           if (partialOutput.delta) {
             addEventToCache(run.id, "text", partialOutput.delta);

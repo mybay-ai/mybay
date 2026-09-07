@@ -62,7 +62,7 @@ describe("run probe controller decisions", () => {
       newOutput: "hello world",
       delta: " world",
     });
-    expect(resolvePartialOutput("hello", "replacement").delta).toBe("replacement");
+    expect(resolvePartialOutput("hello", "replacement").delta).toBe("");
     expect(resolvePartialOutput("hello", "hello").changed).toBe(false);
     expect(resolvePartialOutput("hello", undefined)).toEqual({
       hasPartialOutput: false,

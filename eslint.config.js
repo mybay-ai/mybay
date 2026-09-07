@@ -13,6 +13,7 @@ export default [
       "data/**",
       "dist/**",
       "node_modules/**",
+      "node_modules*/**",
       "release/**",
       "public/generated/**",
     ],

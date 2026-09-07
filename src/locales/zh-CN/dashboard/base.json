@@ -1512,7 +1512,7 @@
   "communitySupport": {
     "title": "开源社区与技术支持（MyBay Community）",
     "subtitle": "麦贝（MyBay）本地私有部署与 Agent 控制台",
-    "description": "麦贝是一个用于一键部署和轻量管理 Hermes Agent 容器实例的开源控制台。私有部署版本完全由用户自治配置 API Key 与通讯渠道。如在部署或使用中遇到问题，欢迎查阅本地指南或在开源仓库交流。",
+    "description": "麦贝是一个用于部署和运行受支持 Agent Runtime 实例的开源控制面。私有部署版本完全由用户自治配置 API Key 与通讯渠道。如在部署或使用中遇到问题，欢迎查阅本地指南或在开源仓库交流。",
     "guides": {
       "title": "本地配置指引",
       "description": "飞书/钉钉/Telegram 渠道 Token 申请与 API 密钥配置教程"

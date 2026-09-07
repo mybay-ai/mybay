@@ -944,7 +944,7 @@
         "id": "purpose",
         "category": "quickstart",
         "question": "麦贝开源版是什么？",
-        "answer": "麦贝开源版是按 AGPL-3.0-only 发布的自托管 AI Agent 控制面。它面向单管理员环境，在您自己的机器上通过 Docker 管理 Hermes Agent，不提供云端账号、订阅套餐、计费或多租户服务。",
+        "answer": "麦贝开源版是按 AGPL-3.0-only 发布的自托管、Runtime-neutral AI Agent 控制面。它面向单管理员环境，在您自己的机器上通过 Docker 管理受支持的 Agent Runtime，不提供云端账号、订阅套餐、计费或多租户服务。",
         "tags": [
           "Local",
           "开源",
@@ -1060,10 +1060,10 @@
     "timelineTip": "正式版",
     "releases": [
       {
-        "version": "v0.1.27.1",
+        "version": "v0.1.28",
         "date": "2026.09.07",
         "badge": "正式版",
-        "summary": "麦贝开源版 v0.1.27.1 完成 Pi Runtime 接入，强化 A2A 与文件流程，并完善 Agent 部署、身份、上下文和响应式聊天体验。",
+        "summary": "麦贝开源版 v0.1.28 完成流式恢复、取消、群组协作与恢复 Runtime 状态收敛闭环，覆盖当前 Hermes 和 Pi 控制面链路。",
         "sections": [
           {
             "title": "A2A 协作闭环",

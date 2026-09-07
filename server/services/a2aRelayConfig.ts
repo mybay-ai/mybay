@@ -15,3 +15,6 @@ export function a2aRelayUrl(instanceId: string, peerId: string) {
   if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(host)) throw Error('A2A_RELAY_HOST_INVALID');
   return `http://${host}:3000/internal/a2a/${encodeURIComponent(instanceId)}/${encodeURIComponent(peerId)}`;
 }
+export function a2aRelayRevision(peers: Array<{ id: string; url: string; token: string }>) {
+  return crypto.createHash('sha256').update(JSON.stringify([...peers].sort((a, b) => a.id.localeCompare(b.id)))).digest('hex');
+}

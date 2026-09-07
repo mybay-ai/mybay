@@ -8,6 +8,7 @@ export type RuntimeCertificationEvidenceScope = "contract" | "runtime" | "e2e";
 export type RuntimeCertificationCheckStatus = "passed" | "failed";
 export type RuntimeCertificationRequirementStatus = "passed" | "failed" | "missing" | "invalid";
 export type RuntimeVerifiedCertificationLevel = RuntimeCertificationLevel | "unverified";
+export type RuntimeCertificationPlatform = "windows" | "linux" | "macos";
 
 export type RuntimeCertificationRequirementId =
   | "runtime-install"
@@ -55,7 +56,26 @@ export interface RuntimeCertificationEvidenceBundle {
     readonly version: string;
     readonly imageRef: string;
   };
+  readonly environments: readonly RuntimeCertificationEnvironment[];
+  readonly artifacts: readonly RuntimeCertificationArtifact[];
   readonly checks: readonly RuntimeCertificationEvidenceCheck[];
+}
+
+export interface RuntimeCertificationEnvironment {
+  readonly id: string;
+  readonly platform: RuntimeCertificationPlatform;
+  readonly platformVersion: string | null;
+  readonly architecture: string | null;
+  readonly containerEngine: "docker-desktop" | "docker-engine" | "other";
+  readonly containerEngineVersion: string | null;
+  readonly runtimeVersion: string;
+  readonly mybayVersion: string;
+  readonly headless: boolean;
+}
+
+export interface RuntimeCertificationArtifact {
+  readonly path: string;
+  readonly sha256: string;
 }
 
 export interface RuntimeCertificationRequirementResult extends RuntimeCertificationRequirement {
@@ -71,6 +91,7 @@ export interface RuntimeCertificationReport {
   readonly declaredLevel: RuntimeCertificationLevel;
   readonly verifiedLevel: RuntimeVerifiedCertificationLevel;
   readonly publicationStatus: "spec-only" | "verified" | "pending" | "invalid";
+  readonly environments: readonly RuntimeCertificationEnvironment[];
   readonly requirements: readonly RuntimeCertificationRequirementResult[];
   readonly errors: readonly string[];
 }
@@ -263,7 +284,7 @@ function levelRank(level: RuntimeCertificationLevel | "unverified"): number {
 export function evaluateRuntimeCertification(
   definition: RuntimeDefinition,
   bundle?: RuntimeCertificationEvidenceBundle,
-  options: { readonly now?: number } = {},
+  options: { readonly now?: number; readonly expectedMybayVersion?: string } = {},
 ): RuntimeCertificationReport {
   const errors: string[] = [];
   const declaredLevel = definition.release.certificationLevel;
@@ -278,6 +299,7 @@ export function evaluateRuntimeCertification(
       declaredLevel,
       verifiedLevel: "spec-only",
       publicationStatus: errors.length > 0 ? "invalid" : "spec-only",
+      environments: Object.freeze([]),
       requirements: Object.freeze([]),
       errors: Object.freeze(errors),
     });
@@ -292,6 +314,20 @@ export function evaluateRuntimeCertification(
       || bundle.runtime.imageRef !== `${definition.runtime.image}:${definition.runtime.tag}`) {
       runtimeBindingMatches = false;
       errors.push("Certification evidence Runtime Binding does not match the catalog.");
+    }
+    if (!Array.isArray(bundle.environments) || bundle.environments.length === 0) {
+      errors.push("Certification evidence must identify at least one structured environment.");
+    }
+    const environmentIds = new Set(bundle.environments?.map((environment) => environment.id));
+    if (environmentIds.size !== (bundle.environments?.length ?? 0)) {
+      errors.push("Certification evidence environment ids must be unique.");
+    }
+    if (!Array.isArray(bundle.artifacts) || bundle.artifacts.length === 0) {
+      errors.push("Certification evidence must include retained artifact hashes.");
+    }
+    if (options.expectedMybayVersion
+      && !bundle.environments?.some((environment) => environment.mybayVersion.replace(/^v/i, "") === options.expectedMybayVersion?.replace(/^v/i, ""))) {
+      errors.push(`Certification evidence does not cover MyBay ${options.expectedMybayVersion}.`);
     }
   }
 
@@ -326,6 +362,7 @@ export function evaluateRuntimeCertification(
     declaredLevel,
     verifiedLevel: verified,
     publicationStatus,
+    environments: Object.freeze([...(bundle?.environments ?? [])]),
     requirements,
     errors: Object.freeze(errors),
   });

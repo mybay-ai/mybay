@@ -893,6 +893,7 @@
   "groupRoomRequiresAgent": "Collaboration rooms require Agent mode. Leave the group before switching to Direct.",
   "groupRunTitle": "Group run · {{count}} Agents",
   "groupRunNoActivity": "No collaboration call was recorded for this member",
+  "groupRunNotSelected": "This member was not selected for this turn",
   "groupRunNoResult": "The collaboration call was recorded without a displayable result",
   "groupRunNotDispatched": "Not dispatched",
   "groupRunNotDispatchedHint": "The host run ended without a recorded call to this member.",

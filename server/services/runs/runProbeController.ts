@@ -82,7 +82,8 @@ export function resolvePartialOutput(previousOutput: string, upstreamPartialOutp
     hasPartialOutput,
     changed: true,
     newOutput,
-    delta: newOutput.startsWith(previousOutput) ? newOutput.substring(previousOutput.length) : newOutput,
+    // A replacement is a snapshot, never an append delta.
+    delta: newOutput.startsWith(previousOutput) ? newOutput.substring(previousOutput.length) : "",
   };
 }
 

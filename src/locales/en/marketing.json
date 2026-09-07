@@ -944,7 +944,7 @@
         "id": "purpose",
         "category": "quickstart",
         "question": "What is MyBay Open Source?",
-        "answer": "MyBay Open Source is a self-hosted AI Agent control plane distributed under AGPL-3.0-only. It is designed for one administrator and manages Hermes Agent through Docker on your own machine. It does not provide cloud accounts, subscription plans, billing, or multi-tenant services.",
+        "answer": "MyBay Open Source is a self-hosted, Runtime-neutral AI Agent control plane distributed under AGPL-3.0-only. It is designed for one administrator and operates supported Agent runtimes through Docker on your own machine. It does not provide cloud accounts, subscription plans, billing, or multi-tenant services.",
         "tags": [
           "Local",
           "Open source",
@@ -1060,10 +1060,10 @@
     "timelineTip": "Stable release",
     "releases": [
       {
-        "version": "v0.1.27.1",
+        "version": "v0.1.28",
         "date": "2026.09.07",
         "badge": "Stable",
-        "summary": "MyBay Open Source v0.1.27.1 completes the Pi Runtime integration, hardens A2A and file workflows, and refines Agent deployment, identity, context, and responsive chat UX.",
+        "summary": "MyBay Open Source v0.1.28 closes streaming recovery, cancellation, group collaboration, and restored Runtime convergence across the current Hermes and Pi control-plane paths.",
         "sections": [
           {
             "title": "A2A collaboration closure",

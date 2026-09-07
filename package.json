@@ -1,6 +1,6 @@
 {
     "name": "mybay-local",
-    "version": "0.1.27.1",
+    "version": "0.1.28",
     "description": "A local-first, self-hosted control plane for managing Hermes Agent instances.",
     "license": "AGPL-3.0-only",
     "repository": {
@@ -22,6 +22,7 @@
         "runtime:build": "tsx scripts/runtime-catalog.ts --write && tsx scripts/runtime-certification.ts --write",
         "runtime:certification": "tsx scripts/runtime-certification.ts",
         "runtime:certify": "tsx scripts/runtime-certification.ts --strict",
+        "release:gate": "npm run check && npm run runtime:certify",
         "docs:check": "tsx scripts/docs-build.ts",
         "docs:build": "tsx scripts/docs-build.ts --write",
         "docs:test": "vitest run src/lib/docs",

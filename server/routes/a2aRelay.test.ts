@@ -23,10 +23,27 @@ beforeEach(() => {
   state.managedSend.mockResolvedValue(new Response());
 });
 afterEach(() => { vi.unstubAllEnvs(); vi.clearAllMocks(); });
+const FETCH_FORBIDDEN_PORTS = new Set([
+  1, 7, 9, 11, 13, 15, 17, 19, 20, 21, 22, 23, 25, 37, 42, 43, 53, 69, 77, 79, 87, 95,
+  101, 102, 103, 104, 109, 110, 111, 113, 115, 117, 119, 123, 135, 137, 139, 143, 161, 179,
+  389, 427, 465, 512, 513, 514, 515, 526, 530, 531, 532, 540, 548, 554, 556, 563, 587, 601,
+  636, 989, 990, 993, 995, 1719, 1720, 1723, 2049, 3659, 4045, 5060, 5061, 6000, 6566,
+  6665, 6666, 6667, 6668, 6669, 6697, 10080,
+]);
+async function listenOnFetchSafePort(app: ReturnType<typeof express>) {
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const server = app.listen(0);
+    await new Promise<void>(resolve => server.once('listening', resolve));
+    const port = (server.address() as any).port as number;
+    if (!FETCH_FORBIDDEN_PORTS.has(port)) return { server, port };
+    await new Promise<void>(resolve => server.close(() => resolve()));
+  }
+  throw new Error('Unable to allocate a Fetch-safe test port');
+}
 async function serve(test: (url: string) => Promise<void>) {
   const app=express(); app.use(express.json()); app.use('/internal/a2a', createA2ARelayRouter());
-  const server=app.listen(0); await new Promise<void>(resolve=>server.once('listening',resolve));
-  try { await test(`http://127.0.0.1:${(server.address() as any).port}/internal/a2a/caller/peer`); }
+  const { server, port } = await listenOnFetchSafePort(app);
+  try { await test(`http://127.0.0.1:${port}/internal/a2a/caller/peer`); }
   finally { server.closeAllConnections(); await new Promise<void>(resolve=>server.close(()=>resolve())); }
 }
 const body = { jsonrpc: '2.0', id: 'task-one', method: 'SendMessage', params: { message: { contextId: 'ctx-one' } } };

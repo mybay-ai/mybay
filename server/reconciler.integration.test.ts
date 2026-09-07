@@ -29,7 +29,7 @@ vi.mock("./infrastructure/traefik/traefikConfig", () => ({
 }));
 vi.mock("./services/instanceCleanup", () => ({ cleanupInstanceResources: state.cleanupInstanceResources, compensateDeployment: state.compensateDeployment }));
 
-import { startReconciler, stopReconciler } from "./reconciler";
+import { resolveRecoveryAccessCheck, shouldPromoteRecoveredInstance, startReconciler, stopReconciler } from "./reconciler";
 
 describe("local Docker reconciler lifecycle", () => {
   beforeEach(() => {
@@ -52,6 +52,31 @@ describe("local Docker reconciler lifecycle", () => {
   afterEach(() => {
     stopReconciler();
     vi.useRealTimers();
+  });
+
+  it("promotes a deployment-timeout instance after later readiness converges", () => {
+    expect(shouldPromoteRecoveredInstance("unhealthy", true, true)).toBe(true);
+    expect(shouldPromoteRecoveredInstance("unhealthy", false, true)).toBe(false);
+    expect(shouldPromoteRecoveredInstance("unhealthy", true, false)).toBe(false);
+  });
+
+  it("uses the published port for local recovery instead of a host-header proxy", () => {
+    const desktop = resolveRecoveryAccessCheck({
+      id: "local",
+      path: "local",
+      config_json: JSON.stringify({ deployment_mode: "desktop", host_port: 10109 }),
+    }, false);
+    expect(desktop.kind).toBe("direct");
+    expect(desktop.context.host_port).toBe(10109);
+
+    expect(resolveRecoveryAccessCheck({
+      id: "headless",
+      config_json: JSON.stringify({ enableDashboard: false }),
+    }, false).kind).toBe("disabled");
+    expect(resolveRecoveryAccessCheck({
+      id: "server",
+      config_json: JSON.stringify({ deployment_mode: "server" }),
+    }, true).kind).toBe("traefik");
   });
 
   it("updates a running DB instance when its local container is stopped", async () => {
