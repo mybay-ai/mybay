@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { chatGroupSystemPolicy, createChatGroupRun, readChatGroupConfig } from "./chatCollaboration";
+import { chatGroupSystemPolicy, createChatGroupRun, readChatGroupConfig, readChatGroupRun, selectChatGroupPeers } from "./chatCollaboration";
 
 describe("chat collaboration contracts", () => {
+  it('snapshots explicit mentions and preserves the selection when reading a saved run', () => {
+    const peers = [{ id: 'research', name: '研究' }, { id: 'review', name: '研究复核' }];
+    expect(selectChatGroupPeers('@研究复核 请检查', peers)).toEqual(['review']);
+    expect(selectChatGroupPeers('请大家协作', peers)).toEqual(['research', 'review']);
+    const run = createChatGroupRun({ runId: 'selected', leader: { id: 'host', name: 'Host' }, peers, maxRounds: 2, selectedPeerIds: ['review'] });
+    expect(readChatGroupRun(run)?.selectedPeerIds).toEqual(['review']);
+    expect(chatGroupSystemPolicy(run)).not.toContain('(ID: research)');
+  });
   it("normalizes a bounded group configuration", () => {
     expect(readChatGroupConfig({ mode: "group", peerIds: ["peer-1", "peer-1", "peer-2"], maxRounds: 9 }))
       .toEqual({ mode: "group", peerIds: ["peer-1", "peer-2"], maxRounds: 3 });

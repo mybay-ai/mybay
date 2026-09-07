@@ -70,7 +70,7 @@ describe("Runs reconciler lease lifecycle characterization", () => {
     vi.spyOn(chatRepo, "claimRuns")
       .mockImplementationOnce(async () => {
         order.push("acquire");
-        return [claimedRun("running", { upstream_run_id: "upstream-1" })];
+        return [claimedRun("running", { id: "lease-sequence-restart", upstream_run_id: "upstream-1", last_event_seq: 40 })];
       })
       .mockResolvedValue([]);
     vi.spyOn(chatRepo, "renewRunLease").mockResolvedValue(true);
@@ -97,6 +97,11 @@ describe("Runs reconciler lease lifecycle characterization", () => {
 
     expect(order.indexOf("acquire")).toBeLessThan(order.indexOf("persist-terminal"));
     expect(order.indexOf("persist-terminal")).toBeLessThan(order.indexOf("release"));
+    const sequenceWrites = vi.mocked(chatRepo.updateChatRun).mock.calls
+      .filter(call => call[0] === "lease-sequence-restart" && typeof call[1].last_event_seq === "number")
+      .map(call => Number(call[1].last_event_seq));
+    expect(sequenceWrites.length).toBeGreaterThan(0);
+    expect(Math.min(...sequenceWrites)).toBe(41);
   });
 
   it("persists the existing failure path before releasing the lease", async () => {

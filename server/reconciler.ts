@@ -197,6 +197,39 @@ function expectsContainerToRun(instance: any) {
   ].includes(String(instance.status));
 }
 
+export function shouldPromoteRecoveredInstance(
+  status: unknown,
+  gatewayReady: boolean,
+  proxyReady: boolean,
+) {
+  const recoverableStatuses = new Set([
+    "gateway_starting",
+    "container_starting",
+    "dashboard_ready",
+    "stopped",
+    "degraded",
+    "partial_running",
+    "unhealthy",
+  ]);
+  return recoverableStatuses.has(String(status)) && gatewayReady && proxyReady;
+}
+
+export function resolveRecoveryAccessCheck(instance: any, isTraefik: boolean) {
+  let config: any = {};
+  try {
+    config = typeof instance?.config_json === "string"
+      ? JSON.parse(instance.config_json || "{}")
+      : (instance?.config_json || {});
+  } catch {}
+  const context = buildDeploymentContext(instance, config);
+  const deploymentMode = String(config.deployment_mode || process.env.DEPLOYMENT_MODE || "desktop").toLowerCase();
+  if (context.enableDashboard === false) return { kind: "disabled" as const, context, deploymentMode };
+  if (deploymentMode === "desktop" || deploymentMode === "lan") {
+    return { kind: "direct" as const, context, deploymentMode };
+  }
+  return { kind: isTraefik ? "traefik" as const : "host-header" as const, context, deploymentMode };
+}
+
 function getPersistedAutoHealAttempts(instance: any) {
   const persisted = Number(instance?.metadata?.recovery?.container_start_attempts || 0);
   return Math.max(autoHealAttempts.get(instance.id) || 0, Number.isFinite(persisted) ? persisted : 0);
@@ -580,26 +613,32 @@ export async function startReconciler(intervalMs: number = 60000, options: Recon
                         channel_status: probeRes.channel_status
                       };
 
-                      const isStuckStatus = (
-                        currentInstance.status === "gateway_starting" || 
-                        currentInstance.status === "container_starting" || 
-                        currentInstance.status === "dashboard_ready" ||
-                        currentInstance.status === "stopped" ||
-                        currentInstance.status === "degraded" ||
-                        currentInstance.status === "partial_running"
-                      );
-
                       const { checkTraefikRoute, checkHostHeaderProxy } = await import("./healthCheck");
                       let proxyReady = false;
                       const { isTraefik: isTraefikMode } = parseTraefikEnv(process.env);
-                      const subdomainVal = currentInstance.subdomain || "";
-                      if (isTraefikMode) {
-                        proxyReady = await checkTraefikRoute(subdomainVal).catch(() => false);
+                      const accessCheck = resolveRecoveryAccessCheck(currentInstance, isTraefikMode);
+                      if (accessCheck.kind === "disabled") {
+                        proxyReady = true;
+                      } else if (accessCheck.kind === "direct") {
+                        const { checkPublishedPortBinding } = await import("./health/containerProbe");
+                        const binding = await checkPublishedPortBinding(
+                          accessCheck.context.dashboardContainerName,
+                          accessCheck.context.internal_web_port,
+                          accessCheck.context.host_port || accessCheck.context.dashboardHostPort,
+                          accessCheck.deploymentMode as "desktop" | "lan",
+                        );
+                        proxyReady = binding.ready;
+                      } else if (accessCheck.kind === "traefik") {
+                        proxyReady = await checkTraefikRoute(accessCheck.context.subdomain).catch(() => false);
                       } else {
-                        proxyReady = await checkHostHeaderProxy(subdomainVal).catch(() => false);
+                        proxyReady = await checkHostHeaderProxy(accessCheck.context.subdomain).catch(() => false);
                       }
 
-                      const shouldPromoteToRunning = isStuckStatus && probeRes.gateway_ready === true && proxyReady;
+                      const shouldPromoteToRunning = shouldPromoteRecoveredInstance(
+                        currentInstance.status,
+                        probeRes.gateway_ready === true,
+                        proxyReady,
+                      );
                       const statusUpdate = shouldPromoteToRunning ? { 
                         status: "running", 
                         deployment_error: null,

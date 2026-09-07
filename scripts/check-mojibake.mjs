@@ -38,7 +38,7 @@ export function findMojibakeIssues(text) {
 
 function collectTextFiles(rootDir, currentDir = rootDir, output = []) {
   for (const entry of fs.readdirSync(currentDir, { withFileTypes: true })) {
-    if (entry.isDirectory() && EXCLUDED_DIRECTORIES.has(entry.name)) continue;
+    if (entry.isDirectory() && (EXCLUDED_DIRECTORIES.has(entry.name) || entry.name.startsWith("node_modules"))) continue;
     const fullPath = path.join(currentDir, entry.name);
     if (entry.isDirectory()) collectTextFiles(rootDir, fullPath, output);
     else if (entry.isFile() && TARGET_EXTS.has(path.extname(entry.name).toLowerCase())) output.push(fullPath);

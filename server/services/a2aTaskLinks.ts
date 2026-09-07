@@ -1,7 +1,13 @@
 import crypto from 'node:crypto';
 import { mutateStoreCollections, readStoreCollections } from '../localStore';
+import { readChatGroupRun } from '../../shared/chatCollaboration';
 
 export type A2ATaskLink = {
+  parentRunId?: string;
+  memberCallNumber?: number;
+  cancelState?: 'pending' | 'confirmed' | 'unconfirmed';
+  cancelAttempts?: number;
+  cancelCheckedAt?: string;
   lookupState?: 'not_found' | 'unavailable' | 'disk_reply'; checkedAt?: string; diskResult?: string;
   id: string; instanceId: string; peerId: string; contextId: string; callerTaskId: string;
   fingerprint: string; remoteTaskId?: string; remoteState?: string; task?: any;
@@ -18,24 +24,41 @@ export function getA2ATaskLink(instanceId: string, peerId: string, callerTaskId:
   return readStoreCollections(['a2aTaskLinks']).a2aTaskLinks.find(row => row.id === linkKey(instanceId, peerId, callerTaskId));
 }
 export function beginA2ATaskLink(input: Pick<A2ATaskLink, 'instanceId' | 'peerId' | 'contextId' | 'callerTaskId' | 'fingerprint'>) {
-  return mutateStoreCollections(['a2aTaskLinks'], store => {
+  return mutateStoreCollections(['a2aTaskLinks', 'chatRuns'], store => {
     const id = linkKey(input.instanceId, input.peerId, input.callerTaskId);
     const found = store.a2aTaskLinks.find(row => row.id === id) as A2ATaskLink | undefined;
     if (found) {
       if (found.fingerprint !== input.fingerprint || found.contextId !== input.contextId) throw Error('A2A_REQUEST_CONFLICT');
       return { created: false, link: found };
     }
+    // Reserve the member budget in the same transaction as the dispatch record.
+    // A caller cannot escape a live room by choosing a fresh context or task ID.
+    const live = store.chatRuns.filter(run => run.instance_id === input.instanceId && ['queued', 'running', 'stopping'].includes(run.status) && readChatGroupRun(run.group_collaboration));
+    const parent = store.chatRuns.find(run => run.instance_id === input.instanceId && readChatGroupRun(run.group_collaboration)?.contextId === input.contextId);
+    const inboundGroup = store.a2aTaskLinks.some(link => link.peerId === input.instanceId && link.parentRunId && link.state !== 'finished');
+    if (inboundGroup) throw Error('A2A_GROUP_RECURSION_BLOCKED');
+    if (live.length && (live.length !== 1 || live[0].id !== parent?.id)) throw Error('A2A_GROUP_CONTEXT_REQUIRED');
+    if (!parent && input.contextId.startsWith('ctx-mybay-room-')) throw Error('A2A_GROUP_PARENT_REQUIRED');
+    let memberCallNumber: number | undefined;
+    if (parent) {
+      const group = readChatGroupRun(parent.group_collaboration)!;
+      if (parent.status !== 'running' || parent.stop_requested_at) throw Error('A2A_GROUP_NOT_RUNNING');
+      if (!group.selectedPeerIds?.includes(input.peerId)) throw Error('A2A_GROUP_PEER_FORBIDDEN');
+      memberCallNumber = store.a2aTaskLinks.filter(link => link.parentRunId === parent.id && link.peerId === input.peerId).length + 1;
+      if (memberCallNumber > group.maxRounds) throw Error('A2A_GROUP_CALL_LIMIT');
+    }
     const now = new Date().toISOString();
-    const link: A2ATaskLink = { ...input, id, state: 'submitted', createdAt: now, updatedAt: now };
+    const link: A2ATaskLink = { ...input, ...(parent ? { parentRunId: parent.id, memberCallNumber } : {}), id, state: 'submitted', createdAt: now, updatedAt: now };
     store.a2aTaskLinks.push(link);
     return { created: true, link };
   });
 }
-export function updateA2ATaskLink(id: string, update: Partial<Pick<A2ATaskLink, 'remoteTaskId' | 'remoteState' | 'task' | 'state' | 'lookupState' | 'checkedAt' | 'diskResult'>>) {
+export function updateA2ATaskLink(id: string, update: Partial<Pick<A2ATaskLink, 'remoteTaskId' | 'remoteState' | 'task' | 'state' | 'lookupState' | 'checkedAt' | 'diskResult' | 'cancelState' | 'cancelAttempts' | 'cancelCheckedAt'>>) {
   return mutateStoreCollections(['a2aTaskLinks'], store => {
     const row = store.a2aTaskLinks.find(row => row.id === id) as A2ATaskLink;
     if (!row) throw Error('A2A_LINK_MISSING');
     if (row.state === 'finished' && update.state && update.state !== 'finished') return row;
+    if (row.state === 'finished' && update.task && row.remoteState && update.task.status?.state !== row.remoteState) return row;
     if (update.remoteTaskId && row.remoteTaskId && row.remoteTaskId !== update.remoteTaskId) throw Error('A2A_REMOTE_ID_CONFLICT');
     Object.assign(row, update, { updatedAt: new Date().toISOString() });
     return row;

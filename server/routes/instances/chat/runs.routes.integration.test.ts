@@ -20,8 +20,10 @@ const primeRunFileSnapshot = vi.hoisted(() => vi.fn());
 const discardRunFileSnapshot = vi.hoisted(() => vi.fn());
 const isQuestionBridgeInstalling = vi.hoisted(() => vi.fn(() => false));
 const cancelMappedA2AGroupTasks = vi.hoisted(() => vi.fn());
+const isA2AGroupTransportApplied = vi.hoisted(() => vi.fn(async () => true));
 vi.mock("../../../services/runs/questionBridgeInstaller", () => ({ isQuestionBridgeInstalling }));
 vi.mock("../../../services/a2aTaskCancel", () => ({ cancelMappedA2AGroupTasks }));
+vi.mock("../../../services/a2aGroupReadiness", () => ({ isA2AGroupTransportApplied }));
 
 vi.mock("../../../middlewares/auth", () => ({
   authenticateToken: (req: any, _res: any, next: any) => {

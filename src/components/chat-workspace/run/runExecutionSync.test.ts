@@ -1,9 +1,17 @@
 import { describe, expect, it } from "vitest";
 import type { ChatMessage } from "../../../lib/chatWorkspaceState";
 import { createRunExecutionState, runReducer } from "./runReducer";
-import { applyRunExecutionToMessages, applyRunTextSnapshot } from "./runExecutionSync";
+import { applyRunExecutionToMessages, applyRunTextSnapshot, replaceRunTextSnapshot } from "./runExecutionSync";
 
 describe("run execution message synchronization", () => {
+  it("replaces duplicated or longer incorrect text after switching exclusively to polling", () => {
+    const state = createRunExecutionState({ runId: "r", assistantMessageId: "m", initialText: "duplicatedduplicated" });
+    const snapshot = replaceRunTextSnapshot(state, "correct");
+    const messages: ChatMessage[] = [{ id: "m", role: "assistant", content: "duplicatedduplicated" }];
+    expect(snapshot.streamText).toBe("correct");
+    expect(applyRunExecutionToMessages(messages, snapshot, true)[0].content).toBe("correct");
+    expect(applyRunExecutionToMessages(messages, replaceRunTextSnapshot(state, ""), true)[0].content).toBe("");
+  });
   it("updates only the assistant message explicitly bound to the run", () => {
     const messages: ChatMessage[] = [
       { id: "assistant-old", role: "assistant", content: "old", status: "pending", conversation_id: "conv-1" },

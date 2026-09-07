@@ -71,7 +71,19 @@ describe("stopping run recovery", () => {
         : { ok: true, statusCode: 202, json: { status: "stopping" } };
     });
     await recoverStoppingRun(run(), dependencies);
-    expect(order).toEqual(["probe", "record", "stop"]);
+    expect(order).toEqual(["probe", "record", "stop", "record"]);
+    expect(dependencies.updateRun).toHaveBeenLastCalledWith('run-1', { stop_accepted_at: new Date(now).toISOString() }, 'owner-1');
+  });
+
+  it('keeps polling an accepted stop without exhausting retries or resending, while retaining a bounded deadline', async () => {
+    const accepted = run({ stop_attempts: 9, stop_accepted_at: new Date(now - 5000).toISOString() });
+    const dependencies = harness([{ ok: true, statusCode: 200, json: { status: 'running' } }]);
+    await recoverStoppingRun(accepted, dependencies);
+    expect(dependencies.requestRuns).toHaveBeenCalledTimes(1);
+    expect(dependencies.completeRun).not.toHaveBeenCalled();
+    expect(dependencies.updateRun).not.toHaveBeenCalled();
+    await recoverStoppingRun({ ...accepted, stop_requested_at: new Date(now - 301000).toISOString() }, dependencies);
+    expect(dependencies.completeRun).toHaveBeenCalledWith('run-1', 'failed', '', 'STOP_CONFIRMATION_TIMEOUT');
   });
 
   it("does not contact the runtime after losing the lease while recording an attempt", async () => {

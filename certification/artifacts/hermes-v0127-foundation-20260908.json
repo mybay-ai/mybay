@@ -1,0 +1,167 @@
+{
+  "schemaVersion": 1,
+  "kind": "mybay-runtime-certification-artifact",
+  "runtime": {
+    "type": "hermes",
+    "providerKey": "hermes-core",
+    "contractVersion": 1
+  },
+  "capturedAt": "2026-09-07T16:48:15.993Z",
+  "environment": {
+    "id": "windows-docker-desktop-20260908",
+    "platform": "windows",
+    "platformVersion": "Windows 10 Pro",
+    "architecture": "x64",
+    "containerEngine": "docker-desktop",
+    "containerEngineVersion": "29.7.2",
+    "runtimeImage": "nousresearch/hermes-agent:v2026.8.27",
+    "runtimeImageId": "sha256:e0df6adebddf29b91112aefc999d4aaf6846c9eb544faca5672a16a13590ff79",
+    "runtimeImageDigest": "nousresearch/hermes-agent@sha256:e0df6adebddf29b91112aefc999d4aaf6846c9eb544faca5672a16a13590ff79",
+    "runtimeHealthReportedVersion": "0.20.6",
+    "mybayVersion": "0.1.27",
+    "headless": false,
+    "controlContainer": "mybay-stream-control-20260907",
+    "runtimeContainer": "mybay-agent-bd4dfe20-d6b2-42b2-bc8b-26c8365903cc",
+    "productionServerBuild": true,
+    "model": "deepseek-v4-flash"
+  },
+  "observations": {
+    "runtimeInstall": {
+      "status": "passed",
+      "instanceId": "bd4dfe20-d6b2-42b2-bc8b-26c8365903cc",
+      "runtimeContainerId": "92bf75b8fafaa34783b67db30102b83d06c5ddb3b17b816cef44096efcf55325",
+      "containerStatus": "running",
+      "startedAt": "2026-09-07T16:44:03.44445839Z",
+      "readiness": {
+        "ready": true,
+        "runtimeReady": true,
+        "sendable": true,
+        "runtimeState": "running"
+      },
+      "hostBinding": "127.0.0.1:10108->9119/tcp"
+    },
+    "controlPlaneDeploy": {
+      "status": "passed",
+      "trigger": "Authenticated MyBay product action: redeploy",
+      "finalStatus": "running",
+      "finalHealthStatus": "healthy",
+      "finalPhysicalStatus": "running",
+      "image": "nousresearch/hermes-agent:v2026.8.27",
+      "dataMountDestination": "/opt/data",
+      "previousStreamingRunsRetained": 10,
+      "allPreviousStreamingRunIdsPresent": true,
+      "conversationsRetained": 5,
+      "messagesRetained": 28,
+      "runsRetainedIncludingNewRun": 14
+    },
+    "taskSubmit": {
+      "status": "passed",
+      "runId": "fd007a58-b6a0-489d-b9bf-d9d83d8367c4",
+      "upstreamRunId": "run_4e262e18f8b545779e42f3f459d118e6",
+      "conversationId": "9e57d354-68c9-4569-997c-8c226ee4eeca",
+      "runtimeType": "hermes",
+      "runtimeProviderKey": "hermes-core",
+      "runtimeContractVersion": 1,
+      "createdAt": "2026-09-07T16:45:26.617Z",
+      "completedAt": "2026-09-07T16:45:38.260Z",
+      "terminalStatus": "completed"
+    },
+    "streamingOutput": {
+      "status": "passed",
+      "lastEventSequence": 38,
+      "outputBytes": 75,
+      "outputSha256": "6cb9442d010d0b031ca2c5c3be5bda3a8021842fac2b33bcc1ced253b8e58725",
+      "orderedMarkersVerified": true,
+      "chineseAndEmojiVerifiedInAuthenticatedBrowser": true
+    },
+    "usageReporting": {
+      "status": "passed",
+      "promptTokens": 12039,
+      "completionTokens": 282,
+      "totalTokens": 12321,
+      "evidence": {
+        "version": 1,
+        "source": "runtime_terminal",
+        "counter": "snapshot",
+        "scope": "unknown",
+        "inputTokens": 12039,
+        "outputTokens": 282,
+        "totalTokens": 12321,
+        "cacheReadTokens": null,
+        "cacheWriteTokens": null,
+        "modelCalls": null,
+        "model": null,
+        "durationMs": null,
+        "durationSource": "unknown"
+      },
+      "browserDisplayedTotalTokens": 12321,
+      "browserMatchesPersistedRun": true
+    },
+    "realE2E": {
+      "status": "passed",
+      "path": "authenticated browser -> MyBay 0.1.27 production build -> product-deployed Hermes -> credentialed model -> persisted run -> browser result",
+      "runId": "fd007a58-b6a0-489d-b9bf-d9d83d8367c4",
+      "expectedOutputVerified": true
+    },
+    "securityFacts": {
+      "privileged": false,
+      "capAdd": [
+        "CHOWN",
+        "SETUID",
+        "SETGID"
+      ],
+      "dockerSocketMounted": false,
+      "publishedDashboardHost": "127.0.0.1",
+      "memoryLimitBytes": 1073741824,
+      "nanoCpus": 1000000000,
+      "configurationCompleteness": {
+        "provider": "deepseek",
+        "model": "deepseek-v4-flash",
+        "hasProviderApiKey": true,
+        "hasInternalApiKey": true,
+        "hasEncryptedDashboardPassword": true,
+        "hasDashboardSecrets": true
+      }
+    }
+  },
+  "linkedEvidence": {
+    "path": "docs/plans/streaming-closure-evidence-2026-09-07.json",
+    "sha256": "7ea2b7cf72aabc6f4c7cc3d2070f96c8bf191175e8683c28801584368e3443a6"
+  },
+  "source": {
+    "baseCommit": "3dd7653866129b894bd78d3039ea8a1a8118109b",
+    "workingTree": "dirty; includes pre-existing changes; source hashes identify inspected files",
+    "finalBuildServerSha256": "f817c920746e05402f9be4f143d8414872d5b0be1fdf9b494148210437656243",
+    "relatedSourceSha256": {
+      "shared/runSseProtocol.ts": "afbe824f6aa99c66d5575548ceacf1d075edb4aa873e36abefcb75f0261e2939",
+      "shared/runSseProtocol.test.ts": "0c27c7c16b2b3dd71226c82ce517555af0a82acb3fc721507eab0f5a49121946",
+      "server/routes/instances/chat/runEvents.routes.ts": "2867ac337730adccdea2feb842cb2d02a794fa9a80b34396b5db98b829b82786",
+      "server/routes/instances/chat/runs.routes.ts": "2e8c5065345fb694df6cf45438ad80440a864e8c183e14b5a94f14f070518015",
+      "server/services/runs/runEventLifecycle.ts": "5d874ccacc22c72f784ce25629d9d810cdc53d8e8f7801218c204e77d00781c6",
+      "server/services/runs/runEventLifecycle.test.ts": "7eb422b25b415110cab5cdb21e22127f7b37d9a7d3fc117ee8d920081bba1b3b",
+      "server/services/runs/runEventCache.characterization.test.ts": "52b3fb9fc7652ed66fde458c451230ede0c63ec07f056f59723e053f347f18ac",
+      "server/services/runs/runProbeController.ts": "d9fa97411988df23a7c01f1cdf5a027f581b656a17ab8005bdf6a0cccb810d28",
+      "server/services/runs/runProbeController.test.ts": "2d9026cd486d6ac7f8854a046ace99ac6216cfcedb255ea3ad19c13d3377a98f",
+      "server/services/runs/runLease.reconciler.characterization.test.ts": "5285690579d73d9c935365a02309f6ff2105d8bfdb4d6de8f97b85764aee64f9",
+      "server/services/runsReconciler.ts": "b7fd564492870176aa34695b520732a9845a76005952d7dcbcd8ac8af163fb7b",
+      "src/components/chat-workspace/useChatRuns.ts": "908f584f9fc2b6c5b2d197fd2e0a613349ad9da5dc0d04891465fe68302c8224",
+      "src/components/chat-workspace/run/runExecutionSync.ts": "a8df7dbfc9d30baec40baafa018f2e55b0f10a59d5915fe01a44da12ff4e979f",
+      "src/components/chat-workspace/run/runExecutionSync.test.ts": "89f9eeb51ffd410055b77d7f7c0a5bddbf19da449308cad11a4819c377b33c4d",
+      "src/components/chat-workspace/run/runStreamTimeout.ts": "9d9b4060bbd6e52cd2a58e82da854efe8f3a36443ac774c1aaf61269630a3d73",
+      "src/components/chat-workspace/run/runStreamTimeout.test.ts": "2e417f8bec697a6a14820687c870b201084adb8ecd013f2f5172c458d39985c8",
+      "src/locales/zh-CN/dashboard/chatWorkspace.json": "63d8ed6010610430075ecb00d907dc0fb4afe90b7ca71fcf702086c83721d257",
+      "src/locales/en/dashboard/chatWorkspace.json": "5e60f4e6f3ae44974f5f03dfa625805ed431feacc1b68512febcf567624a765b"
+    }
+  },
+  "preflightFailuresExcludedFromPassedDeployment": [
+    "PASSWORD_MISSING: test seed lacked a recoverable Dashboard password",
+    "PROVIDER_UNSUPPORTED: test seed lacked provider metadata",
+    "IMAGE_PULL_FAILED: test seed lacked the official agent_image repository",
+    "PORT_CONFLICT: seeded host port 10100 was already owned by another instance"
+  ],
+  "limitations": [
+    "This artifact covers only the observations above and does not complete the 15-requirement certification bundle.",
+    "File artifact, stable tool event identifiers, controlled Runtime restart recovery, upgrade, rollback, full security probes, and backup restore still require 0.1.27 evidence.",
+    "Usage scope is retained as unknown because the Runtime reported it that way."
+  ]
+}

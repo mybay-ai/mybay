@@ -16,6 +16,31 @@ function cacheDependencies(now: { value: number }) {
 }
 
 describe("run event lifecycle controllers", () => {
+  it("discards half frames between connections and ignores late bytes from aborted streams", async () => {
+    const streams = createRunSseStreamController();
+    const received = vi.fn();
+    let lateChunk!: (chunk: string) => void;
+    streams.ensure("run-a", async (_signal, chunk) => {
+      lateChunk = chunk;
+      chunk('data: {"event":"message.delta","delta":"broken');
+    }, received);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    streams.ensure("run-a", async (_signal, chunk) => {
+      chunk('data: {"delta":"NEW"}\n\n');
+      lateChunk('data: {"delta":"OLD"}\n\n');
+    }, received);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(received.mock.calls).toEqual([[{ delta: "NEW" }]]);
+  });
+
+  it("splits large Unicode text without substituting a truncation message", () => {
+    const deps = cacheDependencies({ value: 0 });
+    const cache = createRunEventCacheController(deps);
+    const text = "中文😀\n".repeat(12_000);
+    cache.add("large", "text", text);
+    expect(deps.emit.mock.calls.map(call => (call as unknown as [string, { data: string }])[1].data).join("")).toBe(text);
+    expect(cache.get("large", 0).events.every(event => Buffer.byteLength(event.data) <= DEFAULT_RUN_EVENT_CACHE_POLICY.singleEventMaxBytes)).toBe(true);
+  });
   it("evicts the least-recently-active other run before the current run", () => {
     const now = { value: 1 };
     const dependencies = cacheDependencies(now);
@@ -43,10 +68,11 @@ describe("run event lifecycle controllers", () => {
     cache.add("run-a", "text", "two");
     cache.add("run-a", "text", "three");
 
-    expect(cache.get("run-a", 0).events.map((event) => event.id)).toEqual([2, 3]);
-    expect(cache.get("run-a", 0).events.map((event) => event.data)).toEqual(["two", "three"]);
-    expect(cache.get("run-a", 0).recoveryOutOfBounds).toBeUndefined();
-    expect(cache.get("run-a", 0).events[0].id).toBe(2);
+    expect(cache.get("run-a", 0)).toEqual({ events: [], recoveryOutOfBounds: true });
+    expect(cache.get("run-a", 1).events.map(event => event.id)).toEqual([2, 3]);
+    expect(cache.get("run-a", 99).recoveryOutOfBounds).toBe(true);
+    cache.clear("run-a");
+    expect(cache.get("run-a", 3).recoveryOutOfBounds).toBe(true);
   });
 
   it("uses strict terminal and inactive cleanup boundaries", () => {

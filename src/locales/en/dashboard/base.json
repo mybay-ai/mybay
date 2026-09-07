@@ -1512,7 +1512,7 @@
   "communitySupport": {
     "title": "Open-source community and support (MyBay Community)",
     "subtitle": "MyBay Open Source private deployment and Agent console",
-    "description": "MyBay is an open-source console for one-click deployment and lightweight management of Hermes Agent container instances. Private deployments keep API keys and messaging channels under the user's control. See the local guides or join the repository discussion if you need help.",
+    "description": "MyBay is an open-source control plane for deploying and operating supported Agent Runtime instances. Private deployments keep API keys and messaging channels under the user's control. See the local guides or join the repository discussion if you need help.",
     "guides": {
       "title": "Local setup guides",
       "description": "Token setup for Feishu, DingTalk, and Telegram, plus API credential configuration"

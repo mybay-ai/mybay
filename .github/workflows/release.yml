@@ -9,9 +9,24 @@ permissions:
   contents: write
   packages: write
   actions: read
+  security-events: write
 
 jobs:
+  quality:
+    name: Reuse CI quality, Docker lifecycle, and recovery gates
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
+  security:
+    name: Reuse CodeQL and container security gates
+    uses: ./.github/workflows/security.yml
+    permissions:
+      contents: read
+      security-events: write
+
   release:
+    needs: [quality, security]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -29,8 +44,8 @@ jobs:
           test "$GITHUB_REF_NAME" = "v$PACKAGE_VERSION"
           echo "version=$PACKAGE_VERSION" >> "$GITHUB_OUTPUT"
           echo "series=$(echo "$PACKAGE_VERSION" | awk -F. '{print $1"."$2}')" >> "$GITHUB_OUTPUT"
-      - name: Run release quality gate
-        run: npm run check
+      - name: Run strict release gate
+        run: npm run release:gate
       - name: Create clean source archive
         run: |
           npm run release:create -- "release/mybay-$GITHUB_REF_NAME.zip"

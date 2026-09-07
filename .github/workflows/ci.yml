@@ -1,6 +1,7 @@
 name: CI
 
 on:
+  workflow_call:
   push:
     branches: [ main, "fix/*" ]
   pull_request:
@@ -76,6 +77,8 @@ jobs:
 
       - name: Check Release Version Consistency
         run: npm run check:version
+      - name: Validate Runtime Contract, Catalog, and Certification Artifacts
+        run: npm run runtime:check
       - name: Lint
         run: npm run lint
 

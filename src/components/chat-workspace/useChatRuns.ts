@@ -1,3 +1,5 @@
+import { appendSseData } from "../../../shared/runSseProtocol";
+import { withRunStreamTimeout, RUN_STREAM_CONNECT_TIMEOUT_MS, RUN_STREAM_IDLE_TIMEOUT_MS } from "./run/runStreamTimeout";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Socket } from "socket.io-client";
 import { api } from "../../lib/api";
@@ -14,7 +16,7 @@ import { resolveTextFlushDelay } from "./streamingPresentation";
 import { mergeRecoveredStreamingContent } from "./run/runTextReconciliation";
 import type { RunExecutionState, RunExecutionStatus, ToolEventPayload } from "./run/runTypes";
 import { finalizeRunExecution } from "./run/runFinalizer";
-import { applyRunExecutionToMessages, applyRunTextSnapshot } from "./run/runExecutionSync";
+import { applyRunExecutionToMessages, applyRunTextSnapshot, replaceRunTextSnapshot } from "./run/runExecutionSync";
 import { mergeApprovalEvent, settleApprovalRequests } from "./run/approvalSelectors";
 import { reconcileRunMetricStatus } from "./run/runStatusSemantics";
 import { normalizeStopRunStatus, type StopRunResult } from "./run/runStopLifecycle";
@@ -495,6 +497,9 @@ export function useChatRuns({
         return true;
       } else if (event === "status") {
         const parsed = JSON.parse(data);
+        setRunMetrics(previous => previous?.runId === runId
+          ? { ...previous, status: nextExecution.status }
+          : previous);
         if (isTerminalRunStatus(parsed.status)) {
           flushPendingText();
           pollingGenerationRef.current += 1;
@@ -522,6 +527,10 @@ export function useChatRuns({
 
   const startFallbackPolling = useCallback((runId: string, boundInstanceId = selectedIdRef.current, boundConversationId = selectedConversationIdRef.current) => {
     stopTerminalWatchdog();
+    if (textFlushTimerRef.current) clearTimeout(textFlushTimerRef.current);
+    textFlushTimerRef.current = null;
+    pendingTextRef.current = "";
+    pendingTextConversationIdRef.current = null;
     setRunTransportState(runId, "polling");
     const runGeneration = pollingGenerationRef.current;
     if (activePollingIntervalRef.current) {
@@ -576,13 +585,13 @@ export function useChatRuns({
               statusUnknownPublished = false;
               setRunMetrics(prev => prev?.runId === runId ? { ...prev, status: run.status } : prev);
             }
-            if (run.partialOutput) {
+            if (typeof run.partialOutput === "string") {
               const execution = runExecutionRef.current;
               if (execution?.runId === runId && execution.conversationId === currentConvId) {
-                const reconciled = applyRunTextSnapshot(execution, run.partialOutput);
+                const reconciled = replaceRunTextSnapshot(execution, run.partialOutput);
                 runExecutionRef.current = reconciled;
                 setRunExecutionState(reconciled);
-                setMessages(prev => applyRunExecutionToMessages(prev, reconciled));
+                setMessages(prev => applyRunExecutionToMessages(prev, reconciled, true));
               }
             }
 
@@ -690,10 +699,11 @@ export function useChatRuns({
           break;
         }
 
-        const response = await fetch(`/api/instances/${boundInstanceId}/runs/${runId}/events${urlSuffix}`, {
+        const attemptController = new AbortController();
+        const response = await withRunStreamTimeout(fetch(`/api/instances/${boundInstanceId}/runs/${runId}/events${urlSuffix}`, {
           headers,
-          signal: controller.signal
-        });
+          signal: AbortSignal.any([controller.signal, attemptController.signal])
+        }), RUN_STREAM_CONNECT_TIMEOUT_MS, () => attemptController.abort());
 
         if (!response.ok) {
           throw new Error("Failed to connect to SSE events");
@@ -717,6 +727,7 @@ export function useChatRuns({
         let buffer = "";
         let currentEvent = "";
         let currentData = "";
+        let currentDataLines: string[] = [];
         let currentEventId = 0;
 
         resetAttemptTimeoutId = setTimeout(() => {
@@ -736,6 +747,7 @@ export function useChatRuns({
                   const parsed = JSON.parse(currentData);
                   if (parsed.errorCode === "RECOVERY_OUT_OF_BOUNDS") {
                     console.warn("RECOVERY_OUT_OF_BOUNDS received. Fallback to status polling.");
+                    void reader.cancel().catch(() => {});
                     triggerFallback();
                     return true;
                   }
@@ -771,6 +783,7 @@ export function useChatRuns({
             }
             currentEvent = "";
             currentData = "";
+            currentDataLines = [];
             return;
           }
 
@@ -782,31 +795,15 @@ export function useChatRuns({
           } else if (line.startsWith("event:")) {
             currentEvent = line.slice(6).trim();
           } else if (line.startsWith("data:")) {
-            let val = line.slice(5);
-            if (val.startsWith(" ")) {
-              val = val.slice(1);
-            }
-            currentData = currentData ? currentData + "\n" + val : val;
+            appendSseData(currentDataLines, line);
+            currentData = currentDataLines.join("\n");
           }
         };
 
         while (true) {
-          const { value, done } = await reader.read();
+          const { value, done } = await withRunStreamTimeout(reader.read(), RUN_STREAM_IDLE_TIMEOUT_MS, () => attemptController.abort());
 
           if (done) {
-            if (buffer) {
-              const tailLines = buffer.split("\n");
-              for (const tl of tailLines) {
-                if (parseLineAndProcess(tl)) {
-                  clearTimeout(resetAttemptTimeoutId);
-                  return;
-                }
-              }
-              buffer = "";
-            }
-            if (currentEvent || currentData) {
-              parseLineAndProcess("");
-            }
             break;
           }
 
@@ -935,6 +932,9 @@ export function useChatRuns({
           };
           runExecutionRef.current = execution;
           setRunExecutionState(execution);
+          setRunMetrics(previous => previous?.runId === activeRunId
+            ? { ...previous, status: execution.status }
+            : previous);
         }
         showToast(t("dashboard:chatWorkspace.approvalSubmitted"), "success");
       }

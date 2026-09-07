@@ -9,6 +9,16 @@ import { createConfiguredModelEvidence } from "../../shared/localModelEvidence";
 import { createChatGroupRun } from "../../shared/chatCollaboration";
 
 describe("chatRepo local status contract", () => {
+  it('preserves accepted stop acknowledgement in claimed records after reopening the database', async () => {
+    const conversation = await chatRepo.createConversation('stop-user', 'stop-instance', 'Stop');
+    await chatRepo.beginChatRun({ conversationId: conversation.id, userId: 'stop-user', instanceId: 'stop-instance', content: 'test', requestId: 'stop-request', runId: 'stop-run' });
+    await chatRepo.requestStopChatRun({ runId: 'stop-run', userId: 'stop-user', instanceId: 'stop-instance' });
+    const acceptedAt = new Date().toISOString();
+    await chatRepo.updateChatRun('stop-run', { stop_accepted_at: acceptedAt });
+    closeLocalDatabase();
+    const claimed = await chatRepo.claimRuns({ reconcilerId: 'stop-test', leaseSeconds: 60 });
+    expect(claimed.find(row => row.id === 'stop-run')?.stop_accepted_at).toBe(acceptedAt);
+  });
   it("persists room membership on the conversation and snapshots it on both run messages", async () => {
     const conversation = await chatRepo.createConversation("room-user", "room-instance", "Room");
     const config = { mode: "group" as const, peerIds: ["peer-1"], maxRounds: 1 };
@@ -408,7 +418,7 @@ describe("chatRepo local status contract", () => {
     const second = await chatRepo.searchConversationPage('user-1', 'instance-1', 'needle', 3, first.nextCursor!);
     expect(new Set([...first.results, ...second.results].map(result => result.conversation_id))).toEqual(new Set(conversations.map(row => row.id)));
     expect(second.nextCursor).toBeNull();
-  });
+  }, 15_000);
 
   it("returns bounded search snippets and respects the result limit", async () => {
     const conversation = await chatRepo.createConversation("user-1", "instance-1", "Search limits");

@@ -31,6 +31,18 @@ function evidenceFor(level: "experimental" | "beta" | "certified"): RuntimeCerti
       version: HERMES_RUNTIME_DEFINITION.version,
       imageRef: `${HERMES_RUNTIME_DEFINITION.runtime.image}:${HERMES_RUNTIME_DEFINITION.runtime.tag}`,
     },
+    environments: [{
+      id: "test-runtime",
+      platform: "linux",
+      platformVersion: null,
+      architecture: "amd64",
+      containerEngine: "docker-engine",
+      containerEngineVersion: null,
+      runtimeVersion: "test",
+      mybayVersion: "test",
+      headless: true,
+    }],
+    artifacts: [{ path: "artifacts/evidence.json", sha256: "a".repeat(64) }],
     checks,
   };
 }
@@ -61,6 +73,29 @@ describe("Runtime certification evaluator", () => {
     const report = evaluateRuntimeCertification(HERMES_RUNTIME_DEFINITION, { ...bundle, checks }, { now });
     expect(report.publicationStatus).toBe("invalid");
     expect(report.requirements[0]).toMatchObject({ status: "invalid" });
+  });
+
+  it("rejects executable certification without structured environments or retained artifact hashes", () => {
+    const bundle = evidenceFor("certified");
+    const report = evaluateRuntimeCertification(HERMES_RUNTIME_DEFINITION, {
+      ...bundle,
+      environments: [],
+      artifacts: [],
+    }, { now });
+    expect(report.publicationStatus).toBe("invalid");
+    expect(report.errors).toEqual(expect.arrayContaining([
+      "Certification evidence must identify at least one structured environment.",
+      "Certification evidence must include retained artifact hashes.",
+    ]));
+  });
+
+  it("does not use an older MyBay certification bundle to release a newer version", () => {
+    const report = evaluateRuntimeCertification(HERMES_RUNTIME_DEFINITION, evidenceFor("certified"), {
+      now,
+      expectedMybayVersion: "next-version",
+    });
+    expect(report.publicationStatus).toBe("invalid");
+    expect(report.errors).toContain("Certification evidence does not cover MyBay next-version.");
   });
 
   it("rejects stale or mismatched evidence instead of silently rebinding it", () => {

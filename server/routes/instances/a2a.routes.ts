@@ -21,6 +21,8 @@ import {
   normalizeA2APeerIds,
   supportsA2AByVersion,
 } from "../../../shared/a2aConfig";
+import { readChatGroupRun } from "../../../shared/chatCollaboration";
+import { resolveChatGroupOutcome } from "../../../shared/chatGroupOutcome";
 import { ensureA2ABearerToken } from "../../services/a2aRuntimeConfig";
 import { probeA2AAgentCard } from "../../services/a2aProbe";
 import { applyA2ARemoteTaskEvidence, groupA2AOrchestrations, mergeA2ATaskLinkActivities, readA2AActivities } from "../../services/a2aActivity";
@@ -249,6 +251,10 @@ export function createA2ARoutes() {
     const instance: any = await dbAdapter.getInstanceById(req.params.id);
     if (!instance) return res.status(404).json({ code: "INSTANCE_NOT_FOUND" });
     if (!canAccess(instance, req)) return res.status(403).json({ code: "FORBIDDEN" });
+    const roomContextId = req.query.roomContextId;
+    if (roomContextId !== undefined && (typeof roomContextId !== "string" || !/^ctx-mybay-room-[A-Za-z0-9]{1,64}$/.test(roomContextId))) {
+      return res.status(400).json({ code: "INVALID_REQUEST" });
+    }
     const ownerId = getOwnerId(instance);
     const instances = await dbAdapter.getInstances(req.user.id, req.user.role);
     const peers = instances.filter((item: any) => item.id !== instance.id && getOwnerId(item) === ownerId && isSelectablePeer(item));
@@ -274,7 +280,28 @@ export function createA2ARoutes() {
       activityStore.a2aTaskLinks,
       String(instance.id),
       peerNames,
-    );
+    ).filter(activity => !roomContextId || (activity.contextId === roomContextId && activity.direction === "outbound"));
+    if (roomContextId) {
+      for (const saved of activityStore.a2aTaskLinks.filter(row => row.instanceId === instance.id && row.contextId === roomContextId)) {
+        if (activities.some(row => row.direction === "outbound" && row.taskId === saved.callerTaskId && row.peerId === saved.peerId)) continue;
+        activities.push({
+          contextId: saved.contextId,
+          taskId: saved.callerTaskId,
+          direction: "outbound",
+          peerId: saved.peerId,
+          peerName: peerNames.get(saved.peerId) || saved.peerId,
+          status: "unknown",
+          startedAt: saved.createdAt,
+          completedAt: null,
+          durationMs: null,
+          summary: "",
+          result: null,
+          failureReason: null,
+          evidenceIncomplete: true,
+        });
+      }
+      activities.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+    }
     const refreshLink = async (currentLink: any) => {
       const peer = peers.find((row: any) => row.id === currentLink.peerId);
       const peerConfig = peer ? parseConfig(peer) : null;
@@ -318,7 +345,7 @@ export function createA2ARoutes() {
     };
     const mappingFor = (activity: any) => {
       const saved = activity.direction === "outbound" && activityStore.a2aTaskLinks.find(row => row.instanceId === instance.id && row.peerId === activity.peerId && row.callerTaskId === activity.taskId);
-      return saved?.remoteTaskId ? { contextId: saved.contextId, mapping: { remoteTaskId: saved.remoteTaskId, remoteState: saved.remoteState || "unknown", recordState: saved.state, updatedAt: saved.updatedAt, result: a2aTaskResultText(saved.task), lookupState: saved.lookupState, checkedAt: saved.checkedAt, diskResult: saved.diskResult } } : null;
+      return saved ? { contextId: saved.contextId, mapping: { remoteTaskId: saved.remoteTaskId || "", remoteState: saved.remoteState || "unknown", recordState: saved.state, updatedAt: saved.updatedAt, result: a2aTaskResultText(saved.task), lookupState: saved.lookupState, checkedAt: saved.checkedAt, diskResult: saved.diskResult, cancelState: saved.cancelState, cancelCheckedAt: saved.cancelCheckedAt } } : null;
     };
     const recoveryRuns = activityStore.chatRuns.filter(run => run.instance_id === instance.id && run.user_id === ownerId && run.a2a_recovery_source);
     const enrichedActivities = activities.map(activity => {
@@ -328,9 +355,12 @@ export function createA2ARoutes() {
     });
     return res.json({
       ...(recoveryEvidence ? { recoveryEvidence } : {}),
+      ...(roomContextId ? { groupOutcome: resolveChatGroupOutcome(activityStore.chatRuns.find(run => run.instance_id === instance.id && run.user_id === ownerId && readChatGroupRun(run.group_collaboration)?.contextId === roomContextId), activityStore.a2aTaskLinks) } : {}),
       activities: enrichedActivities.slice(0, limit).map(activity => ({ ...activity, recoveryAttempts: recoveryRuns.filter(run => sameA2ARecoverySource(run.a2a_recovery_source, { contextId: activity.contextId, taskId: activity.taskId, peerId: activity.peerId || "" })).sort((a,b) => String(b.created_at).localeCompare(String(a.created_at))).slice(0,3).map(run => ({ runId: run.id, status: run.status, createdAt: run.created_at })) })),
       orchestrations: groupA2AOrchestrations(enrichedActivities).slice(0, limit),
       total: activities.length,
+      totalActivities: activities.length,
+      activitiesTruncated: activities.length > limit,
       hasMore: activities.length > limit && limit < 100,
       generatedAt: new Date().toISOString(),
     });

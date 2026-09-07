@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-09-07T19:12:40.573Z",
+  "mybay": {
+    "version": "0.1.28",
+    "sourceBase": "f26c8f75b7a9947b02974554ae11d7773d8c0bd3",
+    "build": "isolated production build",
+    "health": "healthy"
+  },
+  "environment": {
+    "platform": "Windows 10 Pro",
+    "architecture": "x64",
+    "containerEngine": "Docker Desktop",
+    "containerEngineVersion": "29.7.2",
+    "browserPath": "authenticated MyBay product UI on isolated loopback control plane"
+  },
+  "observations": {
+    "hermesStreaming": {
+      "result": "passed",
+      "runtimeVersion": "v2026.8.27",
+      "readiness": {
+        "runtimeReady": true,
+        "sendable": true
+      },
+      "browserResult": "HERMES_V0128_STREAM_OK_0908 ✅",
+      "persistedStatus": "completed",
+      "usageTotalTokens": 179,
+      "usageSource": "provider_response",
+      "durationMs": 3599
+    },
+    "piStreaming": {
+      "result": "passed",
+      "runtimeVersion": "0.85.1",
+      "bridgeVersion": "0.1.1-beta",
+      "readiness": {
+        "runtimeReady": true,
+        "sendable": true
+      },
+      "browserResult": "PI_V0128_STREAM_OK_0908 ✅",
+      "persistedStatus": "completed",
+      "usageTotalTokens": 203,
+      "usageSource": "provider_response",
+      "durationMs": 2833
+    }
+  },
+  "scope": "Current-version incremental release evidence for the streaming, terminal persistence, usage, and browser rendering paths changed in v0.1.28. Full lifecycle certification remains backed by the separately retained versioned evidence bundles. No credentials, cookies, tokens, database contents, or raw provider responses are retained."
+}

@@ -10,7 +10,7 @@ describe("runs reconciler timer lifecycle", () => {
     vi.useRealTimers();
   });
 
-  it("starts reconcile and cache cleanup timers only once", async () => {
+  it("starts reconcile, cache cleanup and group cancellation timers only once", async () => {
     vi.useFakeTimers();
     vi.spyOn(chatRepo, "claimRuns").mockResolvedValue([]);
     const setIntervalSpy = vi.spyOn(globalThis, "setInterval");
@@ -18,11 +18,11 @@ describe("runs reconciler timer lifecycle", () => {
     await startRunsReconciler(5000, { allowInTest: true, cacheCleanupIntervalMs: 1000 });
     await startRunsReconciler(5000, { allowInTest: true, cacheCleanupIntervalMs: 1000 });
 
-    expect(setIntervalSpy).toHaveBeenCalledTimes(2);
+    expect(setIntervalSpy).toHaveBeenCalledTimes(3);
     expect(chatRepo.claimRuns).toHaveBeenCalledTimes(1);
   });
 
-  it("clears both timers when stopped", async () => {
+  it("clears all three timers when stopped", async () => {
     vi.useFakeTimers();
     vi.spyOn(chatRepo, "claimRuns").mockResolvedValue([]);
     const clearIntervalSpy = vi.spyOn(globalThis, "clearInterval");
@@ -30,7 +30,7 @@ describe("runs reconciler timer lifecycle", () => {
     await startRunsReconciler(5000, { allowInTest: true, cacheCleanupIntervalMs: 1000 });
     stopRunsReconciler();
 
-    expect(clearIntervalSpy).toHaveBeenCalledTimes(2);
+    expect(clearIntervalSpy).toHaveBeenCalledTimes(3);
   });
 
   it("coalesces immediate reconcile signals without waiting for the interval", async () => {

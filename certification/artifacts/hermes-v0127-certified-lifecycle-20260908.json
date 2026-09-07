@@ -1,0 +1,160 @@
+{
+  "schemaVersion": 1,
+  "artifactType": "runtime-v0127-certified-lifecycle-live-evidence",
+  "generatedAt": "2026-09-07T17:55:28.223Z",
+  "sanitization": {
+    "identifiers": "Runtime, instance, container, conversation, and run identifiers are retained only as SHA-256 references",
+    "credentials": "Credential values, cookies, tokens, passwords, encryption material, and model prompts are omitted",
+    "fileContent": "Only fixed harmless expected markers, byte sizes, and SHA-256 values are retained"
+  },
+  "environment": {
+    "host": "Windows 10 Pro x64 with Docker Desktop 29.7.2",
+    "application": "MyBay OSS 0.1.27 isolated production build on localhost:4337",
+    "runtime": {
+      "type": "hermes",
+      "providerKey": "hermes-core",
+      "contractVersion": 1,
+      "sourceImage": "nousresearch/hermes-agent:v2026.8.27",
+      "upgradeImage": "nousresearch/hermes-agent:v2026.8.31",
+      "sourceImageDigest": "nousresearch/hermes-agent@sha256:e0df6adebddf29b91112aefc999d4aaf6846c9eb544faca5672a16a13590ff79",
+      "upgradeImageDigest": "nousresearch/hermes-agent@sha256:64923faeae267792bf9bf87fe3b4c4869e35004e360c7df01730ad801b74d524"
+    },
+    "sourceInstanceRef": "sha256:04cc9948540838a572e61a69efc45baf452fda1b6bde2aac34fabce15b2017ed",
+    "restoreCloneRef": "sha256:834f887249b2dd3059f53ba0e1ed16d0d7a4a3f8ec11d7bb2866c08c1b4fd499"
+  },
+  "observations": {
+    "cancellation": {
+      "result": "passed",
+      "cancelledRunRef": "sha256:36706e8bc494ca149aeee05e5afa5077c23911a92a511fcd1ac267395a391735",
+      "terminalStatus": "cancelled",
+      "errorCode": "CANCELLED_UPSTREAM",
+      "lastEventSequence": 28,
+      "stopRequestedAt": "2026-09-07T13:00:03.770Z",
+      "completedAt": "2026-09-07T13:00:04.601Z",
+      "followup": {
+        "runRef": "sha256:eb06b98d6fdadc3861777361cf1cfb05cbe854cec427ba91cfb0c715d585b623",
+        "terminalStatus": "completed",
+        "lastEventSequence": 18,
+        "expectedMarker": "AFTER_CANCEL_907_OK",
+        "outputSha256": "32e62f4848a8f330bd3e5c0f7d2481d276f3b49bc10a3d858ae273ccb6533d5a",
+        "queueReleased": true
+      }
+    },
+    "upgrade": {
+      "result": "passed",
+      "operation": "Authenticated MyBay product path: version repository -> preflight -> confirm upgrade",
+      "preflight": { "passed": 9, "warnings": 2, "blockers": 0 },
+      "from": "v2026.8.27",
+      "to": "v2026.8.31",
+      "containerRefBefore": "sha256:868512a4378f3eb12a22a2bf94a34854792a53965b60054832fd3bb39174c3f9",
+      "containerRefAfter": "sha256:35902fa43a5f53d18f70ee3462aeb1d01c7b7d1123705414c1fc99f39f4a10bf",
+      "containerReplaced": true,
+      "runtimeReady": true,
+      "chatReady": true,
+      "fileSha256Before": "891fe7d65cf789f1c08a2b3d20912b84935f5aed1cf85145ea2766d0d69e8c9c",
+      "fileSha256After": "891fe7d65cf789f1c08a2b3d20912b84935f5aed1cf85145ea2766d0d69e8c9c",
+      "postUpgradeRun": {
+        "runRef": "sha256:77e4b78d295fd7892feef69f993cc1e0d18496073bfe849d3524757dab9e5bf6",
+        "upstreamRunRef": "sha256:a4593b47a24c027bb6044a4336248ba0da33fe68299a18225e5177140b195e87",
+        "terminalStatus": "completed",
+        "expectedMarker": "V31_0918_OK",
+        "totalTokens": 11851
+      }
+    },
+    "rollback": {
+      "result": "passed",
+      "operation": "Authenticated MyBay product path: version repository -> rollback -> confirm",
+      "from": "v2026.8.31",
+      "to": "v2026.8.27",
+      "containerRefBefore": "sha256:35902fa43a5f53d18f70ee3462aeb1d01c7b7d1123705414c1fc99f39f4a10bf",
+      "containerRefAfter": "sha256:81a06317e03ba5bec515e0529bebdd34c30fc6a11abc1e30aa981acd40d7989d",
+      "upgradeStatus": "success",
+      "upgradePhase": "rolled_back",
+      "previousImageTag": "v2026.8.31",
+      "finalStatus": "running",
+      "finalHealthStatus": "healthy",
+      "finalPhysicalStatus": "running",
+      "gatewayReady": true,
+      "fileSha256After": "891fe7d65cf789f1c08a2b3d20912b84935f5aed1cf85145ea2766d0d69e8c9c",
+      "postRollbackRun": {
+        "runRef": "sha256:ba977a017658b03373e3ae8d3ef130043bac4fbe113f60648418039630072756",
+        "upstreamRunRef": "sha256:8ab7542042c6511a0da9856126600adab4b1b72355aeab8b88a32587a557f7c1",
+        "terminalStatus": "completed",
+        "expectedMarker": "V27_0918_OK",
+        "totalTokens": 12234
+      }
+    },
+    "backupRestore": {
+      "result": "passed",
+      "operation": "Authenticated MyBay product path: export redacted archive -> import preview -> create stopped clone -> rebind credential and password -> deploy -> file preview -> credentialed browser chat",
+      "archive": {
+        "path": "tmp/stream-closure-20260907/mybay-v0127-backup-20260908.zip",
+        "sizeBytes": 2019,
+        "sha256": "c11419ba0bc583348e7c51b7d40c43fb7889cbc72292cd361dfaf4db600b8f6e",
+        "entryCount": 6,
+        "unsafeEntryCount": 0,
+        "archiveVersion": 1,
+        "redacted": true,
+        "previewValid": true,
+        "previewWarningCount": 1,
+        "hasOutputs": true
+      },
+      "sourceFile": {
+        "path": "outputs/CERT_BACKUP_0918.txt",
+        "sizeBytes": 23,
+        "sha256": "46c5a846f9f6e99933142bf912a18299b855116fa547d8a4805e2fa819b33f67",
+        "expectedMarker": "BACKUP_RESTORE_0918_OK"
+      },
+      "restoredFile": {
+        "path": "outputs/CERT_BACKUP_0918.txt",
+        "sizeBytes": 23,
+        "sha256": "46c5a846f9f6e99933142bf912a18299b855116fa547d8a4805e2fa819b33f67",
+        "browserPreviewMatchedAfterControlPlaneRestart": true
+      },
+      "clone": {
+        "initialStatus": "stopped",
+        "initialDeploymentTimedOutSeconds": 180,
+        "lateRuntimeReadinessObserved": true,
+        "controlStateConvergenceFixApplied": true,
+        "finalStatus": "running",
+        "finalPhysicalStatus": "running",
+        "finalHealthStatus": "healthy",
+        "gatewayReady": true,
+        "deploymentError": null,
+        "containerRef": "sha256:3a08d3292bea6bf0913347790110704002f06ca8e336e8aef341fddbc86ad61f",
+        "browserCredentialedModelMarker": "RESTORE_CONVERGENCE_0918_OK",
+        "browserDisplayedTotalTokens": 164
+      },
+      "sourceArtifactRun": {
+        "runRef": "sha256:bcd98d5c26b1911e11e56fcba6a4198a53ada4c42f486595082f4f1b5b5334db",
+        "terminalStatus": "completed",
+        "expectedMarker": "BACKUP_FILE_0918_OK",
+        "totalTokens": 38100
+      }
+    }
+  },
+  "regression": {
+    "reason": "A local direct-port restore clone could become physically healthy after the deployment timeout while the reconciler permanently retained the top-level unhealthy state.",
+    "change": "The reconciler now treats unhealthy as recoverable and uses the deployment-mode-specific access check used by deployment health checks.",
+    "tests": {
+      "testFile": "server/reconciler.integration.test.ts",
+      "testsPassed": 12,
+      "typecheckPassed": true
+    },
+    "sourceSha256": {
+      "server/reconciler.ts": "cf43182ab7131a9b0996bf83603992150b2b838fa60d3f009d6bdea2701528f0",
+      "server/reconciler.integration.test.ts": "99ebe022b88b76617932846bb4046f0525884731c94dd2edf1d78572effbef71",
+      "isolatedProductionServerBuild": "04f69a572435b00d5f046a110e5e77b69b6a89fc2e6a4419498993bdff45f37a"
+    }
+  },
+  "isolation": {
+    "mainControlContainerStartedAtUnchanged": "2026-09-07T07:20:24.849219208Z",
+    "mainControlPort": 3000,
+    "isolatedControlPort": 4337,
+    "otherInstancesRestarted": 0
+  },
+  "linkedEvidence": {
+    "path": "docs/plans/streaming-closure-evidence-2026-09-07.json",
+    "sha256": "7ea2b7cf72aabc6f4c7cc3d2070f96c8bf191175e8683c28801584368e3443a6"
+  }
+}

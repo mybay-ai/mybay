@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { dbAdapter } from "../db";
 import { decrypt, encrypt } from "../crypto";
-import { a2aRelayToken, a2aRelayUrl, a2aTrackingEnabled } from './a2aRelayConfig';
+import { a2aRelayToken, a2aRelayUrl, a2aTrackingEnabled, a2aRelayRevision } from './a2aRelayConfig';
 import {
   A2A_INTERNAL_PORT,
   getA2AInternalUrl,
@@ -43,6 +43,7 @@ export function buildA2ARuntimeEnv(config: any): Record<string, string> {
     .filter((peer: any) => peer.id && peer.url && peer.token);
   return {
     ...revisionEnv,
+    ...(Array.isArray(config.a2aResolvedPeers) ? { MYBAY_A2A_RELAY_REVISION: a2aRelayRevision(config.a2aResolvedPeers.map((peer: ResolvedA2APeer) => ({ id: peer.instanceId, url: peer.url, token: decrypt(peer.encryptedToken) }))) } : {}),
     A2A_BEARER_TOKEN: token,
     A2A_HOST: "0.0.0.0",
     A2A_PORT: String(A2A_INTERNAL_PORT),
