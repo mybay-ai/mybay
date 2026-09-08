@@ -54,7 +54,9 @@
         "backup": "node scripts/mybay-ops.mjs backup",
         "backup:verify": "node scripts/mybay-ops.mjs verify-backup",
         "backup:restore": "node scripts/mybay-ops.mjs restore",
-        "recovery:service": "node scripts/mybay-service-recovery.mjs"
+        "recovery:service": "node scripts/mybay-service-recovery.mjs",
+        "acceptance:a2a": "tsx scripts/a2a-mixed-acceptance.ts",
+        "acceptance:a2a:strict": "tsx scripts/a2a-mixed-acceptance.ts --strict"
     },
     "dependencies": {
         "@e965/xlsx": "^0.20.3",

@@ -12,5 +12,6 @@ it('does not infer group success from host completion, missing members or an unr
 });
 it('preserves an earlier failure and excludes explicitly unselected members from expectations', () => {
   expect(resolveChatGroupOutcome(run, [call('a', 'TASK_STATE_FAILED'), call('a'), call('b')])).toBe('partial');
+  expect(resolveChatGroupOutcome({ ...run, group_collaboration: { ...group, selectedPeerIds: ['a'] } }, [call('a', 'TASK_STATE_AUTH_REQUIRED')])).toBe('failed');
   expect(resolveChatGroupOutcome({ ...run, group_collaboration: { ...group, selectedPeerIds: ['a'] } }, [call('a')])).toBe('completed');
 });

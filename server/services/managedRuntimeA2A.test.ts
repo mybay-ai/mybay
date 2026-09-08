@@ -58,6 +58,21 @@ it("translates an A2A message into a Pi run and streams mapped terminal evidence
   expect(request.mock.calls[1][1]).toBe(peer);
 });
 
+it("surfaces a pending Pi approval as an actionable A2A state instead of polling to timeout", async () => {
+  request
+    .mockResolvedValueOnce({ ok: true, statusCode: 201, json: { id: "session-1234" } })
+    .mockResolvedValueOnce({ ok: true, statusCode: 202, json: { id: "run-approval", status: "queued" } })
+    .mockResolvedValueOnce({ ok: true, statusCode: 200, json: { id: "run-approval", status: "waiting_for_approval", pending_approvals: [{ permission_id: "private" }] } });
+  const response = await sendManagedRuntimeA2A(peer, {
+    id: "caller-task",
+    params: { message: { contextId: "ctx-room", parts: [{ text: "Review this" }] } },
+  });
+  const frames = await response.text();
+  expect(frames).toContain('"TASK_STATE_AUTH_REQUIRED"');
+  expect(frames).not.toContain("private");
+  expect(request).toHaveBeenCalledTimes(3);
+});
+
 it("reads and cancels a managed Pi task using the same remote run id", async () => {
   request.mockResolvedValueOnce({ ok: true, statusCode: 200, json: { id: "run-12345678", status: "completed", output: "done" } });
   await expect(readManagedRuntimeA2ATask(peer, "ctx-room", "run-12345678")).resolves.toMatchObject({

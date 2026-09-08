@@ -456,6 +456,7 @@ export function mergeA2ATaskLinkActivities(
     const state = String(link.remoteState || "").replace(/^TASK_STATE_/, "").toLowerCase().replaceAll("_", "-");
     const status: A2AActivityStatus = state === "completed" && link.state === "finished" ? "completed"
       : ["cancelled", "canceled"].includes(state) && link.state === "finished" ? "cancelled"
+      : state === "auth-required" && link.state === "finished" ? "auth_failed"
       : ["failed", "rejected"].includes(state) && link.state === "finished" ? "failed"
       : link.state === "uncertain" ? "unknown" : "in_progress";
     const completedAt = ["completed", "cancelled", "failed"].includes(status) ? link.updatedAt : null;
@@ -490,9 +491,11 @@ export function applyA2ARemoteTaskEvidence(
     ? "completed"
     : ["canceled", "cancelled"].includes(state)
       ? "cancelled"
-      : ["failed", "rejected"].includes(state)
-        ? "failed"
-        : null;
+      : state === "auth-required"
+        ? "auth_failed"
+        : ["failed", "rejected", "input-required"].includes(state)
+          ? "failed"
+          : null;
   if (!status || evidence.recordState !== "finished") return activity;
   const completedAt = activity.completedAt || evidence.updatedAt || new Date().toISOString();
   return {

@@ -21,9 +21,11 @@ const discardRunFileSnapshot = vi.hoisted(() => vi.fn());
 const isQuestionBridgeInstalling = vi.hoisted(() => vi.fn(() => false));
 const cancelMappedA2AGroupTasks = vi.hoisted(() => vi.fn());
 const isA2AGroupTransportApplied = vi.hoisted(() => vi.fn(async () => true));
+const a2aTaskLinks = vi.hoisted(() => [] as any[]);
 vi.mock("../../../services/runs/questionBridgeInstaller", () => ({ isQuestionBridgeInstalling }));
 vi.mock("../../../services/a2aTaskCancel", () => ({ cancelMappedA2AGroupTasks }));
 vi.mock("../../../services/a2aGroupReadiness", () => ({ isA2AGroupTransportApplied }));
+vi.mock("../../../localStore", () => ({ readStoreCollections: () => ({ a2aTaskLinks }) }));
 
 vi.mock("../../../middlewares/auth", () => ({
   authenticateToken: (req: any, _res: any, next: any) => {
@@ -118,6 +120,52 @@ describe("Interactive Agent POST /runs integration", () => {
     delete process.env.MYBAY_INTERNAL_ROUTING_SECRET;
     delete process.env.MYBAY_A2A_TRACKED_INSTANCES;
     vi.clearAllMocks();
+    a2aTaskLinks.length = 0;
+  });
+
+  it("exposes the persisted group snapshot and fail-closed group outcome on run status", async () => {
+    const runId = "55555555-5555-4555-8555-555555555556";
+    const peerId = "66666666-6666-4666-8666-666666666666";
+    getInstanceById.mockResolvedValue({ id: instanceId, user_id: userId, owner_id: userId });
+    getChatRun.mockResolvedValue({
+      id: runId,
+      instance_id: instanceId,
+      user_id: userId,
+      conversation_id: conversationId,
+      status: "completed",
+      group_collaboration: {
+        version: 1,
+        mode: "group",
+        contextId: "ctx-mybay-room-statustest",
+        leader: { id: instanceId, name: "Hermes Host" },
+        peers: [{ id: peerId, name: "Pi Peer" }],
+        selectedPeerIds: [peerId],
+        maxRounds: 1,
+      },
+    });
+    a2aTaskLinks.push({ parentRunId: runId, peerId, state: "finished", remoteState: "TASK_STATE_COMPLETED" });
+
+    const app = express();
+    const router = express.Router(); registerRunRoutes(router); app.use("/api/instances", router);
+    const server = app.listen(0);
+    try {
+      await new Promise<void>(resolve => server.once("listening", resolve));
+      const response = await fetch(`http://127.0.0.1:${(server.address() as any).port}/api/instances/${instanceId}/runs/${runId}`);
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({
+        success: true,
+        run: {
+          id: runId,
+          groupOutcome: "completed",
+          groupCollaboration: {
+            contextId: "ctx-mybay-room-statustest",
+            selectedPeerIds: [peerId],
+          },
+        },
+      });
+    } finally {
+      await new Promise<void>(resolve => server.close(() => resolve()));
+    }
   });
 
   it("creates a queued Run when the gate is enabled and Hermes supports Runs", async () => {

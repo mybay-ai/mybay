@@ -1,0 +1,20 @@
+{
+  "baseUrl": "http://127.0.0.1:4348",
+  "controlContainer": "mybay-local-control-panel",
+  "auth": {
+    "usernameEnv": "MYBAY_ACCEPTANCE_USERNAME",
+    "passwordEnv": "MYBAY_ACCEPTANCE_PASSWORD"
+  },
+  "runtimes": {
+    "hermes": {
+      "instanceId": "replace-with-hermes-instance-id",
+      "name": "Hermes"
+    },
+    "pi": {
+      "instanceId": "replace-with-pi-instance-id",
+      "name": "Pi"
+    }
+  },
+  "maxWaitMs": 180000,
+  "pollMs": 1000
+}
