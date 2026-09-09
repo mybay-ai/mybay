@@ -4,6 +4,24 @@ import { decrypt } from "../../../crypto";
 import { providerRegistry } from "../../../../shared/providerRegistry";
 import { CODEX_API_PROVIDER_IDS } from "../../../../shared/runtimeModelProviderPolicy";
 
+// Called only after the saved credential has been resolved for the current user.
+export function applyCodexOAuthCredential(config: Record<string, any>, credentialType: unknown) {
+  if (credentialType !== "openai-codex" || !config.providerCredentialId || config.codexAuthJson) {
+    throw Error("CODEX_ACCOUNT_AUTH_INVALID");
+  }
+  let payload: any;
+  try { payload = JSON.parse(config.providerApiKey); } catch { throw Error("CODEX_ACCOUNT_AUTH_INVALID"); }
+  if (payload?.provider !== "openai-codex") throw Error("CODEX_ACCOUNT_AUTH_INVALID");
+  const auth = normalizeCodexAccountAuth(JSON.stringify(payload));
+  config.codexAuthJson = auth;
+  config.codexAuthMode = "chatgpt";
+  config.provider = "openai";
+  delete config.providerCredentialId;
+  delete config.providerApiKey;
+  delete config.apiKey;
+  delete config.baseUrl;
+}
+
 export function validateCodexConnection(config: any) {
   const mode = config?.codexAuthMode || "chatgpt";
   if (!["chatgpt", "api"].includes(mode)) throw Error("CODEX_AUTH_MODE_INVALID");

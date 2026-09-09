@@ -10,6 +10,13 @@ function validDraft() {
 }
 
 describe("quick deployment validation", () => {
+  it("requires a saved OAuth credential rather than an API key for Codex OAuth", () => {
+    const draft = validDraft(); draft.runtimeType = "codex"; draft.codexAuthMode = "api";
+    draft.modelStrategy = { mode: "byok", provider: "openai-codex", model: "test-model" };
+    expect(validateQuickDeployDraft(draft)).toEqual([{ code: "oauthCredentialRequired", field: "modelStrategy.credentialId" }]);
+    draft.modelStrategy = { mode: "saved_credential", credentialId: "oauth-1", provider: "openai-codex", model: "test-model" };
+    expect(validateQuickDeployDraft(draft)).toEqual([]);
+  });
   it("uses the shared credential strategy for Codex API mode without an account import", () => {
     const draft = validDraft(); draft.runtimeType = "codex"; draft.codexAuthMode = "api";
     draft.modelStrategy = { mode: "saved_credential", credentialId: "key-1", provider: "openai", model: "test-model" };

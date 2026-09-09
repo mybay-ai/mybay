@@ -309,7 +309,8 @@
       "test": "测试模型连接",
       "testPassed": "模型连接已通过",
       "codexAccountMode": "Codex / ChatGPT 账号",
-      "codexApiDescription": "复用已保存凭据或自己的 API。仅支持 Responses API；普通模型连接测试不能证明 Codex 工具兼容性。第三方端点需实际验收。",
+      "codexApiDescription": "选择 OpenAI Codex OAuth 登录账号，或使用 API Key。API 接入要求支持 Responses API；第三方端点的 Codex 工具兼容性需实际验收。",
+      "codexProviderMode": "模型提供商 / OAuth",
       "codexAccountDescription": "导入本机 Codex 登录生成的 auth.json。账号将用于此实例，文件内容会加密保存。模型留空时使用 Codex 默认模型。",
       "codexAccountFile": "Codex 账号文件"
     },

@@ -1,4 +1,4 @@
-import { normalizeCodexAccountAuth, validateCodexConnection } from "../../runtime/adapters/codex/CodexRuntimeEnvironment";
+import { applyCodexOAuthCredential, normalizeCodexAccountAuth, validateCodexConnection } from "../../runtime/adapters/codex/CodexRuntimeEnvironment";
 import { Router, Response } from "express";
 import { AuthenticatedRequest, authenticateToken } from "../../middlewares/auth";
 import { dbAdapter } from "../../db";
@@ -95,7 +95,7 @@ export function createInstanceHandler(deps: RouterDependencies) {
       }
 
       if (requestedRuntimeType === "codex") {
-        try { if ((req.body.codexAuthMode || "chatgpt") === "chatgpt") req.body.codexAuthJson = normalizeCodexAccountAuth(req.body.codexAuthJson); }
+        try { if (req.body.provider !== "openai-codex" && (req.body.codexAuthMode || "chatgpt") === "chatgpt") req.body.codexAuthJson = normalizeCodexAccountAuth(req.body.codexAuthJson); }
         catch { return res.status(400).json({ code: "CODEX_ACCOUNT_AUTH_INVALID", error: "Import a valid Codex ChatGPT account auth.json." }); }
         if (req.body.channel && req.body.channel !== "web" || req.body.skills?.length || req.body.a2aEnabled) {
           return res.status(400).json({ code: "CODEX_CAPABILITY_UNSUPPORTED", error: "Codex currently supports Web chat without external channels, injected skills or A2A." });
@@ -212,6 +212,10 @@ export function createInstanceHandler(deps: RouterDependencies) {
         try {
           const cred = await dbAdapter.getCredentialById(data.providerCredentialId, req.user.id);
           applySavedProviderCredential(data, cred);
+          if (requestedRuntimeType === "codex" && data.provider === "openai-codex") {
+            try { applyCodexOAuthCredential(data, cred?.type); }
+            catch { return res.status(400).json({ code: "CODEX_ACCOUNT_AUTH_INVALID", error: "Reconnect OpenAI Codex OAuth with a complete account credential." }); }
+          }
         } catch (err: any) {
           console.error("Failed to resolve credential for instance creation:", err);
           const code = err instanceof SavedProviderCredentialError ? err.code : "CREDENTIAL_RESOLUTION_FAILED";

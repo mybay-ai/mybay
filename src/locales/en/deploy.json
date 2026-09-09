@@ -309,7 +309,8 @@
       "test": "Test model connection",
       "testPassed": "Model connection passed",
       "codexAccountMode": "Codex / ChatGPT account",
-      "codexApiDescription": "Reuse saved credentials or your own API. Requires the Responses API; a generic model test does not verify Codex tool compatibility. Third-party endpoints require live acceptance.",
+      "codexApiDescription": "Sign in with OpenAI Codex OAuth, or use an API key. API connections require the Responses API; third-party Codex tool compatibility requires live acceptance.",
+      "codexProviderMode": "Model provider / OAuth",
       "codexAccountDescription": "Import auth.json from your local Codex login. This instance uses the account; imported credentials are stored encrypted. Leave the model empty to use the Codex default.",
       "codexAccountFile": "Codex account file"
     },

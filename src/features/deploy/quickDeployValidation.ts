@@ -38,7 +38,7 @@ export function validateQuickDeployDraft(draft: QuickDeployDraft): QuickDeployVa
     issues.push({ code: "oauthCredentialRequired", field: "modelStrategy.credentialId" });
   }
   if (codexAccount && !draft.codexAuthJson?.trim()) issues.push({ code: "codexAccountRequired", field: "codexAuthJson" });
-  if (!codexAccount && strategy?.mode === "byok" && (config?.requiresApiKey || runtimeType === "codex") && !strategy.apiKey?.trim()) {
+  if (!codexAccount && config?.authMode !== "oauth-device-code" && strategy?.mode === "byok" && (config?.requiresApiKey || runtimeType === "codex") && !strategy.apiKey?.trim()) {
     issues.push({ code: "apiKeyRequired", field: "modelStrategy.apiKey" });
   }
   if (runtimeType === "hermes" && draft.channel === "telegram" && !draft.telegramBotToken?.trim()) {

@@ -19,7 +19,7 @@ import { QuickDeployDelivery } from "./QuickDeployDelivery";
 import { useProviderOAuth } from "./useProviderOAuth";
 import { fetchRuntimeCatalog } from "./runtimeCatalogClient";
 import type { RuntimeDefinition } from "../../../shared/runtimeCatalog";
-import { CODEX_API_PROVIDER_IDS, PI_QUICK_DEPLOY_PROVIDER_IDS, supportsQuickDeployRuntimeProvider } from "../../../shared/runtimeModelProviderPolicy";
+import { CODEX_QUICK_DEPLOY_PROVIDER_IDS, PI_QUICK_DEPLOY_PROVIDER_IDS, supportsQuickDeployRuntimeProvider } from "../../../shared/runtimeModelProviderPolicy";
 import { AgentRuntimeIcon } from "../../components/brand/AgentRuntimeIcon";
 import { ChannelBrandIcon } from "../../components/brand/ChannelBrandIcon";
 
@@ -68,7 +68,7 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
   const selectedRuntime = runtimeDefinitions.find((definition) => definition.runtime.type === draft.runtimeType);
   const providerConfig = providerRegistry[strategy.provider];
   const isOAuthProvider = providerConfig?.authMode === "oauth-device-code";
-  const modelNeedsTest = isCodexRuntime ? !isCodexAccount : requiresPredeployModelTest(strategy.provider);
+  const modelNeedsTest = isCodexRuntime ? !isCodexAccount && !isOAuthProvider : requiresPredeployModelTest(strategy.provider);
   const validationIssues = useMemo(() => validateQuickDeployDraft(draft), [draft]);
   const visibleIssues = submitted ? validationIssues : [];
 
@@ -100,6 +100,7 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
   };
 
   const selectRuntime = (runtimeType: "hermes" | "pi" | "codex") => {
+    if (oauth.loading) return;
     const definition = runtimeDefinitions.find((candidate) => candidate.runtime.type === runtimeType);
     if (!definition?.release.deploymentSupported) return;
     setDraft((current) => {
@@ -439,8 +440,8 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
             <div><h2 className="font-bold text-content">{t("quickDeploy.model.title")}</h2><p className="mt-1 text-xs text-content-muted">{t("quickDeploy.model.description")}</p></div>
             {isCodexRuntime && <div className="space-y-3">
               <div className="grid grid-cols-2 gap-2">
-                <Button type="button" variant={isCodexAccount ? "primary" : "outline"} onClick={() => updateDraft({ codexAuthMode: "chatgpt", codexAuthJson: undefined, permissionConfirmed: false, modelStrategy: { mode: "byok", provider: "openai", model: "", isCustomModel: true } })}>{t("quickDeploy.model.codexAccountMode")}</Button>
-                <Button type="button" variant={!isCodexAccount ? "primary" : "outline"} onClick={() => updateDraft({ codexAuthMode: "api", codexAuthJson: undefined, permissionConfirmed: false, modelStrategy: { mode: "byok", provider: "openai", model: providerRegistry.openai.defaultModel, baseUrl: providerRegistry.openai.defaultBaseUrl, apiKey: "" } })}>{t("quickDeploy.model.byok")}</Button>
+                <Button type="button" variant={isCodexAccount ? "primary" : "outline"} disabled={oauth.loading} onClick={() => updateDraft({ codexAuthMode: "chatgpt", codexAuthJson: undefined, permissionConfirmed: false, modelStrategy: { mode: "byok", provider: "openai", model: "", isCustomModel: true } })}>{t("quickDeploy.model.codexAccountMode")}</Button>
+                <Button type="button" variant={!isCodexAccount ? "primary" : "outline"} disabled={oauth.loading} onClick={() => updateDraft({ codexAuthMode: "api", codexAuthJson: undefined, permissionConfirmed: false, modelStrategy: { mode: "byok", provider: "openai", model: providerRegistry.openai.defaultModel, baseUrl: providerRegistry.openai.defaultBaseUrl, apiKey: "" } })}>{t("quickDeploy.model.codexProviderMode")}</Button>
               </div>
               {!isCodexAccount && <p className="text-sm text-content-secondary">{t("quickDeploy.model.codexApiDescription")}</p>}
             </div>}
@@ -454,15 +455,15 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
               }} />
             </div> : <>
             <div className="grid grid-cols-2 gap-2">
-              <Button type="button" variant={strategy.mode === "saved_credential" ? "primary" : "outline"} disabled={compatibleCredentials.length === 0} onClick={() => selectMode("saved_credential")}><KeyRound className="mr-2 h-4 w-4" />{t("quickDeploy.model.saved")}</Button>
-              <Button type="button" variant={strategy.mode === "byok" ? "primary" : "outline"} onClick={() => selectMode("byok")}><Zap className="mr-2 h-4 w-4" />{t("quickDeploy.model.byok")}</Button>
+              <Button type="button" variant={strategy.mode === "saved_credential" ? "primary" : "outline"} disabled={compatibleCredentials.length === 0 || oauth.loading} onClick={() => selectMode("saved_credential")}><KeyRound className="mr-2 h-4 w-4" />{t("quickDeploy.model.saved")}</Button>
+              <Button type="button" variant={strategy.mode === "byok" ? "primary" : "outline"} disabled={oauth.loading} onClick={() => selectMode("byok")}><Zap className="mr-2 h-4 w-4" />{t("quickDeploy.model.byok")}</Button>
             </div>
             {strategy.mode === "saved_credential" ? (
               <div><Label>{t("quickDeploy.model.credential")}</Label><select value={strategy.credentialId} onChange={(event) => selectCredential(event.target.value)} className="mt-2 h-11 w-full rounded-lg border border-outline bg-control px-3 text-sm text-content">{compatibleCredentials.map((credential) => <option key={credential.id} value={credential.id}>{credential.name} ({credential.type})</option>)}</select></div>
             ) : !isOAuthProvider ? (
               <div><Label>{t("quickDeploy.model.apiKey")}</Label><Input type="password" autoComplete="new-password" value={strategy.apiKey || ""} onChange={(event) => updateStrategy({ apiKey: event.target.value })} /></div>
             ) : null}
-            <div><Label>{t("quickDeploy.model.provider")}</Label><ProviderSelect className="mt-2" value={strategy.provider} onValueChange={selectProvider} includeOAuth={!isNativeBridge} allowedProviderIds={isCodexRuntime ? CODEX_API_PROVIDER_IDS : isNativeBridge ? PI_QUICK_DEPLOY_PROVIDER_IDS : undefined} disabled={strategy.mode === "saved_credential" || oauth.loading} /></div>
+            <div><Label>{t("quickDeploy.model.provider")}</Label><ProviderSelect className="mt-2" value={strategy.provider} onValueChange={selectProvider} includeOAuth={!isNativeBridge || isCodexRuntime} allowedProviderIds={isCodexRuntime ? CODEX_QUICK_DEPLOY_PROVIDER_IDS : isNativeBridge ? PI_QUICK_DEPLOY_PROVIDER_IDS : undefined} disabled={strategy.mode === "saved_credential" || oauth.loading} /></div>
             {isOAuthProvider && (
               <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-4 text-sm text-blue-900 dark:border-blue-400/30 dark:bg-blue-400/10 dark:text-blue-100">
                 <div className="flex items-start gap-3">
@@ -485,7 +486,7 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
             )}
             </>}
             <div><Label>{t("quickDeploy.model.model")}</Label>{providerConfig?.models?.length && !strategy.isCustomModel ? <select value={strategy.model} onChange={(event) => updateStrategy({ model: event.target.value })} className="mt-2 h-11 w-full rounded-lg border border-outline bg-control px-3 text-sm text-content">{providerConfig.models.map((model) => <option key={model} value={model}>{model}</option>)}</select> : <Input value={strategy.model} onChange={(event) => updateStrategy({ model: event.target.value })} />}</div>
-            {!isCodexAccount && (isCodexRuntime || strategy.provider === "custom-openai-compatible" || strategy.isCustomModel) && <div><Label>{t("quickDeploy.model.baseUrl")}</Label><Input value={strategy.baseUrl || ""} onChange={(event) => updateStrategy({ baseUrl: event.target.value })} /></div>}
+            {!isCodexAccount && !isOAuthProvider && (isCodexRuntime || strategy.provider === "custom-openai-compatible" || strategy.isCustomModel) && <div><Label>{t("quickDeploy.model.baseUrl")}</Label><Input value={strategy.baseUrl || ""} onChange={(event) => updateStrategy({ baseUrl: event.target.value })} /></div>}
             {modelNeedsTest && <Button type="button" variant="outline" onClick={testModel} disabled={modelTest === "testing" || optionsLoading}>{modelTest === "testing" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}{modelTest === "passed" ? t("quickDeploy.model.testPassed") : t("quickDeploy.model.test")}</Button>}
             {modelTest === "failed" && <p className="text-sm text-danger">{modelTestMessage || t("quickDeploy.errors.modelTestFailed")}</p>}
           </Card>
