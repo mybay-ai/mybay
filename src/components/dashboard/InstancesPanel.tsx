@@ -86,7 +86,7 @@ export function InstancesPanel({
   
   // Pagination & Selection state
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 8;
+  const pageSize = 12;
   const [selectedInstanceIds, setSelectedInstanceIds] = useState<Set<string>>(new Set());
   const [bulkMode, setBulkMode] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
@@ -251,11 +251,11 @@ export function InstancesPanel({
   const allOnPageSelected = selectableInstances.length > 0 && selectableInstances.every(i => selectedInstanceIds.has(i.id));
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       {/* Search and Action Control Bar */}
       {instances.length > 0 && (
         <div className="bg-surface-muted/50 border border-outline/50 p-2 rounded-xl shadow-xs transition-all">
-          <div className="flex flex-col gap-2.5 items-stretch justify-between xl:flex-row xl:items-center">
+          <div className="flex flex-col gap-2.5 items-stretch justify-between 2xl:flex-row 2xl:items-center">
             {/* Search Bar Block */}
             <div className="relative flex-1 min-w-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-content-muted" />
@@ -264,7 +264,7 @@ export function InstancesPanel({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t("search_placeholder")}
-                className="w-full pl-8.5 pr-8 py-1.5 h-9 bg-surface border border-outline rounded-xl text-[12px] font-medium placeholder:text-content-muted focus:outline-none focus:ring-2 focus:ring-focus-ring focus:border-action transition-all text-content"
+                className="w-full pl-8.5 pr-8 py-1.5 h-11 bg-surface border border-outline rounded-xl text-[12px] font-medium placeholder:text-content-muted focus:outline-none focus:ring-2 focus:ring-focus-ring focus:border-action transition-all text-content"
               />
               {searchQuery && (
                 <button
@@ -283,7 +283,7 @@ export function InstancesPanel({
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="h-9 bg-surface border border-outline text-[12px] font-medium text-content-secondary px-3 py-1 rounded-xl focus:outline-none focus:ring-2 focus:ring-focus-ring focus:border-action shadow-xs cursor-pointer transition-colors hover:bg-surface-muted"
+                  className="h-11 bg-surface border border-outline text-[12px] font-medium text-content-secondary px-3 py-1 rounded-xl focus:outline-none focus:ring-2 focus:ring-focus-ring focus:border-action shadow-xs cursor-pointer transition-colors hover:bg-surface-muted"
                 >
                   <option value="all">{t("filter_all")}</option>
                   <option value="running">{t("filter_running")}</option>
@@ -304,7 +304,7 @@ export function InstancesPanel({
                     variant="outline"
                     onClick={executeBulkDelete}
                     disabled={isBulkDeleting}
-                    className="h-9 px-2.5 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/45 transition-colors flex items-center gap-1.5 shadow-xs shrink-0 rounded-xl text-[13px] font-semibold"
+                    className="h-11 px-2.5 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/45 transition-colors flex items-center gap-1.5 shadow-xs shrink-0 rounded-xl text-[13px] font-semibold"
                   >
                     <Trash2 className={cn("w-3.5 h-3.5", isBulkDeleting && "animate-pulse")} />
                     <span className="hidden sm:inline">
@@ -315,11 +315,11 @@ export function InstancesPanel({
               )}
 
               {/* View Switches */}
-              <div className="flex items-center gap-0.5 bg-outline/40 p-0.5 rounded-xl border border-outline/50 h-9">
+              <div className="flex items-center gap-0.5 bg-outline/40 p-0.5 rounded-xl border border-outline/50 h-11">
                 <button
                   onClick={() => setViewMode('grid')}
                   className={cn(
-                    "flex items-center gap-1.5 rounded-lg px-2 py-1 text-[13px] font-semibold transition-colors duration-150 cursor-pointer",
+                    "flex items-center gap-1.5 rounded-lg px-2 min-h-9 text-[13px] font-semibold transition-colors duration-150 cursor-pointer",
                     viewMode === 'grid'
                       ? "bg-surface shadow-xs text-content border border-outline/40"
                       : "text-content-muted hover:text-content-secondary"
@@ -333,7 +333,7 @@ export function InstancesPanel({
                 <button
                   onClick={() => { setViewMode('table'); setBulkMode(false); setSelectedInstanceIds(new Set()); }}
                   className={cn(
-                    "flex items-center gap-1.5 rounded-lg px-2 py-1 text-[13px] font-semibold transition-colors duration-150 cursor-pointer",
+                    "flex items-center gap-1.5 rounded-lg px-2 min-h-9 text-[13px] font-semibold transition-colors duration-150 cursor-pointer",
                     viewMode === 'table'
                       ? "bg-surface shadow-xs text-content border border-outline/40"
                       : "text-content-muted hover:text-content-secondary"
@@ -346,6 +346,9 @@ export function InstancesPanel({
                 </button>
               </div>
 
+              <details className="relative">
+                <summary className="flex min-h-11 cursor-pointer items-center rounded-xl border border-outline bg-surface px-3 text-sm">{t("instances_more_actions", { defaultValue: "更多" })}</summary>
+                <div className="absolute left-0 top-full z-20 mt-2 flex w-56 flex-col gap-2 rounded-xl border border-outline bg-surface p-2 shadow-lg">
               {viewMode === 'grid' && (
                 <Button
                   variant="outline"
@@ -355,7 +358,7 @@ export function InstancesPanel({
                     setBulkMode((current) => !current);
                     setSelectedInstanceIds(new Set());
                   }}
-                  className="h-9 rounded-xl px-3 text-xs"
+                  className="h-11 rounded-xl px-3 text-xs"
                 >
                   {t(bulkMode ? "agent_finish_bulk" : "agent_bulk_manage")}
                 </Button>
@@ -365,19 +368,21 @@ export function InstancesPanel({
               <Button
                 variant="outline"
                 onClick={() => setIsImportModalOpen(true)}
-                className="h-9 px-2.5 bg-emerald-50 dark:bg-emerald-950/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800/80 text-emerald-700 dark:text-emerald-400 rounded-xl text-[13px] font-semibold transition-colors flex items-center gap-1.5 active:scale-95 shadow-xs shrink-0"
+                className="h-11 px-2.5 bg-emerald-50 dark:bg-emerald-950/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800/80 text-emerald-700 dark:text-emerald-400 rounded-xl text-[13px] font-semibold transition-colors flex items-center gap-1.5 active:scale-95 shadow-xs shrink-0"
                 title={t("import_archive_preview_title")}
               >
                 <Upload className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 <span>{t("import_archive_preview_title")}</span>
               </Button>
 
+                </div>
+              </details>
               {/* Reload Action Button */}
               <Button
                 variant="outline"
                 onClick={() => fetchInstances()}
                 disabled={loading}
-                className="h-9 px-2.5 bg-surface border border-outline rounded-xl text-[13px] font-semibold text-content-secondary hover:bg-surface-muted transition-colors flex items-center gap-1.5 active:scale-95 shadow-xs shrink-0"
+                className="h-11 px-2.5 bg-surface border border-outline rounded-xl text-[13px] font-semibold text-content-secondary hover:bg-surface-muted transition-colors flex items-center gap-1.5 active:scale-95 shadow-xs shrink-0"
                 title={t("reload_tooltip")}
               >
                 <RefreshCw className={cn("w-3 h-3 text-content-muted", loading && "animate-spin")} />
@@ -385,7 +390,7 @@ export function InstancesPanel({
               </Button>
 
               {/* Count Indicator */}
-              <div className="flex items-center gap-1.5 px-2.5 h-9 bg-outline/30 border border-outline/30 rounded-xl text-[13px] font-medium text-content-muted select-none shrink-0">
+              <div className="flex items-center gap-1.5 px-2.5 h-11 bg-outline/30 border border-outline/30 rounded-xl text-[13px] font-medium text-content-muted select-none shrink-0">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 <span>
                   {filteredInstances.length} / {instances.length}
@@ -409,8 +414,8 @@ export function InstancesPanel({
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <div className="w-11 h-11 md:w-9 md:h-9 bg-surface-muted rounded-xl md:rounded-lg" />
-                  <div className="w-11 h-11 md:w-9 md:h-9 bg-surface-muted rounded-xl md:rounded-lg" />
+                  <div className="w-11 h-11 md:w-9 md:h-11 bg-surface-muted rounded-xl md:rounded-lg" />
+                  <div className="w-11 h-11 md:w-9 md:h-11 bg-surface-muted rounded-xl md:rounded-lg" />
                 </div>
               </div>
               <div className="w-full h-11 bg-surface-muted rounded-xl md:rounded-lg mb-4" />
@@ -579,11 +584,11 @@ export function InstancesPanel({
 
           {/* Pagination Controls */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-6 bg-surface p-3 rounded-xl border border-outline/60 shadow-sm">
+            <div className="flex flex-wrap gap-3 items-center justify-between mt-6 bg-surface p-3 rounded-xl border border-outline/60 shadow-sm">
               <span className="text-[13px] text-content-muted font-semibold">
                 {t("pagination_info", { start: (currentPage - 1) * pageSize + 1, end: Math.min(currentPage * pageSize, filteredInstances.length), total: filteredInstances.length })}
               </span>
-              <div className="flex items-center gap-1">
+              <div className="flex max-w-full flex-wrap items-center gap-1">
                 <Button
                   variant="outline"
                   size="sm"

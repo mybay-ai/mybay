@@ -465,7 +465,7 @@ export function InstanceSettingsModal({ instance: initialInstance, onClose, onSa
       {/* Mobile background overlay click handler */}
       <div className="absolute inset-0 z-0" onClick={onClose} />
 
-      <div className="bg-surface rounded-t-2xl md:rounded-xl w-full max-w-2xl overflow-hidden shadow-lg animate-in fade-in slide-in-from-bottom-6 md:zoom-in-98 duration-200 flex flex-col max-h-[90vh] md:max-h-[85vh] relative z-10 border border-slate-200/80 dark:border-slate-800">
+      <div className="bg-surface rounded-t-2xl md:rounded-xl w-full max-w-2xl overflow-hidden shadow-lg animate-in fade-in slide-in-from-bottom-6 md:zoom-in-98 duration-200 flex flex-col h-[100dvh] max-h-[100dvh] md:h-auto md:max-h-[85dvh] relative z-10 border border-slate-200/80 dark:border-slate-800">
 
         {/* Mobile handle styling */}
         <div className="w-full flex justify-center py-2.5 md:hidden bg-slate-50/50 dark:bg-slate-950/40 border-b border-outline/80">
@@ -482,7 +482,7 @@ export function InstanceSettingsModal({ instance: initialInstance, onClose, onSa
           </button>
         </div>
 
-        <div className="p-5 overflow-y-auto space-y-5 flex-1 bg-slate-50/30 dark:bg-slate-950/40">
+        <div className="min-h-0 overscroll-contain p-4 md:p-5 overflow-y-auto space-y-5 flex-1 bg-slate-50/30 dark:bg-slate-950/40">
           <div className="p-3 bg-amber-50/50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 text-[13px] rounded-lg border border-amber-200/40 dark:border-amber-900/40 shadow-xs leading-relaxed">
             {t("settings_restart_notice")}
           </div>
@@ -744,9 +744,9 @@ export function InstanceSettingsModal({ instance: initialInstance, onClose, onSa
           <div className="h-4 md:hidden"></div>
         </div>
 
-        <div className="px-5 py-3.5 bg-surface border-t border-slate-200/60 dark:border-slate-800 flex flex-col-reverse md:flex-row justify-end gap-2.5 shrink-0">
-          <Button variant="outline" type="button" className="w-full md:w-auto text-[13px] font-medium rounded-lg h-9 text-slate-600 border-slate-200 hover:bg-surface-muted dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800" onClick={onClose} disabled={loading}>{t("action_cancel")}</Button>
-          <Button type="button" variant="primary" className="h-9 w-full rounded-lg text-[13px] font-medium md:w-auto" onClick={handleSave} disabled={loading}>
+        <div className="px-4 pt-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] bg-surface border-t border-slate-200/60 dark:border-slate-800 flex flex-row justify-end gap-2.5 shrink-0">
+          <Button variant="outline" type="button" className="w-full md:w-auto text-[13px] font-medium rounded-lg h-11 text-slate-600 border-slate-200 hover:bg-surface-muted dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800" onClick={onClose} disabled={loading}>{t("action_cancel")}</Button>
+          <Button type="button" variant="primary" className="h-11 w-full rounded-lg text-[13px] font-medium md:w-auto" onClick={handleSave} disabled={loading}>
             {loading ? t("settings_saving_btn") : t("settings_save_btn")}
           </Button>
         </div>

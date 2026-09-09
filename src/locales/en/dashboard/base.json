@@ -1586,5 +1586,6 @@
     "copyFailed": "Could not copy. Download the report instead."
   },
   "settings_codex_workspace_title": "Codex is managed through the MyBay Agent workspace",
-  "settings_codex_workspace_desc": "Use the MyBay chat workspace and protected Runtime API. Codex does not expose a standalone Dashboard."
+  "settings_codex_workspace_desc": "Use the MyBay chat workspace and protected Runtime API. Codex does not expose a standalone Dashboard.",
+  "instances_more_actions": "More"
 }

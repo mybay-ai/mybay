@@ -1586,5 +1586,6 @@
     "copyFailed": "复制失败，请改用下载。"
   },
   "settings_codex_workspace_title": "Codex 由 MyBay Agent 工作区管理",
-  "settings_codex_workspace_desc": "通过 MyBay 对话工作台和受保护的 Runtime API 访问 Codex，无需配置独立 Dashboard 或其登录密码。"
+  "settings_codex_workspace_desc": "通过 MyBay 对话工作台和受保护的 Runtime API 访问 Codex，无需配置独立 Dashboard 或其登录密码。",
+  "instances_more_actions": "更多"
 }
