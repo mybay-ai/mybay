@@ -10,5 +10,13 @@
   "allowlistHint": "Separate IDs with commas. Groups require both a permitted user and group, plus a bot mention. Each Feishu app can bind to one instance only.",
   "save": "Save Feishu configuration",
   "saved": "Configuration saved. Complete Feishu permissions, long-connection event subscription and app publication before testing messages.",
-  "failed": "Could not load or save. Check the configuration, user allowlist and whether another instance already uses this app."
+  "failed": "Could not load or save. Check the configuration, user allowlist and whether another instance already uses this app.",
+  "qrDescription": "Use the existing Feishu QR flow to create or authorize a test app. Do not select an app currently used by Hermes. Review the user allowlist, then enable and save after scanning.",
+  "qrStart": "Bind with Feishu QR / Refresh",
+  "qrGenerating": "Generating QR code…",
+  "qrWaiting": "Scan with Feishu and complete authorization. The QR code expires in about 10 minutes.",
+  "qrReady": "App credentials and your Open ID have been filled in. Review, enable and save to connect; no connection has been enabled automatically.",
+  "qrMissingUser": "App credentials were received, but no valid user Open ID was returned. Enter an explicit allowlist before enabling.",
+  "qrFailed": "QR authorization is incomplete, expired or temporarily unavailable. Refresh to retry or configure manually.",
+  "qrCancel": "Cancel QR binding"
 }

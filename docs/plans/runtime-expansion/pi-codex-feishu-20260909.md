@@ -87,3 +87,23 @@ UI check. All 12 running Agent container IDs and start times were unchanged afte
 the control-only update, and health returned HTTP 200.
 Local image: `mybay/local:feishu-settings-20260910` (derived from the prior local
 image with the rebuilt application bundle). Real Feishu send/receive was not run.
+
+## Pi/Codex QR binding
+
+Reused the existing authenticated Feishu QR onboarding endpoints. The response
+now optionally includes the scanned user's validated Open ID from `user_info.open_id`.
+Hermes request parameters and its settings UI are unchanged. The Pi/Codex form
+fills credentials and the new app's user allowlist, clears old app-scoped IDs,
+and requires explicit enable/save. Cancelling, replacing or leaving a QR session
+prevents late results from being applied. No credentials are retained in QR display state.
+
+- PASS: 5 QR onboarding tests, TypeScript, targeted ESLint, production build.
+- PASS: real localhost Pi settings generated a pending Feishu QR code.
+- PASS: local image `mybay/local:feishu-qr-20260910`, health HTTP 200, healthy.
+- PASS: all 12 running Agent container IDs/start times unchanged.
+- PENDING USER: scan and authorize a dedicated test application.
+- NOT RUN: completed live QR binding, enabled config save, real Pi/Codex IM round trip.
+- Codex shares the Pi/Codex settings component; no live Codex UI acceptance yet.
+
+Official field reference:
+https://github.com/larksuite/cli/blob/main/internal/auth/app_registration.go

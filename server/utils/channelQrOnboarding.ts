@@ -7,6 +7,7 @@ export interface ChannelQrResult {
   feishuAppId?: string;
   feishuAppSecret?: string;
   feishuRegion?: "feishu" | "lark";
+  feishuUserOpenId?: string;
   wecomBotId?: string;
   wecomBotSecret?: string;
   weixinAccountId?: string;
@@ -93,6 +94,8 @@ async function pollFeishu(session: ChannelQrSession, deviceCode: string, domain:
       feishuAppId: String(result.client_id),
       feishuAppSecret: String(result.client_secret),
       feishuRegion: domain,
+      ...(typeof result.user_info?.open_id === "string" && /^ou_[A-Za-z0-9_-]{1,125}$/.test(result.user_info.open_id)
+        ? { feishuUserOpenId: result.user_info.open_id } : {}),
     });
   } else if (["access_denied", "expired_token"].includes(String(result.error || ""))) {
     fail(session, String(result.error).toUpperCase());
