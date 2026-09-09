@@ -107,3 +107,18 @@ prevents late results from being applied. No credentials are retained in QR disp
 
 Official field reference:
 https://github.com/larksuite/cli/blob/main/internal/auth/app_registration.go
+
+## Live Pi private-message acceptance (2026-09-09)
+
+PASS: QR completion populated the dedicated test application and scanned user's
+allowlist; the enabled binding was saved through the real settings UI.
+PASS: a real Feishu private message reached Pi instance
+`af4c9c26-30f9-4acb-afb0-6e9c80978870` and produced completed run
+`d334b906-5b69-4a94-970b-0280894c1041`.
+PASS: receipt `7949271547e298fbd620302d953cdf9d3c6633e219ac47ddc2ec2165f0af1c9b`
+advanced from submitted to finished. Its single persisted reply chunk has
+`sent: true`, which is written only after the Feishu reply API succeeds.
+The user's Feishu client display was not independently observed.
+
+This proves one real Pi private-text round trip. Codex, groups, /stop,
+reconnect/restart recovery and IM approval flows are not covered by this result.
