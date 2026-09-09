@@ -199,3 +199,21 @@ Each stop receipt points to its original run and conversation. All four receipts
 cancellation replies have sent=true. This verifies actual private IM cancellation,
 not merely Web stop or stop acknowledgement. Group stop and concurrent cross-chat
 non-interference remain outside this test.
+
+## Codex identity correction (2026-09-10)
+
+Added explicit Codex identity/upgrade-policy wording. Legacy Codex native sessions
+retain developer instructions, so corrected sessions use a versioned session ID;
+the preparation adapter rebinds legacy sessions once and replays managed history.
+MyBay conversation records remain intact; native thread continuity changes once.
+Resumed sessions also receive the current developer instructions.
+
+PASS: 9 policy/driver tests, native Runtime tests, TypeScript and production build.
+Local control image: mybay/local:codex-identity-v2-20260910. Codex Runtime image
+was rebuilt locally and the dedicated Codex instance redeployed through the API.
+No per-instance SOUL.md or mybay.system.md was present in this Codex data directory.
+Real check through the existing MyBay conversation initially reproduced the stale
+identity after resume-only patch. After migration, run
+175db08e-a18d-4a2c-8806-26244a3035f3 completed with the correct Codex/OpenAI Codex
+Runtime identity. This check used the authenticated MyBay runs API, not a new
+Feishu delivery. Historical message text is intentionally preserved.

@@ -38,7 +38,8 @@ export class CodexRunPreparationProvider implements RuntimeRunPreparationProvide
       const conversation = await dependencies.getConversationForSessionBinding(run.conversation_id);
       if (!conversation) throw new Error("CONVERSATION_NOT_FOUND");
       const sessionId = typeof conversation.session_id === "string" ? conversation.session_id.trim() : "";
-      if (/^[A-Za-z0-9_.:-]{8,160}$/.test(sessionId)) return { sessionId, state: "existing" };
+      // Rebind legacy sessions once to discard incorrect native developer identity; managed history is replayed.
+      if (sessionId.startsWith("codex-v2-") && /^[A-Za-z0-9_.:-]{8,160}$/.test(sessionId)) return { sessionId, state: "existing" };
       return createSessionBinding(run.instance_id, run.conversation_id, conversation.title);
     };
 

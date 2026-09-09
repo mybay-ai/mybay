@@ -20,21 +20,21 @@ describe("CodexRuntimeDriver experimental boundary", () => {
   });
   it("reuses a persisted Codex session and builds a streaming payload", async () => {
     const controller = codexRuntimeDriver.preparation.createController(dependencies({
-      getConversationForSessionBinding: vi.fn(async () => ({ session_id: "codex-session-1234", title: "Codex chat" })),
+      getConversationForSessionBinding: vi.fn(async () => ({ session_id: "codex-v2-session-1234", title: "Codex chat" })),
     }));
     await expect(controller.ensureSessionForConversation({ instance_id: "instance-1", conversation_id: "conversation-1" } as any))
-      .resolves.toEqual({ sessionId: "codex-session-1234", state: "existing" });
-    expect(controller.shouldLoadManagedHistory?.({ sessionId: "codex-session-1234", state: "existing" })).toBe(false);
-    expect(controller.shouldLoadManagedHistory?.({ sessionId: "codex-session-1234", state: "created" })).toBe(true);
+      .resolves.toEqual({ sessionId: "codex-v2-session-1234", state: "existing" });
+    expect(controller.shouldLoadManagedHistory?.({ sessionId: "codex-v2-session-1234", state: "existing" })).toBe(false);
+    expect(controller.shouldLoadManagedHistory?.({ sessionId: "codex-v2-session-1234", state: "created" })).toBe(true);
     expect(controller.buildRunPayload({
       userContent: "hello",
       reasoningEffort: "deep",
       systemPolicy: "system policy",
-      sessionBinding: { sessionId: "codex-session-1234", state: "existing" },
+      sessionBinding: { sessionId: "codex-v2-session-1234", state: "existing" },
       historyMessages: [],
     } as any)).toMatchObject({
       input: "hello",
-      session_id: "codex-session-1234",
+      session_id: "codex-v2-session-1234",
       instructions: "system policy",
       model_options: { reasoning_effort: "high" },
     });
@@ -47,11 +47,11 @@ describe("CodexRuntimeDriver experimental boundary", () => {
       reasoningEffort: "balanced",
       systemPolicy: "system policy",
       agentAttachmentContext: "1. report.txt\n   - path: /opt/data/chat_uploads/chat-1/stored.txt",
-      sessionBinding: { sessionId: "codex-session-1234", state: "existing" },
+      sessionBinding: { sessionId: "codex-v2-session-1234", state: "existing" },
       historyMessages: [],
     } as any)).toMatchObject({
       input: expect.stringContaining("/opt/data/chat_uploads/chat-1/stored.txt"),
-      session_id: "codex-session-1234",
+      session_id: "codex-v2-session-1234",
     });
   });
 
@@ -66,13 +66,13 @@ describe("CodexRuntimeDriver experimental boundary", () => {
     expect(completeRun).toHaveBeenCalledWith("run-1", "failed", "", "CODEX_BATCH_MODE_UNSUPPORTED");
   });
 
-  it("creates and binds a native Codex session when the conversation has none", async () => {
+  it.each([null, "legacy-session-1234"])("creates and binds a corrected session for %s", async (legacySession) => {
     const bindConversationSessionId = vi.fn(async () => undefined);
     const request = vi.fn(async () => ({ ok: true, statusCode: 201, json: { id: "codex-created-1234" } }));
     const controller = codexRuntimeDriver.preparation.createController(dependencies({
       request,
       bindConversationSessionId,
-      getConversationForSessionBinding: vi.fn(async () => ({ session_id: null, title: "New chat" })),
+      getConversationForSessionBinding: vi.fn(async () => ({ session_id: legacySession, title: "New chat" })),
     }));
     await expect(controller.ensureSessionForConversation({ instance_id: "instance-1", conversation_id: "conversation-1" } as any))
       .resolves.toEqual({ sessionId: "codex-created-1234", state: "created" });

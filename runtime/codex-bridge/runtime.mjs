@@ -76,7 +76,7 @@ export class CodexRuntime extends EventEmitter {
     await rename(`${target}.tmp`, target);
   }
   async createSession() {
-    const session = { id: randomUUID(), threadId: null };
+    const session = { id: "codex-v2-" + randomUUID(), threadId: null };
     this.sessions.set(session.id, session); await this.persist(); return session;
   }
   publicRun(run) {
@@ -120,7 +120,7 @@ export class CodexRuntime extends EventEmitter {
     } else if (!this.loaded.has(session.id)) {
       // Observed 0.153.4 behavior: cumulative usage restarts when a thread is loaded into a fresh process.
       run.usageBaseline = {};
-      const result = await this.rpc.request("thread/resume", { ...options, threadId: session.threadId });
+      const result = await this.rpc.request("thread/resume", { ...options, threadId: session.threadId, developerInstructions: String(body.instructions || "") || undefined });
       if (result?.thread?.id !== session.threadId) throw fail("CODEX_THREAD_MISMATCH");
       this.loaded.add(session.id);
     }
