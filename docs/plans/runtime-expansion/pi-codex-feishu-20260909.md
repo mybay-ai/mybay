@@ -162,3 +162,17 @@ previously enabled Feishu bindings received new private messages without rescann
 Both reply chunks have `sent: true`. This verifies reconnection and new-message
 processing after a control-panel restart. It does not verify an interrupted active
 run, network partition, Runtime container restart, groups or live cancellation.
+
+## Live group-message acceptance (2026-09-10)
+
+PASS: two new messages in the explicitly allowlisted test group reached the
+corresponding Pi/Codex instances. Both runs completed and both inbox receipts
+reached finished with all reply chunks sent through the Feishu reply API.
+- Pi run: cf0358d2-bcbf-4cbd-bb54-69f21868777a;
+  conversation: a106d19b-23ea-41f1-92bf-14f513fe4641.
+- Codex run: d3f6fb98-de60-4fca-ba40-9c6c3c23bd40;
+  conversation: a60ff436-3323-471d-bc07-b31b3232125b.
+The conversations are separate. No filtered-event diagnostic was observed for
+this attempt. The cause of earlier missing events remains unknown; rich-text
+filtering was a hypothesis, not a verified cause. No-mention behavior and live
+cancellation remain unverified. The local diagnostic image remains active.
