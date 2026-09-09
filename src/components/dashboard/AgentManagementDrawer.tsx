@@ -149,7 +149,7 @@ export function AgentManagementDrawer({
               </div>
               <div>
                 <dt className="text-xs text-content-muted">{t("agent_management_runtime")}</dt>
-                <dd className="mt-1 break-words font-medium text-content">{runtimeType === "pi" ? "Pi Agent" : "Hermes Agent"}</dd>
+                <dd className="mt-1 break-words font-medium text-content">{runtimeType === "codex" ? "Codex" : runtimeType === "pi" ? "Pi Agent" : "Hermes Agent"}</dd>
               </div>
               <div>
                 <dt className="text-xs text-content-muted">{t("agent_management_model")}</dt>

@@ -140,3 +140,13 @@ Pi and Codex each now have a real basic private-text round trip. This does not
 certify groups, cancellation, reconnect/restart recovery, attachments or IM approvals.
 Open UI issue: the Codex management dialog labels the runtime as Hermes; actual
 stored runtime and Docker image were verified as Codex. Display correction pending.
+
+## Runtime display and access-policy correction
+
+Fixed Codex naming in management, grid and table version labels. Dashboard
+support now permits Hermes only; Codex settings show a dedicated workspace notice.
+Hermes Dashboard behavior is retained. PASS: 3 access-policy tests, 4 Feishu worker
+tests, TypeScript, targeted ESLint and production build.
+Local image `mybay/local:codex-display-20260910` deployed; HTTP health 200 and all
+13 running Agent container start times unchanged. Real post-restart Feishu
+round trips and dedicated group preparation are awaiting user test messages.

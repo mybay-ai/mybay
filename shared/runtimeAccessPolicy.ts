@@ -1,5 +1,5 @@
 export function supportsRuntimeDashboard(runtimeType: unknown): boolean {
-  return String(runtimeType || "hermes").trim().toLowerCase() !== "pi";
+  return String(runtimeType || "hermes").trim().toLowerCase() === "hermes";
 }
 
 export function normalizeRuntimeAccessDraft<T extends Record<string, any>>(draft: T): T {

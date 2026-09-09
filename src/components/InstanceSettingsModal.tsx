@@ -681,8 +681,8 @@ export function InstanceSettingsModal({ instance: initialInstance, onClose, onSa
             <div className="flex items-start gap-3 rounded-xl border border-purple-200 bg-purple-50/60 p-5 dark:border-purple-800/70 dark:bg-purple-950/30">
               <Info className="mt-0.5 h-4 w-4 shrink-0 text-purple-600 dark:text-purple-300" />
               <div>
-                <h4 className="text-[13px] font-semibold text-content">{t("settings_pi_workspace_title")}</h4>
-                <p className="mt-1 text-[12px] leading-relaxed text-content-muted">{t("settings_pi_workspace_desc")}</p>
+                <h4 className="text-[13px] font-semibold text-content">{t(runtimeType === "codex" ? "settings_codex_workspace_title" : "settings_pi_workspace_title")}</h4>
+                <p className="mt-1 text-[12px] leading-relaxed text-content-muted">{t(runtimeType === "codex" ? "settings_codex_workspace_desc" : "settings_pi_workspace_desc")}</p>
               </div>
             </div>
           )}

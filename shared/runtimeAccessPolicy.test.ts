@@ -2,15 +2,15 @@ import { describe, expect, it } from "vitest";
 import { normalizeRuntimeAccessDraft, supportsRuntimeDashboard } from "./runtimeAccessPolicy";
 
 describe("runtime access policy", () => {
-  it("removes stale Dashboard credentials from Pi deployment drafts", () => {
+  it.each(["pi", "codex"])("removes stale Dashboard credentials from %s deployment drafts", (runtime) => {
     expect(normalizeRuntimeAccessDraft({
-      runtime_type: "pi",
+      runtime_type: runtime,
       enableDashboard: true,
       username: "admin",
       password: "secret-password",
       name: "Pi Agent",
     })).toEqual({
-      runtime_type: "pi",
+      runtime_type: runtime,
       enableDashboard: false,
       username: "",
       password: "",
