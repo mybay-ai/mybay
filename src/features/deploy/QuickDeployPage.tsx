@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { AlertCircle, CheckCircle2, Copy, Eye, EyeOff, KeyRound, Loader2, Settings2, ShieldCheck, Sparkles, Zap } from "lucide-react";
+import { AlertCircle, CheckCircle2, ChevronDown, Copy, Eye, EyeOff, KeyRound, Loader2, Settings2, ShieldCheck, Sparkles, Zap } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { providerRegistry } from "../../../shared/providerRegistry";
 import { resolveProviderRegistryKey } from "../../../shared/providerRegistryUtils";
@@ -459,7 +459,7 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
               <Button type="button" variant={strategy.mode === "byok" ? "primary" : "outline"} disabled={oauth.loading} onClick={() => selectMode("byok")}><Zap className="mr-2 h-4 w-4" />{t("quickDeploy.model.byok")}</Button>
             </div>
             {strategy.mode === "saved_credential" ? (
-              <div><Label>{t("quickDeploy.model.credential")}</Label><select value={strategy.credentialId} onChange={(event) => selectCredential(event.target.value)} className="mt-2 h-11 w-full rounded-lg border border-outline bg-control px-3 text-sm text-content">{compatibleCredentials.map((credential) => <option key={credential.id} value={credential.id}>{credential.name} ({credential.type})</option>)}</select></div>
+              <div><Label>{t("quickDeploy.model.credential")}</Label><div className="relative mt-2"><select value={strategy.credentialId} onChange={(event) => selectCredential(event.target.value)} className="h-11 w-full appearance-none rounded-lg border border-outline bg-control pl-3.5 pr-10 text-sm text-content">{compatibleCredentials.map((credential) => <option key={credential.id} value={credential.id}>{credential.name} ({credential.type})</option>)}</select><ChevronDown aria-hidden="true" className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-content-muted" /></div></div>
             ) : !isOAuthProvider ? (
               <div><Label>{t("quickDeploy.model.apiKey")}</Label><Input type="password" autoComplete="new-password" value={strategy.apiKey || ""} onChange={(event) => updateStrategy({ apiKey: event.target.value })} /></div>
             ) : null}
@@ -485,7 +485,7 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
               </div>
             )}
             </>}
-            <div><Label>{t("quickDeploy.model.model")}</Label>{providerConfig?.models?.length && !strategy.isCustomModel ? <select value={strategy.model} onChange={(event) => updateStrategy({ model: event.target.value })} className="mt-2 h-11 w-full rounded-lg border border-outline bg-control px-3 text-sm text-content">{providerConfig.models.map((model) => <option key={model} value={model}>{model}</option>)}</select> : <Input value={strategy.model} onChange={(event) => updateStrategy({ model: event.target.value })} />}</div>
+            <div><Label>{t("quickDeploy.model.model")}</Label>{providerConfig?.models?.length && !strategy.isCustomModel ? <div className="relative mt-2"><select value={strategy.model} onChange={(event) => updateStrategy({ model: event.target.value })} className="h-11 w-full appearance-none rounded-lg border border-outline bg-control pl-3.5 pr-10 text-sm text-content">{providerConfig.models.map((model) => <option key={model} value={model}>{model}</option>)}</select><ChevronDown aria-hidden="true" className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-content-muted" /></div> : <Input value={strategy.model} onChange={(event) => updateStrategy({ model: event.target.value })} />}</div>
             {!isCodexAccount && !isOAuthProvider && (isCodexRuntime || strategy.provider === "custom-openai-compatible" || strategy.isCustomModel) && <div><Label>{t("quickDeploy.model.baseUrl")}</Label><Input value={strategy.baseUrl || ""} onChange={(event) => updateStrategy({ baseUrl: event.target.value })} /></div>}
             {modelNeedsTest && <Button type="button" variant="outline" onClick={testModel} disabled={modelTest === "testing" || optionsLoading}>{modelTest === "testing" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}{modelTest === "passed" ? t("quickDeploy.model.testPassed") : t("quickDeploy.model.test")}</Button>}
             {modelTest === "failed" && <p className="text-sm text-danger">{modelTestMessage || t("quickDeploy.errors.modelTestFailed")}</p>}
