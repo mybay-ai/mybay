@@ -1,0 +1,14 @@
+{
+  "title": "Feishu channel (experimental)",
+  "description": "Connect Feishu text messages to this Pi/Codex instance. Conversations also appear on the Web. Send /stop to request cancellation. Handle approvals and follow-up questions on the Web for now.",
+  "enabled": "Enable a dedicated Feishu app",
+  "appId": "App ID",
+  "secret": "App Secret",
+  "secretSaved": "Encrypted secret saved; leave blank to keep",
+  "users": "Allowed user Open IDs (required)",
+  "chats": "Allowed group Chat IDs (optional)",
+  "allowlistHint": "Separate IDs with commas. Groups require both a permitted user and group, plus a bot mention. Each Feishu app can bind to one instance only.",
+  "save": "Save Feishu configuration",
+  "saved": "Configuration saved. Complete Feishu permissions, long-connection event subscription and app publication before testing messages.",
+  "failed": "Could not load or save. Check the configuration, user allowlist and whether another instance already uses this app."
+}

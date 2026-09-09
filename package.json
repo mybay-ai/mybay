@@ -60,6 +60,7 @@
     },
     "dependencies": {
         "@e965/xlsx": "^0.20.3",
+        "@larksuiteoapi/node-sdk": "1.73.3",
         "adm-zip": "^0.6.0",
         "archiver": "^8.0.0",
         "bcryptjs": "^3.0.3",

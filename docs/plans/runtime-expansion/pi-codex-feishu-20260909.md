@@ -1,0 +1,76 @@
+# Pi / Codex Feishu integration — 2026-09-09
+
+## Scope
+
+Experimental MyBay control-plane Feishu adapter for existing Pi and Codex instances.
+Hermes keeps its own container adapter. The native Runtime manifests continue to
+advertise Web only; this work does not certify native IM support.
+
+- Current entry: Agent → Manage → Advanced → Runtime details → A2A Collaboration
+  → Feishu channel (experimental).
+- Each Feishu app binds to one instance at a time. Test Pi first, disable that
+  binding, then bind Codex; do not run competing connections for the same app.
+- Explicit sender Open ID allowlist. Groups also require an allowed Chat ID and
+  a bot mention. Conversations are isolated by owner, instance, app, chat and sender.
+- SDK long connection receives text events and commits a durable inbox before
+  returning. The normal Web run repository and reconciler execute the task.
+- Replies use persisted chunk UUIDs for retry; remote duplicate suppression has
+  a provider-defined retention window, so this is not an unlimited exactly-once
+  delivery guarantee.
+- `/stop` targets only the sender's mapped conversation and persists the exact
+  target before requesting cancellation. Acceptance of stop is not confirmation
+  that execution has stopped.
+- Approvals and Pi follow-up questions are handled on the Web in this first
+  phase. IM approval cards/commands, attachments and streaming cards remain pending.
+
+## Storage and rollout
+
+Schema 8 adds `channelMessages` to the normal local database/backup. Back up the
+control database before upgrading. An older control image cannot open schema 8;
+rollback requires its matching schema-7 backup. Credentials use the existing
+AES-GCM instance-secret mechanism and are omitted from configuration responses.
+No credentials belong in this report or Git.
+
+## Test application
+
+User created the dedicated app named `MyBay Pi Codex`.
+Read-only API checks passed: tenant authentication and bot identity lookup.
+The user reports that only app creation has been completed. Event permissions,
+long-connection subscription and a published test version still require setup.
+
+Setup order:
+1. In the Feishu developer console, enable the bot capability.
+2. Grant the receive-private-message, receive-group-mention and send-as-bot
+   permissions required by the message event and reply API. Keep availability
+   restricted to the test users.
+3. Configure the dedicated app in MyBay with the test user's app-scoped Open ID.
+4. With the MyBay listener running, select long connection in event settings and
+   subscribe to `im.message.receive_v1`.
+5. Publish the test version. Test private chat, group mention, duplicate delivery,
+   Web history, cancellation, restart recovery and permission denial for both Runtimes.
+
+Official references:
+- https://github.com/larksuite/node-sdk/blob/main/README.md
+- https://open.feishu.cn/document/server-docs/im-v1/message/events/receive
+- https://open.feishu.cn/document/server-docs/im-v1/message/reply
+
+## Evidence boundary
+
+- PASS: inbound policy, SQLite reopen/replay, identity isolation, bounded inbox,
+  retry UUID preservation, Unicode chunks, scoped cancellation, configuration
+  authentication/ownership, encrypted secret storage, duplicate app rejection.
+- PASS: 35 focused automated tests across the inbox, worker, configuration API,
+  sanitizer and database migration suites; TypeScript, strict core/boundary checks,
+  targeted ESLint, locale-key parity and production build.
+- PASS: dedicated app authentication and bot metadata lookup.
+- PASS: control image `mybay/local:feishu-managed-20260909` deployed at
+  `http://localhost:3000`; health HTTP 200 and container healthy. Pi configuration
+  form observed in the real browser (dark appearance), including its experimental
+  label, secret input and allowlist fields. No binding was enabled during UI QA.
+- Before migration: schema-7 backup
+  `backups/codex-open-20260909-1788961765323`, SQLite integrity check `ok`.
+- NOT RUN: real Feishu message → Pi/Codex run → Feishu reply, published-app
+  permissions, real group handling, Runtime recovery and real form submission.
+- NOT IMPLEMENTED in phase 1: IM approvals/questions and attachments.
+
+The end-to-end IM chain is not yet certified or closed.

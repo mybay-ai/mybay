@@ -64,5 +64,12 @@ export function sanitizeChannelConfigForChannel(config: any) {
     delete sanitized.configured_channels;
   }
 
+  // Managed Pi/Codex channels run in the control plane alongside the Web channel.
+  // Preserve their encrypted configuration when the instance is edited/redeployed.
+  if (config.managedFeishuEnabled === true) {
+    for (const field of channelFieldGroups.feishu) {
+      if (config[field] !== undefined) sanitized[field] = config[field];
+    }
+  }
   return sanitized;
 }

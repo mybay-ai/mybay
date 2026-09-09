@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import { sanitizeChannelConfigForChannel } from "./channelConfigSanitizer";
 
 describe("channel config sanitization", () => {
+  it("preserves the control-plane Feishu binding alongside Web", () => {
+    expect(sanitizeChannelConfigForChannel({ channel: "web", managedFeishuEnabled: true, feishuAppId: "cli_test", feishuAppSecret: "encrypted", feishuAllowedUsers: "ou_test" })).toMatchObject({ channel: "web", feishuAppId: "cli_test", feishuAppSecret: "encrypted", feishuAllowedUsers: "ou_test" });
+  });
   it("keeps only personal WeChat fields for the weixin channel", () => {
     const result = sanitizeChannelConfigForChannel({
       channel: "weixin",

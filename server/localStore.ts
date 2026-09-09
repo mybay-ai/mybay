@@ -13,6 +13,7 @@ export type LocalStoreData = {
   versions: any[];
   userResourcePolicies: any[];
   channelAuthEvents: any[];
+  channelMessages: any[];
   deploymentTasks: any[];
   deploymentEvents: any[];
   files: any[];
@@ -35,7 +36,7 @@ type CollectionName = Exclude<keyof LocalStoreData, "systemSettings">;
 
 const COLLECTIONS: CollectionName[] = [
   "users", "instances", "credentials", "auditLogs", "versions",
-  "userResourcePolicies", "channelAuthEvents", "deploymentTasks",
+  "userResourcePolicies", "channelAuthEvents", "channelMessages", "deploymentTasks",
   "deploymentEvents", "files", "tasks", "scheduledJobs", "scheduledFires", "templates", "blueprints",
   "chatProjects", "conversations", "chatMessages", "chatRuns", "chatMessageFeedback", "a2aTaskLinks", "instanceFileUploads"
 ];
@@ -58,6 +59,7 @@ const defaultData = (): LocalStoreData => ({
   }],
   userResourcePolicies: [],
   channelAuthEvents: [],
+  channelMessages: [],
   deploymentTasks: [],
   deploymentEvents: [],
   files: [],
@@ -386,6 +388,10 @@ function applySchemaMigrations(db: DatabaseSync) {
       // The table is created by initializeSchema. Advancing the schema version
       // makes backup/restore compatibility explicit for durable file-upload receipts.
       version = 7;
+    }
+    if (version < 8) {
+      // Durable managed-Runtime IM receipts participate in normal DB backups.
+      version = 8;
     }
     db.prepare("INSERT OR REPLACE INTO localMetadata (key, value) VALUES (?, ?)").run("schema_version", String(version));
     db.exec("COMMIT");
