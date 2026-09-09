@@ -150,3 +150,15 @@ tests, TypeScript, targeted ESLint and production build.
 Local image `mybay/local:codex-display-20260910` deployed; HTTP health 200 and all
 13 running Agent container start times unchanged. Real post-restart Feishu
 round trips and dedicated group preparation are awaiting user test messages.
+
+## Live control-panel restart recovery (2026-09-09)
+
+After the control-only update to `mybay/local:codex-display-20260910`, both
+previously enabled Feishu bindings received new private messages without rescanning:
+- Codex run `6c33f962-b2d3-4732-bfec-b9e2eb7ef47d`: completed;
+  receipt `cf8b28c71a7fc90142f6ca68814b8caba0b6f099db47fec565cfe6380a93ac10`: finished.
+- Pi run `a70686f5-802a-4ac2-9c19-fba0876dd6bd`: completed;
+  receipt `792c3523b7cb4159afeb221ca0a5f1f84f2328a548e43b7e457f6756ddffad12`: finished.
+Both reply chunks have `sent: true`. This verifies reconnection and new-message
+processing after a control-panel restart. It does not verify an interrupted active
+run, network partition, Runtime container restart, groups or live cancellation.
