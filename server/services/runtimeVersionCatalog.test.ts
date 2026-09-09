@@ -9,6 +9,13 @@ afterEach(() => {
 });
 
 describe("managed Runtime version catalog", () => {
+  it("exposes the pinned Codex build without admitting upgrades", () => {
+    expect(listManagedRuntimeVersions("codex")).toEqual([expect.objectContaining({
+      runtime_type: "codex", version: "0.153.4", bridge_version: "0.1.0-experimental.2",
+      image: "mybay/codex-runtime", upgradeable: false, certification_level: "experimental",
+    })]);
+    expect(listManagedRuntimeVersions("codex")[0].capabilities).not.toContain("upgrade");
+  });
   it("maps the latest Pi release to the configured distributable image", () => {
     process.env.MYBAY_PI_RUNTIME_IMAGE = "ghcr.io/mybay-ai/pi-runtime:0.85.1";
     const versions = listManagedRuntimeVersions("pi");
@@ -32,7 +39,7 @@ describe("managed Runtime version catalog", () => {
     const cached = await enrichRuntimeVersionCacheStatus(versions, {
       getImage: () => ({ inspect: async () => ({ Id: "sha256:cached" }) }),
     });
-    expect(cached[0]).toMatchObject({ is_prewarmed: true, prewarm_status: "cached" });
+    expect(cached[0]).toMatchObject({ is_prewarmed: true, prewarm_status: "cached", image_id: "sha256:cached", repo_digests: [] });
 
     const missing = await enrichRuntimeVersionCacheStatus(versions, {
       getImage: () => ({ inspect: async () => { throw { statusCode: 404 }; } }),

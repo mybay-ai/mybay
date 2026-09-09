@@ -1,3 +1,4 @@
+import { CODEX_BUILD } from "../../../shared/codexBuild";
 import { dbAdapter } from "../../db";
 import { supportsFeishu } from "../../utils/hermesCapabilities";
 import { parseImageRef } from "./helpers";
@@ -22,7 +23,7 @@ export async function resolveCreateRuntimeImage(options: {
   userRole: string;
 }): Promise<RuntimeImageSelectionResult> {
   const { data, secureData, userRole } = options;
-  if (data.runtime_type === "codex") return { ok: true, selection: { agent_image: "mybay/codex-runtime", agent_image_tag: "0.153.4", agent_version: "0.153.4", resolved_version: "0.153.4", myBayVersions: [] } };
+  if (data.runtime_type === "codex") return { ok: true, selection: { agent_image: CODEX_BUILD.image, agent_image_tag: CODEX_BUILD.imageTag, agent_version: CODEX_BUILD.nativeVersion, resolved_version: CODEX_BUILD.nativeVersion, myBayVersions: [] } };
   if (String(data.runtime_type || "hermes").trim().toLowerCase() === "pi") {
     const imageRef = process.env.MYBAY_PI_RUNTIME_IMAGE
       || `${PI_RUNTIME_DEFINITION.runtime.image}:${PI_RUNTIME_DEFINITION.runtime.tag}`;

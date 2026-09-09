@@ -38,3 +38,12 @@ Local working-tree audit and complete source gate, based on a3397bf plus pre-exi
 - Final complete npm run release:gate: PASS, exit 0. Vitest: 368 files passed / 1 skipped, 2037 tests passed / 6 skipped, 213.34 seconds. Native Node tests: 19 passed. Lint, three TypeScript checks, catalog/docs, encoding/copy/i18n/API contract checks, build and strict existing certification passed.
 - Log: tmp/runtime-expansion/chat-storage-final-gate.log. Timing logs: chat-placement-before.log, chat-placement-after.log, chat-placement-schema-after.log in the same local directory.
 - This closes the current full-source-gate blocker for this working-tree candidate, not lifecycle certification. Codex upgrade/rollback and complete backup/restore remain unfinished. No live container was rebuilt, restarted or upgraded in this follow-up, and nothing was published.
+
+## Codex build identity foundation
+
+- Added runtime/codex-bridge/release.json as the shared native/bridge/image identity manifest, consumed by the Runtime catalog, deployment image selection, local image validator and bridge health response. Existing native version and image tag remain unchanged; this is not a native upgrade.
+- Added a Node admission test validating the pinned dependency, lockfile and Docker labels against the manifest. Docker now copies the manifest into the image.
+- The authenticated agent-versions endpoint accepts runtimeType=codex and returns the current build with upgradeable=false, Experimental status and bridge_version. Cache inspection adds actual Docker image_id and available repo_digests. Empty publication date reflects an unpublished local build. Backend upgrade/rollback denial remains intact.
+- This is backend version identity/query support, not a completed version-repository UI or upgrade workflow. Current running containers are untouched.
+- Validation: 3 focused Vitest files / 7 tests, 10 Codex Node tests, final version catalog 4 tests, TypeScript, targeted ESLint and production build passed. Full release gate not repeated after these localized changes; previous storage-gate PASS remains scoped to its candidate.
+- Isolated image mybay/codex-runtime:version-candidate-20260910 built successfully (image config ID sha256:9597cb5dfd79353b930b57209ef91bbfb9c752ec564d8705d40dab1970c0f88e). A non-networked read-only temporary container loaded the release manifest successfully and was removed. No authenticated model execution was performed.

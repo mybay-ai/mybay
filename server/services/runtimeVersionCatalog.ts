@@ -1,8 +1,13 @@
+import { CODEX_BUILD } from "../../shared/codexBuild";
 import { listRuntimeReleases } from "../../shared/runtimeReleases";
 import { parsePiRuntimeImageRef, resolveLocalPiImageRef } from "./localPiRuntime";
 
 export type RuntimeVersionRow = {
   runtime_type: string;
+  bridge_version?: string;
+  image_id?: string;
+  repo_digests?: string[];
+  upgradeable?: boolean;
   familyVersion: string;
   version: string;
   tag: string;
@@ -23,6 +28,17 @@ export type RuntimeVersionRow = {
 
 export function listManagedRuntimeVersions(runtimeType: string): RuntimeVersionRow[] {
   const normalized = String(runtimeType || "").trim().toLowerCase();
+  if (normalized === "codex") return [{
+    runtime_type: "codex", familyVersion: CODEX_BUILD.nativeVersion,
+    version: CODEX_BUILD.nativeVersion, tag: CODEX_BUILD.imageTag,
+    image_tag: CODEX_BUILD.imageTag, image: CODEX_BUILD.image,
+    bridge_version: CODEX_BUILD.bridgeVersion, upgradeable: false,
+    changelog: "Pinned local build; upgrade and rollback are not yet validated.",
+    changelog_zh: "当前固定的本地构建；升级与回滚尚未通过验证。",
+    published_at: "", releaseAt: "", channel: "experimental",
+    certification_level: "experimental", is_latest: true, is_prerelease: true,
+    is_prewarmed: false, prewarm_status: "unknown", capabilities: ["core", "streaming", "cancellation", "files"],
+  }];
   if (normalized !== "pi") return [];
 
   const configured = parsePiRuntimeImageRef(resolveLocalPiImageRef());
@@ -63,8 +79,11 @@ export async function enrichRuntimeVersionCacheStatus(
 ): Promise<RuntimeVersionRow[]> {
   return Promise.all(versions.map(async (version) => {
     try {
-      await imageInspector.getImage(`${version.image}:${version.tag}`).inspect();
-      return { ...version, is_prewarmed: true, prewarm_status: "cached" };
+      const info = await imageInspector.getImage(`${version.image}:${version.tag}`).inspect() as { Id?: unknown; RepoDigests?: unknown };
+      return { ...version, is_prewarmed: true, prewarm_status: "cached",
+        image_id: typeof info?.Id === "string" ? info.Id : undefined,
+        repo_digests: Array.isArray(info?.RepoDigests) ? info.RepoDigests.filter((value): value is string => typeof value === "string") : [],
+      };
     } catch (error: any) {
       if (error?.statusCode === 404) {
         return { ...version, is_prewarmed: false, prewarm_status: "idle" };

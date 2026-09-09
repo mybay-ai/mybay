@@ -58,9 +58,9 @@ export function createVersionsRoutes(deps: RouterDependencies) {
   router.get("/agent-versions", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const runtimeType = String(req.query.runtimeType || "hermes").trim().toLowerCase();
-      if (runtimeType === "pi") {
+      if (runtimeType === "pi" || runtimeType === "codex") {
         res.setHeader("Cache-Control", "no-store");
-        return res.json(await enrichRuntimeVersionCacheStatus(listManagedRuntimeVersions("pi"), docker));
+        return res.json(await enrichRuntimeVersionCacheStatus(listManagedRuntimeVersions(runtimeType), docker));
       }
       if (runtimeType !== "hermes") {
         return res.status(400).json({ code: "UNSUPPORTED_RUNTIME_TYPE", error: "Unsupported Runtime type." });

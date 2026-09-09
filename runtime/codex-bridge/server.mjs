@@ -1,3 +1,4 @@
+import release from "./release.json" with { type: "json" };
 import http from "node:http";
 import { timingSafeEqual } from "node:crypto";
 import { join, dirname, resolve } from "node:path";
@@ -44,7 +45,7 @@ export async function startServer(options = {}) {
   const expected = Buffer.from(`Bearer ${apiKey}`);
   async function handle(request, response) {
     const url = new URL(request.url || "/", "http://localhost");
-    if (request.method === "GET" && ["/health", "/api/health"].includes(url.pathname)) return json(response, rpc.closed ? 503 : 200, { ok: !rpc.closed, runtime: "codex", version: "0.153.4" });
+    if (request.method === "GET" && ["/health", "/api/health"].includes(url.pathname)) return json(response, rpc.closed ? 503 : 200, { ok: !rpc.closed, runtime: "codex", version: release.nativeVersion, bridgeVersion: release.bridgeVersion });
     const supplied = Buffer.from(String(request.headers.authorization || ""));
     if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) return json(response, 401, { error: "UNAUTHORIZED" });
     if (request.method === "GET" && url.pathname === "/v1/capabilities") {

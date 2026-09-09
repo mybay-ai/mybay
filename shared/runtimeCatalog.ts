@@ -1,3 +1,4 @@
+import { CODEX_BUILD } from "./codexBuild";
 export type RuntimeType = string;
 
 export type RuntimeSupportStatus = "available" | "spec-only";
@@ -253,11 +254,11 @@ export const PI_RUNTIME_DEFINITION = freezeRuntimeDefinition({
 });
 
 export const CODEX_RUNTIME_DEFINITION = freezeRuntimeDefinition({
-  specVersion: "1.0.0", name: "codex-agent", displayName: "Codex", version: "0.153.4",
+  specVersion: "1.0.0", name: "codex-agent", displayName: "Codex", version: CODEX_BUILD.nativeVersion,
   description: "Experimental Codex App Server Runtime with isolated native sessions.",
   providerKey: "codex-app-server", contractVersion: 1,
   release: { supportStatus: "available", certificationLevel: "experimental", deploymentSupported: true },
-  runtime: { type: "codex", image: "mybay/codex-runtime", tag: "0.153.4", internalPort: 8080,
+  runtime: { type: "codex", image: CODEX_BUILD.image, tag: CODEX_BUILD.imageTag, internalPort: 8080,
     environmentVariables: [
       { name: "CODEX_BRIDGE_API_KEY", description: "Internal Runtime authentication", required: true, sensitive: true },
       { name: "CODEX_HOME", description: "Isolated native account and session directory", required: true, sensitive: false },

@@ -1,19 +1,20 @@
+import { CODEX_BUILD } from "../../shared/codexBuild";
 import path from "node:path";
 import tar from "tar-fs";
 
-export const CODEX_RUNTIME_IMAGE = "mybay/codex-runtime:0.153.4";
+export const CODEX_RUNTIME_IMAGE = `${CODEX_BUILD.image}:${CODEX_BUILD.imageTag}`;
 let pending: Promise<string> | undefined;
 export async function ensureLocalCodexRuntimeImage({ dockerClient, imageRef, onLog }: { dockerClient: any; imageRef: string; onLog?: (message: string) => void }): Promise<string> {
   if (imageRef !== CODEX_RUNTIME_IMAGE) throw Error("CODEX_IMAGE_UNSUPPORTED");
   const verified = async () => {
     try {
       const info = await dockerClient.getImage(imageRef).inspect();
-      return info.Config?.Labels?.["com.mybay.codex.runtime"] === "true" && info.Config?.Labels?.["com.mybay.codex.agent-version"] === "0.153.4" && info.Config?.Labels?.["com.mybay.codex.bridge-version"] === "0.1.0-experimental.2";
+      return info.Config?.Labels?.["com.mybay.codex.runtime"] === "true" && info.Config?.Labels?.["com.mybay.codex.agent-version"] === CODEX_BUILD.nativeVersion && info.Config?.Labels?.["com.mybay.codex.bridge-version"] === CODEX_BUILD.bridgeVersion;
     } catch { return false; }
   };
   if (await verified()) return imageRef;
   if (!pending) pending = (async () => {
-    onLog?.("Building Codex Runtime 0.153.4");
+    onLog?.(`Building Codex Runtime ${CODEX_BUILD.nativeVersion} (${CODEX_BUILD.bridgeVersion})`);
     const stream = await dockerClient.buildImage(tar.pack(path.join(process.cwd(), "runtime", "codex-bridge")), { t: imageRef, rm: true, forcerm: true });
     await new Promise<void>((resolve, reject) => dockerClient.modem.followProgress(stream, (error: unknown) => error ? reject(Error("CODEX_IMAGE_BUILD_FAILED")) : resolve()));
     if (!await verified()) throw Error("CODEX_IMAGE_UNVERIFIED");
