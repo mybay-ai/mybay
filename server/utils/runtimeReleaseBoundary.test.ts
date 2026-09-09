@@ -28,6 +28,11 @@ describe("Pi runtime Beta release boundary", () => {
     expect(getRuntimeReleaseBoundary(undefined)).toBeNull();
   });
 
+  it("allows registered Codex deployment without an opt-in flag", () => {
+    expect(getRuntimeReleaseBoundary("codex")).toBeNull();
+    expect(getRuntimeReleaseBoundary(" CODEX ")).toBeNull();
+  });
+
   it("rejects unknown runtime types instead of silently deploying Hermes", () => {
     expect(getRuntimeReleaseBoundary("unknown-runtime")).toMatchObject({
       status: 400,

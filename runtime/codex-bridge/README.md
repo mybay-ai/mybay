@@ -4,7 +4,7 @@ An isolated adapter for the official `@openai/codex` App Server, pinned to 0.153
 
 ## Local deployment
 
-Enable `MYBAY_ENABLE_CODEX_RUNTIME=true` on the MyBay control plane, then select Codex in Quick Deploy. Import the `auth.json` from an existing Codex / ChatGPT login. MyBay encrypts the provisioning copy and stores the native account under the instance's private `codex` directory. Native token refreshes are preserved during redeployment. Do not commit or publish account files, instance data or `.env` files.
+Select Codex in Quick Deploy; no deployment opt-in flag is required. Import the `auth.json` from an existing Codex / ChatGPT login. MyBay encrypts the provisioning copy and stores the native account under the instance's private `codex` directory. Native token refreshes are preserved during redeployment. Do not commit or publish account files, instance data or `.env` files.
 
 The image is `mybay/codex-runtime:0.153.4`, built from this directory. It runs as a nonroot user with a read-only root filesystem and a writable, instance-specific `/opt/data` mount. `CODEX_BRIDGE_API_KEY` protects HTTP endpoints. `/health` proves process availability; `/capabilities` separately checks account readiness. Neither proves that a model request will succeed.
 
