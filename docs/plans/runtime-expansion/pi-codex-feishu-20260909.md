@@ -122,3 +122,21 @@ The user's Feishu client display was not independently observed.
 
 This proves one real Pi private-text round trip. Codex, groups, /stop,
 reconnect/restart recovery and IM approval flows are not covered by this result.
+
+## Live Codex private-message acceptance (2026-09-09)
+
+PASS: ChatGPT OAuth credential was saved through the deployment UI. New instance
+`4ee3c436-e6e7-4a2f-816f-843941db6db6` runs `mybay/codex-runtime:0.153.4`.
+Runtime and Chat API readiness passed. A separate Feishu application was QR-bound
+and enabled; the existing Pi binding was preserved.
+PASS: real private message produced completed Codex run
+`728f89af-d2fe-4f51-ba97-45b8aae86ba0` with non-empty model output.
+PASS: receipt `22108511e0c6eb3cd83bd50442f13317a1dc69ea7c1fae2cb9d76fc04342a3e4`
+reached `finished`; reply chunk `1a048b1f-acfd-4fd1-b612-c32f72246888` has
+`sent: true`, indicating successful Feishu reply API response. The user's client
+rendering was not independently observed.
+
+Pi and Codex each now have a real basic private-text round trip. This does not
+certify groups, cancellation, reconnect/restart recovery, attachments or IM approvals.
+Open UI issue: the Codex management dialog labels the runtime as Hermes; actual
+stored runtime and Docker image were verified as Codex. Display correction pending.
