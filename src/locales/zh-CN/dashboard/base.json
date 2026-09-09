@@ -1,4 +1,5 @@
 {
+  "codexVersions": {"tab":"Codex","image":"镜像标签","title":"Codex 当前构建","boundary":"Experimental：当前仅展示固定版本。升级与回滚尚未开放；下方镜像信息来自本地缓存，不代表每个运行实例的镜像。","refresh":"刷新","instances":"Codex 实例（{{count}}）","bridge":"桥接版本","native":"原生版本","loading":"正在读取版本…","error":"版本信息读取失败，请重试。","imageId":"本地镜像 ID","unknown":"暂无信息"},
   "files_upload_title": "上传到当前实例",
   "files_upload_target": "目标目录：{{path}}（非产物目录默认上传到 /uploads）",
   "files_upload_hint": "拖拽文件到此处或选择文件，再点击开始上传。最多 10 个，每个 20 MB；支持文档、PNG/JPEG/WebP 图片和 UTF-8 代码。同名文件不覆盖。100% 后仍需等待服务器确认。",

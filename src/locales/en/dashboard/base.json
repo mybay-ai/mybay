@@ -1,4 +1,5 @@
 {
+  "codexVersions": {"tab":"Codex","image":"Image tag","title":"Current Codex build","boundary":"Experimental: pinned build information only. Upgrade and rollback are unavailable. Image information describes the local cache, not every running instance.","refresh":"Refresh","instances":"Codex instances ({{count}})","bridge":"Bridge version","native":"Native version","loading":"Loading version…","error":"Unable to load versions. Please retry.","imageId":"Local image ID","unknown":"Unavailable"},
   "files_upload_title": "Upload to selected instance",
   "files_upload_target": "Destination: {{path}} (non-artifact folders default to /uploads)",
   "files_upload_hint": "Drop or select files, then start upload. Up to 10 files, 20 MB each; documents, PNG/JPEG/WebP images and UTF-8 code. Existing files are never overwritten. Wait for server confirmation after 100%.",
