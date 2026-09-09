@@ -176,3 +176,13 @@ The conversations are separate. No filtered-event diagnostic was observed for
 this attempt. The cause of earlier missing events remains unknown; rich-text
 filtering was a hypothesis, not a verified cause. No-mention behavior and live
 cancellation remain unverified. The local diagnostic image remains active.
+
+## No-mention observation (2026-09-10)
+
+User reported sending an unmentioned group message. Two database observations
+15 seconds apart showed the same two prior group receipts and completed runs,
+with no additional execution. No filtered-event diagnostic appeared in the
+preceding five-minute window. Observed outcome: no unwanted task triggered.
+This does not prove live local-parser rejection: delivery of the unmentioned
+event to the application was not observed. Platform-side event filtering remains
+possible; the local exact-mention guard is covered by automated tests only.
