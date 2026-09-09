@@ -57,3 +57,14 @@ Local working-tree audit and complete source gate, based on a3397bf plus pre-exi
 - Backup/recovery suites: 22 PASS, 3 SKIP. Targeted ESLint passed. No live service was stopped or restored. Whole-workspace consistency still requires stopping writers; independent SQLite snapshots are not a cross-file transaction.
 - Live authenticated Codex continuation after restore, duplicate Feishu binding suppression at service cutover, and upgrade/rollback remain NOT_RUN. Existing encryption key and images must be preserved separately as documented by the backup utility.
 - TypeScript also passed. Full release gate was not rerun for this scoped CLI backup fix. Logs: tmp/runtime-expansion/codex-backup-tests.log, codex-backup-lint.log, codex-backup-typecheck.log.
+
+## Live Codex native restore acceptance
+
+PASS on Windows with pinned codex-cli 0.153.4 and the current bridge. An isolated copy of the previously authorized ChatGPT login created a new native session and remembered a random marker. The test process exited before backup. The backup utility restored into a different directory; a new process continued the stored session without reauthentication or injecting the marker into the second prompt.
+
+- Before run: 779a7e86-cc76-4e3c-9c55-8f67b56d8364, completed.
+- After run: e5f16880-7b4e-449b-9463-f2d073ff8654, completed.
+- Same session and native thread; exact marker recalled; workspace file preserved; backup hash/integrity verification passed.
+- Retained sanitized evidence: codex-restore-native-20260910.json, SHA-256 f9314f2f0c1922c0d4b4ad093c6f69b305569091a3b0c7f1f6daf6b261c381c0.
+- Both test processes exited. Existing Agent containers and Feishu connections were untouched. Test credentials and raw state remain only in ignored local test directories, not this evidence or Git.
+- Scope: real host-native model continuation after filesystem/database backup and restore. The small control metadata database was a fixture, not the real product database. Docker/product restore, service cutover, duplicate-binding handling and upgrade/rollback remain NOT_RUN. No certification level was raised, and no remote publication occurred.
