@@ -42,7 +42,6 @@ import { useFeedback } from "../FeedbackProvider";
 import { getRefinedStatusLabel } from "./instanceStatus";
 import { APP_ROUTES } from "../../constants/routes";
 import { InstanceA2ACollaboration } from "./InstanceA2ACollaboration";
-import { InstanceManagedFeishu } from "./InstanceManagedFeishu";
 import { supportsRuntimeDashboard } from "../../../shared/runtimeAccessPolicy";
 
 interface InstanceDetailPanelProps {
@@ -755,8 +754,6 @@ export function InstanceDetailPanel({
               <InstanceRuntimeContextViewer instanceId={selectedInstance.id} />
             </div>
           ) : detailTab === 'collaboration' ? (
-            <div className="flex-1 min-h-0 overflow-y-auto">
-            {["pi", "codex"].includes(selectedInstance.runtime_type || selectedInstance.config?.runtime_type || "") && <InstanceManagedFeishu key={selectedInstance.id} instanceId={selectedInstance.id} />}
             <InstanceA2ACollaboration
               instance={selectedInstance}
               onRedeploy={() => handleInstanceAction(selectedInstance.id, "redeploy", true, t("confirm_redeploy"))}
@@ -772,7 +769,6 @@ export function InstanceDetailPanel({
                 setDetailTab("collaboration");
               }}
             />
-            </div>
           ) : (
             <InstanceDiagnosticsWorkspace
               instanceId={selectedInstance.id}

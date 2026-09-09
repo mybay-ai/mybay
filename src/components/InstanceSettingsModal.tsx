@@ -17,6 +17,7 @@ import { supportsRuntimeDashboard } from "../../shared/runtimeAccessPolicy";
 import { api, apiFetch } from "../lib/api";
 import { AgentAvatar } from "./agent/AgentAvatar";
 import { PiApprovalPolicySection } from "./PiApprovalPolicySection";
+import { InstanceManagedFeishu } from "./dashboard/InstanceManagedFeishu";
 
 export function InstanceSettingsModal({ instance: initialInstance, onClose, onSave, currentUser, advancedResourceConfigEnabled = false }: { instance: AgentInstance, onClose: () => void, onSave: () => void, currentUser: any, advancedResourceConfigEnabled?: boolean }) {
   const { t } = useTranslation("dashboard");
@@ -532,7 +533,9 @@ export function InstanceSettingsModal({ instance: initialInstance, onClose, onSa
             credentials={credentials}
           />
 
-          <AppSettingsChannelSection
+          {runtimeType === "pi" || runtimeType === "codex" ? (
+            <InstanceManagedFeishu key={instance.id} instanceId={instance.id} />
+          ) : <AppSettingsChannelSection
             channel={channel} setChannel={setChannel}
             externalChannelsAllowed={externalChannelsAllowed}
             telegramBotToken={telegramBotToken} setTelegramBotToken={setTelegramBotToken}
@@ -579,7 +582,7 @@ export function InstanceSettingsModal({ instance: initialInstance, onClose, onSa
             wecomAllowedChats={wecomAllowedChats} setWecomAllowedChats={setWecomAllowedChats}
             webhookUrl={webhookUrl} setWebhookUrl={setWebhookUrl}
             webhookSecret={webhookSecret} setWebhookSecret={setWebhookSecret}
-          />
+          />}
 
           <div className="p-5 bg-surface border border-slate-200/60 dark:border-slate-800 rounded-xl space-y-3 shadow-2xs">
             <h4 className="text-[11px] font-semibold uppercase tracking-wider text-content-muted">{t("settings_personality_title")}</h4>

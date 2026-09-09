@@ -6,8 +6,8 @@ Experimental MyBay control-plane Feishu adapter for existing Pi and Codex instan
 Hermes keeps its own container adapter. The native Runtime manifests continue to
 advertise Web only; this work does not certify native IM support.
 
-- Current entry: Agent → Manage → Advanced → Runtime details → A2A Collaboration
-  → Feishu channel (experimental).
+- Current entry: Agent → Manage → Agent settings → Feishu channel (experimental).
+  This entry applies only to Pi/Codex. Hermes retains its existing channel form.
 - Each Feishu app binds to one instance at a time. Test Pi first, disable that
   binding, then bind Codex; do not run competing connections for the same app.
 - Explicit sender Open ID allowlist. Groups also require an allowed Chat ID and
@@ -74,3 +74,16 @@ Official references:
 - NOT IMPLEMENTED in phase 1: IM approvals/questions and attachments.
 
 The end-to-end IM chain is not yet certified or closed.
+
+## Entry correction
+
+Moved the Pi/Codex form out of A2A into the channel position of Agent settings.
+The Hermes `AppSettingsChannelSection` and every supplied prop are unchanged;
+no backend, credentials, channel configuration or Runtime container was changed.
+TypeScript, targeted ESLint and production build passed. Real localhost browser
+checks confirmed the Pi form in settings and the original Hermes channel selector.
+Codex uses the same explicit branch; no live Codex instance was available for this
+UI check. All 12 running Agent container IDs and start times were unchanged after
+the control-only update, and health returned HTTP 200.
+Local image: `mybay/local:feishu-settings-20260910` (derived from the prior local
+image with the rebuilt application bundle). Real Feishu send/receive was not run.
