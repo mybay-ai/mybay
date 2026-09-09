@@ -36,6 +36,31 @@ function fixture() {
 }
 
 describe("backup exclusions and isolated restore", () => {
+  it("restores Codex native WAL state, private session files and workspace without sidecars", async () => {
+    const f = fixture();
+    f.write("instances/codex/codex/auth.json", JSON.stringify({ token: "synthetic-only" }));
+    f.write("instances/codex/codex/sessions/session.jsonl", "synthetic-session");
+    f.write("instances/codex/codex-bridge/state.json", JSON.stringify({ threadId: "synthetic-thread" }));
+    f.write("instances/codex/workspace/output.txt", "preserved-output");
+    const nativePath = path.join(f.data, "instances/codex/codex/state.sqlite");
+    const native = new DatabaseSync(nativePath);
+    try {
+      native.exec("PRAGMA journal_mode=WAL; PRAGMA wal_autocheckpoint=0; CREATE TABLE threads(id TEXT PRIMARY KEY); INSERT INTO threads VALUES ('native-thread');");
+      expect(fs.statSync(nativePath + "-wal").size).toBeGreaterThan(0);
+      await createBackup({ database: f.database, output: f.backup });
+      expect(verifyBackup({ backup: f.backup }).ok).toBe(true);
+      restoreBackup({ backup: f.backup, output: f.restored });
+      const restoredRoot = path.join(f.restored, "data/instances/codex");
+      const recovered = new DatabaseSync(path.join(restoredRoot, "codex/state.sqlite"), { readOnly: true });
+      try { expect(recovered.prepare("SELECT id FROM threads").all()).toEqual([{ id: "native-thread" }]); }
+      finally { recovered.close(); }
+      expect(fs.existsSync(path.join(restoredRoot, "codex/state.sqlite-wal"))).toBe(false);
+      expect(JSON.parse(fs.readFileSync(path.join(restoredRoot, "codex/auth.json"), "utf8"))).toEqual({ token: "synthetic-only" });
+      expect(fs.readFileSync(path.join(restoredRoot, "codex/sessions/session.jsonl"), "utf8")).toBe("synthetic-session");
+      expect(JSON.parse(fs.readFileSync(path.join(restoredRoot, "codex-bridge/state.json"), "utf8"))).toEqual({ threadId: "synthetic-thread" });
+      expect(fs.readFileSync(path.join(restoredRoot, "workspace/output.txt"), "utf8")).toBe("preserved-output");
+    } finally { native.close(); }
+  });
   it("reopens a restored application store with usable login hash, encrypted credentials, history and configuration", async () => {
     const f = fixture();
     const appDatabase = path.join(f.data, "application.sqlite");
