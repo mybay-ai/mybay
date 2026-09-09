@@ -1,3 +1,4 @@
+import { codexRuntimeDriver } from "./adapters/codex/CodexRuntimeDriver";
 import { hermesRuntimeDriver } from "./adapters/hermes/HermesRuntimeDriver";
 import { piRuntimeDriver } from "./adapters/pi/PiRuntimeDriver";
 import type {
@@ -140,4 +141,4 @@ export class RuntimeRegistry {
   }
 }
 
-export const runtimeRegistry = new RuntimeRegistry([hermesRuntimeDriver, piRuntimeDriver], "hermes");
+export const runtimeRegistry = new RuntimeRegistry([hermesRuntimeDriver, piRuntimeDriver, codexRuntimeDriver], "hermes");

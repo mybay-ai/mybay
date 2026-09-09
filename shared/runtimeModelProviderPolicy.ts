@@ -27,6 +27,7 @@ export function resolvePiRuntimeProvider(provider: unknown): string | null {
 }
 
 export function supportsQuickDeployRuntimeProvider(runtimeType: unknown, provider: unknown): boolean {
+  if (String(runtimeType).trim().toLowerCase() === "codex") return provider === "openai";
   return String(runtimeType || "hermes").trim().toLowerCase() !== "pi"
     || resolvePiRuntimeProvider(provider) !== null;
 }

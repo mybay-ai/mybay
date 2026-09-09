@@ -169,6 +169,15 @@ describe.each([
     expect(interpreter.get("run-1")?.sentSteps.get("interaction:approval:approval-1")).toBe("resolved");
   });
 
+  it("keeps waiting until every pending native approval has been answered", () => {
+    const { interpreter, events } = createHarness();
+    for (const id of ["approval-1", "approval-2"]) interpreter.handle({ id: "run-1" }, { event: "approval.request", approval_id: id });
+    interpreter.handle({ id: "run-1" }, { event: "approval.responded", approval_id: "approval-1", choice: "once" });
+    expect(JSON.parse(events.at(-1)!.data)).toEqual({ status: "waiting_for_approval" });
+    interpreter.handle({ id: "run-1" }, { event: "approval.responded", approval_id: "approval-2", choice: "deny" });
+    expect(JSON.parse(events.at(-1)!.data)).toEqual({ status: "running" });
+  });
+
   it("requests reconciliation when immediate terminal handling rejects", async () => {
     const { interpreter, completeTerminal, requestReconcile, warn } = createHarness(
       vi.fn(async () => { throw new Error("terminal write failed"); }),

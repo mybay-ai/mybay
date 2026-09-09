@@ -9,7 +9,7 @@ export function validateQuickDeployDraft(draft: QuickDeployDraft): QuickDeployVa
   const entrypoint = String(draft.entrypoint || "");
 
   if (draft.schemaVersion !== 1) issues.push({ code: "unsupportedSchemaVersion", field: "schemaVersion", requiresAdvanced: true });
-  if (!["hermes", "pi"].includes(runtimeType)) issues.push({ code: "unsupportedRuntime", field: "runtimeType", requiresAdvanced: true });
+  if (!["hermes", "pi", "codex"].includes(runtimeType)) issues.push({ code: "unsupportedRuntime", field: "runtimeType", requiresAdvanced: true });
   if (entrypoint !== "web") issues.push({ code: "unsupportedEntrypoint", field: "entrypoint", requiresAdvanced: true });
   if (!["web", "telegram", "feishu", "weixin"].includes(String(draft.channel || ""))) {
     issues.push({ code: "unsupportedChannel", field: "channel", requiresAdvanced: true });
@@ -17,7 +17,7 @@ export function validateQuickDeployDraft(draft: QuickDeployDraft): QuickDeployVa
   if (!draft.name?.trim()) issues.push({ code: "nameRequired", field: "name" });
   if (runtimeType === "hermes" && !draft.dashboardUsername?.trim()) issues.push({ code: "dashboardUsernameRequired", field: "dashboardUsername" });
   if (runtimeType === "hermes" && (draft.dashboardPassword || "").length < 8) issues.push({ code: "dashboardPasswordTooShort", field: "dashboardPassword" });
-  if (runtimeType === "pi" && draft.channel !== "web") issues.push({ code: "unsupportedChannel", field: "channel", requiresAdvanced: true });
+  if (runtimeType !== "hermes" && draft.channel !== "web") issues.push({ code: "unsupportedChannel", field: "channel", requiresAdvanced: true });
 
   const strategy = draft.modelStrategy;
   const provider = strategy?.provider?.trim();
@@ -26,7 +26,7 @@ export function validateQuickDeployDraft(draft: QuickDeployDraft): QuickDeployVa
   if (!provider) issues.push({ code: "providerRequired", field: "modelStrategy.provider" });
   else if (!config?.enabled) issues.push({ code: "providerUnavailable", field: "modelStrategy.provider" });
   else if (!supportsQuickDeployRuntimeProvider(runtimeType, provider)) issues.push({ code: "runtimeProviderUnsupported", field: "modelStrategy.provider" });
-  if (!model) issues.push({ code: "modelRequired", field: "modelStrategy.model" });
+  if (runtimeType !== "codex" && !model) issues.push({ code: "modelRequired", field: "modelStrategy.model" });
   if (provider === "custom-openai-compatible" && !strategy?.baseUrl?.trim()) {
     issues.push({ code: "customBaseUrlRequired", field: "modelStrategy.baseUrl" });
   }
@@ -36,7 +36,8 @@ export function validateQuickDeployDraft(draft: QuickDeployDraft): QuickDeployVa
   if (config?.authMode === "oauth-device-code" && strategy?.mode !== "saved_credential") {
     issues.push({ code: "oauthCredentialRequired", field: "modelStrategy.credentialId" });
   }
-  if (strategy?.mode === "byok" && config?.requiresApiKey && !strategy.apiKey?.trim()) {
+  if (runtimeType === "codex" && !draft.codexAuthJson?.trim()) issues.push({ code: "codexAccountRequired", field: "codexAuthJson" });
+  if (runtimeType !== "codex" && strategy?.mode === "byok" && config?.requiresApiKey && !strategy.apiKey?.trim()) {
     issues.push({ code: "apiKeyRequired", field: "modelStrategy.apiKey" });
   }
   if (runtimeType === "hermes" && draft.channel === "telegram" && !draft.telegramBotToken?.trim()) {
@@ -53,7 +54,7 @@ export function validateQuickDeployDraft(draft: QuickDeployDraft): QuickDeployVa
   }
 
   const advancedSkillIds = [...new Set(draft.selectedSkillIds || [])].filter((skillId) => {
-    if (runtimeType === "pi") return true;
+    if (runtimeType !== "hermes") return true;
     const policy = skillPolicyRegistry[skillId];
     return !policy
       || policy.runtimeStatus !== "available"

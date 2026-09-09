@@ -3,10 +3,12 @@ import { buildRuntimeCatalogResponse } from "./runtimes";
 
 describe("runtime catalog route", () => {
   it("advertises Pi Certified capabilities but keeps deployment disabled by default", async () => {
-    const response = buildRuntimeCatalogResponse(false);
+    const response = buildRuntimeCatalogResponse(false, false);
     expect(response.schemaVersion).toBe(1);
-    expect(response.runtimes.map((runtime) => runtime.runtime.type)).toEqual(["hermes", "pi"]);
+    expect(response.runtimes.map((runtime) => runtime.runtime.type)).toEqual(["hermes", "pi", "codex"]);
 
+    expect(response.runtimes[2].release).toMatchObject({ certificationLevel: "experimental", deploymentSupported: false });
+    expect(buildRuntimeCatalogResponse(false, true).runtimes[2].release.deploymentSupported).toBe(true);
     const hermes = response.runtimes[0];
     expect(hermes.release).toMatchObject({ supportStatus: "available", deploymentSupported: true });
     expect(hermes.runtime).toMatchObject({ image: "nousresearch/hermes-agent", internalPort: 9119 });

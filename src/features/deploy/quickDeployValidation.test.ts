@@ -10,6 +10,14 @@ function validDraft() {
 }
 
 describe("quick deployment validation", () => {
+  it("accepts Codex account authentication without an API key or a forced model", () => {
+    const draft = validDraft(); draft.runtimeType = "codex"; draft.codexAuthJson = "account-import-fixture";
+    draft.modelStrategy = { mode: "byok", provider: "openai", model: "" };
+    draft.dashboardUsername = ""; draft.dashboardPassword = "";
+    expect(validateQuickDeployDraft(draft)).toEqual([]);
+    delete draft.codexAuthJson;
+    expect(validateQuickDeployDraft(draft)).toContainEqual({ code: "codexAccountRequired", field: "codexAuthJson" });
+  });
   it("accepts the Hermes Web saved-credential happy path", () => {
     expect(validateQuickDeployDraft(validDraft())).toEqual([]);
     expect(canSubmitQuickDeploy(validDraft())).toBe(true);

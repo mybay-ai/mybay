@@ -7,10 +7,11 @@ export function buildQuickDeployAdvancedInitialData(
   path: string,
 ): Partial<SetupFormData> {
   const runtime = getRuntimeDefinition(draft.runtimeType);
-  const isPi = draft.runtimeType === "pi";
+  const isPi = draft.runtimeType !== "hermes";
   const channel = isPi ? "web" : draft.channel;
   const common: Partial<SetupFormData> = {
     runtime_type: draft.runtimeType,
+    ...(draft.runtimeType === "codex" ? { codexAuthJson: draft.codexAuthJson } : {}),
     name: draft.name.trim(),
     path,
     username: isPi ? "" : draft.dashboardUsername.trim(),

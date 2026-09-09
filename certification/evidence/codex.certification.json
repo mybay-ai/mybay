@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 2,
+  "runtime": {
+    "type": "codex",
+    "providerKey": "codex-app-server",
+    "contractVersion": 1,
+    "version": "0.153.4",
+    "imageRef": "mybay/codex-runtime:0.153.4"
+  },
+  "environments": [
+    {
+      "id": "windows-docker-desktop-20260909",
+      "platform": "windows",
+      "platformVersion": null,
+      "architecture": "x64",
+      "containerEngine": "docker-desktop",
+      "containerEngineVersion": null,
+      "runtimeVersion": "Codex 0.153.4; bridge 0.1.0-experimental.0",
+      "mybayVersion": "0.1.28",
+      "headless": false
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "certification/artifacts/codex-0.153.4-runtime-20260909.json",
+      "sha256": "d53077a1f5c5319aa6d98a6fe9de4cfbe8d5b77fb6fd964396b5656d720464a2"
+    },
+    {
+      "path": "certification/artifacts/codex-0.153.4-product-20260909.json",
+      "sha256": "8cd17e1a6bd204ed39f606e6c709f330ede5f1f5cd0e86e2631f5fc814450c15"
+    }
+  ],
+  "checks": [
+    {
+      "requirementId": "runtime-install",
+      "status": "passed",
+      "scope": "runtime",
+      "observedAt": "2026-09-09T07:59:36.687Z",
+      "environment": "Windows Docker Desktop, isolated Codex 0.153.4 Runtime, existing ChatGPT account",
+      "evidenceRefs": [
+        "certification/artifacts/codex-0.153.4-runtime-20260909.json",
+        "certification/artifacts/codex-0.153.4-product-20260909.json"
+      ]
+    },
+    {
+      "requirementId": "task-submit",
+      "status": "passed",
+      "scope": "runtime",
+      "observedAt": "2026-09-09T07:59:36.687Z",
+      "environment": "Windows Docker Desktop, isolated Codex 0.153.4 Runtime, existing ChatGPT account",
+      "evidenceRefs": [
+        "certification/artifacts/codex-0.153.4-runtime-20260909.json",
+        "certification/artifacts/codex-0.153.4-product-20260909.json"
+      ]
+    },
+    {
+      "requirementId": "streaming-output",
+      "status": "passed",
+      "scope": "runtime",
+      "observedAt": "2026-09-09T07:59:36.687Z",
+      "environment": "Windows Docker Desktop, isolated Codex 0.153.4 Runtime, existing ChatGPT account",
+      "evidenceRefs": [
+        "certification/artifacts/codex-0.153.4-runtime-20260909.json",
+        "certification/artifacts/codex-0.153.4-product-20260909.json"
+      ],
+      "note": "Retained delta count is non-zero; native run completed with expected marker."
+    },
+    {
+      "requirementId": "cancellation",
+      "status": "passed",
+      "scope": "runtime",
+      "observedAt": "2026-09-09T07:59:36.687Z",
+      "environment": "Windows Docker Desktop, isolated Codex 0.153.4 Runtime, existing ChatGPT account",
+      "evidenceRefs": [
+        "certification/artifacts/codex-0.153.4-runtime-20260909.json",
+        "certification/artifacts/codex-0.153.4-product-20260909.json"
+      ]
+    }
+  ]
+}

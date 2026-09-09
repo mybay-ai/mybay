@@ -95,6 +95,7 @@ async function rollbackInstanceUnlocked(
     return { success: false, error: "该实例上已有正在运行的任务，请稍后再试。" };
   }
   const instance = await dbAdapter.getInstanceById(instanceId);
+  if (instance?.runtime_type === "codex") return { success: false, error: "CODEX_UPGRADE_NOT_AVAILABLE: no validated upgrade or rollback release is available." };
   if (!instance) {
     return { success: false, error: "实例未找到。" };
   }
@@ -178,6 +179,7 @@ export async function validateUpgradeTag(
   targetTag: string
 ): Promise<{ success: boolean; error?: string; code?: string; resolvedTag?: string }> {
   const instance = await dbAdapter.getInstanceById(instanceId);
+  if (instance?.runtime_type === "codex") return { success: false, error: "CODEX_UPGRADE_NOT_AVAILABLE: no validated upgrade or rollback release is available." };
   if (!instance) {
     return { success: false, error: "实例未找到。", code: "INSTANCE_NOT_FOUND" };
   }
@@ -274,6 +276,7 @@ async function upgradeInstanceUnlocked(
   }
 
   const instance = await dbAdapter.getInstanceById(instanceId);
+  if (instance?.runtime_type === "codex") return { success: false, error: "CODEX_UPGRADE_NOT_AVAILABLE: no validated upgrade or rollback release is available." };
   if (!instance) {
     return { success: false, error: "实例未找到。" };
   }

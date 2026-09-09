@@ -2,6 +2,7 @@ import { instanceSensitiveFields } from "./instances/instanceSensitiveFields";
 import { providerRegistry } from "../../shared/providerRegistry";
 
 const DEFAULT_SENSITIVE_KEYS = [
+  "codexAuthJson",
   ...instanceSensitiveFields,
   'apiKey', 'api_key', 'token', 'secret', 'password', 'authorization', 
   'credential', 'webhook', 'encrypted', 'private', 'access_token', 

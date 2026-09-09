@@ -11,6 +11,8 @@ export function isPiRuntimeBetaEnabled(env: NodeJS.ProcessEnv = process.env): bo
   return String(env.MYBAY_ENABLE_PI_RUNTIME || "").trim().toLowerCase() === "true";
 }
 
+export function isCodexRuntimeEnabled(env: NodeJS.ProcessEnv = process.env): boolean { return env.MYBAY_ENABLE_CODEX_RUNTIME === "true"; }
+
 export function getRuntimeReleaseBoundary(runtimeType: unknown) {
   const normalized = runtimeType === undefined || runtimeType === null || runtimeType === ""
     ? "hermes"
@@ -25,6 +27,7 @@ export function getRuntimeReleaseBoundary(runtimeType: unknown) {
       error: `Runtime '${String(runtimeType)}' is not registered.`,
     } as const;
   }
+  if (normalized === "codex" && !isCodexRuntimeEnabled()) return { status: 400, code: "CODEX_RUNTIME_EXPERIMENTAL_DISABLED", error: "Enable MYBAY_ENABLE_CODEX_RUNTIME=true to use the experimental Codex Runtime." } as const;
   if (normalized === "pi" && !isPiRuntimeBetaEnabled()) {
     return {
       status: 400,

@@ -1,0 +1,20 @@
+{
+  "scenario": "native-approval-denial",
+  "verdict": "FAIL",
+  "deniedCount": 0,
+  "fileExists": false,
+  "run": {
+    "id": "5c00321a-7f54-4752-8c85-08640549ad95",
+    "run_id": "5c00321a-7f54-4752-8c85-08640549ad95",
+    "client_run_id": "aca812fc-8d59-4388-a4cf-4ce42ee63954",
+    "session_id": "3dd37c6d-c20f-41f1-ba5f-81b56cb9ccfb",
+    "native_thread_id": "01a0852f-d98a-78e2-99f3-d82c5cebd40f",
+    "native_turn_id": "01a0852f-da86-7000-a6c3-3a8ce5654faa",
+    "status": "failed",
+    "output": "",
+    "error": "CODEX_TURN_FAILED",
+    "stop_requested": false,
+    "created_at": "2026-09-09T08:01:37.083Z",
+    "updated_at": "2026-09-09T08:01:57.621Z"
+  }
+}

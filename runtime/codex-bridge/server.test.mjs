@@ -1,0 +1,31 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { EventEmitter } from "node:events";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { startServer } from "./server.mjs";
+
+test("HTTP authentication, rejected operations and durable SSE reconnect", async t => {
+  const root = await mkdtemp(join(tmpdir(), "mybay-codex-http-"));
+  const rpc = new EventEmitter();
+  rpc.initialize = async () => {};
+  rpc.close = () => { rpc.closed = true; };
+  rpc.request = async method => method === "account/read" ? { account: { type: "chatgpt" } } : { thread: { id: "native-thread-123" }, turn: { id: "native-turn-123" } };
+  const key = "fixture-authentication-key-12345678";
+  const { server, runtime } = await startServer({ rpc, env: { CODEX_BRIDGE_API_KEY: key, CODEX_BRIDGE_DATA_DIR: join(root, "state"), CODEX_WORKSPACE_DIR: join(root, "workspace"), HOST: "127.0.0.1", PORT: "0" } });
+  t.after(async () => { server.closeAllConnections(); await new Promise(r => server.close(r)); await runtime.queue; await rm(root, { recursive: true, force: true }); });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const headers = { Authorization: `Bearer ${key}`, "Content-Type": "application/json" };
+  assert.equal((await fetch(base + "/v1/runs")).status, 401);
+  assert.equal((await fetch(base + "/v1/capabilities", { headers }).then(r => r.json())).features.run_submission, true);
+  const session = await fetch(base + "/api/sessions", { headers, method: "POST", body: "{}" }).then(r => r.json());
+  assert.equal((await fetch(base + "/v1/runs", { headers, method: "POST", body: JSON.stringify({ session_id: "missing-session", input: "hello" }) })).status, 404);
+  assert.equal(rpc.closed, undefined);
+  const run = await fetch(base + "/v1/runs", { headers, method: "POST", body: JSON.stringify({ session_id: session.id, input: "hello" }) }).then(r => r.json());
+  for (let i = 0; i < 30 && !runtime.runs.get(run.id).turnId; i++) await new Promise(r => setTimeout(r, 5));
+  await runtime.enqueue(() => runtime.finish(runtime.runs.get(run.id), "completed"));
+  const replay = await fetch(base + `/v1/runs/${run.id}/events`, { headers: { ...headers, "Last-Event-ID": "1" } }).then(r => r.text());
+  assert.ok(replay.includes("run.completed")); assert.ok(!replay.includes("run.created"));
+  assert.equal((await fetch(base + `/v1/runs/${run.id}/events`, { headers: { ...headers, "Last-Event-ID": "999" } })).status, 400);
+});

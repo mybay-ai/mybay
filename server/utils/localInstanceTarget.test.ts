@@ -66,6 +66,14 @@ describe("local instance target resolution", () => {
     });
   });
 
+  it.each([8080, 9119])("routes a labeled Codex runtime to its configured port %s", async (port) => {
+    const agentInspect = inspect({ Config: { Labels: { "com.mybay.codex.runtime": "true" }, Env: [`PORT=${port}`] },
+      NetworkSettings: { Networks: { "mybay-net-codex-test": { IPAddress: "172.34.0.2" } } } });
+    const controlInspect = inspect({ NetworkSettings: { Networks: { "mybay-net-codex-test": { IPAddress: "172.34.0.3" } } } });
+    docker.getContainer.mockImplementation((name: string) => ({ inspect: name === "mybay-agent-codex-test" ? agentInspect : controlInspect }));
+    await expect(resolveLocalInstanceTarget("codex-test")).resolves.toEqual({ hostname: "mybay-agent-codex-test", port, protocol: "http:" });
+  });
+
   it("coalesces concurrent Docker inspections and reconnects the control plane once", async () => {
     const connect = vi.fn().mockResolvedValue(undefined);
     const agentInspect = inspect({

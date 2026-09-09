@@ -1,3 +1,4 @@
+import { ensureLocalCodexRuntimeImage } from "./services/localCodexRuntime";
 import os from "os";
 import path from "path";
 import Docker from "dockerode";
@@ -43,6 +44,7 @@ import {
 } from "./services/docker/dockerNetworkManager";
 
 export async function ensureFrontendBuilt(docker: any, baseImage: string, instanceId: string, io: SocketIOServer, config?: any): Promise<string> {
+  if (config?.runtime_type === "codex") return ensureLocalCodexRuntimeImage({ dockerClient: docker, imageRef: baseImage, onLog: message => io.emit(`deploy_log_${instanceId}`, { message, timestamp: new Date().toISOString() }) });
   if (String(config?.runtime_type || "hermes").trim().toLowerCase() === "pi") {
     return ensureSelectedPiRuntimeImage({
       dockerClient: docker,
@@ -227,7 +229,7 @@ export async function buildDockerHostConfig(
     SecurityOpt: securityOpts,
     CapDrop: profile.CapDrop || [],
     CapAdd: profile.CapAdd ?? ["CHOWN", "SETUID", "SETGID"],
-    ...(String(options.config?.runtime_type || "").trim().toLowerCase() === "pi"
+    ...(["pi", "codex"].includes(String(options.config?.runtime_type || "").trim().toLowerCase())
       ? { Tmpfs: { "/tmp": "rw,noexec,nosuid,nodev,size=64m,mode=1777" } }
       : {}),
     Privileged: false // Ensure regular containers are never running as privileged
@@ -282,17 +284,17 @@ export function createDashboardContainer(
       }
     }
 
-    const isPiRuntime = options.RuntimeType === "pi";
+    const isNativeBridge = options.RuntimeType === "pi" || options.RuntimeType === "codex";
     const runtimeProfile = getAgentContainerSecurityProfile(options.RuntimeType);
     dockerInstance.createContainer({
       Image: options.Image,
       name: options.name,
-      ...(options.Cmd ? { Cmd: options.Cmd } : isPiRuntime ? {} : { Cmd: ["gateway", "run"] }),
+      ...(options.Cmd ? { Cmd: options.Cmd } : isNativeBridge ? {} : { Cmd: ["gateway", "run"] }),
       Env: options.Env,
       Labels: options.Labels,
       ExposedPorts: {
         [`${targetPort}/tcp`]: {},
-        ...(!isPiRuntime ? { "8642/tcp": {}, "8644/tcp": {} } : {}),
+        ...(!isNativeBridge ? { "8642/tcp": {}, "8644/tcp": {} } : {}),
       },
       HostConfig: options.HostConfig,
       User: options.User !== undefined ? options.User : runtimeProfile.User

@@ -1,3 +1,4 @@
+import { normalizeCodexAccountAuth } from "../../runtime/adapters/codex/CodexRuntimeEnvironment";
 import { Router, Response } from "express";
 import { AuthenticatedRequest, authenticateToken } from "../../middlewares/auth";
 import { dbAdapter } from "../../db";
@@ -93,6 +94,14 @@ export function createInstanceHandler(deps: RouterDependencies) {
         throw entitlementErr;
       }
 
+      if (requestedRuntimeType === "codex") {
+        try { req.body.codexAuthJson = normalizeCodexAccountAuth(req.body.codexAuthJson); }
+        catch { return res.status(400).json({ code: "CODEX_ACCOUNT_AUTH_INVALID", error: "Import a valid Codex ChatGPT account auth.json." }); }
+        if (req.body.provider !== "openai" || req.body.channel && req.body.channel !== "web" || req.body.skills?.length || req.body.a2aEnabled) {
+          return res.status(400).json({ code: "CODEX_CAPABILITY_UNSUPPORTED", error: "Codex currently supports OpenAI account authentication and Web chat only." });
+        }
+        req.body.enableDashboard = false;
+      }
       const rawBody = req.body;
       const data = rawBody;
       if (!isTemplateWorkflowsEnabled() && hasTemplateDeploymentPayload(rawBody)) {
@@ -368,7 +377,7 @@ export function createInstanceHandler(deps: RouterDependencies) {
       const { isTraefik } = parseTraefikEnv(process.env);
 
       // Default internal web port (default 9119 as required)
-      data.internal_web_port = requestedRuntimeType === "pi"
+      data.internal_web_port = ["pi", "codex"].includes(requestedRuntimeType)
         ? 8080
         : data.internal_web_port ? parseInt(String(data.internal_web_port), 10) : 9119;
 
@@ -473,6 +482,7 @@ export function createInstanceHandler(deps: RouterDependencies) {
         data.template_inputs = secureData.template_inputs;
       }
       const sensitiveFields = [
+        "codexAuthJson",
         'apiKey', 'providerApiKey', 'password', 'telegramBotToken', 'discordBotToken',
         'feishuAppSecret', 'qqBotSecret', 'whatsappAccessToken', 'slackBotToken',
         'slackSigningSecret', 'slackAppToken', 'dingtalkAppSecret', 'dingtalkRobotSecret',
@@ -531,6 +541,7 @@ export function createInstanceHandler(deps: RouterDependencies) {
 
       if (secureData.chatApiKey) secureData.chatApiKey = encrypt(secureData.chatApiKey);
 
+      if (secureData.codexAuthJson) secureData.codexAuthJson = encrypt(secureData.codexAuthJson);
       if (secureData.apiKey) secureData.apiKey = encrypt(secureData.apiKey);
       if (secureData.providerApiKey) secureData.providerApiKey = encrypt(secureData.providerApiKey);
       if (secureData.telegramBotToken) secureData.telegramBotToken = encrypt(secureData.telegramBotToken);

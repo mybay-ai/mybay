@@ -1,0 +1,81 @@
+{
+  "cliVersion": "0.153.4",
+  "auth": "ChatGPT account",
+  "checks": [
+    {
+      "scenario": "tools-file",
+      "verdict": "PASS",
+      "run": {
+        "id": "bc8a9fde-d641-4e06-b5bb-febabd5ea59d",
+        "run_id": "bc8a9fde-d641-4e06-b5bb-febabd5ea59d",
+        "client_run_id": "ea25489d-ae1c-460a-8eae-9bf267a9f682",
+        "session_id": "d3e110ad-d988-4866-8648-d0b77c93f944",
+        "native_thread_id": "01a08510-b7fe-7e10-86ed-6720ad213c86",
+        "native_turn_id": "01a08510-b8b0-7e71-8122-6d39f66cfae8",
+        "status": "completed",
+        "output": "I’ll create `p2-note.txt` with the exact content and remember the session word for your next message.\nFILE_DONE",
+        "usage": {
+          "input_tokens": 44293,
+          "output_tokens": 193,
+          "total_tokens": 44486,
+          "input_tokens_details": {
+            "cached_tokens": 41344
+          }
+        },
+        "stop_requested": false,
+        "created_at": "2026-09-09T07:27:38.151Z",
+        "updated_at": "2026-09-09T07:28:06.115Z"
+      },
+      "eventTypes": [
+        "run.created",
+        "run.started",
+        "message.delta",
+        "tool.started",
+        "approval.request",
+        "approval.responded",
+        "tool.completed",
+        "run.completed"
+      ],
+      "fileOk": true
+    },
+    {
+      "scenario": "restart-session-recovery",
+      "verdict": "PASS",
+      "run": {
+        "id": "3a8d9b70-3814-4016-ba98-3805a1a9a1be",
+        "run_id": "3a8d9b70-3814-4016-ba98-3805a1a9a1be",
+        "client_run_id": "8ad49f03-05e8-4924-9af2-972a74c79890",
+        "session_id": "d3e110ad-d988-4866-8648-d0b77c93f944",
+        "native_thread_id": "01a08510-b7fe-7e10-86ed-6720ad213c86",
+        "native_turn_id": "01a08511-2033-7fc0-bd06-d6dd51a9c65a",
+        "status": "completed",
+        "output": "COBALT8362",
+        "usage": {
+          "input_tokens_details": {}
+        },
+        "stop_requested": false,
+        "created_at": "2026-09-09T07:28:06.952Z",
+        "updated_at": "2026-09-09T07:28:16.946Z"
+      },
+      "sameThread": true
+    },
+    {
+      "scenario": "cancellation",
+      "verdict": "PASS",
+      "acceptedStatus": "queued",
+      "run": {
+        "id": "029e1720-1901-4963-951d-0578a32c1d3e",
+        "run_id": "029e1720-1901-4963-951d-0578a32c1d3e",
+        "client_run_id": "ae85a8ba-d291-4ff2-beea-a45afb9c24f9",
+        "session_id": "883e1a06-acac-49be-849e-4f62c9e00d27",
+        "native_thread_id": "01a08511-46d0-7fc2-ad07-d72cae478c29",
+        "native_turn_id": "01a08511-4768-74c3-a10a-a6ba29aecc64",
+        "status": "cancelled",
+        "output": "",
+        "stop_requested": true,
+        "created_at": "2026-09-09T07:28:17.094Z",
+        "updated_at": "2026-09-09T07:28:17.377Z"
+      }
+    }
+  ]
+}

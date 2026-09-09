@@ -1,0 +1,65 @@
+# Generated from shared/runtimeCatalog.ts. Do not edit by hand.
+specVersion: 1.0.0
+name: codex-agent
+displayName: Codex
+version: 0.153.4
+description: Experimental Codex App Server Runtime with isolated native sessions.
+release:
+  supportStatus: available
+  certificationLevel: experimental
+  deploymentSupported: true
+runtime:
+  type: codex
+  image: mybay/codex-runtime
+  tag: 0.153.4
+  internalPort: 8080
+  environmentVariables:
+    - name: CODEX_BRIDGE_API_KEY
+      description: Internal Runtime authentication
+      required: true
+      sensitive: true
+    - name: CODEX_HOME
+      description: Isolated native account and session directory
+      required: true
+      sensitive: false
+health:
+  endpoint: /health
+  intervalSeconds: 20
+  timeoutSeconds: 5
+  expectedStatusCode: 200
+storage:
+  dataPath: /opt/data
+  configPath: /opt/data/codex
+  volumeNamePrefix: mybay-codex-data
+capabilities:
+  chat: true
+  fileUpload: true
+  scheduledTasks: false
+  browser: false
+  shell: true
+  imChannels:
+    - web
+lifecycle:
+  conversation:
+    modes:
+      - streaming
+  cancellation:
+    supported: true
+    granularity: run
+  terminal:
+    observation: events
+  interactions:
+    approvals: true
+    questions: false
+resources:
+  minimumMemory: 512Mi
+  recommendedMemory: 1Gi
+  minimumCpu: 0.5
+backup:
+  includePaths:
+    - /opt/data/codex
+    - /opt/data/codex-bridge
+    - /opt/data/workspace
+  excludePatterns:
+    - '*.log'
+    - tmp/*

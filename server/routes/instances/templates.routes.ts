@@ -57,7 +57,7 @@ export function createTemplatesRoutes(deps: RouterDependencies) {
       // Decrypt credentials in config to safely rewrite files
       const configWithDecryptedKeys = { ...config };
       const encryptedFields = [
-        "apiKey", "providerApiKey", "password", "telegramBotToken", 
+        "codexAuthJson", "apiKey", "providerApiKey", "password", "telegramBotToken",
         "discordBotToken", "feishuAppSecret", "qqBotSecret", 
         "whatsappAccessToken", "slackBotToken", "slackSigningSecret", 
         "slackAppToken", "dingtalkAppSecret", "dingtalkRobotSecret", 
@@ -221,7 +221,7 @@ export function createTemplatesRoutes(deps: RouterDependencies) {
       // Decrypt credentials to rewrite files
       const configWithDecryptedKeys = { ...config };
       const encryptedFields = [
-        "apiKey", "providerApiKey", "password", "telegramBotToken", 
+        "codexAuthJson", "apiKey", "providerApiKey", "password", "telegramBotToken",
         "discordBotToken", "feishuAppSecret", "qqBotSecret", 
         "whatsappAccessToken", "slackBotToken", "slackSigningSecret", 
         "slackAppToken", "dingtalkAppSecret", "dingtalkRobotSecret", 

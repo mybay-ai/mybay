@@ -298,7 +298,7 @@ export function createChatRoutes(deps: RouterDependencies) {
       }
       const apiKey = keyResolution.apiKey;
       const runtimeType = String(config.runtime_type || instance.runtime_type || "hermes").trim().toLowerCase();
-      const isPiRuntime = runtimeType === "pi";
+      const isPiRuntime = ["pi", "codex"].includes(runtimeType);
       const response = await requestTraefikInternal({
         instanceId: id,
         method: "GET",
@@ -310,7 +310,7 @@ export function createChatRoutes(deps: RouterDependencies) {
       const isJson = response.headers["content-type"]?.includes("application/json") || response.json !== undefined;
       const data = response.json;
       const ready = response.ok && isJson && data && (isPiRuntime
-        ? data.runtime === "pi"
+        ? data.runtime === runtimeType
           && data.features?.run_submission === true
           && data.features?.run_status === true
         : data.object === "list" && Array.isArray(data.data) && data.data.length > 0);

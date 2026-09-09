@@ -17,7 +17,7 @@ The Driver owns native session preparation, dispatch/fallback behavior, event in
 | `tool.started`, `tool.completed` and aliases | Pair native call IDs, sanitize metadata, retain confirmed file evidence |
 | `step`, `step.started`, `step.completed`, `step.failed` | Sanitize and deduplicate steps |
 | `approval.request` | Emit pending approval and waiting status |
-| `approval.responded`, `approval.response` | Resolve the interaction and emit running status; this is not successful task completion |
+| `approval.responded`, `approval.response` | Resolve the interaction; remain waiting while other approvals are pending, otherwise emit running status |
 | Completed/failed/cancelled run events | Call authoritative terminal handling with the upstream run ID, usage and duration |
 
 Each controller owns its trackers. Call IDs are scoped by run; clearing one run must not clear another controller or run. Keep raw tool arguments, secrets and unconfirmed file operations out of product events. A failed tool is not a confirmed file change.
@@ -54,4 +54,10 @@ The Driver has no install/start/upgrade/backup methods. Container deployment, im
 4. Verify the candidate bundle in the actual acceptance environment. Retain sanitized PASS/FAIL/NOT_RUN results with platform, versions, run IDs and scope.
 5. Document protocol-specific failures and unrun scenarios. Existing Windows Docker evidence does not certify other platforms.
 
-P1 changes no persisted schema, public capability declaration or Driver contract version. Codex and Claude Code implementation remains subsequent work.
+P1 changed no persisted schema, public capability declaration or Driver contract version. The subsequent P2 implementation is described below.
+
+## P2 Codex implementation / P2 Codex 实施
+
+Codex now has an isolated App Server bridge pinned to official CLI 0.153.4, a registered Driver, account-import deployment and capability-based readiness. Deployment is opt-in through `MYBAY_ENABLE_CODEX_RUNTIME`; certification remains Experimental. See [bridge boundaries](../runtime/codex-bridge/README.md). Claude Code is not implemented.
+
+Approval resolution keeps the run waiting while another pending approval remains. Restart preserves completed session identity but explicitly fails an in-flight turn; no automatic tool replay is claimed. Native account and bridge state directories are excluded from the product file surface. Upgrade and rollback fail closed before lifecycle mutation.

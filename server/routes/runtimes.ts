@@ -1,13 +1,13 @@
 import { Router } from "express";
 import { runtimeRegistry } from "../runtime/runtimeRegistry";
-import { isPiRuntimeBetaEnabled } from "../utils/runtimeReleaseBoundary";
+import { isPiRuntimeBetaEnabled, isCodexRuntimeEnabled } from "../utils/runtimeReleaseBoundary";
 
 const router = Router();
 
-export function buildRuntimeCatalogResponse(piEnabled = isPiRuntimeBetaEnabled()) {
+export function buildRuntimeCatalogResponse(piEnabled = isPiRuntimeBetaEnabled(), codexEnabled = isCodexRuntimeEnabled()) {
   return {
     schemaVersion: 1 as const,
-    runtimes: runtimeRegistry.listRuntimeDefinitions().map((definition) => definition.runtime.type !== "pi"
+    runtimes: runtimeRegistry.listRuntimeDefinitions().map((definition) => definition.runtime.type === "codex" ? { ...definition, release: { ...definition.release, deploymentSupported: codexEnabled && definition.release.deploymentSupported } } : definition.runtime.type !== "pi"
       ? definition
       : {
           ...definition,

@@ -1,3 +1,5 @@
+import { writeCodexRuntimeEnvironment } from "./runtime/adapters/codex/CodexRuntimeEnvironment";
+import { ensureCodexRuntimeDataOwnership } from "./services/localCodexRuntime";
 import os from "os";
 import path from "path";
 import Docker from "dockerode";
@@ -176,6 +178,7 @@ export async function recreateInstance(
     systemTrustedContext: options.systemTrustedContext
   });
 
+  if (runtimeType === "codex") await ensureCodexRuntimeDataOwnership({ dockerClient: docker, image, hostInstanceDataDir: options.hostInstanceDataDir });
   if (runtimeType === "pi") {
     await ensurePiRuntimeDataOwnership({
       dockerClient: docker,
@@ -601,6 +604,8 @@ export async function executeDeployment(instance: any, io: SocketIOServer, updat
   const instanceId = ctx.instanceId;
   const runtimeType = String(config?.runtime_type || instance.runtime_type || "hermes").trim().toLowerCase();
   const isPiRuntime = runtimeType === "pi";
+  const isCodexRuntime = runtimeType === "codex";
+  const isNativeBridge = isPiRuntime || isCodexRuntime;
   const containerName = ctx.gatewayContainerName.replace("-gateway", "");
 
   // Clear any existing deployment error at start of execution
@@ -645,7 +650,7 @@ export async function executeDeployment(instance: any, io: SocketIOServer, updat
 
   // If MyBay provider is openai and Base URL is official, runtime provider MUST be openai-api
   const isOfficial = !baseUrl || baseUrl.includes("api.openai.com");
-  if (!isPiRuntime && mybayProvider.toLowerCase() === "openai" && isOfficial && runtimeProvider !== "openai-api") {
+  if (!isNativeBridge && mybayProvider.toLowerCase() === "openai" && isOfficial && runtimeProvider !== "openai-api") {
     const errorMsg = `MyBay provider "openai" has not been mapped to a valid Hermes runtime provider. Expected runtime provider: "openai-api".`;
     io.emit(`deploy_log_${instanceId}`, {
       timestamp: new Date().toISOString(),
@@ -678,7 +683,7 @@ export async function executeDeployment(instance: any, io: SocketIOServer, updat
     return;
   }
 
-  if (!isPiRuntime && !VALID_HERMES_PROVIDERS.has(runtimeProvider)) {
+  if (!isNativeBridge && !VALID_HERMES_PROVIDERS.has(runtimeProvider)) {
     const errorMsg = `Unsupported Hermes runtime provider: "${runtimeProvider}" (from MyBay provider "${mybayProvider}").`;
     io.emit(`deploy_log_${instanceId}`, {
       timestamp: new Date().toISOString(),
@@ -723,7 +728,7 @@ export async function executeDeployment(instance: any, io: SocketIOServer, updat
   // Validate historical instance password compatibility using strict helper
   const plainPassword = tryResolvePlainInstancePassword(config);
 
-  if (!isPiRuntime && config.webPasswordHash && !plainPassword) {
+  if (!isNativeBridge && config.webPasswordHash && !plainPassword) {
     let passwordConfigSummary: any = {};
     try {
       passwordConfigSummary = buildPasswordConfigSummary(config);
@@ -771,7 +776,7 @@ export async function executeDeployment(instance: any, io: SocketIOServer, updat
     return;
   }
 
-  if (!isPiRuntime && config.enableDashboard !== false) {
+  if (!isNativeBridge && config.enableDashboard !== false) {
     const dashboardSecretChanged = ensureEncryptedDashboardAuthSecret(config);
     if (dashboardSecretChanged) {
       try {
@@ -806,7 +811,7 @@ export async function executeDeployment(instance: any, io: SocketIOServer, updat
   }
 
   // Check if current instance supports native dashboard basic auth
-  const nativeDashboardAuthSupported = !isPiRuntime && supportsNativeDashboardBasicAuth({
+  const nativeDashboardAuthSupported = !isNativeBridge && supportsNativeDashboardBasicAuth({
     agentImage: instance.agent_image,
     agentImageTag: instance.agent_image_tag,
     agentVersion: instance.agent_version || instance.resolved_version,
@@ -897,7 +902,9 @@ export async function executeDeployment(instance: any, io: SocketIOServer, updat
 
   try {
     await hydrateA2ARuntimePeers(instanceId, config);
-    if (isPiRuntime) {
+    if (isCodexRuntime) {
+      generatedEnvMap = writeCodexRuntimeEnvironment(instanceId, config).finalEnvMap;
+    } else if (isPiRuntime) {
       const configResult = writePiRuntimeEnvironment(instanceId, config);
       generatedEnvMap = configResult.finalEnvMap;
       piRuntimeConfigResult = configResult.piRuntimeConfigResult;
@@ -908,7 +915,7 @@ export async function executeDeployment(instance: any, io: SocketIOServer, updat
     }
 
     // --- Add config.yaml validation (File size / existence check) ---
-    if (!isPiRuntime) {
+    if (!isNativeBridge) {
       const configYamlPath = path.join(process.cwd(), "data", "instances", instanceId, "config.yaml");
       if (!fs.existsSync(configYamlPath)) {
         throw new Error("运行时配置文件 config.yaml 写入失败，物理文件不存在。");
@@ -925,7 +932,7 @@ export async function executeDeployment(instance: any, io: SocketIOServer, updat
       owner_id: ownerId,
       step: "write_config",
       status: "success",
-      message: isPiRuntime
+      message: isCodexRuntime ? "Codex Runtime account and environment prepared" : isPiRuntime
         ? "Pi Runtime 环境变量与运行标识已安全写入实例目录"
         : "运行时环境变量成功汇编，集成环境安全配置 config.yaml 写入磁盘"
     }).catch(() => {});
@@ -1271,7 +1278,7 @@ agent.task_completion_guidance=true`
              const gatewayEnv: string[] = [
                "TZ=Asia/Shanghai",
                "MYBAY_AGENT_HOME=/opt/data",
-               isPiRuntime ? "PI_HOME=/opt/data" : "HERMES_HOME=/opt/data"
+               isCodexRuntime ? "CODEX_HOME=/opt/data/codex" : isPiRuntime ? "PI_HOME=/opt/data" : "HERMES_HOME=/opt/data"
              ];
              Object.entries(envVars).forEach(([k, v]) => {
                gatewayEnv.push(`${k}=${v}`);

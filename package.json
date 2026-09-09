@@ -30,7 +30,7 @@
         "start": "node dist/server.cjs",
         "typecheck": "tsc --noEmit",
         "typecheck:strict-core": "tsc -p tsconfig.strict.json --noEmit",
-        "test": "vitest run",
+        "test": "vitest run && node --test runtime/codex-bridge/*.test.mjs",
         "test:schema": "vitest run server/runtimeSchema.test.ts",
         "test:docker-e2e": "vitest run server/dockerLifecycle.e2e.test.ts",
         "check:mojibake": "node scripts/check-mojibake.mjs",

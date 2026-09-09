@@ -1,0 +1,27 @@
+{
+  "scenario": "native-approval-denial",
+  "verdict": "PASS",
+  "deniedCount": 1,
+  "fileExists": false,
+  "run": {
+    "id": "f0350727-42e3-48ca-80a2-53b034c6a6f1",
+    "run_id": "f0350727-42e3-48ca-80a2-53b034c6a6f1",
+    "client_run_id": "87d8fdbb-6331-4819-adb3-e98ebec94faa",
+    "session_id": "0c6f31a3-86b6-47a8-bae0-5ddde00858e6",
+    "native_thread_id": "01a08531-3e6c-77c2-a745-d6ee6f83f511",
+    "native_turn_id": "01a08531-3f0e-7563-bb0f-02cc1d4693af",
+    "status": "completed",
+    "output": "I’ll make the single requested apply_patch attempt.\nDENIED_CONFIRMED",
+    "usage": {
+      "input_tokens": 31289,
+      "output_tokens": 104,
+      "total_tokens": 31393,
+      "input_tokens_details": {
+        "cached_tokens": 27648
+      }
+    },
+    "stop_requested": false,
+    "created_at": "2026-09-09T08:03:09.434Z",
+    "updated_at": "2026-09-09T08:03:28.804Z"
+  }
+}

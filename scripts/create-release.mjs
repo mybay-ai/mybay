@@ -18,7 +18,7 @@ export function shouldIncludeReleasePath(relativePath) {
   const segments = normalized.split("/").filter(Boolean);
   if (!normalized || normalized.startsWith("/") || segments.includes("..")) return false;
   if (EXCLUDED_ROOT_DIRECTORIES.has(segments[0])) return false;
-  if (segments[0] === "runtime" && segments[1] !== "pi-bridge") return false;
+  if (segments[0] === "runtime" && !["pi-bridge", "codex-bridge"].includes(segments[1])) return false;
   const name = segments.at(-1) || "";
   if (name === ".env.example") return true;
   if (name === ".env" || name.startsWith(".env.")) return false;

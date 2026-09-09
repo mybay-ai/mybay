@@ -292,7 +292,8 @@ export class NormalizedRunEventProvider implements RuntimeRunEventProvider {
         const approval = sanitizeApprovalEvent(event, "resolved");
         tracker.sentSteps.set(`interaction:approval:${approval.id}`, "resolved");
         dependencies.addEvent(run.id, "approval", JSON.stringify(approval));
-        dependencies.addEvent(run.id, "status", JSON.stringify({ status: "running" }));
+        const pending = [...tracker.sentSteps].some(([key, value]) => key.startsWith("interaction:approval:") && value === "pending");
+        dependencies.addEvent(run.id, "status", JSON.stringify({ status: pending ? "waiting_for_approval" : "running" }));
       }
     }
 

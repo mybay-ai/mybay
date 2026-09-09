@@ -31,7 +31,10 @@ async function inspectLocalInstanceTarget(instanceId: string): Promise<LocalInst
   const networks = agentInspect.NetworkSettings?.Networks || {};
   const labels = agentInspect.Config?.Labels || {};
   const exposedPorts = agentInspect.Config?.ExposedPorts || {};
-  const runtimePort = labels["com.mybay.pi.runtime"] === "true"
+  const codexPort = Number((agentInspect.Config?.Env || []).find(value => value.startsWith("PORT="))?.slice(5));
+  const runtimePort = labels["com.mybay.codex.runtime"] === "true"
+    ? (Number.isInteger(codexPort) && codexPort > 0 && codexPort <= 65535 ? codexPort : 8080)
+    : labels["com.mybay.pi.runtime"] === "true"
     || (exposedPorts["8080/tcp"] && !exposedPorts["8642/tcp"])
     ? 8080
     : 8642;

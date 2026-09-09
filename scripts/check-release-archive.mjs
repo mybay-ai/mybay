@@ -14,6 +14,7 @@ const requiredFiles = [
   "docker-compose.server.yml", "docker-compose.windows.yml", "docker-compose.yml", "package-lock.json", "package.json", "quick-start.ps1", "quick-start.sh",
   "Repair-MyBay.bat", "Start-MyBay.bat", "Stop-MyBay.bat", "Uninstall-MyBay.bat", "View-Logs.bat", "scripts/quick-start-env.ps1", "scripts/quick-start-env.sh",
   "scripts/windows-control.ps1", "scripts/windows-preflight.ps1", "scripts/windows-prerequisites.ps1", "runtime/pi-bridge/Dockerfile",
+  "runtime/codex-bridge/Dockerfile", "runtime/codex-bridge/package.json", "runtime/codex-bridge/package-lock.json", "runtime/codex-bridge/server.mjs", "runtime/codex-bridge/runtime.mjs", "runtime/codex-bridge/app-server.mjs",
   "runtime/pi-bridge/package.json", "runtime/pi-bridge/package-lock.json", "runtime/pi-bridge/server.mjs",
 ];
 

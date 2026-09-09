@@ -2,7 +2,7 @@
 
 ## Scope / 范围
 
-Integrate Codex first, then Claude Code, while preserving Hermes and Pi behavior. Admission requires real execution evidence, not catalog registration alone. Neither new Runtime is implemented or certified by this plan.
+Integrate Codex first, then Claude Code, while preserving Hermes and Pi behavior. Admission requires real execution evidence, not catalog registration alone. P2 now implements Experimental Codex within the evidence below; Claude Code remains pending.
 
 依次接入 Codex、Claude Code，保留 Hermes、Pi 现有行为。新 Runtime 的准入必须有真实执行证据，不能仅凭注册或单元测试声明可用。
 
@@ -44,9 +44,9 @@ Do not widen the first release to scheduling, browser automation or IM channels 
 
 ## Status / 状态
 
-P0: PASS for isolated baseline admission (source gate plus the two-direction live HTTP smoke). P1: PASS for shared event extraction and the scoped regression below; P2-P5 are pending. This does not claim clean-install, browser or full lifecycle recertification.
+P0: PASS for isolated baseline admission (source gate plus the two-direction live HTTP smoke). P1: PASS for shared event extraction and the scoped regression below; P2 is complete for Experimental single-Runtime admission as recorded below; P3-P5 are pending. This does not claim clean-install, browser or full lifecycle recertification.
 
-P0 开发基线准入通过：独立工作树、完整源码门禁与双向真实 HTTP 冒烟已验证。P1 通用事件提取与本轮回归已完成；下一步为 P2 Codex 接入。本报告不代表新 Runtime 已实现或已发布。
+P0 开发基线准入通过：独立工作树、完整源码门禁与双向真实 HTTP 冒烟已验证。P1 通用事件提取与本轮回归已完成；P2 Codex Experimental 接入及验收见下文。尚未发布，P3 Claude Code 尚未开始。
 
 ### P0 results / P0 已取得结果
 
@@ -113,4 +113,47 @@ The full source gate after the cancellation fix initially reported 1,949 passed 
 
 Final `npm run release:gate` recheck: PASS (exit 0), 358 test files passed / one skipped; 1,950 tests passed / six skipped, 288.49 seconds. Lint, TypeScript, catalog/docs, encoding/copy/i18n/API contract checks, production build and strict existing certification validation passed. No test timeout was changed. Local log: `tmp/runtime-expansion/p1-release-gate-final-recheck.log`.
 
-P1 is complete within the stated scope. Changes and sanitized evidence are recorded on the local expansion branch; no push, merge or release was performed. The original acceptance control is running healthy with the same immutable ID, and the other working tree retains 79 pending entries. P2 Codex implementation has not started.
+P1 is complete within the stated scope. Changes and sanitized evidence are recorded on the local expansion branch; no push, merge or release was performed. The original acceptance control is running healthy with the same immutable ID, and the other working tree retains 79 pending entries. At P1 completion, P2 Codex implementation had not started.
+
+## P2 execution / P2 Codex 实施与验收
+
+P2 is complete for **Experimental single-Runtime admission**, not Beta, cross-platform certification or a release. Native CLI is pinned to `@openai/codex` 0.153.4. The implementation starts a dedicated App Server per instance and never attaches to the desktop daemon. User-authorized existing Codex / ChatGPT account import was used; no API key purchase or new account was required.
+
+Implemented: Driver registration; encrypted provisioning credentials; private native account/session directories; isolated nonroot Docker deployment; native thread and turn identity; streaming and tool/file events; one-shot approval/denial; native cancellation confirmation; reconnect replay; completed-session recovery after process restart. In-flight restart fails explicitly instead of replaying side effects. Account refresh files are preserved on redeploy. Codex deployment defaults closed behind `MYBAY_ENABLE_CODEX_RUNTIME=true`.
+
+### Live results and retained evidence / 真实验收与留存证据
+
+- Native host acceptance: conversation, file write with approval, same-thread resume after restart, cancellation, and denial without file creation passed. Initial denial runs failed after the copied credential expired; refreshing only the test copy from the existing authorized login made the denial test pass. All native reports, including failures, are retained under `runtime-expansion/p2-native-*.json`.
+- Isolated Runtime Docker admission passed installation/readiness, real output and cancellation. Historical candidate artifact: [Runtime evidence](../../certification/artifacts/codex-0.153.4-runtime-20260909.json).
+- Product browser acceptance used a new empty control plane at `127.0.0.1:4360`, not the original database. Account-file import, deployment readiness, real conversation, refresh context, file approval, same native thread after redeployment, shell read, approval denial, and cancellation before/during output were observed.
+- Final output cancellation: MyBay run `42e106f8-41b4-4d01-8c8c-79faf881390c`, native turn `01a08551-b4c3-7280-b2fc-73a1ce101353`, 1,209 output characters / 168 events, native `run.cancelled`, `stop_requested=true`; product run status also `cancelled`. Control health returned HTTP 200 afterward.
+- [Product evidence](../../certification/artifacts/codex-0.153.4-product-20260909.json) retains exact run/thread/turn/container IDs, source/image hashes, usage, approval choices, product terminal states, and failed first attempts. Results span successive candidates; the final batched image is specifically proven by the final cancellation runs. This is not an assertion that every historical run used the final image.
+- Final image's three executable bridge files match the worktree byte-for-byte. Runtime implementation SHA-256: `2cdc1e8bba2745fc44238ea5a8365ea8933c67ed78c9c98c6b3f771201c47188`.
+
+### Defects found by actual deployment / 实际部署发现并修复的问题
+
+The first control exhausted Docker's default address pools and selected host ports already used by another control. Only the new test control's network was moved to an explicit unused subnet and its port range moved to 14370–14389; existing networks and instances were preserved.
+
+Product-path fixes removed the Hermes startup command from Codex containers, selected Codex readiness from persisted configuration, routed the native bridge to its actual port, and allowed the network-disabled ownership initializer to traverse Codex's private directories. Runtime containers remain nonroot with a read-only root filesystem and all Linux capabilities dropped.
+
+Nested bubblewrap namespaces were unavailable on this Docker Desktop host. The Docker image therefore uses the native `externalSandbox` policy with the existing container as the boundary; host-native tests keep the native workspace sandbox. No host sysctl or Docker daemon security configuration was changed. Approval denial uses native `cancel` only when `decline` is unavailable; no persistent approval is granted.
+
+A first product stop failed because the generic consumer accepts run-level cancellation, while the initial declaration said turn-level. Each MyBay run maps to one native turn; the declaration now correctly exposes run cancellation and has a consumer regression test. A later long-output stop failed to arrive before completion because 5,424 small deltas overloaded control-plane persistence. The bridge now coalesces text for up to 100 ms and flushes before non-text and terminal events. Both failures remain in evidence; the final before-output and during-output stop tests passed.
+
+### Source validation / 源码验证
+
+- First complete check: Vitest collected a Node-native test as an empty suite; framework separation was corrected.
+- Next gate attempt: Node restart fixture raced an unfinished previous state write. The fixture now waits for its queue before simulating restart; no timeout was increased.
+- Complete `npm run release:gate` recheck: PASS, 361 files passed / one skipped; 1,971 tests passed / six skipped, plus eight Node Bridge tests. Lint, all three TypeScript checks, catalog/docs, encoding/copy/i18n/API contracts, production build and strict certification passed. Log: `tmp/runtime-expansion/p2-release-gate-recheck.log`.
+- After final cancellation declaration and delta batching: affected Driver/shared/cancellation suites PASS (25 tests), Node Bridge tests PASS (9 tests), main and strict TypeScript checks PASS, lint PASS, final production build PASS. The full Vitest suite was not rerun after these last localized changes; final focused results are recorded separately.
+- Current-account token scan across tracked and unignored source files: zero matches. Account files, cookies and raw configuration are not retained in Git.
+
+### Remaining boundaries / 尚未开放
+
+Choose **Agent execution** for Codex; direct-provider quick mode does not use the imported ChatGPT account. Default-model identity can remain unknown in the UI; no model identity is fabricated. At most 200 retained runs per Experimental instance; no automatic retention cleanup. Reauthentication/account switching UX, upgrade/rollback, structured questions, A2A, external channels, browser tools, schedules, clean release-package installation, backup/restore and other platforms are not certified here. These remain later-phase work or explicit limitations.
+
+P3 Claude Code is the next phase. No push, merge or release was performed.
+
+### Final environment disposition / 验收环境收尾
+
+The named P2 control and final Codex instance containers were stopped after evidence capture; test data and failed-run records remain in ignored local directories for diagnosis. Original `mybay-release-control-v0128` remained healthy, and `files-a2a-hardening` retained 79 pending entries. No unrelated container, network or working-tree change was made. Final strict certification still verifies Codex only as Experimental.

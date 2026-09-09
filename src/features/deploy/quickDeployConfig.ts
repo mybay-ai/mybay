@@ -6,7 +6,7 @@ export interface QuickDeployDefaultsInput {
   password?: string;
   provider?: string;
   model?: string;
-  runtimeType?: "hermes" | "pi";
+  runtimeType?: "hermes" | "pi" | "codex";
 }
 
 function compactSuffix(value: string) {

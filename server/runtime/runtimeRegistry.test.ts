@@ -12,9 +12,9 @@ import {
 
 describe("server RuntimeRegistry", () => {
   it("registers the truthful Hermes execution boundary", () => {
-    expect(runtimeRegistry.listRuntimeTypes()).toEqual(["hermes", "pi"]);
+    expect(runtimeRegistry.listRuntimeTypes()).toEqual(["hermes", "pi", "codex"]);
     expect(runtimeRegistry.get("hermes")).toBe(hermesRuntimeDriver);
-    expect(runtimeRegistry.listProviderKeys()).toEqual(["hermes-core", "pi-rpc"]);
+    expect(runtimeRegistry.listProviderKeys()).toEqual(["hermes-core", "pi-rpc", "codex-app-server"]);
     expect(runtimeRegistry.get().runs.request).toBeTypeOf("function");
     expect(runtimeRegistry.get().runs.streamEvents).toBeTypeOf("function");
     expect(runtimeRegistry.get().preparation.createController).toBeTypeOf("function");
