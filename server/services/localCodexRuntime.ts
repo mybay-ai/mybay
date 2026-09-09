@@ -8,7 +8,7 @@ export async function ensureLocalCodexRuntimeImage({ dockerClient, imageRef, onL
   const verified = async () => {
     try {
       const info = await dockerClient.getImage(imageRef).inspect();
-      return info.Config?.Labels?.["com.mybay.codex.runtime"] === "true" && info.Config?.Labels?.["com.mybay.codex.agent-version"] === "0.153.4";
+      return info.Config?.Labels?.["com.mybay.codex.runtime"] === "true" && info.Config?.Labels?.["com.mybay.codex.agent-version"] === "0.153.4" && info.Config?.Labels?.["com.mybay.codex.bridge-version"] === "0.1.0-experimental.1";
     } catch { return false; }
   };
   if (await verified()) return imageRef;

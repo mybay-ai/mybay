@@ -19,7 +19,7 @@ import { QuickDeployDelivery } from "./QuickDeployDelivery";
 import { useProviderOAuth } from "./useProviderOAuth";
 import { fetchRuntimeCatalog } from "./runtimeCatalogClient";
 import type { RuntimeDefinition } from "../../../shared/runtimeCatalog";
-import { PI_QUICK_DEPLOY_PROVIDER_IDS, supportsQuickDeployRuntimeProvider } from "../../../shared/runtimeModelProviderPolicy";
+import { CODEX_API_PROVIDER_IDS, PI_QUICK_DEPLOY_PROVIDER_IDS, supportsQuickDeployRuntimeProvider } from "../../../shared/runtimeModelProviderPolicy";
 import { AgentRuntimeIcon } from "../../components/brand/AgentRuntimeIcon";
 import { ChannelBrandIcon } from "../../components/brand/ChannelBrandIcon";
 
@@ -59,6 +59,7 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
 
   const strategy = draft.modelStrategy;
   const isCodexRuntime = draft.runtimeType === "codex";
+  const isCodexAccount = isCodexRuntime && draft.codexAuthMode !== "api";
   const isNativeBridge = draft.runtimeType !== "hermes";
   const compatibleCredentials = useMemo(() => credentials.filter((credential) => {
     const provider = resolveProviderRegistryKey(credential.provider || credential.type, undefined, credential.baseUrl);
@@ -67,7 +68,7 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
   const selectedRuntime = runtimeDefinitions.find((definition) => definition.runtime.type === draft.runtimeType);
   const providerConfig = providerRegistry[strategy.provider];
   const isOAuthProvider = providerConfig?.authMode === "oauth-device-code";
-  const modelNeedsTest = !isCodexRuntime && requiresPredeployModelTest(strategy.provider);
+  const modelNeedsTest = isCodexRuntime ? !isCodexAccount : requiresPredeployModelTest(strategy.provider);
   const validationIssues = useMemo(() => validateQuickDeployDraft(draft), [draft]);
   const visibleIssues = submitted ? validationIssues : [];
 
@@ -102,7 +103,7 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
     const definition = runtimeDefinitions.find((candidate) => candidate.runtime.type === runtimeType);
     if (!definition?.release.deploymentSupported) return;
     setDraft((current) => {
-      if (runtimeType === "codex") return { ...current, runtimeType, channel: "web", selectedSkillIds: [], modelStrategy: { mode: "byok", provider: "openai", model: "", isCustomModel: true }, permissionConfirmed: false };
+      if (runtimeType === "codex") return { ...current, codexAuthMode: "chatgpt", codexAuthJson: undefined, runtimeType, channel: "web", selectedSkillIds: [], modelStrategy: { mode: "byok", provider: "openai", model: "", isCustomModel: true }, permissionConfirmed: false };
       let modelStrategy = current.modelStrategy;
       if (!supportsQuickDeployRuntimeProvider(runtimeType, modelStrategy.provider)) {
         const compatibleCredential = credentials.find((credential) => {
@@ -304,6 +305,7 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
     setModelTestMessage("");
     try {
       const result = await api.post("/api/system/test-llm", {
+        runtimeType: draft.runtimeType,
         provider: strategy.provider,
         model: strategy.model,
         baseUrl: strategy.baseUrl,
@@ -435,7 +437,14 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
 
           <Card className="space-y-5 p-6">
             <div><h2 className="font-bold text-content">{t("quickDeploy.model.title")}</h2><p className="mt-1 text-xs text-content-muted">{t("quickDeploy.model.description")}</p></div>
-            {isCodexRuntime ? <div className="space-y-3">
+            {isCodexRuntime && <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <Button type="button" variant={isCodexAccount ? "primary" : "outline"} onClick={() => updateDraft({ codexAuthMode: "chatgpt", codexAuthJson: undefined, permissionConfirmed: false, modelStrategy: { mode: "byok", provider: "openai", model: "", isCustomModel: true } })}>{t("quickDeploy.model.codexAccountMode")}</Button>
+                <Button type="button" variant={!isCodexAccount ? "primary" : "outline"} onClick={() => updateDraft({ codexAuthMode: "api", codexAuthJson: undefined, permissionConfirmed: false, modelStrategy: { mode: "byok", provider: "openai", model: providerRegistry.openai.defaultModel, baseUrl: providerRegistry.openai.defaultBaseUrl, apiKey: "" } })}>{t("quickDeploy.model.byok")}</Button>
+              </div>
+              {!isCodexAccount && <p className="text-sm text-content-secondary">{t("quickDeploy.model.codexApiDescription")}</p>}
+            </div>}
+            {isCodexAccount ? <div className="space-y-3">
               <p className="text-sm text-content-secondary">{t("quickDeploy.model.codexAccountDescription")}</p>
               <Label htmlFor="codex-account-file">{t("quickDeploy.model.codexAccountFile")}</Label>
               <Input id="codex-account-file" type="file" accept="application/json,.json" onChange={async event => {
@@ -453,7 +462,7 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
             ) : !isOAuthProvider ? (
               <div><Label>{t("quickDeploy.model.apiKey")}</Label><Input type="password" autoComplete="new-password" value={strategy.apiKey || ""} onChange={(event) => updateStrategy({ apiKey: event.target.value })} /></div>
             ) : null}
-            <div><Label>{t("quickDeploy.model.provider")}</Label><ProviderSelect className="mt-2" value={strategy.provider} onValueChange={selectProvider} includeOAuth={!isNativeBridge} allowedProviderIds={isNativeBridge ? PI_QUICK_DEPLOY_PROVIDER_IDS : undefined} disabled={strategy.mode === "saved_credential" || oauth.loading} /></div>
+            <div><Label>{t("quickDeploy.model.provider")}</Label><ProviderSelect className="mt-2" value={strategy.provider} onValueChange={selectProvider} includeOAuth={!isNativeBridge} allowedProviderIds={isCodexRuntime ? CODEX_API_PROVIDER_IDS : isNativeBridge ? PI_QUICK_DEPLOY_PROVIDER_IDS : undefined} disabled={strategy.mode === "saved_credential" || oauth.loading} /></div>
             {isOAuthProvider && (
               <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-4 text-sm text-blue-900 dark:border-blue-400/30 dark:bg-blue-400/10 dark:text-blue-100">
                 <div className="flex items-start gap-3">
@@ -476,7 +485,7 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
             )}
             </>}
             <div><Label>{t("quickDeploy.model.model")}</Label>{providerConfig?.models?.length && !strategy.isCustomModel ? <select value={strategy.model} onChange={(event) => updateStrategy({ model: event.target.value })} className="mt-2 h-11 w-full rounded-lg border border-outline bg-control px-3 text-sm text-content">{providerConfig.models.map((model) => <option key={model} value={model}>{model}</option>)}</select> : <Input value={strategy.model} onChange={(event) => updateStrategy({ model: event.target.value })} />}</div>
-            {!isCodexRuntime && (strategy.provider === "custom-openai-compatible" || strategy.isCustomModel) && <div><Label>{t("quickDeploy.model.baseUrl")}</Label><Input value={strategy.baseUrl || ""} onChange={(event) => updateStrategy({ baseUrl: event.target.value })} /></div>}
+            {!isCodexAccount && (isCodexRuntime || strategy.provider === "custom-openai-compatible" || strategy.isCustomModel) && <div><Label>{t("quickDeploy.model.baseUrl")}</Label><Input value={strategy.baseUrl || ""} onChange={(event) => updateStrategy({ baseUrl: event.target.value })} /></div>}
             {modelNeedsTest && <Button type="button" variant="outline" onClick={testModel} disabled={modelTest === "testing" || optionsLoading}>{modelTest === "testing" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}{modelTest === "passed" ? t("quickDeploy.model.testPassed") : t("quickDeploy.model.test")}</Button>}
             {modelTest === "failed" && <p className="text-sm text-danger">{modelTestMessage || t("quickDeploy.errors.modelTestFailed")}</p>}
           </Card>

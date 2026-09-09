@@ -1,4 +1,5 @@
 import { Router, Response } from "express";
+import { validateCodexConnection } from "../runtime/adapters/codex/CodexRuntimeEnvironment";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { checkPortInUse, isPortTaken, findAvailablePort } from "../utils";
 import Docker from "dockerode";
@@ -91,7 +92,12 @@ router.post("/test-llm", testLimiter, authenticateToken, async (req: Authenticat
     }
   }
 
-  const strategy = conf ? conf.testStrategy : "openai-chat-completions";
+  const codexApi = req.body.runtimeType === "codex";
+  if (codexApi) {
+    try { validateCodexConnection({ codexAuthMode: "api", provider: regKey, model, baseUrl, providerApiKey: apiKey }); }
+    catch { return res.status(400).json({ success: false, code: "CODEX_CONNECTION_INVALID", error: "Invalid Codex Responses API connection configuration." }); }
+  }
+  const strategy = codexApi ? "openai-responses" : conf ? conf.testStrategy : "openai-chat-completions";
 
   if (strategy === "no-predeploy-test") {
     return res.json({ success: false, error: `模型服务商 "${conf ? conf.label : provider}" 设置了 no-predeploy-test 策略，不支持运行预配置连通性测试。` });
@@ -109,7 +115,11 @@ router.post("/test-llm", testLimiter, authenticateToken, async (req: Authenticat
     let opts: any = { method: "POST", headers: { "Content-Type": "application/json" }, signal: controller.signal };
     let response;
 
-    if (strategy === "anthropic-messages") {
+    if (strategy === "openai-responses") {
+      url = `${baseUrl.replace(/\/$/, "")}/responses`;
+      opts.headers["Authorization"] = `Bearer ${apiKey}`;
+      opts.body = JSON.stringify({ model, input: "Reply with OK.", max_output_tokens: 64, store: false });
+    } else if (strategy === "anthropic-messages") {
       url = `${baseUrl.replace(/\/$/, "")}/messages`;
       opts.headers["x-api-key"] = apiKey;
       opts.headers["anthropic-version"] = "2023-06-01";
@@ -190,6 +200,12 @@ router.post("/test-llm", testLimiter, authenticateToken, async (req: Authenticat
     clearTimeout(timeoutId);
 
     if (response.ok) {
+      if (codexApi) {
+        const payload = await response.clone().json().catch(() => null);
+        if (!payload || !Array.isArray(payload.output) || payload.error || !["completed", "incomplete"].includes(payload.status)) {
+          return res.json({ success: false, code: "CODEX_RESPONSES_PROTOCOL_INVALID", error: "The endpoint did not return a valid Responses API result." });
+        }
+      }
       if (credentialId) {
         await dbAdapter.updateCredential(credentialId, req.user.id, { verification_status: "verified", verified_at: new Date().toISOString() }).catch(() => null);
       }

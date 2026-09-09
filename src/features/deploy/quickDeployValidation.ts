@@ -4,6 +4,7 @@ import type { QuickDeployDraft, QuickDeployValidationIssue } from "./quickDeploy
 import { supportsQuickDeployRuntimeProvider } from "../../../shared/runtimeModelProviderPolicy";
 
 export function validateQuickDeployDraft(draft: QuickDeployDraft): QuickDeployValidationIssue[] {
+  const codexAccount = draft.runtimeType === "codex" && draft.codexAuthMode !== "api";
   const issues: QuickDeployValidationIssue[] = [];
   const runtimeType = String(draft.runtimeType || "");
   const entrypoint = String(draft.entrypoint || "");
@@ -26,7 +27,7 @@ export function validateQuickDeployDraft(draft: QuickDeployDraft): QuickDeployVa
   if (!provider) issues.push({ code: "providerRequired", field: "modelStrategy.provider" });
   else if (!config?.enabled) issues.push({ code: "providerUnavailable", field: "modelStrategy.provider" });
   else if (!supportsQuickDeployRuntimeProvider(runtimeType, provider)) issues.push({ code: "runtimeProviderUnsupported", field: "modelStrategy.provider" });
-  if (runtimeType !== "codex" && !model) issues.push({ code: "modelRequired", field: "modelStrategy.model" });
+  if (!codexAccount && !model) issues.push({ code: "modelRequired", field: "modelStrategy.model" });
   if (provider === "custom-openai-compatible" && !strategy?.baseUrl?.trim()) {
     issues.push({ code: "customBaseUrlRequired", field: "modelStrategy.baseUrl" });
   }
@@ -36,8 +37,8 @@ export function validateQuickDeployDraft(draft: QuickDeployDraft): QuickDeployVa
   if (config?.authMode === "oauth-device-code" && strategy?.mode !== "saved_credential") {
     issues.push({ code: "oauthCredentialRequired", field: "modelStrategy.credentialId" });
   }
-  if (runtimeType === "codex" && !draft.codexAuthJson?.trim()) issues.push({ code: "codexAccountRequired", field: "codexAuthJson" });
-  if (runtimeType !== "codex" && strategy?.mode === "byok" && config?.requiresApiKey && !strategy.apiKey?.trim()) {
+  if (codexAccount && !draft.codexAuthJson?.trim()) issues.push({ code: "codexAccountRequired", field: "codexAuthJson" });
+  if (!codexAccount && strategy?.mode === "byok" && (config?.requiresApiKey || runtimeType === "codex") && !strategy.apiKey?.trim()) {
     issues.push({ code: "apiKeyRequired", field: "modelStrategy.apiKey" });
   }
   if (runtimeType === "hermes" && draft.channel === "telegram" && !draft.telegramBotToken?.trim()) {

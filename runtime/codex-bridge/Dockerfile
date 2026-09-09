@@ -1,7 +1,7 @@
 FROM node:22-bookworm-slim
 
 LABEL com.mybay.codex.runtime="true" \
-  com.mybay.codex.bridge-version="0.1.0-experimental.0" \
+  com.mybay.codex.bridge-version="0.1.0-experimental.1" \
   com.mybay.codex.agent-version="0.153.4"
 RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates \
   && rm -rf /var/lib/apt/lists/*

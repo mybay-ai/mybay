@@ -48,8 +48,8 @@ export async function startServer(options = {}) {
     const supplied = Buffer.from(String(request.headers.authorization || ""));
     if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) return json(response, 401, { error: "UNAUTHORIZED" });
     if (request.method === "GET" && url.pathname === "/v1/capabilities") {
-      const account = await rpc.request("account/read", { refreshToken: false });
-      const ready = Boolean(account.account);
+      const account = env.CODEX_AUTH_MODE === "api" ? { account: null } : await rpc.request("account/read", { refreshToken: false });
+      const ready = env.CODEX_AUTH_MODE === "api" ? Boolean(env.MYBAY_CODEX_PROVIDER_KEY) : Boolean(account.account);
       return json(response, 200, { runtime: "codex", auth_ready: ready, features: { ...CODEX_BRIDGE_FEATURES, run_submission: ready }, endpoints: { sessions: "/api/sessions", runs: "/v1/runs" } });
     }
     if (request.method === "POST" && url.pathname === "/api/sessions") return json(response, 201, await runtime.enqueue(() => runtime.createSession()));

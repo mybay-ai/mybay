@@ -287,7 +287,7 @@
       "piDescription": "基于官方 Pi RPC 的隔离运行时，支持 Web 流式对话、会话恢复和文件工作流。",
       "unavailable": "当前版本暂不可部署",
       "codexBadge": "Experimental",
-      "codexDescription": "使用 Codex / ChatGPT 账号运行独立会话。仅支持 Web 对话，其他能力按验收逐步开放。"
+      "codexDescription": "使用 Codex / ChatGPT 账号或兼容 Responses 的模型 API 运行独立会话，支持 Web 对话。"
     },
     "instance": {
       "title": "Agent 信息",
@@ -308,6 +308,8 @@
       "baseUrl": "Base URL",
       "test": "测试模型连接",
       "testPassed": "模型连接已通过",
+      "codexAccountMode": "Codex / ChatGPT 账号",
+      "codexApiDescription": "复用已保存凭据或自己的 API。仅支持 Responses API；普通模型连接测试不能证明 Codex 工具兼容性。第三方端点需实际验收。",
       "codexAccountDescription": "导入本机 Codex 登录生成的 auth.json。账号将用于此实例，文件内容会加密保存。模型留空时使用 Codex 默认模型。",
       "codexAccountFile": "Codex 账号文件"
     },

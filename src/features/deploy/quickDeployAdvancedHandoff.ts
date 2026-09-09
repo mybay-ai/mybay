@@ -11,7 +11,7 @@ export function buildQuickDeployAdvancedInitialData(
   const channel = isPi ? "web" : draft.channel;
   const common: Partial<SetupFormData> = {
     runtime_type: draft.runtimeType,
-    ...(draft.runtimeType === "codex" ? { codexAuthJson: draft.codexAuthJson } : {}),
+    ...(draft.runtimeType === "codex" ? { codexAuthMode: draft.codexAuthMode || "chatgpt", codexAuthJson: draft.codexAuthMode === "api" ? undefined : draft.codexAuthJson } : {}),
     name: draft.name.trim(),
     path,
     username: isPi ? "" : draft.dashboardUsername.trim(),

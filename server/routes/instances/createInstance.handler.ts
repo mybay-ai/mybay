@@ -1,4 +1,4 @@
-import { normalizeCodexAccountAuth } from "../../runtime/adapters/codex/CodexRuntimeEnvironment";
+import { normalizeCodexAccountAuth, validateCodexConnection } from "../../runtime/adapters/codex/CodexRuntimeEnvironment";
 import { Router, Response } from "express";
 import { AuthenticatedRequest, authenticateToken } from "../../middlewares/auth";
 import { dbAdapter } from "../../db";
@@ -95,10 +95,10 @@ export function createInstanceHandler(deps: RouterDependencies) {
       }
 
       if (requestedRuntimeType === "codex") {
-        try { req.body.codexAuthJson = normalizeCodexAccountAuth(req.body.codexAuthJson); }
+        try { if ((req.body.codexAuthMode || "chatgpt") === "chatgpt") req.body.codexAuthJson = normalizeCodexAccountAuth(req.body.codexAuthJson); }
         catch { return res.status(400).json({ code: "CODEX_ACCOUNT_AUTH_INVALID", error: "Import a valid Codex ChatGPT account auth.json." }); }
-        if (req.body.provider !== "openai" || req.body.channel && req.body.channel !== "web" || req.body.skills?.length || req.body.a2aEnabled) {
-          return res.status(400).json({ code: "CODEX_CAPABILITY_UNSUPPORTED", error: "Codex currently supports OpenAI account authentication and Web chat only." });
+        if (req.body.channel && req.body.channel !== "web" || req.body.skills?.length || req.body.a2aEnabled) {
+          return res.status(400).json({ code: "CODEX_CAPABILITY_UNSUPPORTED", error: "Codex currently supports Web chat without external channels, injected skills or A2A." });
         }
         req.body.enableDashboard = false;
       }
@@ -225,6 +225,11 @@ export function createInstanceHandler(deps: RouterDependencies) {
                 : "Failed to resolve the selected saved credential."
           });
         }
+      }
+
+      if (requestedRuntimeType === "codex") {
+        try { validateCodexConnection(data); }
+        catch (error) { return res.status(400).json({ code: "CODEX_CONNECTION_INVALID", error: error instanceof Error ? error.message : "CODEX_CONNECTION_INVALID" }); }
       }
 
       // Handle Demo Mode token minting and config override

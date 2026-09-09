@@ -19,6 +19,7 @@ export type QuickDeployModelStrategy =
 export type QuickDeployChannel = "web" | "telegram" | "feishu" | "weixin";
 
 export interface QuickDeployDraft {
+  codexAuthMode?: "chatgpt" | "api";
   codexAuthJson?: string;
   schemaVersion: 1;
   runtimeType: "hermes" | "pi" | "codex";
