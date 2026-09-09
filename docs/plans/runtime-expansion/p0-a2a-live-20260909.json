@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-09T06:14:22.191Z",
+  "environment": {
+    "platform": "win32",
+    "arch": "x64",
+    "node": "v25.2.1"
+  },
+  "target": {
+    "baseUrl": "http://127.0.0.1:4348",
+    "runtimes": {
+      "pi": {
+        "instanceId": "1a5c4df7-4d95-4b0d-b758-84464ede0c6d",
+        "name": "PiAcceptance"
+      },
+      "hermes": {
+        "instanceId": "f4343d7e-b1c5-4869-b0c1-4798310fd240",
+        "name": "HermesAcceptance"
+      }
+    }
+  },
+  "strict": false,
+  "results": [
+    {
+      "name": "hermes-to-pi",
+      "verdict": "PASS",
+      "durationMs": 51741,
+      "evidence": {
+        "host": {
+          "instanceId": "f4343d7e-b1c5-4869-b0c1-4798310fd240",
+          "name": "HermesAcceptance"
+        },
+        "peer": {
+          "instanceId": "1a5c4df7-4d95-4b0d-b758-84464ede0c6d",
+          "name": "PiAcceptance"
+        },
+        "conversationId": "2850f925-8d1e-44e5-9615-a6dcf18dcc67",
+        "callerState": "ready",
+        "toolState": "ready",
+        "peerState": "ready",
+        "runId": "cf4afa08-5a4a-4029-a90b-e2a1dc9cb2d9",
+        "runStatus": "completed",
+        "contextId": "ctx-mybay-room-cf4afa085a4a4029a90be2a1dc9cb2d9",
+        "selectedPeerIds": [
+          "1a5c4df7-4d95-4b0d-b758-84464ede0c6d"
+        ],
+        "groupOutcome": "completed",
+        "activityGroupOutcome": "completed",
+        "memberStatus": "completed",
+        "memberTaskId": "task-9e93f103b6364e7e",
+        "markerObserved": true
+      }
+    },
+    {
+      "name": "pi-to-hermes",
+      "verdict": "PASS",
+      "durationMs": 125736,
+      "evidence": {
+        "host": {
+          "instanceId": "1a5c4df7-4d95-4b0d-b758-84464ede0c6d",
+          "name": "PiAcceptance"
+        },
+        "peer": {
+          "instanceId": "f4343d7e-b1c5-4869-b0c1-4798310fd240",
+          "name": "HermesAcceptance"
+        },
+        "conversationId": "8f7bf6f8-ba79-43ec-a5b9-bde1b1eaad87",
+        "callerState": "ready",
+        "toolState": "ready",
+        "peerState": "ready",
+        "runId": "3c6a3b40-ac0f-4543-a3be-147c69fd0ddf",
+        "runStatus": "completed",
+        "contextId": "ctx-mybay-room-3c6a3b40ac0f4543a3be147c69fd0ddf",
+        "selectedPeerIds": [
+          "f4343d7e-b1c5-4869-b0c1-4798310fd240"
+        ],
+        "groupOutcome": "completed",
+        "activityGroupOutcome": "completed",
+        "memberStatus": "completed",
+        "memberTaskId": "15c564a6-92fe-4ace-97ba-1de011f66558",
+        "markerObserved": true
+      }
+    },
+    {
+      "name": "parallel",
+      "verdict": "NOT_RUN",
+      "reason": "scenario was not selected"
+    },
+    {
+      "name": "partial-failure",
+      "verdict": "NOT_RUN",
+      "reason": "scenario was not selected"
+    },
+    {
+      "name": "group-cancellation",
+      "verdict": "NOT_RUN",
+      "reason": "scenario was not selected"
+    },
+    {
+      "name": "refresh-recovery",
+      "verdict": "NOT_RUN",
+      "reason": "scenario was not selected"
+    },
+    {
+      "name": "control-restart-recovery",
+      "verdict": "NOT_RUN",
+      "reason": "scenario was not selected"
+    }
+  ],
+  "summary": {
+    "PASS": 2,
+    "FAIL": 0,
+    "NOT_RUN": 5,
+    "accepted": true
+  }
+}
