@@ -94,7 +94,7 @@ router.post("/test-llm", testLimiter, authenticateToken, async (req: Authenticat
 
   const codexApi = req.body.runtimeType === "codex";
   if (codexApi) {
-    try { validateCodexConnection({ codexAuthMode: "api", provider: regKey, model, baseUrl, providerApiKey: apiKey }); }
+    try { baseUrl = validateCodexConnection({ codexAuthMode: "api", provider: regKey, model, baseUrl, providerApiKey: apiKey }).baseUrl; }
     catch { return res.status(400).json({ success: false, code: "CODEX_CONNECTION_INVALID", error: "Invalid Codex Responses API connection configuration." }); }
   }
   const strategy = codexApi ? "openai-responses" : conf ? conf.testStrategy : "openai-chat-completions";

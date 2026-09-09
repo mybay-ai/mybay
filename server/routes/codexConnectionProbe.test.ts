@@ -24,4 +24,10 @@ describe("Codex probe reuses model diagnostics with Responses semantics", () => 
     outbound.mockResolvedValue(new Response(JSON.stringify({ choices: [] }), { status: 200 }));
     expect((await probe()).success).toBe(false);
   });
+  it("normalizes saved DeepSeek chat URLs only for Codex Responses probes", async () => {
+    outbound.mockResolvedValue(new Response(JSON.stringify({ status: "completed", output: [{ type: "message" }] }), { status: 200 }));
+    const result = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ runtimeType: "codex", provider: "deepseek", model: "deepseek-v4-flash", baseUrl: "https://api.deepseek.com/v1", apiKey: "fixture-key" }) }).then(r => r.json());
+    expect(result.success).toBe(true);
+    expect(outbound.mock.calls.at(-1)?.[0]).toBe("https://api.deepseek.com/responses");
+  });
 });

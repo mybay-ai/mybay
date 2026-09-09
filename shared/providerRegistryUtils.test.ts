@@ -41,7 +41,10 @@ describe("provider display grouping", () => {
 
 describe("Hermes model catalog compatibility", () => {
   it("offers Fable 5.1 through Anthropic and OpenRouter", () => {
-    expect(providerRegistry.anthropic.models).toContain("claude-fable-5.1");
+    expect(providerRegistry.anthropic.models).toContain("claude-fable-5-1");
+    expect(providerRegistry.openai.models).toContain("gpt-6-astra");
+    expect(providerRegistry["openai-codex"].models).toContain("gpt-6-astra");
+    expect(providerRegistry.gemini.models).toContain("gemini-3.8-flash");
     expect(providerRegistry.openrouter.models).toContain("anthropic/claude-fable-5.1");
   });
 
@@ -56,7 +59,8 @@ describe("Hermes model catalog compatibility", () => {
     ]));
   });
 
-  it("keeps Codex OAuth models limited to its runtime fallback catalog", () => {
-    expect(providerRegistry["openai-codex"].models).not.toContain("gpt-6-astra");
+  it("offers the new Codex model without aggregator-specific suffixes", () => {
+    expect(providerRegistry["openai-codex"].models).toContain("gpt-6-astra");
+    expect(providerRegistry["openai-codex"].models).not.toContain("openai/gpt-6-astra");
   });
 });

@@ -54,8 +54,13 @@ export const PI_BRIDGE_FEATURES = Object.freeze({
   session_resources: false,
 });
 
-export function normalizeReasoningEffort(modelOptions = {}) {
+export function normalizeReasoningEffort(modelOptions = {}, model = MODEL) {
   const value = String(modelOptions?.reasoning_effort || modelOptions?.reasoning?.effort || "medium").toLowerCase();
+  if (model === "gemini-3.8-flash") {
+    if (["off", "none", "minimal", "low"].includes(value)) return "low";
+    if (["high", "xhigh", "max"].includes(value)) return "high";
+    return "medium";
+  }
   if (["off", "minimal", "low", "medium", "high", "xhigh", "max"].includes(value)) return value;
   if (value === "none") return "off";
   return "medium";

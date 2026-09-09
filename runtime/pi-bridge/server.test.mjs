@@ -65,6 +65,8 @@ test("normalizes MyBay reasoning levels for Pi", () => {
   assert.equal(normalizeReasoningEffort({ reasoning_effort: "none" }), "off");
   assert.equal(normalizeReasoningEffort({ reasoning: { effort: "high" } }), "high");
   assert.equal(normalizeReasoningEffort({ reasoning_effort: "unexpected" }), "medium");
+  assert.equal(normalizeReasoningEffort({ reasoning_effort: "minimal" }, "gemini-3.8-flash"), "low");
+  assert.equal(normalizeReasoningEffort({ reasoning_effort: "max" }, "gemini-3.8-flash"), "high");
 });
 
 test("keeps an idle Pi session warm when the requested reasoning level changes", () => {

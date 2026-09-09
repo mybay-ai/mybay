@@ -3,6 +3,7 @@ import path from "node:path";
 import { decrypt } from "../../../crypto";
 import { providerRegistry } from "../../../../shared/providerRegistry";
 import { CODEX_API_PROVIDER_IDS } from "../../../../shared/runtimeModelProviderPolicy";
+import { buildDeepSeekCodexModelCatalog } from "./CodexModelCatalog";
 
 // Called only after the saved credential has been resolved for the current user.
 export function applyCodexOAuthCredential(config: Record<string, any>, credentialType: unknown) {
@@ -32,7 +33,10 @@ export function validateCodexConnection(config: any) {
   if (config.codexAuthJson || !CODEX_API_PROVIDER_IDS.includes(config.provider)) throw Error("CODEX_PROVIDER_UNSUPPORTED");
   const model = String(config.model || "").trim();
   if (!model || !/^[A-Za-z0-9._:/-]{1,200}$/.test(model)) throw Error("CODEX_MODEL_INVALID");
-  const baseUrl = String(config.baseUrl || providerRegistry[config.provider]?.defaultBaseUrl || "").trim();
+  const provider = providerRegistry[config.provider];
+  const requestedBaseUrl = String(config.baseUrl || "").trim().replace(/\/$/, "");
+  const baseUrl = provider?.responsesBaseUrl && (!requestedBaseUrl || requestedBaseUrl === provider.defaultBaseUrl.replace(/\/$/, ""))
+    ? provider.responsesBaseUrl : requestedBaseUrl || provider?.defaultBaseUrl || "";
   let url: URL; try { url = new URL(baseUrl); } catch { throw Error("CODEX_BASE_URL_INVALID"); }
   if (!["https:", "http:"].includes(url.protocol) || url.username || url.password || url.search || url.hash || /[\r\n]/.test(baseUrl)) throw Error("CODEX_BASE_URL_INVALID");
   if (!config.providerApiKey && !config.apiKey) throw Error("CODEX_API_KEY_MISSING");
@@ -80,9 +84,14 @@ export function writeCodexRuntimeEnvironment(instanceId: string, config: any) {
   }
   fs.mkdirSync(path.dirname(authPath), { recursive: true });
   const connection = validateCodexConnection(config);
+  const deepseek = connection.mode === "api" && config.provider === "deepseek";
+  if (deepseek) {
+    fs.writeFileSync(path.join(root, "codex", "models.json"), JSON.stringify(buildDeepSeekCodexModelCatalog()), { mode: 0o600 });
+  }
   const nativeConfig = connection.mode === "api" ? [
     'model_provider = "mybay_api"',
     `model = ${JSON.stringify(finalEnvMap.CODEX_MODEL)}`,
+    ...(deepseek ? ['model_catalog_json = "/opt/data/codex/models.json"', 'model_reasoning_effort = "high"'] : []),
     '[model_providers.mybay_api]',
     'name = "MyBay configured provider"',
     `base_url = ${JSON.stringify(connection.baseUrl)}`,

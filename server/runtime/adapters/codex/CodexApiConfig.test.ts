@@ -6,6 +6,21 @@ import { encrypt } from "../../../crypto";
 import { validateCodexConnection, writeCodexRuntimeEnvironment } from "./CodexRuntimeEnvironment";
 
 describe("Codex shared API credentials", () => {
+  it("uses the dedicated DeepSeek Responses endpoint and native model catalog", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "mybay-codex-deepseek-"));
+    vi.spyOn(process, "cwd").mockReturnValue(root);
+    const input = { codexAuthMode: "api", provider: "deepseek", model: "deepseek-v4-flash", baseUrl: "https://api.deepseek.com/v1", providerApiKey: encrypt("fixture-key"), hermesApiKey: encrypt("bridge-key") };
+    expect(validateCodexConnection(input).baseUrl).toBe("https://api.deepseek.com");
+    writeCodexRuntimeEnvironment("isolated", input);
+    const home = path.join(root, "data/instances/isolated/codex");
+    const toml = fs.readFileSync(path.join(home, "config.toml"), "utf8");
+    expect(toml).toContain('base_url = "https://api.deepseek.com"');
+    expect(toml).toContain('model_catalog_json = "/opt/data/codex/models.json"');
+    expect(toml).not.toContain("fixture-key");
+    const catalog = JSON.parse(fs.readFileSync(path.join(home, "models.json"), "utf8"));
+    expect(catalog.models.find((m: any) => m.slug === "deepseek-v4-flash").supported_reasoning_levels.map((r: any) => r.effort)).toEqual(["low", "high", "max"]);
+    expect(catalog.models.find((m: any) => m.slug.endsWith("vision-exp")).input_modalities).toContain("image");
+  });
   afterEach(() => vi.restoreAllMocks());
   it("writes native Responses provider config without putting the secret in TOML or importing an account", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "mybay-codex-api-"));
@@ -26,7 +41,7 @@ describe("Codex shared API credentials", () => {
   });
   it("rejects mixed authentication and non-Responses presets", () => {
     expect(() => validateCodexConnection({ provider: "openai", providerApiKey: "key" })).toThrow("CODEX_PROVIDER_UNSUPPORTED");
-    expect(() => validateCodexConnection({ codexAuthMode: "api", provider: "deepseek", model: "x", providerApiKey: "key" })).toThrow("CODEX_PROVIDER_UNSUPPORTED");
+    expect(() => validateCodexConnection({ codexAuthMode: "api", provider: "anthropic", model: "x", providerApiKey: "key" })).toThrow("CODEX_PROVIDER_UNSUPPORTED");
     expect(() => validateCodexConnection({ codexAuthMode: "api", provider: "custom-openai-compatible", model: "x", baseUrl: "https://user:secret@example.com", providerApiKey: "key" })).toThrow("CODEX_BASE_URL_INVALID");
   });
 });

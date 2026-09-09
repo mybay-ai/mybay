@@ -34,6 +34,7 @@ export interface ProviderConfig {
   supportsToolCalling?: boolean;
   supportsStreaming?: boolean;
   supportsResponsesApi?: boolean;
+  responsesBaseUrl?: string;
   supportsVision?: boolean;
   tokenLimitParameter?: "max_tokens" | "max_completion_tokens";
   enabled: boolean;
@@ -54,7 +55,7 @@ export const providerRegistry: Record<string, ProviderConfig> = {
     type: "openai-compatible",
     defaultBaseUrl: "https://api.openai.com/v1",
     defaultModel: "gpt-5.5",
-    models: ["gpt-5.6-sol","gpt-5.6-terra","gpt-5.6-luna","gpt-5.5", "gpt-5.4", "gpt-5.4-mini"],
+    models: ["gpt-6-astra", "gpt-5.6-sol","gpt-5.6-terra","gpt-5.6-luna","gpt-5.5", "gpt-5.4", "gpt-5.4-mini"],
     envPrefix: "OPENAI",
     requiresApiKey: true,
     testStrategy: "openai-chat-completions",
@@ -82,7 +83,7 @@ export const providerRegistry: Record<string, ProviderConfig> = {
     type: "gemini",
     defaultBaseUrl: "https://generativelanguage.googleapis.com/v1beta",
     defaultModel: "gemini-3.5-flash",
-    models: ["gemini-3.1-pro-preview", "gemini-3.5-flash", "gemini-3-flash-preview"],
+    models: ["gemini-3.8-flash", "gemini-3.1-pro-preview", "gemini-3.5-flash", "gemini-3-flash-preview"],
     envPrefix: "GEMINI",
     requiresApiKey: true,
     testStrategy: "gemini-generate-content",
@@ -100,7 +101,7 @@ export const providerRegistry: Record<string, ProviderConfig> = {
     type: "anthropic",
     defaultBaseUrl: "https://api.anthropic.com/v1",
     defaultModel: "claude-opus-4-8",
-    models: ["claude-fable-5.1", "claude-fable-5", "claude-opus-5", "claude-sonnet-5", "claude-opus-4-8"],
+    models: ["claude-fable-5-1", "claude-fable-5", "claude-opus-5", "claude-sonnet-5", "claude-opus-4-8"],
     envPrefix: "ANTHROPIC",
     requiresApiKey: true,
     testStrategy: "anthropic-messages",
@@ -126,7 +127,8 @@ export const providerRegistry: Record<string, ProviderConfig> = {
     authType: "api_key",
     supportsToolCalling: true,
     supportsStreaming: true,
-    supportsResponsesApi: false,
+    supportsResponsesApi: true,
+    responsesBaseUrl: "https://api.deepseek.com",
     enabled: true,
     category: "domestic",
     networkAccess: "cn-direct",
@@ -345,6 +347,7 @@ export const providerRegistry: Record<string, ProviderConfig> = {
     // not necessarily through the public OpenAI API.
     defaultModel: "gpt-5.5",
     models: [
+      "gpt-6-astra",
       "gpt-5.6-sol",
       "gpt-5.6-terra",
       "gpt-5.6-luna",

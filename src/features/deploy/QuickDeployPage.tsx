@@ -298,7 +298,7 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
 
   const selectProvider = (provider: string) => {
     const config = providerRegistry[provider];
-    updateStrategy({ provider, model: config?.defaultModel || "", baseUrl: config?.defaultBaseUrl || "", isCustomModel: provider === "custom-openai-compatible" });
+    updateStrategy({ provider, model: config?.defaultModel || "", baseUrl: (isCodexRuntime ? config?.responsesBaseUrl : undefined) || config?.defaultBaseUrl || "", isCustomModel: provider === "custom-openai-compatible" });
   };
 
   const testModel = async () => {

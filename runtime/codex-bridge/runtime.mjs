@@ -127,7 +127,10 @@ export class CodexRuntime extends EventEmitter {
     await this.enqueue(async () => { run.threadId = session.threadId; await this.persist(); });
     if (run.stopRequested) return this.enqueue(() => this.finish(run, "cancelled"));
     const text = typeof body.input === "string" ? body.input : body.input.map(m => `[${String(m.role || "user")}]\n${String(m.content || "")}`).join("\n\n");
-    const effort = ["low", "medium", "high"].includes(body.model_options?.reasoning_effort) ? body.model_options.reasoning_effort : "medium";
+    const requestedEffort = body.model_options?.reasoning_effort;
+    const effort = this.model?.startsWith("deepseek-v4-")
+      ? (["low", "high", "max"].includes(requestedEffort) ? requestedEffort : "high")
+      : (["low", "medium", "high"].includes(requestedEffort) ? requestedEffort : "medium");
     const result = await this.rpc.request("turn/start", { threadId: session.threadId, input: [{ type: "text", text }], effort,
       ...(this.externalSandbox ? { sandboxPolicy: { type: "externalSandbox", networkAccess: "enabled" } } : {}) });
     await this.enqueue(async () => {
