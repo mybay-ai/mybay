@@ -347,7 +347,7 @@ export function InstancesPanel({
               </div>
 
               <details className="relative">
-                <summary className="flex min-h-11 cursor-pointer items-center rounded-xl border border-outline bg-surface px-3 text-sm">{t("instances_more_actions", { defaultValue: "更多" })}</summary>
+                <summary className="flex min-h-11 cursor-pointer items-center rounded-xl border border-outline bg-surface px-3 text-sm">{t("instances_more_actions")}</summary>
                 <div className="absolute left-0 top-full z-20 mt-2 flex w-56 flex-col gap-2 rounded-xl border border-outline bg-surface p-2 shadow-lg">
               {viewMode === 'grid' && (
                 <Button
