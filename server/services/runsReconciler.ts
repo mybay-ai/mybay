@@ -205,7 +205,7 @@ function getRuntimeRunEventController(driver: RuntimeDriver): RuntimeRunEventCon
   runtimeRunEventControllers.set(key, controller);
   return controller;
 }
-const runSseStreamController = createRunSseStreamController();
+const runSseStreamController = createRunSseStreamController(1024 * 1024, 100);
 const runTimelineCollector = createLocalTimelineCollector();
 const runLatencyObservability = createRunLatencyObservability();
 const runFileSnapshots = createRunFileSnapshots(event => console.info(JSON.stringify({ operation: "run_file_snapshot", ...event })));

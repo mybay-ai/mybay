@@ -1,5 +1,30 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { emit, flushPiDeltas } from "./server.mjs";
+
+test("batches Pi deltas and flushes them before terminal delivery", () => {
+  const received = [];
+  const run = { id: "test-run", events: [], subscribers: new Set([(event, id) => received.push({ event, id })]) };
+  for (let i = 0; i < 2000; i++) emit(run, { type: "message.delta", delta: "x" });
+  assert.equal(received.length, 0);
+  emit(run, { type: "run.completed" });
+  assert.equal(received.length, 2);
+  assert.equal(received[0].event.delta.length, 2000);
+  assert.equal(received[1].event.type, "run.completed");
+  assert.deepEqual(received.map(v => v.id), [1, 2]);
+  flushPiDeltas(run);
+  assert.equal(received.length, 2);
+});
+
+test("Pi replay sequence does not reset when the retained window rolls over", () => {
+  const run = { id: "test-run", events: [], subscribers: new Set() };
+  for (let i = 0; i < 750; i++) emit(run, { type: "tool.started", tool_call_id: String(i) });
+  assert.equal(run.events.length, 500);
+  assert.equal(run.eventSequence, 750);
+  assert.equal(run.eventSequence - run.events.length + 1, 251);
+  emit(run, { type: "run.completed" });
+  assert.equal(run.eventSequence, 751);
+});
 import { PI_BRIDGE_FEATURES, applyPiSessionEvidence, applyPiThinkingLevel, approvalPolicySnapshot, assistantText, cancelActiveRun, instructionsForPiTurn, normalizePiEvent, normalizePrompt, normalizeReasoningEffort, piCompactionFailureStatus, requestPiCompaction, revokeAlwaysApprovedTool, safeToolMetadata, selectPiSession } from "./server.mjs";
 
 test("advertises the managed attachment and generated-file contract", () => {

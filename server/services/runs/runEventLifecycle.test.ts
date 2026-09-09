@@ -16,6 +16,38 @@ function cacheDependencies(now: { value: number }) {
 }
 
 describe("run event lifecycle controllers", () => {
+  it("coalesces dense native text, preserves ordering and commits the final delivered cursor", async () => {
+    const streams = createRunSseStreamController(1024 * 1024, 100);
+    const events = vi.fn();
+    const text = Array.from({ length: 1000 }, (_, n) => `id: ${n + 1}\ndata: {"type":"message.delta","run_id":"native","delta":"x"}\n\n`).join("");
+    streams.ensure("local", async (_signal, chunk) => {
+      chunk(text);
+      expect(events).not.toHaveBeenCalled();
+      chunk('id: 1001\ndata: {"type":"approval.request"}\n\n');
+    }, events);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(events.mock.calls.map(([e]) => e.type)).toEqual(["message.delta", "approval.request"]);
+    expect(events.mock.calls[0][0].delta.length).toBe(1000);
+    streams.ensure("local", async (_signal, chunk) => { chunk(text); }, events);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(events).toHaveBeenCalledTimes(2);
+  });
+
+  it("flushes text while a connection stays open and discards pending bytes on clear", async () => {
+    vi.useFakeTimers();
+    try {
+      const streams = createRunSseStreamController(1024 * 1024, 100), events = vi.fn();
+      let send!: (chunk: string) => void;
+      streams.ensure("local", (_signal, chunk) => { send = chunk; return new Promise(() => {}); }, events);
+      send('id: 1\ndata: {"type":"message.delta","delta":"first"}\n\n');
+      await vi.advanceTimersByTimeAsync(100);
+      expect(events).toHaveBeenCalledWith({ type: "message.delta", delta: "first" });
+      send('id: 2\ndata: {"type":"message.delta","delta":"discard"}\n\n');
+      streams.clear("local");
+      await vi.advanceTimersByTimeAsync(100);
+      expect(events).toHaveBeenCalledTimes(1);
+    } finally { vi.useRealTimers(); }
+  });
   it("does not replay text or approvals when the same upstream stream reconnects", async () => {
     const streams = createRunSseStreamController();
     const received = vi.fn();

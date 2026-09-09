@@ -203,7 +203,7 @@ export interface RunSseStreamController {
   clearAll(): void;
 }
 
-export function createRunSseStreamController(maxBufferCharacters = 1024 * 1024): RunSseStreamController {
+export function createRunSseStreamController(maxBufferCharacters = 1024 * 1024, textBatchMs = 0): RunSseStreamController {
   const activeStreams = new Map<string, AbortController>();
   const cursors = new Map<string, { sourceId: string; sequence: number }>();
 
@@ -218,6 +218,19 @@ export function createRunSseStreamController(maxBufferCharacters = 1024 * 1024):
       const controller = new AbortController();
       activeStreams.set(runId, controller);
       let buffer = "";
+      let pending: { event: Record<string, unknown>; sequence?: number } | undefined;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const flush = () => {
+        clearTimeout(timer); timer = undefined;
+        const item = pending; pending = undefined;
+        if (!item || controller.signal.aborted || activeStreams.get(runId) !== controller) return;
+        try {
+          onEvent(item.event);
+          const cursor = cursors.get(runId);
+          if (item.sequence !== undefined && cursor?.sourceId === sourceId) cursor.sequence = item.sequence;
+        } catch { controller.abort(); }
+      };
+      controller.signal.addEventListener("abort", () => { clearTimeout(timer); pending = undefined; }, { once: true });
       void start(controller.signal, (chunk) => {
         if (controller.signal.aborted || activeStreams.get(runId) !== controller) return;
         onChunkObserved?.();
@@ -244,9 +257,23 @@ export function createRunSseStreamController(maxBufferCharacters = 1024 * 1024):
           const sequence = rawId && /^[1-9][0-9]*$/.test(rawId) ? Number(rawId) : undefined;
           const numericId = sequence !== undefined && Number.isSafeInteger(sequence);
           const cursor = cursors.get(runId)!;
-          if (numericId && sequence <= cursor.sequence) continue;
+          if (numericId && sequence <= (pending?.sequence ?? cursor.sequence)) continue;
           let event: unknown;
           try { event = JSON.parse(data); } catch { continue; }
+          const text = event && typeof event === "object" ? event as Record<string, unknown> : undefined;
+          if (textBatchMs > 0 && (text?.type || text?.event) === "message.delta" && typeof text?.delta === "string") {
+            if (pending && pending.event.run_id !== text.run_id) flush();
+            if (controller.signal.aborted) return;
+            if (pending) {
+              pending.event.delta = String(pending.event.delta) + text.delta;
+              if (numericId) pending.sequence = sequence;
+            } else pending = { event: { ...text }, sequence: numericId ? sequence : undefined };
+            if (!timer) timer = setTimeout(flush, textBatchMs);
+            if (String(pending.event.delta).length >= maxBufferCharacters) flush();
+            continue;
+          }
+          flush();
+          if (controller.signal.aborted) return;
           try {
             onEvent(event);
             if (numericId && cursors.get(runId) === cursor) cursor.sequence = sequence;
@@ -255,6 +282,7 @@ export function createRunSseStreamController(maxBufferCharacters = 1024 * 1024):
       })
         .catch(() => {})
         .finally(() => {
+          flush();
           if (activeStreams.get(runId) === controller) activeStreams.delete(runId);
         });
       return true;
