@@ -186,3 +186,16 @@ preceding five-minute window. Observed outcome: no unwanted task triggered.
 This does not prove live local-parser rejection: delivery of the unmentioned
 event to the application was not observed. Platform-side event filtering remains
 possible; the local exact-mention guard is covered by automated tests only.
+
+## Live Feishu private /stop acceptance (2026-09-10)
+
+Sent text-only long tasks through the signed-in Feishu web client to the two
+dedicated test bots, observed each exact run in running state, then sent /stop
+through the same private chat. Both exact runs reached cancelled:
+- Pi: 29d50f9e-3776-4ae9-894a-ed14998f4f39.
+- Codex: dbd6041b-4a17-4d19-b3d6-140be7ad0995.
+Each stop receipt points to its original run and conversation. All four receipts
+(original tasks plus stops) reached finished; stop acknowledgements and terminal
+cancellation replies have sent=true. This verifies actual private IM cancellation,
+not merely Web stop or stop acknowledgement. Group stop and concurrent cross-chat
+non-interference remain outside this test.
