@@ -68,3 +68,14 @@ PASS on Windows with pinned codex-cli 0.153.4 and the current bridge. An isolate
 - Retained sanitized evidence: codex-restore-native-20260910.json, SHA-256 f9314f2f0c1922c0d4b4ad093c6f69b305569091a3b0c7f1f6daf6b261c381c0.
 - Both test processes exited. Existing Agent containers and Feishu connections were untouched. Test credentials and raw state remain only in ignored local test directories, not this evidence or Git.
 - Scope: real host-native model continuation after filesystem/database backup and restore. The small control metadata database was a fixture, not the real product database. Docker/product restore, service cutover, duplicate-binding handling and upgrade/rollback remain NOT_RUN. No certification level was raised, and no remote publication occurred.
+
+## Docker native restore acceptance
+
+PASS for Linux Docker to Linux Docker with candidate image mybay/codex-runtime:version-candidate-20260910. A fresh isolated authenticated Codex container created a native conversation, then was stopped and exported. The corrected backup/restore utility produced a new data directory, which was copied to another isolated Linux volume. The replacement nonroot container resumed the same native session/thread and recalled an unseen-in-the-second-prompt random marker. The final container export independently verified the workspace marker file.
+
+- Before run b7a0b6f7-c946-4d83-b64b-2a939a92d30a; after run 05f93611-31c1-465a-84c1-379d6d0a9aa2; both completed.
+- Session codex-v2-196e5742-4232-41f0-9a32-dff50dc668a1; native thread 01a08770-59b0-7c63-a155-aab4e01f5108; unchanged.
+- Retained evidence: codex-docker-restore-20260910.json, including failed attempts. All test containers/volumes cleaned up. Existing instances and Feishu bindings untouched.
+- The first Windows-native-to-Linux attempts failed native SQLite initialization, including after ownership preparation and use of a Linux volume. Cause remains unresolved; no cross-platform support is claimed.
+- An initial same-platform export failed because Windows could not create Codex temporary executable symlinks. The isolated runner excludes the regenerable native tmp directory before stopped-container export. It also corrects helper ownership ordering and cleanup after export failure. These runner changes are not product lifecycle implementation.
+- This is native Docker restore, not full MyBay product restoration: the control metadata database was a fixture. Actual product database cutover, duplicate IM binding handling, upgrade and rollback remain NOT_RUN. No certification change or publication.

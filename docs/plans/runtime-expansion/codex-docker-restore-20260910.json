@@ -1,0 +1,81 @@
+{
+  "priorAttempts": [
+    {
+      "error": "HEALTH_TIMEOUT",
+      "scenario": "Windows native to Linux Docker",
+      "verdict": "FAIL",
+      "imageId": "sha256:2fae8499b2264d86e65ef17c141b62ed4562e8eff7962aeb4bdf6a6611260952"
+    },
+    {
+      "error": "HEALTH_TIMEOUT",
+      "scenario": "Windows native to Linux Docker",
+      "verdict": "FAIL",
+      "imageId": "sha256:2fae8499b2264d86e65ef17c141b62ed4562e8eff7962aeb4bdf6a6611260952"
+    },
+    {
+      "error": "HEALTH_TIMEOUT",
+      "scenario": "Windows native to Linux Docker",
+      "verdict": "FAIL",
+      "imageId": "sha256:2fae8499b2264d86e65ef17c141b62ed4562e8eff7962aeb4bdf6a6611260952"
+    },
+    {
+      "error": "OWNER_PREPARE_FAILED",
+      "scenario": "Windows native to Linux Docker",
+      "verdict": "FAIL",
+      "imageId": "sha256:2fae8499b2264d86e65ef17c141b62ed4562e8eff7962aeb4bdf6a6611260952"
+    },
+    {
+      "error": "OWNER_PREPARE_FAILED",
+      "scenario": "Windows native to Linux Docker",
+      "verdict": "FAIL",
+      "imageId": "sha256:2fae8499b2264d86e65ef17c141b62ed4562e8eff7962aeb4bdf6a6611260952"
+    },
+    {
+      "error": "HEALTH_TIMEOUT",
+      "scenario": "Windows native to Linux Docker",
+      "verdict": "FAIL",
+      "imageId": "sha256:2fae8499b2264d86e65ef17c141b62ed4562e8eff7962aeb4bdf6a6611260952"
+    },
+    {
+      "error": "HEALTH_TIMEOUT",
+      "scenario": "Windows native to Linux Docker",
+      "verdict": "FAIL",
+      "imageId": "sha256:2fae8499b2264d86e65ef17c141b62ed4562e8eff7962aeb4bdf6a6611260952"
+    }
+  ],
+  "samePlatform": {
+    "scope": "same-platform Docker native backup restore; no product cutover",
+    "image": "mybay/codex-runtime:version-candidate-20260910",
+    "verdict": "PASS",
+    "imageId": "sha256:2fae8499b2264d86e65ef17c141b62ed4562e8eff7962aeb4bdf6a6611260952",
+    "before": {
+      "id": "b7a0b6f7-c946-4d83-b64b-2a939a92d30a",
+      "status": "completed",
+      "session": "codex-v2-196e5742-4232-41f0-9a32-dff50dc668a1",
+      "thread": "01a08770-59b0-7c63-a155-aab4e01f5108"
+    },
+    "backupVerified": true,
+    "after": {
+      "id": "05f93611-31c1-465a-84c1-379d6d0a9aa2",
+      "status": "completed",
+      "session": "codex-v2-196e5742-4232-41f0-9a32-dff50dc668a1",
+      "thread": "01a08770-59b0-7c63-a155-aab4e01f5108"
+    },
+    "markerRecalled": true,
+    "sameThread": true,
+    "workspacePreserved": true,
+    "cleanedUp": true
+  },
+  "date": "2026-09-10",
+  "limitations": [
+    "No full product database/service cutover",
+    "Windows native to Linux recovery failed at native SQLite initialization; cause unresolved",
+    "No upgrade or rollback admission",
+    "No Feishu clone worker started"
+  ],
+  "exportFirstAttempt": {
+    "error": "WINDOWS_SYMLINK_PRIVILEGE_REQUIRED",
+    "verdict": "FAIL",
+    "resolution": "Exclude regenerable native tmp links in isolated export rehearsal; clean up test resources"
+  }
+}
