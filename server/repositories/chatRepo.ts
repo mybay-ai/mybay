@@ -181,7 +181,7 @@ export const chatRepo = {
   },
 
   async createProject(userId: string, instanceId: string, name: string): Promise<ChatProject> {
-    return mutateStore((data) => {
+    return mutateStoreCollections(["chatProjects"] as const, (data) => {
       const now = nowIso();
       const scopedProjects = data.chatProjects.filter((project: any) => project.user_id === userId && project.instance_id === instanceId && !project.is_archived);
       const firstSortOrder = scopedProjects.reduce((min: number, project: any) => Math.min(min, Number(project.sort_order || 0)), 0) - 1;
@@ -229,7 +229,7 @@ export const chatRepo = {
   },
 
   async createConversation(userId: string, instanceId: string, title: string, projectId?: string | null): Promise<Conversation> {
-    return mutateStore((data) => {
+    return mutateStoreCollections(["conversations"] as const, (data) => {
       const now = nowIso();
       const scoped = data.conversations.filter((conversation: any) => conversation.user_id === userId && conversation.instance_id === instanceId);
       const firstSortOrder = scoped.reduce((min: number, conversation: any) => Math.min(min, conversationSortValue(conversation.sort_order)), 0) - 1;

@@ -28,3 +28,13 @@ Local working-tree audit and complete source gate, based on a3397bf plus pre-exi
 - After that correction: fallback and API error checks, production build and strict existing certification PASS. Targeted ESLint PASS. The final complete gate was not rerun; release remains blocked on a clean complete pass and the lifecycle evidence listed above.
 - Logs: tmp/runtime-expansion/three-runtime-closeout-gate.log, three-runtime-closeout-gate-recheck.log, three-runtime-closeout-targeted.log, three-runtime-closeout-remaining.log, three-runtime-closeout-remaining-recheck.log.
 - No Runtime image or running container was changed in this closeout pass. No new live model, backup/restore, upgrade/rollback or Feishu message acceptance was performed.
+
+## Storage gate follow-up
+
+- Found that createProject/createConversation still rewrote the entire store. Scoped them to their own collections using the existing transactional helper. A new regression test installs a SQLite trigger rejecting unrelated message deletion and checks reopened persistence.
+- Isolated placement test: before 1895 ms, collection scoping alone 1906 ms; this did not show a measurable improvement for the empty fixture. Further inspection found per-table autocommit during schema initialization under synchronous=FULL.
+- Batched schema DDL into one transaction, keeping WAL, FULL durability, failure rollback and future-schema rejection. Same test: 684 ms. These are single local observations, not a universal benchmark or proof of every historical timeout cause.
+- The intermediate gate was intentionally interrupted before final schema changes; it is not a PASS.
+- Final complete npm run release:gate: PASS, exit 0. Vitest: 368 files passed / 1 skipped, 2037 tests passed / 6 skipped, 213.34 seconds. Native Node tests: 19 passed. Lint, three TypeScript checks, catalog/docs, encoding/copy/i18n/API contract checks, build and strict existing certification passed.
+- Log: tmp/runtime-expansion/chat-storage-final-gate.log. Timing logs: chat-placement-before.log, chat-placement-after.log, chat-placement-schema-after.log in the same local directory.
+- This closes the current full-source-gate blocker for this working-tree candidate, not lifecycle certification. Codex upgrade/rollback and complete backup/restore remain unfinished. No live container was rebuilt, restarted or upgraded in this follow-up, and nothing was published.

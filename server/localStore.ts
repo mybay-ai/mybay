@@ -143,78 +143,86 @@ function validateLegacyData(value: unknown): LocalStoreData {
 
 function initializeSchema(db: DatabaseSync) {
   db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;");
-  for (const collection of COLLECTIONS) {
-    db.exec(`CREATE TABLE IF NOT EXISTS ${quoteIdentifier(collection)} (id TEXT PRIMARY KEY NOT NULL, data TEXT NOT NULL)`);
+  // Commit schema creation once; keep FULL durability without one fsync per table.
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    for (const collection of COLLECTIONS) {
+      db.exec(`CREATE TABLE IF NOT EXISTS ${quoteIdentifier(collection)} (id TEXT PRIMARY KEY NOT NULL, data TEXT NOT NULL)`);
+    }
+    db.exec("CREATE TABLE IF NOT EXISTS systemSettings (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL)");
+    db.exec("CREATE TABLE IF NOT EXISTS localMetadata (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL)");
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS instanceIdentities (
+        instance_id TEXT PRIMARY KEY NOT NULL,
+        path TEXT NOT NULL COLLATE NOCASE UNIQUE,
+        created_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS deploymentTasksCore (
+        id TEXT PRIMARY KEY NOT NULL,
+        instance_id TEXT NOT NULL,
+        status TEXT NOT NULL,
+        worker_id TEXT,
+        locked_at TEXT,
+        lease_until TEXT,
+        heartbeat_at TEXT,
+        attempt INTEGER NOT NULL DEFAULT 0,
+        max_attempts INTEGER NOT NULL DEFAULT 3,
+        current_step TEXT NOT NULL DEFAULT 'queued',
+        next_retry_at TEXT,
+        error_code TEXT,
+        error_message TEXT,
+        error_detail TEXT,
+        failed_at TEXT,
+        cancel_requested INTEGER NOT NULL DEFAULT 0,
+        payload_json TEXT,
+        created_by TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        completed_at TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_deployment_claim
+        ON deploymentTasksCore(status, next_retry_at, lease_until, created_at);
+      CREATE INDEX IF NOT EXISTS idx_deployment_instance
+        ON deploymentTasksCore(instance_id, status);
+      CREATE TABLE IF NOT EXISTS instancePortReservations (
+        port INTEGER PRIMARY KEY NOT NULL,
+        instance_id TEXT NOT NULL UNIQUE,
+        status TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        released_at TEXT
+      );
+      CREATE TABLE IF NOT EXISTS idempotencyRecords (
+        idempotency_key TEXT PRIMARY KEY NOT NULL,
+        request_hash TEXT NOT NULL,
+        instance_id TEXT NOT NULL,
+        deployment_task_id TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS cleanupTasks (
+        id TEXT PRIMARY KEY NOT NULL,
+        instance_id TEXT NOT NULL,
+        status TEXT NOT NULL,
+        cleanup_mode TEXT NOT NULL DEFAULT 'delete',
+        worker_id TEXT,
+        lease_until TEXT,
+        attempt INTEGER NOT NULL DEFAULT 0,
+        error_code TEXT,
+        error_message TEXT,
+        created_at TEXT NOT NULL,
+        error_detail TEXT,
+        failed_at TEXT,
+        current_step TEXT NOT NULL DEFAULT 'queued',
+        next_retry_at TEXT,
+        updated_at TEXT NOT NULL,
+        completed_at TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_cleanup_claim ON cleanupTasks(status, lease_until, created_at);
+    `);
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
   }
-  db.exec("CREATE TABLE IF NOT EXISTS systemSettings (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL)");
-  db.exec("CREATE TABLE IF NOT EXISTS localMetadata (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL)");
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS instanceIdentities (
-      instance_id TEXT PRIMARY KEY NOT NULL,
-      path TEXT NOT NULL COLLATE NOCASE UNIQUE,
-      created_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS deploymentTasksCore (
-      id TEXT PRIMARY KEY NOT NULL,
-      instance_id TEXT NOT NULL,
-      status TEXT NOT NULL,
-      worker_id TEXT,
-      locked_at TEXT,
-      lease_until TEXT,
-      heartbeat_at TEXT,
-      attempt INTEGER NOT NULL DEFAULT 0,
-      max_attempts INTEGER NOT NULL DEFAULT 3,
-      current_step TEXT NOT NULL DEFAULT 'queued',
-      next_retry_at TEXT,
-      error_code TEXT,
-      error_message TEXT,
-      error_detail TEXT,
-      failed_at TEXT,
-      cancel_requested INTEGER NOT NULL DEFAULT 0,
-      payload_json TEXT,
-      created_by TEXT,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL,
-      completed_at TEXT
-    );
-    CREATE INDEX IF NOT EXISTS idx_deployment_claim
-      ON deploymentTasksCore(status, next_retry_at, lease_until, created_at);
-    CREATE INDEX IF NOT EXISTS idx_deployment_instance
-      ON deploymentTasksCore(instance_id, status);
-    CREATE TABLE IF NOT EXISTS instancePortReservations (
-      port INTEGER PRIMARY KEY NOT NULL,
-      instance_id TEXT NOT NULL UNIQUE,
-      status TEXT NOT NULL,
-      created_at TEXT NOT NULL,
-      released_at TEXT
-    );
-    CREATE TABLE IF NOT EXISTS idempotencyRecords (
-      idempotency_key TEXT PRIMARY KEY NOT NULL,
-      request_hash TEXT NOT NULL,
-      instance_id TEXT NOT NULL,
-      deployment_task_id TEXT NOT NULL,
-      created_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS cleanupTasks (
-      id TEXT PRIMARY KEY NOT NULL,
-      instance_id TEXT NOT NULL,
-      status TEXT NOT NULL,
-      cleanup_mode TEXT NOT NULL DEFAULT 'delete',
-      worker_id TEXT,
-      lease_until TEXT,
-      attempt INTEGER NOT NULL DEFAULT 0,
-      error_code TEXT,
-      error_message TEXT,
-      created_at TEXT NOT NULL,
-      error_detail TEXT,
-      failed_at TEXT,
-      current_step TEXT NOT NULL DEFAULT 'queued',
-      next_retry_at TEXT,
-      updated_at TEXT NOT NULL,
-      completed_at TEXT
-    );
-    CREATE INDEX IF NOT EXISTS idx_cleanup_claim ON cleanupTasks(status, lease_until, created_at);
-  `);
 }
 
 function readRows(db: DatabaseSync, collection: CollectionName): any[] {
