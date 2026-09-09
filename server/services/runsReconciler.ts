@@ -366,6 +366,7 @@ function ensureUpstreamRunEventStream(run: any, upstreamRunId: string, driver: R
     (signal, onChunk) => driver.runs.streamEvents(run.instance_id, upstreamRunId, signal, onChunk),
     (event) => handleRuntimeRunEvent(driver, run, event, upstreamRunId),
     () => runLatencyObservability.markFirstUpstreamByte(run.id),
+    `${run.instance_id}:${upstreamRunId}`,
   );
 }
 

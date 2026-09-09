@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { hermesRunEventProvider } from "../adapters/hermes/HermesRunEvents";
 import { piRuntimeDriver } from "../adapters/pi/PiRuntimeDriver";
+import { codexRuntimeDriver } from "../adapters/codex/CodexRuntimeDriver";
 import type { RuntimeRunEventProvider } from "../contracts";
 import { normalizedRunEventProvider } from "./NormalizedRunEvents";
 
@@ -24,9 +25,26 @@ describe.each([
   { name: "Normalized", provider: normalizedRunEventProvider, reconcileDecoder: false },
   { name: "Hermes", provider: hermesRunEventProvider, reconcileDecoder: true },
   { name: "Pi", provider: piRuntimeDriver.events, reconcileDecoder: false },
+  { name: "Codex", provider: codexRuntimeDriver.events, reconcileDecoder: false },
 ])("$name run events", ({ provider, reconcileDecoder }) => {
   const createHarness = (completeTerminal?: ReturnType<typeof vi.fn<() => Promise<boolean>>>) =>
     createProviderHarness(provider, completeTerminal);
+
+  it("rejects foreign text, approval and terminal events on a bound run", async () => {
+    const { interpreter, events, completeTerminal } = createHarness();
+    const run = { id: "local-1", upstream_run_id: "native-1" };
+    for (const event of [
+      { type: "message.delta", delta: "foreign output" },
+      { type: "approval.request", approval_id: "foreign-approval" },
+      { type: "run.completed", output: "foreign result" },
+    ]) interpreter.handle(run, { ...event, run_id: "native-other" }, "native-1");
+    expect(events).toEqual([]);
+    expect(interpreter.get(run.id)).toBeUndefined();
+    await expect(interpreter.completeTerminalEvent(run, { type: "run.cancelled", run_id: "native-other" }, "native-1")).resolves.toBe(false);
+    expect(completeTerminal).not.toHaveBeenCalled();
+    interpreter.handle(run, { type: "message.delta", run_id: "native-1", delta: "correct" }, "native-1");
+    expect(interpreter.get(run.id)?.lastPartialOutput).toBe("correct");
+  });
 
   it("scopes decoder recovery to the adapter before output", async () => {
     const { interpreter, requestReconcile, completeTerminal } = createHarness();

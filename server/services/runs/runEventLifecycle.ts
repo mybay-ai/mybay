@@ -197,6 +197,7 @@ export interface RunSseStreamController {
     start: (signal: AbortSignal, onChunk: (chunk: string) => void) => Promise<void>,
     onEvent: (event: unknown) => void,
     onChunkObserved?: () => void,
+    sourceId?: string,
   ): boolean;
   clear(runId: string): void;
   clearAll(): void;
@@ -204,9 +205,15 @@ export interface RunSseStreamController {
 
 export function createRunSseStreamController(maxBufferCharacters = 1024 * 1024): RunSseStreamController {
   const activeStreams = new Map<string, AbortController>();
+  const cursors = new Map<string, { sourceId: string; sequence: number }>();
 
   return {
-    ensure: (runId, start, onEvent, onChunkObserved) => {
+    ensure: (runId, start, onEvent, onChunkObserved, sourceId = runId) => {
+      if (cursors.get(runId)?.sourceId !== sourceId) {
+        activeStreams.get(runId)?.abort();
+        activeStreams.delete(runId);
+        cursors.set(runId, { sourceId, sequence: 0 });
+      }
       if (activeStreams.has(runId)) return false;
       const controller = new AbortController();
       activeStreams.set(runId, controller);
@@ -223,13 +230,27 @@ export function createRunSseStreamController(maxBufferCharacters = 1024 * 1024):
           return;
         }
         for (const frame of frames) {
+          if (controller.signal.aborted || activeStreams.get(runId) !== controller) return;
           if (frame.length > maxBufferCharacters) { controller.abort(); return; }
-          const data = frame.split(/\r?\n/)
+          const lines = frame.split(/\r?\n/);
+          const data = lines
             .filter(line => line.startsWith("data:"))
             .map(line => line.slice(5).replace(/^ /, ""))
             .join("\n");
           if (!data || data === "[DONE]") continue;
-          try { onEvent(JSON.parse(data)); } catch {}
+          // Native bridge sequence IDs survive a connection reconnect. Keep the
+          // cursor separate from downstream UI event IDs, and commit only after delivery.
+          const rawId = lines.filter(line => line.startsWith("id:")).at(-1)?.slice(3).trim();
+          const sequence = rawId && /^[1-9][0-9]*$/.test(rawId) ? Number(rawId) : undefined;
+          const numericId = sequence !== undefined && Number.isSafeInteger(sequence);
+          const cursor = cursors.get(runId)!;
+          if (numericId && sequence <= cursor.sequence) continue;
+          let event: unknown;
+          try { event = JSON.parse(data); } catch { continue; }
+          try {
+            onEvent(event);
+            if (numericId && cursors.get(runId) === cursor) cursor.sequence = sequence;
+          } catch { controller.abort(); return; }
         }
       })
         .catch(() => {})
@@ -241,10 +262,12 @@ export function createRunSseStreamController(maxBufferCharacters = 1024 * 1024):
     clear: (runId) => {
       activeStreams.get(runId)?.abort();
       activeStreams.delete(runId);
+      cursors.delete(runId);
     },
     clearAll: () => {
       for (const controller of activeStreams.values()) controller.abort();
       activeStreams.clear();
+      cursors.clear();
     },
   };
 }

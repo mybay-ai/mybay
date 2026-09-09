@@ -98,6 +98,7 @@ export class NormalizedRunEventProvider implements RuntimeRunEventProvider {
     ): Promise<boolean> {
       if (!rawEvent || typeof rawEvent !== "object") return false;
       const event = rawEvent as Record<string, any>;
+      if (event.run_id && upstreamRunId && String(event.run_id) !== upstreamRunId) return false;
       const eventType = String(event.event || event.type || "");
       const tracker = trackers.get(run.id);
       const durationMs = typeof event.duration_ms === "number" && Number.isSafeInteger(event.duration_ms) && event.duration_ms >= 0 ? event.duration_ms : null;
@@ -159,6 +160,8 @@ export class NormalizedRunEventProvider implements RuntimeRunEventProvider {
     function handle(run: RuntimeRunEventTarget, rawEvent: unknown, upstreamRunId?: string): void {
       if (!rawEvent || typeof rawEvent !== "object") return;
       const event = rawEvent as Record<string, any>;
+      const expectedUpstreamRunId = upstreamRunId || String(run.upstream_run_id || "");
+      if (event.run_id && expectedUpstreamRunId && String(event.run_id) !== expectedUpstreamRunId) return;
       const tracker = getOrCreate(run.id, run.partial_output);
       const eventType = String(event.event || event.type || "");
       const resolvedUpstreamRunId = upstreamRunId ?? String(event.run_id || "");
