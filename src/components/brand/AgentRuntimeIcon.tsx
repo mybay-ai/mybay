@@ -8,18 +8,19 @@ interface AgentRuntimeIconProps {
 export function AgentRuntimeIcon({ runtimeType, className = "h-5 w-5" }: AgentRuntimeIconProps) {
   const normalizedRuntimeType = String(runtimeType || "hermes").trim().toLowerCase();
 
-  if (normalizedRuntimeType === "hermes") {
+  if (normalizedRuntimeType === "hermes" || normalizedRuntimeType === "codex") {
+    const assetName = normalizedRuntimeType === "codex" ? "codex-agent" : "hermes-agent";
     return (
       <span className={`relative inline-flex shrink-0 ${className}`} aria-hidden="true">
         <img
-          src="/assets/agent-runtimes/hermes-agent.png"
+          src={`/assets/agent-runtimes/${assetName}.png`}
           alt=""
           width="256"
           height="256"
           className="h-full w-full object-contain dark:hidden"
         />
         <img
-          src="/assets/agent-runtimes/hermes-agent-dark.png"
+          src={`/assets/agent-runtimes/${assetName}-dark.png`}
           alt=""
           width="256"
           height="256"

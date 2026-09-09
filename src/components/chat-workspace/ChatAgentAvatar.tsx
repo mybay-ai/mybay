@@ -11,6 +11,11 @@ type AgentAvatarPresentation = {
 };
 
 const RUNTIME_AVATARS: Record<string, Omit<AgentAvatarPresentation, "runtime">> = {
+  codex: {
+    labelKey: "chatWorkspace.agentAvatarCodex",
+    initials: "CX",
+    className: "border-slate-300/80 bg-slate-500/10 dark:border-slate-400/40",
+  },
   hermes: {
     labelKey: "chatWorkspace.agentAvatarHermes",
     initials: "H",
