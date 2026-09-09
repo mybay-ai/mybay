@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-09-09T06:50:56.798Z",
+  "baseCommit": "c5f6c49",
+  "candidateServerSha256": "5337313d0af3ebbb98f50ae8e76ae187dd32cf5e705b93830fa987ba0b7f987c",
+  "candidatePackageVersion": "0.1.28",
+  "scope": "Aggregate of separate live HTTP runs against the same candidate server bundle; not a single all-scenarios pass and not fresh platform certification",
+  "sourceGate": {
+    "command": "npm run release:gate",
+    "verdict": "PASS",
+    "exitCode": 0,
+    "testFilesPassed": 358,
+    "testFilesSkipped": 1,
+    "testsPassed": 1950,
+    "testsSkipped": 6,
+    "durationSeconds": 288.49,
+    "priorTimeoutRetained": true,
+    "timeoutChanged": false
+  },
+  "initialLiveFailureRetained": true,
+  "originalControlRestored": true,
+  "results": [
+    {
+      "scenario": "hermes-to-pi",
+      "verdict": "PASS",
+      "evidence": "p1-a2a-cancel-fix-20260909.json"
+    },
+    {
+      "scenario": "pi-to-hermes",
+      "verdict": "PASS",
+      "evidence": "p1-a2a-cancel-fix-20260909.json"
+    },
+    {
+      "scenario": "parallel",
+      "verdict": "NOT_RUN",
+      "evidence": "p1-a2a-cancel-fix-20260909.json"
+    },
+    {
+      "scenario": "partial-failure",
+      "verdict": "NOT_RUN",
+      "evidence": "p1-a2a-cancel-fix-20260909.json"
+    },
+    {
+      "scenario": "group-cancellation",
+      "verdict": "PASS",
+      "evidence": "p1-a2a-cancel-fix-20260909.json"
+    },
+    {
+      "scenario": "refresh-recovery",
+      "verdict": "PASS",
+      "evidence": "p1-a2a-refresh-20260909.json"
+    },
+    {
+      "scenario": "control-restart-recovery",
+      "verdict": "NOT_RUN",
+      "evidence": "p1-a2a-cancel-fix-20260909.json"
+    }
+  ],
+  "summary": {
+    "PASS": 4,
+    "FAIL": 0,
+    "NOT_RUN": 3
+  },
+  "artifacts": [
+    {
+      "path": "p1-a2a-initial-20260909.json",
+      "sha256": "c10d7919faa37bc64053a971b137785515425056dba34cb6230f62be8da94b3a"
+    },
+    {
+      "path": "p1-a2a-cancel-fix-20260909.json",
+      "sha256": "002f708c59009b2ec235bdf258f1df161790e52549a3c4c0949f6addc52c774b"
+    },
+    {
+      "path": "p1-a2a-refresh-20260909.json",
+      "sha256": "eda92961453a561412288f435ef6a379ceb1f79b99a879d85d5f6867000c81ed"
+    },
+    {
+      "path": "p1-deployment-cancel-fix-20260909.json",
+      "sha256": "a42f103c0d1c4ff2067b0a90319040010ccf0fca29eaf28deb617d91ada2a4c6"
+    },
+    {
+      "path": "p1-deployment-refresh-20260909.json",
+      "sha256": "2da7db4f52da68c8ce80c767e7473ee12ec8c705161fa7055c2bafe786aae416"
+    }
+  ]
+}

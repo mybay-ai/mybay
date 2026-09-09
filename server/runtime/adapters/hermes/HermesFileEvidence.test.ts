@@ -1,16 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { hermesRunEventProvider } from "./HermesRunEvents";
+import { piRuntimeDriver } from "../pi/PiRuntimeDriver";
+import type { RuntimeRunEventProvider } from "../../contracts";
 import { normalizeSseRunEvent } from "../../../../src/components/chat-workspace/run/runEventNormalizer";
 import { createRunExecutionState, runReducer } from "../../../../src/components/chat-workspace/run/runReducer";
 import { collectLocalRunFileChanges } from "../../../../src/components/chat-workspace/localRunFileChanges";
 import { mergeLocalFileChanges, readLocalFileEvidence } from "../../../../shared/localRunFileEvidence";
 
-function harness() {
+function createHarness(provider: RuntimeRunEventProvider) {
   let execution = createRunExecutionState({ runId: "run-1" });
   const emitted: string[] = [];
   let seq = 0;
   let id = 0;
-  const controller = hermesRunEventProvider.createController({
+  const controller = provider.createController({
     addEvent: (runId, event, data) => {
       emitted.push(data);
       const normalized = normalizeSseRunEvent({ runId, event, data, seq: ++seq });
@@ -26,7 +28,11 @@ function harness() {
   };
 }
 
-describe("Hermes file evidence from native event through message UI", () => {
+describe.each([
+  { name: "Hermes", provider: hermesRunEventProvider },
+  { name: "Pi", provider: piRuntimeDriver.events },
+])("$name file evidence from normalized event through message UI", ({ provider }) => {
+  const harness = () => createHarness(provider);
   it.each([["patch", "modified"], ["write_file", "unknown"]])("pairs actual %s path previews and persists %s", (tool, kind) => {
     const h = harness();
     h.send({ event: "tool.started", tool, preview: "/opt/data/report.html" });

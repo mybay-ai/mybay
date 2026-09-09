@@ -1,0 +1,21 @@
+{
+  "capturedAt": "2026-09-09T06:43:14.709Z",
+  "candidateServerSha256": "5337313d0af3ebbb98f50ae8e76ae187dd32cf5e705b93830fa987ba0b7f987c",
+  "baselineServerSha256": "431c14cc4d85d7745f8c97c893d0eb223818fe6a7350d2ae3c55859be3786588",
+  "packageVersion": "0.1.28",
+  "target": "mybay-release-control-v0128",
+  "baseUrl": "http://127.0.0.1:4348",
+  "baselineContainerId": "2efe7474c30647b058fbe2527fd54223099d41cddc4d5b720d77e2a350bdbd3a",
+  "restored": true,
+  "scope": "Temporary candidate on the named acceptance control plane; existing two Runtime containers retained",
+  "candidateHealth": {
+    "status": "healthy",
+    "version": "0.1.28"
+  },
+  "candidateContainerId": "eb96e15966b4a051c910aec612270435fa21ad4ba83c8534f12dc9b2ef73fdc3",
+  "acceptanceExitCode": 1,
+  "restoredHealth": {
+    "status": "healthy",
+    "version": "0.1.27.1"
+  }
+}

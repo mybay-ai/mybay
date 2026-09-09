@@ -44,11 +44,11 @@ Do not widen the first release to scheduling, browser automation or IM channels 
 
 ## Status / 状态
 
-P0: PASS for isolated baseline admission (source gate plus the two-direction live HTTP smoke). P1-P5 are pending. This does not claim clean-install, browser or full lifecycle recertification.
+P0: PASS for isolated baseline admission (source gate plus the two-direction live HTTP smoke). P1: PASS for shared event extraction and the scoped regression below; P2-P5 are pending. This does not claim clean-install, browser or full lifecycle recertification.
 
-P0 开发基线准入通过：独立工作树、完整源码门禁与双向真实 HTTP 冒烟已验证。下一步进入 P1；本报告不代表新 Runtime 已实现或已发布。
+P0 开发基线准入通过：独立工作树、完整源码门禁与双向真实 HTTP 冒烟已验证。P1 通用事件提取与本轮回归已完成；下一步为 P2 Codex 接入。本报告不代表新 Runtime 已实现或已发布。
 
-### Results recorded so far / 已取得结果
+### P0 results / P0 已取得结果
 
 - `npm run release:gate`, first attempt: FAIL. Lint, catalog/docs checks and three TypeScript checks passed. Vitest: 357 files passed, one failed, one skipped; 1,896 tests passed, one failed, six skipped. The sole failure was the default 5,000 ms timeout in `chatRepo.test.ts` (terminal timeline atomic persistence), not an assertion mismatch.
 - The exact failing test was rerun without changing source or timeout: PASS (1 test, 29 unselected; 1.92 seconds test duration). A complete gate recheck is required; this targeted success does not erase the initial failure.
@@ -73,3 +73,44 @@ P0 开发基线准入通过：独立工作树、完整源码门禁与双向真�
 3. `questionBridgeInstaller.ts` recognizes specific Hermes images and a managed Pi label. New native question support must have an explicit capability/readiness path; do not install the Hermes plugin into a different Runtime.
 4. Driver currently owns preparation, execution and event/transport interpretation. Container image build, data ownership and upgrade operations remain in services such as `localPiRuntime.ts`; design new deployment support around real requirements rather than adding unused lifecycle methods.
 5. Codex integration research: [official App Server documentation](https://learn.chatgpt.com/docs/app-server), checked 2026-09-09. Validate the fixed CLI version's stdio handshake and generated protocol schemas before implementing its adapter. The transport supports bidirectional events/requests; native approval and interruption semantics require mapping and tests.
+
+## P1 implementation / P1 实施
+
+Base: `c5f6c49`. Changes are confined to the isolated expansion worktree.
+
+- Extracted `NormalizedRunEventProvider` into `server/runtime/events/NormalizedRunEvents.ts`. The default provider has no adapter import or decoder heuristic. Its vocabulary, text/tool handling, sanitization, approval choices, usage and terminal persistence delegation are preserved.
+- Hermes now supplies `shouldReconcileEmptyFailure` through its adapter. Empty-output decoder failures still request reconciliation; failures after output still terminalize.
+- Pi imports the common provider directly. Intentional correction: a Pi terminal failure containing a Hermes decoder-error string is now a failed terminal event, rather than silently requesting Hermes-style recovery.
+- Question plugin eligibility now requires both Hermes Runtime identity and the verified image. Install attempts for Pi or unknown Runtime types fail before Docker/filesystem mutation. Managed Pi callback health checks remain available without offering the Hermes plugin.
+- Live regression exposed a pre-existing cancellation transport gap: remote task identity can arrive after the parent has stopped, but the background cancellation worker only used native A2A. The worker now uses the existing managed Runtime cancellation path for tracked managed peers, retaining owner, peer membership and remote terminal validation. This is a necessary cancellation-boundary correction found during P1.
+- The cancellation acceptance runner now waits up to 60 seconds for persisted, confirmed remote cancellation. It requires the exact selected peer, member task ID, remote ID, finished record and cancelled host/group/member states. Immediate stop counters are retained as observations, not mistaken for terminal proof.
+- Added [Runtime extension boundaries](../runtime-extension-guide.md), documenting actual approval/question/stop paths and the remaining product lifecycle boundary. This does not create new executable Runtime catalog entries, change persisted schemas, or claim a new certification level.
+
+### P1 verification / P1 验证
+
+- Focused contracts/events/file evidence/question health/integration suites: PASS, 7 files / 100 tests. Tests cover both real providers plus the neutral provider, run/controller isolation, failed-vs-cancelled terminals, usage, recovery policy scope and native Pi question readiness.
+- TypeScript: PASS. Candidate production build: PASS.
+- First full release gate: PASS, 1,946 tests passed / six skipped. Final full gate after the cancellation correction and timeout recheck: PASS, 1,950 tests passed / six skipped.
+- Cancellation transport and acceptance tests after the correction: PASS, four files / 18 tests; includes delayed mapping, ownership/tracking rejection and refusal to accept incomplete cancellation evidence.
+- Candidate live acceptance completed on the named `mybay-release-control-v0128` acceptance service. A temporary candidate replaces only that control container, using its existing image/dependencies and isolated acceptance database. The original container is retained for restoration; Hermes/Pi containers are not replaced. Database backup and runtime credentials remain in ignored local files/process memory.
+- Fresh install, browser, native approval interaction E2E, three-member partial failure and multi-platform certification are not claimed by these checks.
+
+### First live attempt / 首轮真实验收
+
+Three scenarios passed (both directions and refresh recovery). Group cancellation failed: host cancelled, member/group unknown, immediate cancellation attempts zero. A later mapping showed the Pi task waiting for approval and background cancellation unconfirmed. The first report is retained separately; it is not overwritten by a successful rerun. The exact test-created native task was subsequently stopped and returned `cancelled`.
+
+The temporary deployment helper initially referenced the original container by its old name after rename. Automatic restoration therefore failed after removing the candidate. The retained original container was immediately renamed back and started by its known identity; health was verified. The helper now holds the immutable original container ID. No original container, Runtime container or database was deleted.
+
+### Final candidate live results / 最终候选真实验收
+
+The same candidate server bundle, SHA-256 `5337313d0af3ebbb98f50ae8e76ae187dd32cf5e705b93830fa987ba0b7f987c`, passed Hermes → Pi, Pi → Hermes, group cancellation and refresh recovery across separate runs: aggregate 4 PASS / 0 FAIL / 3 NOT_RUN. This is not a single full-matrix pass. Parallel execution, three-member partial failure and control restart recovery were not selected in P1.
+
+The second run passed both directions and confirmed remote cancellation, but failed refresh recovery because the host returned the marker without actually delegating. The runner prompt was clarified to require host delegation while restricting tools only for the member. A refresh-only rerun against the unchanged server bundle passed with a real completed remote task. All three reports, including both failures, are retained in [the validation manifest](runtime-expansion/p1-validation-20260909.json), with SHA-256 references.
+
+Both final candidate deployments automatically restored the original control container and verified health. The original immutable container ID and Runtime containers were preserved. These checks used the existing acceptance environment; clean installation and browser acceptance remain NOT_RUN.
+
+The full source gate after the cancellation fix initially reported 1,949 passed / one failed / six skipped. The sole failure was the original 5,000 ms timeout in `server/localStore.test.ts` (concurrent callers), observed at 5,692 ms while live acceptance was also running. The exact test passed on rerun in 3.92 seconds without changing source or timeout. The complete final gate was rerun separately from live I/O; its result is recorded below. This observation does not establish the timeout's cause.
+
+Final `npm run release:gate` recheck: PASS (exit 0), 358 test files passed / one skipped; 1,950 tests passed / six skipped, 288.49 seconds. Lint, TypeScript, catalog/docs, encoding/copy/i18n/API contract checks, production build and strict existing certification validation passed. No test timeout was changed. Local log: `tmp/runtime-expansion/p1-release-gate-final-recheck.log`.
+
+P1 is complete within the stated scope. Changes and sanitized evidence are recorded on the local expansion branch; no push, merge or release was performed. The original acceptance control is running healthy with the same immutable ID, and the other working tree retains 79 pending entries. P2 Codex implementation has not started.

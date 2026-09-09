@@ -81,7 +81,7 @@ async function inspectLocalQuestionBridgeUncached(instance: any): Promise<Questi
   const runtimeType = String(instance.runtime_type || "hermes").toLowerCase();
   const labels = agent.Config?.Labels || {};
   const piRuntime = runtimeType === "pi" && labels["com.mybay.pi.runtime"] === "true";
-  const supported = piRuntime || SUPPORTED_IMAGES.has(agent.Image);
+  const supported = piRuntime || (runtimeType === "hermes" && SUPPORTED_IMAGES.has(agent.Image));
   if (!supported) return unavailable("unsupported_image", false);
   if (!agent.State.Running) return unavailable("container_stopped", true);
   const sharedNetwork = Object.keys(agent.NetworkSettings.Networks).some(network => controller.NetworkSettings.Networks[network]);
@@ -126,6 +126,10 @@ export async function inspectLocalQuestionBridge(instance: any): Promise<Questio
   return pending;
 }
 export async function installLocalQuestionBridge(instance: any) {
+  // Native bridges (including Pi) must never receive the Hermes Python plugin.
+  if (String(instance.runtime_type || "hermes").toLowerCase() !== "hermes") {
+    throw new QuestionError("QUESTION_IMAGE_NOT_VERIFIED");
+  }
   const id = String(instance.id);
   const credentialFile = bridgeCredentialPath(id);
   if (installing.has(id)) throw new QuestionError("INSTANCE_BUSY");

@@ -8,7 +8,7 @@ import { defineRuntimeCapabilities } from "../../contracts";
 import { PI_RUNTIME_DEFINITION } from "../../../../shared/runtimeCatalog";
 import { requestInternalRuntimeAPI, streamInternalRuntimeEventsAPI } from "../../transports/InternalRuntimeTransport";
 import { piRunPreparationProvider } from "./PiRunPreparation";
-import { hermesRunEventProvider as normalizedRuntimeRunEventProvider } from "../hermes/HermesRunEvents";
+import { normalizedRunEventProvider } from "../../events/NormalizedRunEvents";
 
 class PiExecutionProvider implements RuntimeRunExecutionProvider {
   public createController(
@@ -40,7 +40,7 @@ export const piRuntimeDriver: RuntimeDriver = Object.freeze({
   capabilities: PI_RUNTIME_CAPABILITIES,
   preparation: piRunPreparationProvider,
   // The bridge emits the normalized MyBay Runs v1 event vocabulary.
-  events: normalizedRuntimeRunEventProvider,
+  events: normalizedRunEventProvider,
   execution: Object.freeze(new PiExecutionProvider()),
   runs: Object.freeze({
     request: requestInternalRuntimeAPI,

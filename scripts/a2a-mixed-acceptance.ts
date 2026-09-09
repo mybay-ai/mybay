@@ -186,7 +186,7 @@ async function runDirection(client: ApiClient, name: ScenarioName, host: Runtime
       conversationId,
       requestId: crypto.randomUUID(),
       reasoningEffort: "quick",
-      content: `@${peer.name} 请只返回标记 ${marker}，不要调用任何工具或请求审批。主持 Agent 的最终回答必须原样包含该成员标记。`,
+      content: `@${peer.name} 主持 Agent 必须使用 A2A 委派工具实际调用该成员，不能自行模拟成员结果。发送给成员的任务是：只返回标记 ${marker}，成员不要调用工具或请求审批。收到真实成员结果后，主持 Agent 的最终回答必须原样包含该成员标记。`,
     });
     const runId = String(submitted.runId || submitted.run?.id || "");
     if (!runId) throw new Error("run submission returned no id");
@@ -254,6 +254,18 @@ async function runRefreshRecovery(client: ApiClient, config: AcceptanceConfig): 
   }
 }
 
+export function evaluateCancelledScenario(run: any, activity: any, expectedPeerId: string): boolean {
+  const member = Array.isArray(activity?.activities)
+    ? activity.activities.find((row: any) => row?.direction === "outbound" && String(row?.peerId) === expectedPeerId) : null;
+  const mapping = member?.remoteMapping;
+  const selected = run?.groupCollaboration?.selectedPeerIds;
+  return run?.status === "cancelled" && run?.groupOutcome === "cancelled" && activity?.groupOutcome === "cancelled"
+    && Array.isArray(selected) && selected.length === 1 && selected[0] === expectedPeerId
+    && member?.status === "cancelled" && Boolean(member?.taskId) && Boolean(mapping?.remoteTaskId)
+    && mapping?.cancelState === "confirmed" && mapping?.recordState === "finished"
+    && ["task_state_canceled", "task_state_cancelled", "canceled", "cancelled"].includes(String(mapping?.remoteState).toLowerCase());
+}
+
 async function runGroupCancellation(client: ApiClient, config: AcceptanceConfig): Promise<ScenarioResult> {
   const startedAt = Date.now();
   const host = config.runtimes.hermes;
@@ -289,17 +301,24 @@ async function runGroupCancellation(client: ApiClient, config: AcceptanceConfig)
     const stopped = await client.request("POST", `/api/instances/${host.instanceId}/runs/${runId}/stop`, {});
     run = await waitForRun(client, host.instanceId, runId, config.maxWaitMs || 180_000, config.pollMs || 1_000);
     const contextId = String(run?.groupCollaboration?.contextId || "");
-    activity = await client.request("GET", `/api/instances/${host.instanceId}/a2a/activity?roomContextId=${encodeURIComponent(contextId)}&limit=20`);
+    // A remote ID can arrive after the host stop. Wait for verified persisted
+    // compensation, rather than treating the immediate acknowledgement as proof.
+    const cancellationDeadline = Date.now() + Math.min(config.maxWaitMs || 180_000, 60_000);
+    do {
+      run = (await client.request("GET", `/api/instances/${host.instanceId}/runs/${runId}`)).run;
+      activity = await client.request("GET", `/api/instances/${host.instanceId}/a2a/activity?roomContextId=${encodeURIComponent(contextId)}&limit=20`);
+      if (evaluateCancelledScenario(run, activity, peer.instanceId)) break;
+      await new Promise(resolve => setTimeout(resolve, config.pollMs || 1_000));
+    } while (Date.now() < cancellationDeadline);
     member = Array.isArray(activity.activities) ? activity.activities.find((row: any) => String(row?.peerId) === peer.instanceId) : null;
     const cancellation = isObject(stopped.groupCancellation) ? stopped.groupCancellation : {};
-    const ok = run.status === "cancelled" && run.groupOutcome === "cancelled" && activity.groupOutcome === "cancelled"
-      && member?.status === "cancelled" && Number(cancellation.attempted) >= 1 && Number(cancellation.confirmed) >= 1 && Number(cancellation.unconfirmed) === 0;
+    const ok = evaluateCancelledScenario(run, activity, peer.instanceId);
     return {
       name: "group-cancellation",
       verdict: ok ? "PASS" : "FAIL",
       ...(ok ? {} : { reason: "host and retained member cancellation evidence did not converge" }),
       durationMs: Date.now() - startedAt,
-      evidence: { host: { instanceId: host.instanceId, name: host.name }, peer: { instanceId: peer.instanceId, name: peer.name }, conversationId, runId, contextId, ...preflightEvidence, runStatus: bounded(run.status), groupOutcome: bounded(run.groupOutcome), activityGroupOutcome: bounded(activity.groupOutcome), memberStatus: bounded(member?.status) || "missing", cancellation: { attempted: Number(cancellation.attempted) || 0, confirmed: Number(cancellation.confirmed) || 0, unconfirmed: Number(cancellation.unconfirmed) || 0 } },
+      evidence: { host: { instanceId: host.instanceId, name: host.name }, peer: { instanceId: peer.instanceId, name: peer.name }, conversationId, runId, contextId, ...preflightEvidence, runStatus: bounded(run.status), groupOutcome: bounded(run.groupOutcome), activityGroupOutcome: bounded(activity.groupOutcome), memberStatus: bounded(member?.status) || "missing", memberTaskId: bounded(member?.taskId), remoteTaskId: bounded(member?.remoteMapping?.remoteTaskId), cancelState: bounded(member?.remoteMapping?.cancelState), remoteState: bounded(member?.remoteMapping?.remoteState), recordState: bounded(member?.remoteMapping?.recordState), cancellation: { attempted: Number(cancellation.attempted) || 0, confirmed: Number(cancellation.confirmed) || 0, unconfirmed: Number(cancellation.unconfirmed) || 0 } },
     };
   } catch (error: any) {
     return { name: "group-cancellation", verdict: "FAIL", reason: bounded(error?.message || error, 500), durationMs: Date.now() - startedAt, evidence: { host: { instanceId: host.instanceId, name: host.name }, peer: { instanceId: peer.instanceId, name: peer.name } } };

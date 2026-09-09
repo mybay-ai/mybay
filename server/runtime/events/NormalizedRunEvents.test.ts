@@ -1,12 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
-import { hermesRunEventProvider } from "./HermesRunEvents";
+import { hermesRunEventProvider } from "../adapters/hermes/HermesRunEvents";
+import { piRuntimeDriver } from "../adapters/pi/PiRuntimeDriver";
+import type { RuntimeRunEventProvider } from "../contracts";
+import { normalizedRunEventProvider } from "./NormalizedRunEvents";
 
-function createHarness(completeTerminal = vi.fn(async () => true)) {
+function createProviderHarness(provider: RuntimeRunEventProvider, completeTerminal = vi.fn(async () => true)) {
   const events: Array<{ runId: string; event: string; data: string; ownerId?: string }> = [];
   const requestReconcile = vi.fn();
   const warn = vi.fn();
   let uuidSequence = 0;
-  const interpreter = hermesRunEventProvider.createController({
+  const interpreter = provider.createController({
     addEvent: (runId, event, data, ownerId) => events.push({ runId, event, data, ownerId }),
     completeTerminal,
     requestReconcile,
@@ -17,7 +20,60 @@ function createHarness(completeTerminal = vi.fn(async () => true)) {
   return { interpreter, events, completeTerminal, requestReconcile, warn };
 }
 
-describe("HermesRunEventProvider", () => {
+describe.each([
+  { name: "Normalized", provider: normalizedRunEventProvider, reconcileDecoder: false },
+  { name: "Hermes", provider: hermesRunEventProvider, reconcileDecoder: true },
+  { name: "Pi", provider: piRuntimeDriver.events, reconcileDecoder: false },
+])("$name run events", ({ provider, reconcileDecoder }) => {
+  const createHarness = (completeTerminal?: ReturnType<typeof vi.fn<() => Promise<boolean>>>) =>
+    createProviderHarness(provider, completeTerminal);
+
+  it("scopes decoder recovery to the adapter before output", async () => {
+    const { interpreter, requestReconcile, completeTerminal } = createHarness();
+    const run = { id: "run-1" };
+    await expect(interpreter.completeTerminalEvent(run, {
+      event: "run.failed", error: "STREAMING_DECODER_ERROR",
+    }, "upstream-1")).resolves.toBe(!reconcileDecoder);
+    expect(requestReconcile).toHaveBeenCalledTimes(reconcileDecoder ? 1 : 0);
+    if (reconcileDecoder) expect(completeTerminal).not.toHaveBeenCalled();
+    else expect(completeTerminal).toHaveBeenCalledWith(run,
+      expect.objectContaining({ status: "failed", errorCode: "STREAMING_DECODER_ERROR" }), "upstream-1");
+  });
+
+  it("commits a failed terminal after partial output instead of silently recovering", async () => {
+    const { interpreter, requestReconcile, completeTerminal } = createHarness();
+    const run = { id: "run-1" };
+    interpreter.handle(run, { event: "message.delta", delta: "partial" });
+    await interpreter.completeTerminalEvent(run, { event: "run.failed", error: "STREAMING_DECODER_ERROR" }, "upstream-1");
+    expect(completeTerminal).toHaveBeenCalledWith(run, expect.objectContaining({ status: "failed" }), "upstream-1");
+    expect(requestReconcile).not.toHaveBeenCalled();
+  });
+
+  it("keeps simultaneous runs and controller instances isolated", () => {
+    const first = createHarness();
+    const second = createHarness();
+    first.interpreter.handle({ id: "a" }, { event: "message.delta", delta: "one" });
+    first.interpreter.handle({ id: "b" }, { event: "message.delta", delta: "two" });
+    first.interpreter.handle({ id: "a" }, { event: "approval.request", approval_id: "same-id" });
+    second.interpreter.handle({ id: "a" }, { event: "message.delta", delta: "other controller" });
+    expect(first.interpreter.get("b")?.lastPartialOutput).toBe("two");
+    expect(first.interpreter.get("b")?.sentSteps.has("interaction:approval:same-id")).toBe(false);
+    first.interpreter.clear("a");
+    expect(first.interpreter.get("b")?.lastPartialOutput).toBe("two");
+    expect(second.interpreter.get("a")?.lastPartialOutput).toBe("other controller");
+  });
+
+  it("preserves cancellation and reported usage without turning it into success", async () => {
+    const { interpreter, completeTerminal } = createHarness();
+    const run = { id: "cancel-run" };
+    await interpreter.completeTerminalEvent(run, {
+      event: "run.cancelled", model: "reported-model", usage: { input_tokens: 5, output_tokens: 2 }, duration_ms: 30,
+    }, "cancel-upstream");
+    expect(completeTerminal).toHaveBeenCalledWith(run, expect.objectContaining({
+      status: "cancelled", errorCode: "CANCELLED_UPSTREAM", durationMs: 30,
+      usage: expect.objectContaining({ input_tokens: 5, output_tokens: 2, model: "reported-model" }),
+    }), "cancel-upstream");
+  });
   it("owns tracker creation and cleanup without replacing an existing tracker", () => {
     const { interpreter } = createHarness();
     const tracker = interpreter.getOrCreate("run-1", "initial");
