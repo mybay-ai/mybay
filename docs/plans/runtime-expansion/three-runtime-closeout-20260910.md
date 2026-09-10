@@ -79,3 +79,18 @@ PASS for Linux Docker to Linux Docker with candidate image mybay/codex-runtime:v
 - The first Windows-native-to-Linux attempts failed native SQLite initialization, including after ownership preparation and use of a Linux volume. Cause remains unresolved; no cross-platform support is claimed.
 - An initial same-platform export failed because Windows could not create Codex temporary executable symlinks. The isolated runner excludes the regenerable native tmp directory before stopped-container export. It also corrects helper ownership ordering and cleanup after export failure. These runner changes are not product lifecycle implementation.
 - This is native Docker restore, not full MyBay product restoration: the control metadata database was a fixture. Actual product database cutover, duplicate IM binding handling, upgrade and rollback remain NOT_RUN. No certification change or publication.
+
+## Full MyBay Codex product restore acceptance
+
+PASS on the same Windows Docker Desktop host. An isolated MyBay control service created a fresh Codex conversation through the product API, received a random marker, and then stopped both control and Runtime writers. The full backup retained the MyBay SQLite database and the complete Codex instance directory. A second isolated control service loaded the restored database, recreated the Codex Runtime from the restored directory, opened the original conversation, and continued the same native thread without importing credentials again or placing the marker in the continuation prompt.
+
+- Source MyBay Run `65e4c7f7-0785-42e5-8137-e4d74cb8ed57`; restored MyBay Run `e739428a-dfe8-46de-96ed-d5dbcf706530`; both completed.
+- Native thread `01a088fa-03b9-7823-aaf0-6132d63bfd52` was unchanged. The exact marker was recalled and an existing workspace file had the same SHA-256 before and after restore.
+- Backup verification passed at schema 8 with 635 files. The restored control login, instance readiness, conversation history and continuation were verified through product APIs.
+- Real browser acceptance at the restored control showed the Codex instance running, the restored conversation in the recent list, and both the source and continuation replies with the exact marker.
+- The restored instance used Web channel configuration. `managedFeishu.enabled` was false and the restored database contained zero channel authorization events, so the isolated copy did not establish a duplicate Feishu connection.
+- Retained sanitized evidence: `docs/plans/runtime-expansion/codex-product-restore-20260910.json`.
+
+The first product backup attempt was not usable: the old isolated control image lacked the current Feishu SDK, and the Codex native `tmp` subtree contained Windows-inaccessible temporary helper links. The backup utility now excludes only `instances/<id>/codex/tmp`, which Codex regenerates at startup. Targeted recovery tests and lint pass, and the successful backup manifest records the skipped subtree. The partial failed backup is retained only in the ignored local test directory.
+
+Scope remains same-host restoration with the current encryption key and cached images preserved separately. Windows-native-to-Linux restore, Codex upgrade and rollback remain NOT_RUN. The isolated restored service stays on port 4362 for review; the main localhost:3000 service and existing Agent/Feishu instances were not changed.

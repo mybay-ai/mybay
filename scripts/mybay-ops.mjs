@@ -28,6 +28,11 @@ function isExcludedInstanceRuntimeFile(basename) {
     || basename.endsWith("-shm");
 }
 
+function isExcludedInstanceRuntimeDirectory(relative) {
+  const normalized = relative.replaceAll("\\", "/");
+  return /^instances\/[^/]+\/codex\/tmp(?:\/|$)/i.test(normalized);
+}
+
 function parseArgs(argv) {
   const args = { command: argv[0] || "doctor", json: false, database: "", output: "", backup: "" };
   for (let index = 1; index < argv.length; index += 1) {
@@ -141,6 +146,13 @@ async function copyOptionalDataDirectory(name, destination, sourceDataRoot, skip
     // PID, lock, log, and SQLite sidecar files are all recreated by Hermes.
     // Exclude them by name before lstat so a live gateway.sock cannot abort the backup.
     if (name === "instances" && relative !== name && isExcludedInstanceRuntimeFile(basename)) {
+      skippedPaths.push(`data/${relative.replaceAll("\\", "/")}`);
+      return;
+    }
+    // Codex creates short-lived helper executables and platform-specific links
+    // under CODEX_HOME/tmp. They are regenerated on startup and can be
+    // unreadable from a Windows host even after the Runtime has stopped.
+    if (name === "instances" && relative !== name && isExcludedInstanceRuntimeDirectory(relative)) {
       skippedPaths.push(`data/${relative.replaceAll("\\", "/")}`);
       return;
     }

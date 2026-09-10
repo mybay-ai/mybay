@@ -99,6 +99,7 @@ describe("backup exclusions and isolated restore", () => {
     }
     f.write("instances/agent/.env", "SYNTHETIC_PROVIDER_KEY=test-only");
     f.write("instances/agent/report.html", "artifact");
+    f.write("instances/agent/codex/tmp/arg0/codex-helper/apply_patch", "regenerable");
     for (const runtimeFile of ["gateway.sock", "gateway.pid", "auth.lock", "state.db-wal", "state.db-shm", "gateway-starts.log"]) {
       f.write(`instances/agent/${runtimeFile}`, "regenerable");
     }
@@ -109,6 +110,7 @@ describe("backup exclusions and isolated restore", () => {
       "data/instances/agent/.env", "data/instances/agent/report.html", "data/mybay.sqlite", "data/uploads/document.txt",
     ]);
     expect(manifest.skippedPaths).toContain("data/instances/agent/.hermes/.venv");
+    expect(manifest.skippedPaths).toContain("data/instances/agent/codex/tmp");
     expect(manifest.skippedPaths).toEqual(expect.arrayContaining([
       "data/instances/agent/gateway.sock",
       "data/instances/agent/gateway.pid",

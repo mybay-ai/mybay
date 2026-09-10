@@ -1,0 +1,84 @@
+{
+  "capturedAt": "2026-09-10T01:45:48.050Z",
+  "verdict": "PASS",
+  "scope": "Full MyBay control database and Codex instance data restore on the same Windows Docker Desktop host.",
+  "source": {
+    "controlUrl": "http://127.0.0.1:4361",
+    "conversationId": "b572bada-0987-44b6-a307-21c359e50cde",
+    "runId": "65e4c7f7-0785-42e5-8137-e4d74cb8ed57",
+    "upstreamRunId": "56540d49-8846-4edb-85e5-e008133dc7bc",
+    "nativeThreadId": "01a088fa-03b9-7823-aaf0-6132d63bfd52",
+    "nativeTurnId": "01a088fa-0d91-7f02-890b-59f8183d07f1",
+    "markerReplyObserved": true
+  },
+  "backup": {
+    "path": "tmp/runtime-expansion/product-restore-final-backup-20260910-094258",
+    "schemaVersion": 8,
+    "verifiedFiles": 635
+  },
+  "restore": {
+    "path": "tmp/runtime-expansion/product-restore-target-20260910-094258",
+    "controlUrl": "http://127.0.0.1:4362",
+    "controlContainerId": "f4a32f24fcd4c32de2893ea764ab43774fdd09c7c4b171785a22a06fd6d960ab",
+    "controlImageId": "sha256:28c929ee4c5b5d6cd1b54efcbaae1fcdec0e0b45f7960f81ae8ccf6f6eae76e1",
+    "runtimeContainerId": "cfb0723624ea59f69234537b0fd927b1509a17a2cabe69fc482f60c9a833c6a9",
+    "runtimeImageId": "sha256:83982840a9189cc92745e2addafb8adfc4b7be8656fc75e3da06d2527c90138c",
+    "conversationRestored": true,
+    "runId": "e739428a-dfe8-46de-96ed-d5dbcf706530",
+    "upstreamRunId": "649ada33-0435-4baf-ac2c-06654b45d832",
+    "nativeThreadId": "01a088fa-03b9-7823-aaf0-6132d63bfd52",
+    "nativeTurnId": "01a088fd-ec1e-7d31-9cc1-4290ec38fdae",
+    "status": "completed",
+    "exactMarkerRecalled": true,
+    "workspaceFilePreserved": true,
+    "managedFeishuEnabled": false,
+    "channelAuthEventCount": 0
+  },
+  "browser": {
+    "url": "http://127.0.0.1:4362/app/chat?instanceId=3595693f-2a43-4b6e-9db9-fdd41ce01e9b",
+    "verdict": "PASS",
+    "instanceShownRunning": true,
+    "restoredConversationVisible": true,
+    "sourceMarkerReplyVisible": true,
+    "continuedMarkerReplyVisible": true
+  },
+  "checks": [
+    {
+      "name": "backup-integrity",
+      "verdict": "PASS"
+    },
+    {
+      "name": "control-login-and-conversation-read",
+      "verdict": "PASS"
+    },
+    {
+      "name": "restored-runtime-readiness",
+      "verdict": "PASS"
+    },
+    {
+      "name": "same-native-thread",
+      "verdict": "PASS"
+    },
+    {
+      "name": "unprompted-marker-recall",
+      "verdict": "PASS"
+    },
+    {
+      "name": "workspace-file-preserved",
+      "verdict": "PASS"
+    },
+    {
+      "name": "duplicate-feishu-not-activated",
+      "verdict": "PASS"
+    },
+    {
+      "name": "browser-restored-conversation",
+      "verdict": "PASS"
+    }
+  ],
+  "limitations": [
+    "Same-host Windows Docker Desktop restore only.",
+    "Cross-platform Windows-native to Linux restore remains unsupported.",
+    "Upgrade and rollback are not covered by this report."
+  ]
+}
