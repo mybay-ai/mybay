@@ -1,0 +1,442 @@
+{
+  "schemaVersion": 1,
+  "acceptance": "localhost-3000-codex-upgrade-rollback",
+  "startedAt": "2026-09-10T11:10:34.129Z",
+  "completedAt": "2026-09-10T11:32:55.506Z",
+  "controlPlane": {
+    "baseUrl": "http://127.0.0.1:3000",
+    "version": "0.1.28",
+    "health": 200
+  },
+  "instance": {
+    "id": "4ee3c436-e6e7-4a2f-816f-843941db6db6",
+    "name": "Codex助手",
+    "runtimeType": "codex"
+  },
+  "versions": {
+    "initial": "0.153.4",
+    "upgrade": "0.154.0",
+    "rollback": "0.153.4",
+    "final": "0.154.0"
+  },
+  "markerSha256": "1a950adc52a858796d2f00c2f8e1d7f5bdc08082d0fcdbf69fee030483525a18",
+  "preflight": [
+    {
+      "label": "initial-upgrade",
+      "tag": "0.154.0",
+      "allowed": true,
+      "summary": {
+        "passed": 9,
+        "warnings": 2,
+        "blockers": 0
+      }
+    },
+    {
+      "label": "final-upgrade",
+      "tag": "0.154.0",
+      "allowed": true,
+      "summary": {
+        "passed": 9,
+        "warnings": 2,
+        "blockers": 0
+      }
+    }
+  ],
+  "conversation": {
+    "id": "69419f3a-2029-438a-9d53-95a986c7feca",
+    "nativeSessionBefore": "codex-v2-774c79fe-eb2e-4cf5-b41e-14e510d6a4ae",
+    "nativeSessionAfter": "codex-v2-774c79fe-eb2e-4cf5-b41e-14e510d6a4ae"
+  },
+  "runs": [
+    {
+      "label": "baseline-0.153.4",
+      "runId": "438476a4-9069-4939-b355-f20df0d7e680",
+      "status": "completed",
+      "acceptedMs": 13682,
+      "durationMs": null,
+      "firstTextMs": 11608,
+      "textEvents": 1,
+      "textChars": 5,
+      "eventCounts": {
+        "step": 8,
+        "status": 3,
+        "text": 1
+      },
+      "stopRequested": false,
+      "markerRecovered": null,
+      "assistantMessageId": "0317b98c-6cb6-43df-85c0-1df64905533e",
+      "modelEvidence": {
+        "version": 1,
+        "model": "gpt-5.5",
+        "source": "configured_snapshot"
+      },
+      "usageTotalTokens": 15465
+    },
+    {
+      "label": "context-after-upgrade-0.154.0",
+      "runId": "5abde737-90ec-442a-b459-8127672d9d97",
+      "status": "completed",
+      "acceptedMs": 12892,
+      "durationMs": null,
+      "firstTextMs": 11213,
+      "textEvents": 4,
+      "textChars": 51,
+      "eventCounts": {
+        "step": 8,
+        "status": 3,
+        "text": 4
+      },
+      "stopRequested": false,
+      "markerRecovered": true,
+      "assistantMessageId": "7a784662-2495-448b-94c6-36023a57f4b9",
+      "modelEvidence": {
+        "version": 1,
+        "model": "gpt-5.5",
+        "source": "configured_snapshot"
+      },
+      "usageTotalTokens": 15516
+    },
+    {
+      "label": "stream-after-upgrade-0.154.0",
+      "runId": "d559d040-ec0c-4f2c-a476-9957c79fcbdd",
+      "status": "completed",
+      "acceptedMs": 9280,
+      "durationMs": null,
+      "firstTextMs": 3798,
+      "textEvents": 24,
+      "textChars": 1318,
+      "eventCounts": {
+        "step": 8,
+        "status": 3,
+        "text": 24
+      },
+      "stopRequested": false,
+      "markerRecovered": null,
+      "assistantMessageId": "2f7cedea-496d-4393-81a2-09066dd1e96a",
+      "modelEvidence": {
+        "version": 1,
+        "model": "gpt-5.5",
+        "source": "configured_snapshot"
+      },
+      "usageTotalTokens": 15825
+    },
+    {
+      "label": "cancel-after-upgrade-0.154.0",
+      "runId": "0b0f5048-96b3-46cf-a089-4b7cafc9041c",
+      "status": "cancelled",
+      "acceptedMs": 7121,
+      "durationMs": null,
+      "firstTextMs": 5121,
+      "textEvents": 3,
+      "textChars": 192,
+      "eventCounts": {
+        "step": 8,
+        "status": 3,
+        "text": 3
+      },
+      "stopRequested": true,
+      "markerRecovered": null,
+      "assistantMessageId": "2c6653fe-ac3f-4893-9112-0ace979dc18c",
+      "modelEvidence": {
+        "version": 1,
+        "model": "gpt-5.5",
+        "source": "configured_snapshot"
+      },
+      "usageTotalTokens": 0
+    },
+    {
+      "label": "context-after-rollback-0.153.4",
+      "runId": "3a5ac402-140e-4504-a49a-987595b9df01",
+      "status": "completed",
+      "acceptedMs": 38030,
+      "durationMs": null,
+      "firstTextMs": 35532,
+      "textEvents": 2,
+      "textChars": 51,
+      "eventCounts": {
+        "step": 8,
+        "status": 3,
+        "text": 2
+      },
+      "stopRequested": false,
+      "markerRecovered": true,
+      "assistantMessageId": "42990519-2b96-469b-925a-25b0c8874856",
+      "modelEvidence": {
+        "version": 1,
+        "model": "gpt-5.5",
+        "source": "configured_snapshot"
+      },
+      "usageTotalTokens": 15941
+    },
+    {
+      "label": "context-after-final-upgrade-0.154.0",
+      "runId": "71f58afa-c6c1-4031-8b09-b0ec332b09d3",
+      "status": "completed",
+      "acceptedMs": 17707,
+      "durationMs": null,
+      "firstTextMs": 15626,
+      "textEvents": 3,
+      "textChars": 51,
+      "eventCounts": {
+        "step": 8,
+        "status": 3,
+        "text": 3
+      },
+      "stopRequested": false,
+      "markerRecovered": true,
+      "assistantMessageId": "d065ddcd-fef4-4e17-be2c-9ce4b5b53a89",
+      "modelEvidence": {
+        "version": 1,
+        "model": "gpt-5.5",
+        "source": "configured_snapshot"
+      },
+      "usageTotalTokens": 15996
+    }
+  ],
+  "operations": [
+    {
+      "label": "upgrade",
+      "responseSuccess": true,
+      "resumedAfterTransientControlDisconnect": true,
+      "state": {
+        "id": "4ee3c436-e6e7-4a2f-816f-843941db6db6",
+        "name": "Codex助手",
+        "runtimeType": "codex",
+        "status": "running",
+        "agentVersion": "0.154.0",
+        "imageTag": "0.154.0",
+        "previousImageTag": "0.153.4",
+        "upgradeStatus": "success",
+        "upgradePhase": "completed"
+      }
+    },
+    {
+      "label": "rollback",
+      "responseSuccess": true,
+      "state": {
+        "id": "4ee3c436-e6e7-4a2f-816f-843941db6db6",
+        "name": "Codex助手",
+        "runtimeType": "codex",
+        "status": "running",
+        "agentVersion": "0.153.4",
+        "imageTag": "0.153.4",
+        "previousImageTag": "0.154.0",
+        "upgradeStatus": "success",
+        "upgradePhase": "rolled_back"
+      }
+    },
+    {
+      "label": "final-upgrade",
+      "responseSuccess": true,
+      "state": {
+        "id": "4ee3c436-e6e7-4a2f-816f-843941db6db6",
+        "name": "Codex助手",
+        "runtimeType": "codex",
+        "status": "running",
+        "agentVersion": "0.154.0",
+        "imageTag": "0.154.0",
+        "previousImageTag": "0.153.4",
+        "upgradeStatus": "success",
+        "upgradePhase": "completed"
+      }
+    }
+  ],
+  "peerInstances": {
+    "before": [
+      {
+        "id": "6d131ba2-e803-4684-b5f2-c0ab63b4ef97",
+        "name": "网页端对话",
+        "status": "running",
+        "agentVersion": "v2026.8.27",
+        "imageTag": "v2026.8.27",
+        "previousImageTag": "v2026.8.19",
+        "upgradeStatus": "success",
+        "upgradePhase": null
+      },
+      {
+        "id": "1ebfca5d-bc96-4c56-9503-36bbfcf23a86",
+        "name": "飞书Agent",
+        "status": "running",
+        "agentVersion": "v2026.8.27",
+        "imageTag": "v2026.8.27",
+        "previousImageTag": null,
+        "upgradeStatus": null,
+        "upgradePhase": null
+      },
+      {
+        "id": "9791482e-88b5-4548-aea3-b2858edba53c",
+        "name": "微信Agent",
+        "status": "running",
+        "agentVersion": "v2026.8.27",
+        "imageTag": "v2026.8.27",
+        "previousImageTag": null,
+        "upgradeStatus": null,
+        "upgradePhase": null
+      },
+      {
+        "id": "b416212e-c36d-4af3-9968-d94d6d8526f8",
+        "name": "服务器运维",
+        "status": "running",
+        "agentVersion": "v2026.8.31",
+        "imageTag": "v2026.8.31",
+        "previousImageTag": "v2026.8.27",
+        "upgradeStatus": "success",
+        "upgradePhase": "rolled_back"
+      },
+      {
+        "id": "af4c9c26-30f9-4acb-afb0-6e9c80978870",
+        "name": "PI Agent对话",
+        "runtimeType": "pi",
+        "status": "running",
+        "agentVersion": "0.85.1",
+        "imageTag": "0.85.1",
+        "previousImageTag": null,
+        "upgradeStatus": null,
+        "upgradePhase": null
+      },
+      {
+        "id": "96cfa336-49d0-4e75-947d-87ab8c2c6665",
+        "name": "Research Agent",
+        "runtimeType": "hermes",
+        "status": "running",
+        "agentVersion": "v2026.8.31",
+        "imageTag": "v2026.8.31",
+        "previousImageTag": null,
+        "upgradeStatus": null,
+        "upgradePhase": null
+      },
+      {
+        "id": "4c872d28-970d-4050-8ae9-e12f9152f569",
+        "name": "代码构建Agent",
+        "runtimeType": "pi",
+        "status": "running",
+        "agentVersion": "0.85.1",
+        "imageTag": "0.85.1",
+        "previousImageTag": null,
+        "upgradeStatus": null,
+        "upgradePhase": null
+      }
+    ],
+    "after": [
+      {
+        "id": "6d131ba2-e803-4684-b5f2-c0ab63b4ef97",
+        "name": "网页端对话",
+        "status": "running",
+        "agentVersion": "v2026.8.27",
+        "imageTag": "v2026.8.27",
+        "previousImageTag": "v2026.8.19",
+        "upgradeStatus": "success",
+        "upgradePhase": null
+      },
+      {
+        "id": "1ebfca5d-bc96-4c56-9503-36bbfcf23a86",
+        "name": "飞书Agent",
+        "status": "running",
+        "agentVersion": "v2026.8.27",
+        "imageTag": "v2026.8.27",
+        "previousImageTag": null,
+        "upgradeStatus": null,
+        "upgradePhase": null
+      },
+      {
+        "id": "9791482e-88b5-4548-aea3-b2858edba53c",
+        "name": "微信Agent",
+        "status": "running",
+        "agentVersion": "v2026.8.27",
+        "imageTag": "v2026.8.27",
+        "previousImageTag": null,
+        "upgradeStatus": null,
+        "upgradePhase": null
+      },
+      {
+        "id": "b416212e-c36d-4af3-9968-d94d6d8526f8",
+        "name": "服务器运维",
+        "status": "running",
+        "agentVersion": "v2026.8.31",
+        "imageTag": "v2026.8.31",
+        "previousImageTag": "v2026.8.27",
+        "upgradeStatus": "success",
+        "upgradePhase": "rolled_back"
+      },
+      {
+        "id": "af4c9c26-30f9-4acb-afb0-6e9c80978870",
+        "name": "PI Agent对话",
+        "runtimeType": "pi",
+        "status": "running",
+        "agentVersion": "0.85.1",
+        "imageTag": "0.85.1",
+        "previousImageTag": null,
+        "upgradeStatus": null,
+        "upgradePhase": null
+      },
+      {
+        "id": "96cfa336-49d0-4e75-947d-87ab8c2c6665",
+        "name": "Research Agent",
+        "runtimeType": "hermes",
+        "status": "running",
+        "agentVersion": "v2026.8.31",
+        "imageTag": "v2026.8.31",
+        "previousImageTag": null,
+        "upgradeStatus": null,
+        "upgradePhase": null
+      },
+      {
+        "id": "4c872d28-970d-4050-8ae9-e12f9152f569",
+        "name": "代码构建Agent",
+        "runtimeType": "pi",
+        "status": "running",
+        "agentVersion": "0.85.1",
+        "imageTag": "0.85.1",
+        "previousImageTag": null,
+        "upgradeStatus": null,
+        "upgradePhase": null
+      }
+    ],
+    "unchanged": true
+  },
+  "finalState": {
+    "id": "4ee3c436-e6e7-4a2f-816f-843941db6db6",
+    "name": "Codex助手",
+    "runtimeType": "codex",
+    "status": "running",
+    "agentVersion": "0.154.0",
+    "imageTag": "0.154.0",
+    "previousImageTag": "0.153.4",
+    "upgradeStatus": "success",
+    "upgradePhase": "completed"
+  },
+  "result": "PASS",
+  "error": null,
+  "implementation": {
+    "sourceCommit": "a42bf58",
+    "controlImage": "mybay/local:codex-rollback-fix-a42bf58",
+    "controlImageId": "sha256:726444a9fa8d957f44acdc41a0e26a888d78c4efc01265fc54ba0ab45808b480",
+    "finalRuntimeImage": "mybay/codex-runtime:0.154.0",
+    "finalRuntimeImageId": "sha256:20b46c8407fa9f4a40435653db85b00518d9fff132a7333b9482246357f42256"
+  },
+  "observedDefectAndRepair": {
+    "initialRollbackResult": "FAIL",
+    "errorCode": "CODEX_IMAGE_UNVERIFIED",
+    "impact": "The old container remained running on 0.154.0; no conversation or workspace data was lost.",
+    "cause": "Historical Codex images were compared with the current bridge revision instead of the bridge revision declared by that release.",
+    "repair": "Each Codex release now declares its immutable bridge revision; preflight verifies cached image labels; pre-stop rollback failure retains the original rollback point.",
+    "repairedRollbackPoint": "0.153.4",
+    "sqliteBackup": "data/.acceptance/mybay-before-codex-rollback-point-repair.sqlite",
+    "retestResult": "PASS"
+  },
+  "validation": {
+    "targetedVitest": {
+      "files": 5,
+      "tests": 22,
+      "result": "PASS"
+    },
+    "typecheck": "PASS",
+    "strictCoreTypecheck": "PASS",
+    "dockerBuild": "PASS",
+    "apiLifecycleAcceptance": "PASS",
+    "browserVisualAcceptance": {
+      "status": "NOT_RUN",
+      "reason": "The fresh localhost:3000 browser tab required a separate interactive login; authenticated API acceptance and Docker health checks were completed instead."
+    }
+  }
+}
