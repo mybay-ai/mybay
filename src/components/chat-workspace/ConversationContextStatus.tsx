@@ -27,10 +27,11 @@ export function getContextCompactionRecommendation(percent: number | null) {
   return "low" as const;
 }
 
-export function ConversationContextStatus({ usage, instanceId, conversationId, disabled = false }: {
+export function ConversationContextStatus({ usage, instanceId, conversationId, manualCompactionSupported = false, disabled = false }: {
   usage: LocalRunUsage | null;
   instanceId: string;
   conversationId: string | null;
+  manualCompactionSupported?: boolean;
   disabled?: boolean;
 }) {
   const { t } = useTranslation("dashboard");
@@ -52,7 +53,7 @@ export function ConversationContextStatus({ usage, instanceId, conversationId, d
     ? "text-rose-600 dark:text-rose-300"
     : warning ? "text-amber-600 dark:text-amber-300" : "text-violet-600 dark:text-violet-300";
   const bar = critical ? "bg-rose-500" : warning ? "bg-amber-500" : "bg-violet-500";
-  const canCompact = Boolean(conversationId && !disabled && !compacting);
+  const canCompact = Boolean(manualCompactionSupported && conversationId && !disabled && !compacting);
   const recommendation = getContextCompactionRecommendation(displayed.percent);
 
   React.useEffect(() => {
@@ -158,13 +159,13 @@ export function ConversationContextStatus({ usage, instanceId, conversationId, d
         <dt className="text-content-muted">{t("chatWorkspace.usage.compactionTokensBefore")}</dt><dd className="text-right font-medium tabular-nums text-content-secondary">{formatNumber(usage.compactionTokensBefore, unknown)}</dd>
         <dt className="text-content-muted">{t("chatWorkspace.usage.compactionEstimatedTokensAfter")}</dt><dd className="text-right font-medium tabular-nums text-content-secondary">{formatNumber(usage.compactionEstimatedTokensAfter, unknown)}</dd>
       </dl>}
-      <div className="mt-3 border-t border-outline pb-[env(safe-area-inset-bottom)] pt-3">
+      {manualCompactionSupported && <div className="mt-3 border-t border-outline pb-[env(safe-area-inset-bottom)] pt-3">
         <button ref={compactButtonRef} type="button" onClick={() => setConfirmOpen(true)} disabled={!canCompact} className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-violet-300 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-700 transition hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-violet-400/30 dark:bg-violet-500/10 dark:text-violet-200 dark:hover:bg-violet-500/15">
           {compacting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Minimize2 className="h-4 w-4" />}{t(compacting ? "chatWorkspace.usage.compacting" : "chatWorkspace.usage.compactNow")}
         </button>
         <p className="mt-2 text-[11px] leading-relaxed text-content-muted">{t("chatWorkspace.usage.compactHint")}</p>
         {manualResult && <p className={`mt-2 rounded-lg px-2.5 py-2 text-[11px] ${manualResult.status === "completed" ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200" : "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-200"}`}>{t(`chatWorkspace.usage.manualCompaction.${manualResult.status}`, { runtime: manualResult.runtime === "pi" ? "Pi" : manualResult.runtime === "hermes" ? "Hermes" : "Agent", before: formatNumber(manualResult.tokensBefore, unknown), after: formatNumber(manualResult.estimatedTokensAfter, unknown) })}</p>}
-      </div>
+      </div>}
     </div>
   </> : null;
 
@@ -211,7 +212,7 @@ export function ConversationContextStatus({ usage, instanceId, conversationId, d
 
   return <>
     <button ref={triggerRef} type="button" aria-expanded={open} aria-haspopup="dialog" onClick={() => { setPosition(null); setOpen(value => !value); }} className={`inline-flex min-w-0 items-center gap-1.5 rounded-full px-2 py-1 font-medium transition-colors hover:bg-surface-muted ${accent}`} title={`${t("chatWorkspace.usage.contextAsOfPreviousTurn")} · ${statusLabel}`}>
-      <Gauge className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{statusLabel}</span><span className="hidden text-content-muted lg:inline">· {t("chatWorkspace.usage.contextManage")}</span>
+      <Gauge className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{statusLabel}</span><span className="hidden text-content-muted lg:inline">· {t(manualCompactionSupported ? "chatWorkspace.usage.contextManage" : "chatWorkspace.usage.contextDetails")}</span>
     </button>
     {open && typeof document !== "undefined" ? createPortal(panel, document.body) : null}
     {confirmOpen && typeof document !== "undefined" ? createPortal(confirmationDialog, document.body) : null}

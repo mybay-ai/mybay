@@ -6,6 +6,21 @@ import { EventEmitter } from "node:events";
 const ACTIVE = new Set(["queued", "running", "waiting_for_approval"]);
 const safeId = value => typeof value === "string" && /^[A-Za-z0-9_.:-]{8,160}$/.test(value);
 const fail = (code, statusCode = 400) => Object.assign(Error(code), { statusCode });
+const safeModel = value => typeof value === "string" && value.length <= 160
+  && /^[A-Za-z0-9][A-Za-z0-9._:/-]*$/.test(value)
+  && !/(?:sk-|api[_-]?key|secret|password|token)/i.test(value) ? value : undefined;
+const safeUsageInteger = value => Number.isSafeInteger(value) && value >= 0 ? value : undefined;
+
+function contextUsage(tokenUsage) {
+  const contextTokens = safeUsageInteger(tokenUsage?.last?.totalTokens);
+  const contextWindow = safeUsageInteger(tokenUsage?.modelContextWindow);
+  const ratio = contextTokens !== undefined && contextWindow > 0 ? (contextTokens / contextWindow) * 100 : undefined;
+  return {
+    context_tokens: contextTokens,
+    context_window: contextWindow,
+    context_percent: Number.isFinite(ratio) && ratio >= 0 && ratio <= 100 ? Math.round(ratio * 100) / 100 : undefined,
+  };
+}
 
 export function approvalDecision(method, choice, availableDecisions) {
   if (!["item/commandExecution/requestApproval", "item/fileChange/requestApproval"].includes(method)) throw fail("CODEX_APPROVAL_UNSUPPORTED");
@@ -102,8 +117,9 @@ export class CodexRuntime extends EventEmitter {
     if ([...this.runs.values()].some(r => r.sessionId === body.session_id && ACTIVE.has(r.status))) throw fail("CODEX_SESSION_BUSY", 409);
     if (this.runs.size >= 200) throw fail("CODEX_RUN_CAPACITY", 429);
     if (!(typeof body.input === "string" || Array.isArray(body.input))) throw fail("INVALID_INPUT");
+    const session = this.sessions.get(body.session_id);
     const run = { id: randomUUID(), clientRunId: key || randomUUID(), fingerprint, sessionId: body.session_id,
-      status: "queued", output: "", model: this.model, threadId: null, turnId: null,
+      status: "queued", output: "", model: safeModel(this.model) || safeModel(session.model), threadId: null, turnId: null,
       stopRequested: false, approvals: {}, events: [], messages: {}, usageBaseline: this.sessions.get(body.session_id).tokenTotals || {}, createdAt: new Date().toISOString() };
     this.runs.set(run.id, run); await this.emitEvent(run, { type: "run.created" });
     // Queue mutation before awaiting RPC; notifications must never deadlock behind a pending response.
@@ -116,13 +132,15 @@ export class CodexRuntime extends EventEmitter {
     if (!session.threadId) {
       const result = await this.rpc.request("thread/start", { ...options, developerInstructions: String(body.instructions || "") || undefined });
       if (!safeId(result?.thread?.id)) throw fail("CODEX_THREAD_INVALID");
-      await this.enqueue(async () => { session.threadId = result.thread.id; this.loaded.add(session.id); run.threadId = session.threadId; await this.persist(); });
+      await this.enqueue(async () => {
+        session.threadId = result.thread.id; session.model = safeModel(result.model) || safeModel(result.thread?.model) || run.model;
+        this.loaded.add(session.id); run.threadId = session.threadId; run.model = session.model; await this.persist();
+      });
     } else if (!this.loaded.has(session.id)) {
-      // Observed 0.153.4 behavior: cumulative usage restarts when a thread is loaded into a fresh process.
-      run.usageBaseline = {};
       const result = await this.rpc.request("thread/resume", { ...options, threadId: session.threadId, developerInstructions: String(body.instructions || "") || undefined });
       if (result?.thread?.id !== session.threadId) throw fail("CODEX_THREAD_MISMATCH");
-      this.loaded.add(session.id);
+      session.model = safeModel(result.model) || safeModel(result.thread?.model) || run.model;
+      run.model = session.model; this.loaded.add(session.id);
     }
     await this.enqueue(async () => { run.threadId = session.threadId; await this.persist(); });
     if (run.stopRequested) return this.enqueue(() => this.finish(run, "cancelled"));
@@ -209,9 +227,29 @@ export class CodexRuntime extends EventEmitter {
     } else if (message.method === "thread/tokenUsage/updated") {
       const u = p.tokenUsage?.total;
       if (u) {
+        // Native releases differ on whether a resumed thread reports counters from zero or from
+        // persisted history. Keep the durable baseline when counters continue, and reset it only
+        // when the first observed cumulative total is genuinely smaller.
+        if (safeUsageInteger(u.totalTokens) !== undefined && safeUsageInteger(run.usageBaseline.totalTokens) !== undefined
+          && u.totalTokens < run.usageBaseline.totalTokens) run.usageBaseline = {};
         const delta = key => Number.isSafeInteger(u[key]) && u[key] >= (run.usageBaseline[key] || 0) ? u[key] - (run.usageBaseline[key] || 0) : undefined;
         run.tokenTotals = u;
-        run.usage = { input_tokens: delta("inputTokens"), output_tokens: delta("outputTokens"), total_tokens: delta("totalTokens"), input_tokens_details: { cached_tokens: delta("cachedInputTokens") } };
+        run.usage = { scope: "run", input_tokens: delta("inputTokens"), output_tokens: delta("outputTokens"), total_tokens: delta("totalTokens"),
+          input_tokens_details: { cached_tokens: delta("cachedInputTokens") }, model: run.model, ...contextUsage(p.tokenUsage) };
+        await this.persist();
+      }
+    } else if (message.method === "model/rerouted") {
+      const model = safeModel(p.toModel);
+      if (model) {
+        run.model = model; this.sessions.get(run.sessionId).model = model;
+        if (run.usage) run.usage.model = model;
+        await this.persist();
+      }
+    } else if (message.method === "thread/settings/updated") {
+      const model = safeModel(p.threadSettings?.model);
+      if (model) {
+        run.model = model; this.sessions.get(run.sessionId).model = model;
+        if (run.usage) run.usage.model = model;
         await this.persist();
       }
     } else if (message.method === "turn/completed" && (!run.turnId || p.turn?.id === run.turnId)) {

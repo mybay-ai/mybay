@@ -11,7 +11,7 @@ export const CODEX_BRIDGE_FEATURES = Object.freeze({
   tool_progress_events: true, chat_attachments: true, persisted_workspace: true,
   generated_file_evidence: true, approval_events: true, run_approval_response: true,
   structured_questions: false, a2a_tools: false, managed_collaboration: false,
-  session_context_usage: false, manual_compaction: false, session_resources: false,
+  session_context_usage: true, manual_compaction: false, session_resources: false,
 });
 
 function json(response, code, payload) {

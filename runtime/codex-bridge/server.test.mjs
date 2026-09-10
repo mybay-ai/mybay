@@ -18,7 +18,9 @@ test("HTTP authentication, rejected operations and durable SSE reconnect", async
   const base = `http://127.0.0.1:${server.address().port}`;
   const headers = { Authorization: `Bearer ${key}`, "Content-Type": "application/json" };
   assert.equal((await fetch(base + "/v1/runs")).status, 401);
-  assert.equal((await fetch(base + "/v1/capabilities", { headers }).then(r => r.json())).features.run_submission, true);
+  const capabilities = await fetch(base + "/v1/capabilities", { headers }).then(r => r.json());
+  assert.equal(capabilities.features.run_submission, true);
+  assert.equal(capabilities.features.session_context_usage, true);
   const session = await fetch(base + "/api/sessions", { headers, method: "POST", body: "{}" }).then(r => r.json());
   assert.equal((await fetch(base + "/v1/runs", { headers, method: "POST", body: JSON.stringify({ session_id: "missing-session", input: "hello" }) })).status, 404);
   assert.equal(rpc.closed, undefined);

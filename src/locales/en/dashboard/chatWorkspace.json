@@ -682,6 +682,7 @@
     "contextClose": "Close conversation context",
     "contextAsOfPreviousTurn": "As of the previous Runtime terminal report",
     "contextManage": "Manage",
+    "contextDetails": "Details",
     "contextUnknown": "Context unknown",
     "contextCompactLabel": "Context {{percent}}%",
     "contextWarningHint": "Agent auto-compaction is enabled. At the threshold, it summarizes older content before continuing the task.",

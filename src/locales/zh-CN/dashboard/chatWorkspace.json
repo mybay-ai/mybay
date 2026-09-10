@@ -682,6 +682,7 @@
     "contextClose": "关闭会话上下文",
     "contextAsOfPreviousTurn": "截至上一轮 Runtime 终态",
     "contextManage": "管理",
+    "contextDetails": "详情",
     "contextUnknown": "上下文未知",
     "contextCompactLabel": "上下文 {{percent}}%",
     "contextWarningHint": "Agent 已启用自动压缩；达到阈值后会先总结较早内容，再继续当前任务。",

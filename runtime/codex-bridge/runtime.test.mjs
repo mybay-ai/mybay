@@ -11,8 +11,8 @@ class Rpc extends EventEmitter {
   async initialize() {}
   async request(method, params) {
     this.calls.push({ method, params });
-    if (method === "thread/start") return { thread: { id: "native-thread-1234" } };
-    if (method === "thread/resume") return { thread: { id: params.threadId } };
+    if (method === "thread/start") return { thread: { id: "native-thread-1234" }, model: "gpt-6-astra" };
+    if (method === "thread/resume") return { thread: { id: params.threadId }, model: "gpt-6-astra" };
     if (method === "turn/start") return { turn: { id: "native-turn-1234" } };
     return {};
   }
@@ -109,4 +109,53 @@ test("batches token deltas without reordering completion", async t => {
   assert.equal(run.output, "one two");
   assert.equal(run.events.filter(e => e.type === "message.delta").length, 1);
   assert.equal(run.events.at(-1).type, "run.completed");
+});
+
+test("retains the effective native model and previous-turn context usage", async t => {
+  const { run, session, event, runtime } = await fixture(t);
+  assert.equal(run.model, "gpt-6-astra");
+  assert.equal(session.model, "gpt-6-astra");
+  await event("thread/tokenUsage/updated", { tokenUsage: {
+    total: { inputTokens: 15254, cachedInputTokens: 12160, outputTokens: 6, totalTokens: 15260 },
+    last: { inputTokens: 15254, cachedInputTokens: 12160, outputTokens: 6, totalTokens: 15260 },
+    modelContextWindow: 258400,
+  } });
+  assert.deepEqual(run.usage, {
+    scope: "run", input_tokens: 15254, output_tokens: 6, total_tokens: 15260,
+    input_tokens_details: { cached_tokens: 12160 }, model: "gpt-6-astra",
+    context_tokens: 15260, context_window: 258400, context_percent: 5.91,
+  });
+  await event("model/rerouted", { fromModel: "gpt-6-astra", toModel: "gpt-6-astra-fast", reason: "fallback" });
+  assert.equal(run.model, "gpt-6-astra-fast");
+  assert.equal(run.usage.model, "gpt-6-astra-fast");
+  await event("turn/completed", { turn: { id: run.turnId, status: "completed" } });
+  const next = await runtime.enqueue(() => runtime.submit({ session_id: session.id, input: "again" }, "client-run-next-1234"));
+  assert.equal(next.model, "gpt-6-astra-fast");
+  for (let i = 0; i < 30 && !next.turnId; i++) await new Promise(resolve => setTimeout(resolve, 5));
+  await runtime.queue;
+  await runtime.enqueue(() => runtime.finish(next, "cancelled"));
+});
+
+test("subtracts persisted counters after resume and detects native counter resets", async t => {
+  const { run, event } = await fixture(t);
+  run.usageBaseline = { inputTokens: 100, cachedInputTokens: 60, outputTokens: 10, totalTokens: 110 };
+  await event("thread/tokenUsage/updated", { tokenUsage: {
+    total: { inputTokens: 140, cachedInputTokens: 80, outputTokens: 15, totalTokens: 155 },
+    last: { inputTokens: 44, cachedInputTokens: 20, outputTokens: 5, totalTokens: 49 },
+    modelContextWindow: 1000,
+  } });
+  assert.deepEqual(run.usage, {
+    scope: "run", input_tokens: 40, output_tokens: 5, total_tokens: 45,
+    input_tokens_details: { cached_tokens: 20 }, model: "gpt-6-astra",
+    context_tokens: 49, context_window: 1000, context_percent: 4.9,
+  });
+
+  run.usageBaseline = { inputTokens: 200, cachedInputTokens: 120, outputTokens: 20, totalTokens: 220 };
+  await event("thread/tokenUsage/updated", { tokenUsage: {
+    total: { inputTokens: 40, cachedInputTokens: 10, outputTokens: 5, totalTokens: 45 },
+    last: { inputTokens: 40, cachedInputTokens: 10, outputTokens: 5, totalTokens: 45 },
+    modelContextWindow: 1000,
+  } });
+  assert.equal(run.usage.total_tokens, 45);
+  assert.equal(run.usage.input_tokens, 40);
 });

@@ -55,6 +55,7 @@ type ChatInputBarProps = {
   selectedInstanceName?: string;
   runMetrics?: ChatRunMetrics | null;
   contextUsage?: LocalRunUsage | null;
+  manualCompactionSupported?: boolean;
   hasActiveConversation?: boolean;
   chatMode: "quick" | "assist" | "agent";
   onChatModeChange: (mode: "quick" | "agent") => void;
@@ -91,6 +92,7 @@ export function ChatInputBar({
   selectedInstanceName,
   runMetrics = null,
   contextUsage = null,
+  manualCompactionSupported = false,
   hasActiveConversation = true,
   chatMode,
   onChatModeChange,
@@ -470,6 +472,7 @@ export function ChatInputBar({
                 usage={contextUsage}
                 instanceId={workspaceContext.instanceId}
                 conversationId={workspaceContext.conversationId}
+                manualCompactionSupported={manualCompactionSupported}
                 disabled={sending || !isChatReady || conversationUnavailable}
               />
             </div>

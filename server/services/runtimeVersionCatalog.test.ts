@@ -12,7 +12,7 @@ describe("managed Runtime version catalog", () => {
   it("exposes the admitted Codex upgrade and rollback pair", () => {
     expect(listManagedRuntimeVersions("codex")).toEqual([
       expect.objectContaining({
-        runtime_type: "codex", version: "0.154.0", bridge_version: "0.1.0-experimental.2",
+        runtime_type: "codex", version: "0.154.0", bridge_version: "0.1.0-experimental.3",
         image: "mybay/codex-runtime", image_tag: "0.154.0", upgradeable: true, is_latest: true,
         certification_level: "experimental",
       }),

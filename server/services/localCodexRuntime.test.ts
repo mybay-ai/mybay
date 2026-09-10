@@ -9,7 +9,7 @@ describe("local Codex Runtime image admission", () => {
         getImage: () => ({ inspect: async () => ({ Config: { Labels: {
           "com.mybay.codex.runtime": "true",
           "com.mybay.codex.agent-version": "0.153.4",
-          "com.mybay.codex.bridge-version": "0.1.0-experimental.2",
+          "com.mybay.codex.bridge-version": "0.1.0-experimental.3",
         } } }) }),
       },
     });
@@ -27,7 +27,7 @@ describe("local Codex Runtime image admission", () => {
         getImage: () => ({ inspect: async () => ({ Config: { Labels: {
           "com.mybay.codex.runtime": "true",
           "com.mybay.codex.agent-version": "0.154.0",
-          "com.mybay.codex.bridge-version": "0.1.0-experimental.2",
+          "com.mybay.codex.bridge-version": "0.1.0-experimental.3",
         } } }) }),
       },
     })).rejects.toThrow("CODEX_IMAGE_UNVERIFIED");
