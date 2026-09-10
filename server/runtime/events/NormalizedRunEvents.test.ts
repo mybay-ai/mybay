@@ -67,6 +67,34 @@ describe.each([
     expect(requestReconcile).not.toHaveBeenCalled();
   });
 
+  it("publishes unstreamed interim assistant messages separately from final output", () => {
+    const { interpreter, events } = createHarness();
+    interpreter.handle({ id: "run-1" }, {
+      event: "message.interim",
+      id: "native:interim:1",
+      text: "I inspected the project structure.",
+      timestamp: 1_700_000_001,
+      already_streamed: false,
+    });
+    expect(events).toEqual([{
+      runId: "run-1",
+      event: "commentary",
+      data: JSON.stringify({ id: "native:interim:1", text: "I inspected the project structure.", timestamp: 1_700_000_001 }),
+      ownerId: undefined,
+    }]);
+    expect(interpreter.get("run-1")?.lastPartialOutput).toBe("");
+  });
+
+  it("does not duplicate interim commentary already delivered as text", () => {
+    const { interpreter, events } = createHarness();
+    interpreter.handle({ id: "run-1" }, {
+      event: "message.interim",
+      text: "already visible",
+      already_streamed: true,
+    });
+    expect(events).toEqual([]);
+  });
+
   it("keeps simultaneous runs and controller instances isolated", () => {
     const first = createHarness();
     const second = createHarness();

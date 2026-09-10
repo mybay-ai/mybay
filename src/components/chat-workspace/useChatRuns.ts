@@ -485,6 +485,8 @@ export function useChatRuns({
           : mergeRecoveredStreamingContent(recoveryTextBaselineRef.current, deriveAssistantText(nextExecution.blocks));
         scheduleTextFlush();
         return true;
+      } else if (event === "commentary") {
+        return true;
       } else if (event === "step") {
         setToolSteps(deriveToolSteps(nextExecution.blocks));
         const step = JSON.parse(data);

@@ -228,6 +228,7 @@
   "timelineEmptyDesc": "Steps will appear here in real time when the Agent starts working.",
   "timelineCount": "{{count}} item(s)",
   "timelineGenericStep": "Task step",
+  "timelineCommentary": "Progress update",
   "workspaceFilesEmptyTitle": "No conversation files yet",
   "workspaceFilesEmptyDesc": "User uploaded attachments and Agent generated reports or files will appear here.",
   "workspacePreviewEmptyTitle": "Preview is not connected yet",

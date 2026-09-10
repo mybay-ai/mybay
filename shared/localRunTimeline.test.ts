@@ -35,6 +35,15 @@ describe("local timeline archive", () => {
     expect(readLocalRunTimeline(result, "r2", "c1")).toBeNull();
     expect(readLocalRunTimeline(result, "r1", "c2")).toBeNull();
   });
+  it("archives bounded interim commentary for reload", () => {
+    const result = make([{ id: 1, event: "commentary", data: JSON.stringify({
+      id: "interim-1", text: "Checked the repository structure.", timestamp: 123, ignored: "private"
+    }) }]);
+    expect(result.events).toEqual([{ id: 1, event: "commentary", data: JSON.stringify({
+      id: "interim-1", text: "Checked the repository structure.", timestamp: 123
+    }) }]);
+    expect(readLocalRunTimeline(result, "r1", "c1")).toEqual(result);
+  });
   it("marks missing, oversized and duplicate observations partial without fabricating text", () => {
     expect(make([]).partial).toBe(true);
     expect(make([{ id: 20, event: "text", data: "suffix" }]).partial).toBe(true);

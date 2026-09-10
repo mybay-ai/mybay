@@ -12,6 +12,7 @@ export type RunExecutionStatus =
 
 export type NormalizedRunEventType =
   | "text.delta"
+  | "commentary.added"
   | "tool.started"
   | "tool.completed"
   | "tool.failed"
@@ -34,6 +35,16 @@ export interface TextRunBlock {
   firstSeq: number;
   lastSeq: number;
   content: string;
+}
+
+export interface CommentaryRunBlock {
+  id: string;
+  type: "commentary";
+  firstSeq: number;
+  lastSeq: number;
+  commentaryId: string;
+  content: string;
+  timestamp?: number;
 }
 
 export interface ToolRunBlock {
@@ -73,7 +84,7 @@ export interface StatusRunBlock {
   errorCode?: string;
 }
 
-export type RunBlock = TextRunBlock | ToolRunBlock | ApprovalRunBlock | StatusRunBlock;
+export type RunBlock = TextRunBlock | CommentaryRunBlock | ToolRunBlock | ApprovalRunBlock | StatusRunBlock;
 
 export interface RunExecutionState {
   timelinePartial?: boolean;
@@ -90,6 +101,12 @@ export interface RunExecutionState {
 
 export interface TextDeltaPayload {
   delta: string;
+}
+
+export interface CommentaryEventPayload {
+  id: string;
+  text: string;
+  timestamp?: number;
 }
 
 export interface ToolEventPayload {

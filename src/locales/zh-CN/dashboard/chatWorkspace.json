@@ -228,6 +228,7 @@
   "timelineEmptyDesc": "Agent 开始执行后，步骤会实时出现在这里。",
   "timelineCount": "{{count}} 项",
   "timelineGenericStep": "执行任务步骤",
+  "timelineCommentary": "过程说明",
   "workspaceFilesEmptyTitle": "暂无对话文件",
   "workspaceFilesEmptyDesc": "在此展示用户上传的附件以及 Agent 生成的报告、文件等产物。",
   "workspacePreviewEmptyTitle": "预览区暂未接入",

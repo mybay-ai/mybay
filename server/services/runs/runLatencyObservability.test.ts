@@ -8,6 +8,8 @@ describe("run latency observability", () => {
     tracker.markFirstUpstreamByte("run-1");
     current = 1_120;
     tracker.observeRuntimeEvent("run-1", { event: "run.started", private: "SECRET" });
+    current = 1_200;
+    tracker.observeRuntimeEvent("run-1", { event: "message.interim", text: "PRIVATE_COMMENTARY" });
     current = 1_300;
     tracker.observeRuntimeEvent("run-1", { event: "message.delta", delta: "PRIVATE_TEXT" });
     current = 1_500;
@@ -29,6 +31,7 @@ describe("run latency observability", () => {
       queueMs: 1_000,
       dispatchToFirstUpstreamByteMs: 100,
       dispatchToFirstRuntimeEventMs: 120,
+      dispatchToFirstInterimMessageMs: 200,
       dispatchToFirstVisibleTextMs: 300,
       dispatchToFirstToolMs: 500,
       toolSpanMs: 400,
@@ -49,6 +52,7 @@ describe("run latency observability", () => {
         queueMs: null,
         dispatchToFirstUpstreamByteMs: null,
         dispatchToFirstVisibleTextMs: null,
+        dispatchToFirstInterimMessageMs: null,
         dispatchToFirstToolMs: null,
         toolSpanMs: null,
         upstreamTerminalToPersistedMs: 50,

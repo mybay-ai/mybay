@@ -181,6 +181,21 @@ export class NormalizedRunEventProvider implements RuntimeRunEventProvider {
         return;
       }
 
+      if (eventType === "message.interim" && event.already_streamed !== true) {
+        const text = truncateSafeText(event.text, 8_192);
+        if (!text || containsDsmlToolCallProtocol(text)) return;
+        const rawId = String(event.id || event.message_id || "");
+        const id = /^[A-Za-z0-9_.:-]{1,160}$/.test(rawId)
+          ? rawId
+          : `commentary-${dependencies.randomUUID()}`;
+        dependencies.addEvent(run.id, "commentary", JSON.stringify({
+          id,
+          text,
+          timestamp: typeof event.timestamp === "number" ? event.timestamp : dependencies.now() / 1_000,
+        }));
+        return;
+      }
+
       if (["run.created", "run.queued"].includes(eventType)) {
         emitStep(run.id, tracker, {
           id: `${run.id}-task_received`,

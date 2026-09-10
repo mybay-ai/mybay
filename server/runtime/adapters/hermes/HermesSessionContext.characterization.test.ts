@@ -96,6 +96,7 @@ describe("Hermes session context characterization", () => {
     expect(payload.instructions).toContain(HERMES_CONVERSATION_EFFICIENCY_POLICY);
     expect(payload.instructions).toContain("不要连续改写关键词重试");
     expect(payload.instructions).toContain("浏览器控制不可用或首次调用失败时");
+    expect(payload.instructions).toContain("面向用户的过程说明");
   });
 
   it("keeps current-only input for an existing session with no prior messages", () => {

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { CheckCircle2, ChevronDown, ChevronRight, CircleHelp, CircleStop, LoaderCircle, ShieldQuestion, Wrench, XCircle } from "lucide-react";
+import { CheckCircle2, ChevronDown, ChevronRight, CircleHelp, CircleStop, LoaderCircle, MessageSquareText, ShieldQuestion, Wrench, XCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ChatRunMetrics } from "../useChatRuns";
 import type { RunBlock, RunExecutionState, ToolRunBlock } from "./runTypes";
@@ -42,6 +42,15 @@ function ToolBlock({ block, execution }: { block: ToolRunBlock; execution: RunEx
 function TimelineBlock({ block, execution, renderText }: { block: RunBlock; execution: RunExecutionState; renderText?: (content: string) => ReactNode }) {
   const { t } = useTranslation("dashboard");
   if (block.type === "text") return <div className="px-1 text-[14px]" data-timeline-text>{renderText ? renderText(block.content) : block.content}</div>;
+  if (block.type === "commentary") return (
+    <div className="rounded-xl border border-indigo-100/90 bg-indigo-50/45 px-3 py-2.5 dark:border-indigo-400/20 dark:bg-indigo-500/10" data-timeline-commentary>
+      <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-medium text-indigo-600 dark:text-indigo-300">
+        <MessageSquareText className="h-3.5 w-3.5" />
+        {t("chatWorkspace.timelineCommentary")}
+      </div>
+      <div className="text-[14px] leading-6 text-content-secondary">{renderText ? renderText(block.content) : block.content}</div>
+    </div>
+  );
   if (block.type === "tool") return <ToolBlock block={block} execution={execution} />;
   if (block.type === "approval") {
     return (
