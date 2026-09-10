@@ -109,6 +109,16 @@ async function withInstanceUpgradeOperation(
 
 const activeUpgrades = new Set<string>();
 
+export function buildPreStopUpgradeFailureState(instance: any, isDirectRollback: boolean, error: string) {
+  return {
+    status: instance.status || "running",
+    upgrade_status: "failed",
+    upgrade_phase: "failed",
+    upgrade_error: error,
+    ...(isDirectRollback ? { previous_image_tag: instance.previous_image_tag || null } : {}),
+  };
+}
+
 export async function getUpgradeLogs(instanceId: string) {
   // Return audit logs specifically related to upgrades
   const logs = await dbAdapter.getAuditLogs(instanceId);
@@ -534,12 +544,7 @@ async function upgradeInstanceFlow(
   } catch (pullErr: any) {
     const errMsg = `拉取 Docker 新镜像失败: ${pullErr.message || String(pullErr)}`;
     await logUpgrade(`[拉取镜像] ❌ 失败: ${errMsg}`);
-    await dbAdapter.updateInstanceVersionInfo(instanceId, {
-      status: instance.status || "running",
-      upgrade_status: "failed",
-      upgrade_phase: "failed",
-      upgrade_error: errMsg,
-    });
+    await dbAdapter.updateInstanceVersionInfo(instanceId, buildPreStopUpgradeFailureState(instance, isDirectRollback, errMsg));
     io.emit("instances_updated", { id: instanceId, status: instance.status || "running", upgrade_phase: "failed" });
     await logUpgrade(`[升级终止] 当前容器尚未停止，实例继续运行原版本。`);
     return { success: false, error: errMsg };
@@ -604,12 +609,7 @@ async function upgradeInstanceFlow(
     
     // We explicitly do not call rollbackFlow because old containers were not stopped yet.
     // We just mark the upgrade as failed and revert the status to 'running' (assuming it was running before).
-    await dbAdapter.updateInstanceVersionInfo(instanceId, {
-      status: "running",
-      upgrade_status: "failed",
-      upgrade_phase: "failed",
-      upgrade_error: errMsg
-    });
+    await dbAdapter.updateInstanceVersionInfo(instanceId, buildPreStopUpgradeFailureState(instance, isDirectRollback, errMsg));
     
     io.emit("instances_updated", { id: instanceId, status: "running" });
     await logUpgrade(`[升级终止] 旧容器未受影响，实例版本保持不变。`);

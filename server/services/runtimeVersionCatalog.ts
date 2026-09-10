@@ -1,4 +1,3 @@
-import { CODEX_BUILD } from "../../shared/codexBuild";
 import { listRuntimeReleases } from "../../shared/runtimeReleases";
 import { parsePiRuntimeImageRef, resolveLocalPiImageRef } from "./localPiRuntime";
 
@@ -34,7 +33,7 @@ export function listManagedRuntimeVersions(runtimeType: string): RuntimeVersionR
       runtime_type: "codex", familyVersion: release.runtimeVersion,
       version: release.runtimeVersion, tag: release.imageTag,
       image_tag: release.imageTag, image: release.image,
-      bridge_version: CODEX_BUILD.bridgeVersion, upgradeable: true,
+      bridge_version: release.bridgeVersion, upgradeable: true,
       changelog: release.changelog, changelog_zh: release.changelogZh,
       published_at: `${release.releasedAt}T00:00:00.000Z`, releaseAt: release.releasedAt,
       channel: release.channel, certification_level: release.certificationLevel,

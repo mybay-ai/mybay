@@ -5,6 +5,20 @@ import tar from "tar-fs";
 
 export const CODEX_RUNTIME_IMAGE = `${CODEX_BUILD.image}:${CODEX_BUILD.imageTag}`;
 let pending: Promise<string> | undefined;
+
+export function isVerifiedLocalCodexRuntimeImage(imageRef: string, info: any): boolean {
+  const separator = imageRef.lastIndexOf(":");
+  if (separator <= imageRef.lastIndexOf("/")) return false;
+  const image = imageRef.slice(0, separator);
+  const tag = imageRef.slice(separator + 1);
+  const release = findRuntimeRelease("codex", tag);
+  if (!release || release.image !== image) return false;
+  const expectedBridgeVersion = release.bridgeVersion || CODEX_BUILD.bridgeVersion;
+  return info?.Config?.Labels?.["com.mybay.codex.runtime"] === "true"
+    && info?.Config?.Labels?.["com.mybay.codex.agent-version"] === release.runtimeVersion
+    && info?.Config?.Labels?.["com.mybay.codex.bridge-version"] === expectedBridgeVersion;
+}
+
 export async function ensureLocalCodexRuntimeImage({ dockerClient, imageRef, onLog }: { dockerClient: any; imageRef: string; onLog?: (message: string) => void }): Promise<string> {
   const separator = imageRef.lastIndexOf(":");
   if (separator <= imageRef.lastIndexOf("/")) throw Error("CODEX_IMAGE_UNSUPPORTED");
@@ -15,9 +29,7 @@ export async function ensureLocalCodexRuntimeImage({ dockerClient, imageRef, onL
   const verified = async () => {
     try {
       const info = await dockerClient.getImage(imageRef).inspect();
-      return info.Config?.Labels?.["com.mybay.codex.runtime"] === "true"
-        && info.Config?.Labels?.["com.mybay.codex.agent-version"] === release.runtimeVersion
-        && info.Config?.Labels?.["com.mybay.codex.bridge-version"] === CODEX_BUILD.bridgeVersion;
+      return isVerifiedLocalCodexRuntimeImage(imageRef, info);
     } catch { return false; }
   };
   if (await verified()) return imageRef;

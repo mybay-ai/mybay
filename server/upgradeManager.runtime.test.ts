@@ -11,7 +11,7 @@ vi.mock("./runtime/adapters/pi/PiRuntimeReadiness", () => ({ probePiRuntimeReadi
 vi.mock("./utils/localInstanceTarget", () => ({ invalidateLocalInstanceTarget: mocks.invalidateTarget }));
 vi.mock("./db", () => ({ dbAdapter: {} }));
 
-import { buildUpgradeContainerEnvironment, probeManagedRuntimeUpgradeReadiness, refreshManagedRuntimeUpgradeTarget } from "./upgradeManager";
+import { buildPreStopUpgradeFailureState, buildUpgradeContainerEnvironment, probeManagedRuntimeUpgradeReadiness, refreshManagedRuntimeUpgradeTarget } from "./upgradeManager";
 
 describe("managed Runtime upgrade readiness", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -43,5 +43,18 @@ describe("managed Runtime upgrade readiness", () => {
       ["TZ=Asia/Shanghai", "PORT=8080", "GATEWAY_HEALTH_URL=http://stale"],
       9119,
     )).toEqual(["TZ=Asia/Shanghai", "PORT=9119"]);
+  });
+
+  it("retains the recorded rollback point when a direct rollback fails before the old container stops", () => {
+    expect(buildPreStopUpgradeFailureState(
+      { status: "running", previous_image_tag: "0.153.4" },
+      true,
+      "CODEX_IMAGE_UNVERIFIED",
+    )).toMatchObject({
+      status: "running",
+      upgrade_status: "failed",
+      upgrade_phase: "failed",
+      previous_image_tag: "0.153.4",
+    });
   });
 });

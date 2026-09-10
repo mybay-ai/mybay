@@ -16,6 +16,7 @@ export interface UpgradePreflightInput {
   dataDirectoryExists: boolean;
   currentContainerRunning: boolean;
   targetImageCached: boolean;
+  targetImageVerified?: boolean | null;
   architectureCompatible?: boolean | null;
 }
 
@@ -40,7 +41,7 @@ export function buildUpgradePreflight(input: UpgradePreflightInput) {
     { code: "DATA_DIRECTORY", status: input.dataDirectoryExists ? "pass" : "blocker", detail: instance?.data_volume_path || null },
     { code: "DISK_SPACE", status: diskStatus, detail: input.disk ? `${input.disk.freeBytes}/${input.disk.totalBytes}` : null },
     { code: "ROLLBACK_READY", status: input.currentContainerRunning ? "pass" : "blocker", detail: instance?.agent_image_tag || null },
-    { code: "TARGET_IMAGE", status: input.targetImageCached ? "pass" : "warning", detail: input.targetTag },
+    { code: "TARGET_IMAGE", status: input.targetImageVerified === false ? "blocker" : input.targetImageCached ? "pass" : "warning", detail: input.targetTag },
     { code: "ARCHITECTURE", status: input.architectureCompatible === false ? "blocker" : input.architectureCompatible === true ? "pass" : "warning" },
     { code: "CHAT_READINESS", status: chatReady ? "pass" : "warning", detail: instance?.gateway_status || runtimeStatus },
     { code: "SERVICE_INTERRUPTION", status: "warning" },

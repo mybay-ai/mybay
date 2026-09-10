@@ -1,3 +1,4 @@
+import { CODEX_BUILD } from "./codexBuild";
 import { CODEX_RUNTIME_DEFINITION, PI_RUNTIME_DEFINITION, type RuntimeCertificationLevel, type RuntimeType } from "./runtimeCatalog";
 
 export interface RuntimeReleaseDefinition {
@@ -13,6 +14,8 @@ export interface RuntimeReleaseDefinition {
   readonly isLatest: boolean;
   readonly upgradeable: boolean;
   readonly aliases: readonly string[];
+  /** Immutable MyBay bridge revision expected on retained local images. */
+  readonly bridgeVersion?: string;
 }
 
 function freezeRelease(release: RuntimeReleaseDefinition): RuntimeReleaseDefinition {
@@ -83,6 +86,7 @@ export const CODEX_RUNTIME_RELEASES: readonly RuntimeReleaseDefinition[] = Objec
     isLatest: true,
     upgradeable: true,
     aliases: [CODEX_RUNTIME_DEFINITION.version, CODEX_RUNTIME_DEFINITION.runtime.tag],
+    bridgeVersion: CODEX_BUILD.bridgeVersion,
   }),
   freezeRelease({
     runtimeType: "codex",
@@ -97,6 +101,7 @@ export const CODEX_RUNTIME_RELEASES: readonly RuntimeReleaseDefinition[] = Objec
     isLatest: false,
     upgradeable: true,
     aliases: ["0.153.4"],
+    bridgeVersion: "0.1.0-experimental.2",
   }),
 ]);
 

@@ -9,7 +9,7 @@ describe("local Codex Runtime image admission", () => {
         getImage: () => ({ inspect: async () => ({ Config: { Labels: {
           "com.mybay.codex.runtime": "true",
           "com.mybay.codex.agent-version": "0.153.4",
-          "com.mybay.codex.bridge-version": "0.1.0-experimental.3",
+          "com.mybay.codex.bridge-version": "0.1.0-experimental.2",
         } } }) }),
       },
     });
@@ -27,6 +27,19 @@ describe("local Codex Runtime image admission", () => {
         getImage: () => ({ inspect: async () => ({ Config: { Labels: {
           "com.mybay.codex.runtime": "true",
           "com.mybay.codex.agent-version": "0.154.0",
+          "com.mybay.codex.bridge-version": "0.1.0-experimental.3",
+        } } }) }),
+      },
+    })).rejects.toThrow("CODEX_IMAGE_UNVERIFIED");
+  });
+
+  it("rejects a rollback image carrying the current bridge instead of its retained bridge", async () => {
+    await expect(ensureLocalCodexRuntimeImage({
+      imageRef: "mybay/codex-runtime:0.153.4",
+      dockerClient: {
+        getImage: () => ({ inspect: async () => ({ Config: { Labels: {
+          "com.mybay.codex.runtime": "true",
+          "com.mybay.codex.agent-version": "0.153.4",
           "com.mybay.codex.bridge-version": "0.1.0-experimental.3",
         } } }) }),
       },

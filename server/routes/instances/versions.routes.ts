@@ -32,6 +32,7 @@ import {
   resolvePiRuntimeUpgradeSelection,
 } from "../../services/instances/runtimeUpgradeSelection";
 import { enrichRuntimeVersionCacheStatus, listManagedRuntimeVersions } from "../../services/runtimeVersionCatalog";
+import { isVerifiedLocalCodexRuntimeImage } from "../../services/localCodexRuntime";
 
 function respondIfInstanceOperationActive(res: Response, instanceIds: string[]): boolean {
   for (const instanceId of instanceIds) {
@@ -145,6 +146,9 @@ export function createVersionsRoutes(deps: RouterDependencies) {
           dataDirectoryExists: fs.existsSync(dataPath),
           currentContainerRunning: containerInspect?.State?.Running === true,
           targetImageCached: !!imageInspect,
+          targetImageVerified: codexSelection?.ok && imageInspect
+            ? isVerifiedLocalCodexRuntimeImage(targetImage, imageInspect)
+            : null,
           architectureCompatible: imageInspect?.Architecture && dockerInfo?.Architecture
             ? normalizeArchitecture(imageInspect.Architecture) === normalizeArchitecture(dockerInfo.Architecture)
             : null,
