@@ -10,7 +10,7 @@ A declared certification level is a release target. A verified level is granted 
 | --- | --- | --- | --- | --- | --- | --- |
 | hermes | certified | certified | verified | windows/not-retained (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop) | 2026-09-07T19:12:40.573Z | certification/evidence/hermes.certification.json |
 | pi | certified | certified | verified | windows/not-retained (docker-desktop), windows/x64 (docker-desktop) | 2026-09-07T19:12:40.573Z | certification/evidence/pi.certification.json |
-| codex | experimental | experimental | verified | windows/x64 (docker-desktop) | 2026-09-09T07:59:36.687Z | certification/evidence/codex.certification.json |
+| codex | experimental | experimental | verified | windows/x64 (docker-desktop) | 2026-09-10T02:53:56.170Z | certification/evidence/codex.certification.json |
 
 ## Evidence-backed capability coverage
 

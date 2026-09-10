@@ -4,30 +4,30 @@
     "type": "codex",
     "providerKey": "codex-app-server",
     "contractVersion": 1,
-    "version": "0.153.4",
-    "imageRef": "mybay/codex-runtime:0.153.4"
+    "version": "0.154.0",
+    "imageRef": "mybay/codex-runtime:0.154.0"
   },
   "environments": [
     {
-      "id": "windows-docker-desktop-20260909",
+      "id": "windows-docker-desktop-20260910",
       "platform": "windows",
       "platformVersion": null,
       "architecture": "x64",
       "containerEngine": "docker-desktop",
       "containerEngineVersion": null,
-      "runtimeVersion": "Codex 0.153.4; bridge 0.1.0-experimental.0",
+      "runtimeVersion": "Codex 0.154.0; bridge 0.1.0-experimental.2",
       "mybayVersion": "0.1.28",
       "headless": false
     }
   ],
   "artifacts": [
     {
-      "path": "certification/artifacts/codex-0.153.4-runtime-20260909.json",
-      "sha256": "d53077a1f5c5319aa6d98a6fe9de4cfbe8d5b77fb6fd964396b5656d720464a2"
+      "path": "certification/artifacts/codex-0.154.0-lifecycle-20260910.json",
+      "sha256": "3ac6be0c416875bae5b1f7629b8cca46f8d15607ec782a1018a0f9443e491b77"
     },
     {
-      "path": "certification/artifacts/codex-0.153.4-product-20260909.json",
-      "sha256": "8cd17e1a6bd204ed39f606e6c709f330ede5f1f5cd0e86e2631f5fc814450c15"
+      "path": "docs/plans/runtime-expansion/codex-upgrade-rollback-20260910.json",
+      "sha256": "9c714b2162d315c4e6d687b3c75cdd16ed339a283ac8730749f5954af63b5271"
     }
   ],
   "checks": [
@@ -35,46 +35,47 @@
       "requirementId": "runtime-install",
       "status": "passed",
       "scope": "runtime",
-      "observedAt": "2026-09-09T07:59:36.687Z",
-      "environment": "Windows Docker Desktop, isolated Codex 0.153.4 Runtime, existing ChatGPT account",
+      "observedAt": "2026-09-10T02:52:04.106Z",
+      "environment": "Windows Docker Desktop, isolated MyBay control, Codex 0.154.0 Runtime, existing ChatGPT account",
       "evidenceRefs": [
-        "certification/artifacts/codex-0.153.4-runtime-20260909.json",
-        "certification/artifacts/codex-0.153.4-product-20260909.json"
+        "certification/artifacts/codex-0.154.0-lifecycle-20260910.json#observations.runtimeInstall",
+        "docs/plans/runtime-expansion/codex-upgrade-rollback-20260910.json#observations.upgrade"
       ]
     },
     {
       "requirementId": "task-submit",
       "status": "passed",
       "scope": "runtime",
-      "observedAt": "2026-09-09T07:59:36.687Z",
-      "environment": "Windows Docker Desktop, isolated Codex 0.153.4 Runtime, existing ChatGPT account",
+      "observedAt": "2026-09-10T02:19:14.582Z",
+      "environment": "Windows Docker Desktop, isolated MyBay control, Codex 0.154.0 Runtime, existing ChatGPT account",
       "evidenceRefs": [
-        "certification/artifacts/codex-0.153.4-runtime-20260909.json",
-        "certification/artifacts/codex-0.153.4-product-20260909.json"
+        "certification/artifacts/codex-0.154.0-lifecycle-20260910.json#observations.taskSubmit",
+        "docs/plans/runtime-expansion/codex-upgrade-rollback-20260910.json#observations.restoredConversationContinuity"
       ]
     },
     {
       "requirementId": "streaming-output",
       "status": "passed",
       "scope": "runtime",
-      "observedAt": "2026-09-09T07:59:36.687Z",
-      "environment": "Windows Docker Desktop, isolated Codex 0.153.4 Runtime, existing ChatGPT account",
+      "observedAt": "2026-09-10T02:19:14.582Z",
+      "environment": "Windows Docker Desktop, isolated MyBay control, Codex 0.154.0 Runtime, existing ChatGPT account",
       "evidenceRefs": [
-        "certification/artifacts/codex-0.153.4-runtime-20260909.json",
-        "certification/artifacts/codex-0.153.4-product-20260909.json"
+        "certification/artifacts/codex-0.154.0-lifecycle-20260910.json#observations.streamingOutput",
+        "docs/plans/runtime-expansion/codex-upgrade-rollback-20260910.json#observations.restoredConversationContinuity"
       ],
-      "note": "Retained delta count is non-zero; native run completed with expected marker."
+      "note": "The retained native run emitted non-empty message deltas and completed with the exact marker."
     },
     {
       "requirementId": "cancellation",
       "status": "passed",
       "scope": "runtime",
-      "observedAt": "2026-09-09T07:59:36.687Z",
-      "environment": "Windows Docker Desktop, isolated Codex 0.153.4 Runtime, existing ChatGPT account",
+      "observedAt": "2026-09-10T02:53:56.170Z",
+      "environment": "Windows Docker Desktop, isolated MyBay control, Codex 0.154.0 Runtime, existing ChatGPT account",
       "evidenceRefs": [
-        "certification/artifacts/codex-0.153.4-runtime-20260909.json",
-        "certification/artifacts/codex-0.153.4-product-20260909.json"
-      ]
+        "certification/artifacts/codex-0.154.0-lifecycle-20260910.json#observations.cancellation",
+        "docs/plans/runtime-expansion/codex-upgrade-rollback-20260910.json#observations.cancellationOnLatest"
+      ],
+      "note": "A live run was observed running, stop was accepted, and the upstream Runtime terminal state was cancelled."
     }
   ]
 }

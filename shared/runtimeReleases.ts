@@ -1,4 +1,4 @@
-import { PI_RUNTIME_DEFINITION, type RuntimeCertificationLevel, type RuntimeType } from "./runtimeCatalog";
+import { CODEX_RUNTIME_DEFINITION, PI_RUNTIME_DEFINITION, type RuntimeCertificationLevel, type RuntimeType } from "./runtimeCatalog";
 
 export interface RuntimeReleaseDefinition {
   readonly runtimeType: RuntimeType;
@@ -69,8 +69,40 @@ export const PI_RUNTIME_RELEASES: readonly RuntimeReleaseDefinition[] = Object.f
   }),
 ]);
 
+export const CODEX_RUNTIME_RELEASES: readonly RuntimeReleaseDefinition[] = Object.freeze([
+  freezeRelease({
+    runtimeType: "codex",
+    runtimeVersion: CODEX_RUNTIME_DEFINITION.version,
+    image: CODEX_RUNTIME_DEFINITION.runtime.image,
+    imageTag: CODEX_RUNTIME_DEFINITION.runtime.tag,
+    channel: "experimental",
+    certificationLevel: "experimental",
+    releasedAt: "2026-09-10",
+    changelog: "Updates the pinned native Codex CLI to 0.154.0 and admits controlled local upgrade and rollback.",
+    changelogZh: "将原生 Codex CLI 固定升级至 0.154.0，并开放受控的本地升级与回滚。",
+    isLatest: true,
+    upgradeable: true,
+    aliases: [CODEX_RUNTIME_DEFINITION.version, CODEX_RUNTIME_DEFINITION.runtime.tag],
+  }),
+  freezeRelease({
+    runtimeType: "codex",
+    runtimeVersion: "0.153.4",
+    image: CODEX_RUNTIME_DEFINITION.runtime.image,
+    imageTag: "0.153.4",
+    channel: "experimental",
+    certificationLevel: "experimental",
+    releasedAt: "2026-09-09",
+    changelog: "Previous pinned Codex CLI build retained as the supported rollback point.",
+    changelogZh: "保留上一版固定的 Codex CLI 构建，作为受支持的回滚点。",
+    isLatest: false,
+    upgradeable: true,
+    aliases: ["0.153.4"],
+  }),
+]);
+
 export function listRuntimeReleases(runtimeType: RuntimeType): readonly RuntimeReleaseDefinition[] {
   if (runtimeType === "pi") return PI_RUNTIME_RELEASES;
+  if (runtimeType === "codex") return CODEX_RUNTIME_RELEASES;
   return Object.freeze([]);
 }
 

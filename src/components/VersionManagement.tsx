@@ -769,7 +769,17 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
         ))}
         <button type="button" role="tab" aria-selected={showCodex} onClick={() => { setShowCodex(true); setSelectedInstances([]); }} className={cn("flex-1 rounded-xl px-3 py-2.5 text-sm font-bold sm:flex-none", showCodex ? "bg-surface text-content shadow-sm ring-1 ring-outline" : "text-content-muted")}>{t("codexVersions.tab")}</button>
       </div>
-      {showCodex ? <CodexVersionPanel token={currentUser?.token} instances={instances.filter(instance => getRuntimeType(instance) === "codex")} /> : <>
+      {showCodex ? <CodexVersionPanel
+        token={currentUser?.token}
+        instances={instances.filter(instance => getRuntimeType(instance) === "codex")}
+        refreshingInstances={refreshingInstances}
+        upgradingId={upgradingId}
+        rollingBackId={rollingBackId}
+        onRefreshInstances={handleRefreshInstances}
+        onUpgrade={handleUpgradeSingle}
+        onRollback={handleRollbackSingle}
+        onOpenLogs={handleOpenLogs}
+      /> : <>
       <VersionOverviewCards
         totalInstances={totalInstances}
         latestInstances={latestInstances}
@@ -994,6 +1004,7 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
         onRollback={handleRollbackSingle}
         onUpgradeLatest={(id, e) => handleUpgradeSingle(id, "latest", e)}
       />
+      </>}
       <VersionLogsModal
         showLogsModal={showLogsModal}
         logsInstanceId={logsInstanceId}
@@ -1014,8 +1025,6 @@ export function VersionManagement({ instances, currentUser, fetchInstances, sock
           else void handleBulkUpgrade(current.tag, true);
         }}
       />
-
-      </>}
     </div>
   );
 }

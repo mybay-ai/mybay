@@ -2,7 +2,7 @@
 specVersion: 1.0.0
 name: codex-agent
 displayName: Codex
-version: 0.153.4
+version: 0.154.0
 description: Experimental Codex App Server Runtime with isolated native sessions.
 release:
   supportStatus: available
@@ -11,7 +11,7 @@ release:
 runtime:
   type: codex
   image: mybay/codex-runtime
-  tag: 0.153.4
+  tag: 0.154.0
   internalPort: 8080
   environmentVariables:
     - name: CODEX_BRIDGE_API_KEY

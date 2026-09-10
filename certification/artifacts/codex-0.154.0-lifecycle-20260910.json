@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "artifactType": "codex-experimental-lifecycle-evidence",
+  "capturedAt": "2026-09-10T02:55:00.000Z",
+  "runtime": {
+    "type": "codex",
+    "nativeVersion": "0.154.0",
+    "bridgeVersion": "0.1.0-experimental.2",
+    "imageRef": "mybay/codex-runtime:0.154.0",
+    "imageId": "sha256:e3cee1fbcafd6991c4ff4feabee1c901ccb91117b684489ba9fc4b210b9ba07e"
+  },
+  "environment": "Windows x64 with Docker Desktop; isolated MyBay 0.1.28 control on 127.0.0.1:4362; existing ChatGPT account",
+  "observations": {
+    "runtimeInstall": {
+      "verdict": "PASS",
+      "instanceId": "3595693f-2a43-4b6e-9db9-fdd41ce01e9b",
+      "status": "running",
+      "chatReady": true,
+      "containerPort": 9119
+    },
+    "taskSubmit": {
+      "verdict": "PASS",
+      "mybayRunId": "e1d27b3e-62cb-446a-9f9b-6af361d70b89",
+      "upstreamRunId": "0250d49a-2dfb-46a9-8324-fc4a72c6fda4",
+      "nativeThreadId": "01a088fa-03b9-7823-aaf0-6132d63bfd52",
+      "nativeTurnId": "01a0891c-984b-7ef0-9406-c45c42cfa4c7",
+      "status": "completed"
+    },
+    "streamingOutput": {
+      "verdict": "PASS",
+      "marker": "PRODUCT_RESTORE_7095E15D5B6A4B37",
+      "incrementalOutputObserved": true,
+      "terminalEvent": "run.completed"
+    },
+    "cancellation": {
+      "verdict": "PASS",
+      "mybayRunId": "0e8ea4c8-625e-425a-b609-3990b7f6d3e2",
+      "upstreamRunId": "86dfc897-b2e5-497d-b31f-2df393df5933",
+      "nativeThreadId": "01a088fa-03b9-7823-aaf0-6132d63bfd52",
+      "runningObserved": true,
+      "stopRequested": true,
+      "terminalStatus": "cancelled",
+      "errorCode": "CANCELLED_UPSTREAM"
+    },
+    "upgradeRollback": {
+      "verdict": "PASS",
+      "path": "0.153.4 -> 0.154.0 -> 0.153.4 -> 0.154.0",
+      "conversationContinuityVerified": true,
+      "finalVersion": "0.154.0",
+      "rollbackPoint": "0.153.4"
+    }
+  },
+  "sourceEvidence": "docs/plans/runtime-expansion/codex-upgrade-rollback-20260910.json",
+  "boundaries": [
+    "This artifact supports the Experimental certification requirements only.",
+    "Acceptance covers one isolated same-host Windows Docker Desktop environment.",
+    "Cross-platform upgrade, production publication, and Feishu activation were not run."
+  ],
+  "containsSecrets": false
+}

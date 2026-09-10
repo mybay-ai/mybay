@@ -9,12 +9,18 @@ afterEach(() => {
 });
 
 describe("managed Runtime version catalog", () => {
-  it("exposes the pinned Codex build without admitting upgrades", () => {
-    expect(listManagedRuntimeVersions("codex")).toEqual([expect.objectContaining({
-      runtime_type: "codex", version: "0.153.4", bridge_version: "0.1.0-experimental.2",
-      image: "mybay/codex-runtime", upgradeable: false, certification_level: "experimental",
-    })]);
-    expect(listManagedRuntimeVersions("codex")[0].capabilities).not.toContain("upgrade");
+  it("exposes the admitted Codex upgrade and rollback pair", () => {
+    expect(listManagedRuntimeVersions("codex")).toEqual([
+      expect.objectContaining({
+        runtime_type: "codex", version: "0.154.0", bridge_version: "0.1.0-experimental.2",
+        image: "mybay/codex-runtime", image_tag: "0.154.0", upgradeable: true, is_latest: true,
+        certification_level: "experimental",
+      }),
+      expect.objectContaining({
+        runtime_type: "codex", version: "0.153.4", image_tag: "0.153.4", upgradeable: true, is_latest: false,
+      }),
+    ]);
+    expect(listManagedRuntimeVersions("codex")[0].capabilities).toEqual(expect.arrayContaining(["upgrade", "rollback"]));
   });
   it("maps the latest Pi release to the configured distributable image", () => {
     process.env.MYBAY_PI_RUNTIME_IMAGE = "ghcr.io/mybay-ai/pi-runtime:0.85.1";

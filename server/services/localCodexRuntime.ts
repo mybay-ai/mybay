@@ -1,18 +1,27 @@
 import { CODEX_BUILD } from "../../shared/codexBuild";
+import { findRuntimeRelease } from "../../shared/runtimeReleases";
 import path from "node:path";
 import tar from "tar-fs";
 
 export const CODEX_RUNTIME_IMAGE = `${CODEX_BUILD.image}:${CODEX_BUILD.imageTag}`;
 let pending: Promise<string> | undefined;
 export async function ensureLocalCodexRuntimeImage({ dockerClient, imageRef, onLog }: { dockerClient: any; imageRef: string; onLog?: (message: string) => void }): Promise<string> {
-  if (imageRef !== CODEX_RUNTIME_IMAGE) throw Error("CODEX_IMAGE_UNSUPPORTED");
+  const separator = imageRef.lastIndexOf(":");
+  if (separator <= imageRef.lastIndexOf("/")) throw Error("CODEX_IMAGE_UNSUPPORTED");
+  const image = imageRef.slice(0, separator);
+  const tag = imageRef.slice(separator + 1);
+  const release = findRuntimeRelease("codex", tag);
+  if (!release || release.image !== image) throw Error("CODEX_IMAGE_UNSUPPORTED");
   const verified = async () => {
     try {
       const info = await dockerClient.getImage(imageRef).inspect();
-      return info.Config?.Labels?.["com.mybay.codex.runtime"] === "true" && info.Config?.Labels?.["com.mybay.codex.agent-version"] === CODEX_BUILD.nativeVersion && info.Config?.Labels?.["com.mybay.codex.bridge-version"] === CODEX_BUILD.bridgeVersion;
+      return info.Config?.Labels?.["com.mybay.codex.runtime"] === "true"
+        && info.Config?.Labels?.["com.mybay.codex.agent-version"] === release.runtimeVersion
+        && info.Config?.Labels?.["com.mybay.codex.bridge-version"] === CODEX_BUILD.bridgeVersion;
     } catch { return false; }
   };
   if (await verified()) return imageRef;
+  if (!release.isLatest || imageRef !== CODEX_RUNTIME_IMAGE) throw Error("CODEX_IMAGE_UNVERIFIED");
   if (!pending) pending = (async () => {
     onLog?.(`Building Codex Runtime ${CODEX_BUILD.nativeVersion} (${CODEX_BUILD.bridgeVersion})`);
     const stream = await dockerClient.buildImage(tar.pack(path.join(process.cwd(), "runtime", "codex-bridge")), { t: imageRef, rm: true, forcerm: true });

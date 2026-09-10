@@ -25,7 +25,12 @@ import {
   instanceOperationCoordinator,
 } from "../../services/instances/instanceOperationCoordinator";
 import { buildUpgradePreflight } from "../../services/instances/upgradePreflightService";
-import { isPiRuntimeInstance, resolvePiRuntimeUpgradeSelection } from "../../services/instances/runtimeUpgradeSelection";
+import {
+  isCodexRuntimeInstance,
+  isPiRuntimeInstance,
+  resolveCodexRuntimeUpgradeSelection,
+  resolvePiRuntimeUpgradeSelection,
+} from "../../services/instances/runtimeUpgradeSelection";
 import { enrichRuntimeVersionCacheStatus, listManagedRuntimeVersions } from "../../services/runtimeVersionCatalog";
 
 function respondIfInstanceOperationActive(res: Response, instanceIds: string[]): boolean {
@@ -113,8 +118,12 @@ export function createVersionsRoutes(deps: RouterDependencies) {
         const piSelection = isPiRuntimeInstance(instance)
           ? resolvePiRuntimeUpgradeSelection({ instance, targetTag: resolvedTag })
           : null;
-        const targetImage = piSelection?.ok
-          ? piSelection.selection.imageRef
+        const codexSelection = isCodexRuntimeInstance(instance)
+          ? resolveCodexRuntimeUpgradeSelection({ instance, targetTag: resolvedTag })
+          : null;
+        const managedSelection = piSelection?.ok ? piSelection : codexSelection?.ok ? codexSelection : null;
+        const targetImage = managedSelection?.ok
+          ? managedSelection.selection.imageRef
           : `${version?.image || instance.agent_image || process.env.MY_BAY_IMAGE || "nousresearch/hermes-agent"}:${version?.image_tag || version?.tag || resolvedTag}`;
         const imageInspect: any = await docker.getImage(targetImage).inspect().catch(() => null);
         const context = buildDeploymentContext(instance);

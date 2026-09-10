@@ -22,11 +22,40 @@ import {
 } from "./services/instances/instanceOperationCoordinator";
 import type { AgentUpgradePhase } from "../shared/agentUpgradePhase";
 import { ensurePiRuntimeDataOwnership } from "./services/localPiRuntime";
-import { isPiRuntimeInstance, resolvePiRuntimeUpgradeSelection } from "./services/instances/runtimeUpgradeSelection";
+import { ensureCodexRuntimeDataOwnership } from "./services/localCodexRuntime";
+import {
+  isCodexRuntimeInstance,
+  isPiRuntimeInstance,
+  resolveCodexRuntimeUpgradeSelection,
+  resolvePiRuntimeUpgradeSelection,
+} from "./services/instances/runtimeUpgradeSelection";
 import { probePiRuntimeReadiness } from "./runtime/adapters/pi/PiRuntimeReadiness";
+import { probeCodexRuntimeReadiness } from "./runtime/adapters/codex/CodexRuntimeReadiness";
 import { writePiRuntimeEnvironment } from "./runtime/adapters/pi/PiRuntimeEnvironment";
+import { writeCodexRuntimeEnvironment } from "./runtime/adapters/codex/CodexRuntimeEnvironment";
+import { invalidateLocalInstanceTarget } from "./utils/localInstanceTarget";
 
 type UpgradeOperationResult = { success: boolean; error?: string };
+
+export async function probeManagedRuntimeUpgradeReadiness(instance: any) {
+  if (isCodexRuntimeInstance(instance)) return probeCodexRuntimeReadiness(instance);
+  if (isPiRuntimeInstance(instance)) return probePiRuntimeReadiness(instance);
+  return null;
+}
+
+export function refreshManagedRuntimeUpgradeTarget(instanceId: string) {
+  invalidateLocalInstanceTarget(instanceId);
+}
+
+export function buildUpgradeContainerEnvironment(instance: any, gatewayEnv: string[], internalPort: number): string[] {
+  return [
+    ...gatewayEnv.filter((value) => !value.startsWith("PORT=") && !value.startsWith("GATEWAY_HEALTH_URL=")),
+    `PORT=${internalPort}`,
+    ...(!isPiRuntimeInstance(instance) && !isCodexRuntimeInstance(instance)
+      ? ["GATEWAY_HEALTH_URL=http://127.0.0.1:8642"]
+      : []),
+  ];
+}
 
 async function persistUpgradePhase(instanceId: string, phase: AgentUpgradePhase, io: SocketIOServer) {
   await dbAdapter.updateInstanceVersionInfo(instanceId, { upgrade_phase: phase });
@@ -41,8 +70,9 @@ async function waitForChatReadiness(
   const instanceId = String(instance.id);
   let lastDetail = "Chat API port or gateway is not ready";
   for (let attempt = 0; attempt < 10; attempt += 1) {
-    if (isPiRuntimeInstance(instance)) {
-      const readiness = await probePiRuntimeReadiness(instance);
+    if (isPiRuntimeInstance(instance) || isCodexRuntimeInstance(instance)) {
+      const readiness = await probeManagedRuntimeUpgradeReadiness(instance);
+      if (!readiness) throw new Error("MANAGED_RUNTIME_READINESS_UNAVAILABLE");
       if (readiness.gateway_ready && readiness.chat_ready) return { ready: true, detail: "ready" };
       lastDetail = readiness.gateway_error || readiness.gateway_status;
       if (attempt < 9) await new Promise(resolve => setTimeout(resolve, 3000));
@@ -95,12 +125,14 @@ async function rollbackInstanceUnlocked(
     return { success: false, error: "该实例上已有正在运行的任务，请稍后再试。" };
   }
   const instance = await dbAdapter.getInstanceById(instanceId);
-  if (instance?.runtime_type === "codex") return { success: false, error: "CODEX_UPGRADE_NOT_AVAILABLE: no validated upgrade or rollback release is available." };
   if (!instance) {
     return { success: false, error: "实例未找到。" };
   }
   if (instance.user_id !== userId && role !== 'admin') {
     return { success: false, error: "越权操作：您没有权限操作此实例。" };
+  }
+  if (isCodexRuntimeInstance(instance) && !instance.previous_image_tag) {
+    return { success: false, error: "CODEX_ROLLBACK_POINT_NOT_AVAILABLE: this instance has no recorded previous Codex image." };
   }
   const targetTag = instance.previous_image_tag || "latest";
   
@@ -179,13 +211,17 @@ export async function validateUpgradeTag(
   targetTag: string
 ): Promise<{ success: boolean; error?: string; code?: string; resolvedTag?: string }> {
   const instance = await dbAdapter.getInstanceById(instanceId);
-  if (instance?.runtime_type === "codex") return { success: false, error: "CODEX_UPGRADE_NOT_AVAILABLE: no validated upgrade or rollback release is available." };
   if (!instance) {
     return { success: false, error: "实例未找到。", code: "INSTANCE_NOT_FOUND" };
   }
 
   if (isPiRuntimeInstance(instance)) {
     const selection = resolvePiRuntimeUpgradeSelection({ instance, targetTag });
+    if (selection.ok === false) return { success: false, error: selection.error, code: selection.code };
+    return { success: true, resolvedTag: selection.selection.tag };
+  }
+  if (isCodexRuntimeInstance(instance)) {
+    const selection = resolveCodexRuntimeUpgradeSelection({ instance, targetTag });
     if (selection.ok === false) return { success: false, error: selection.error, code: selection.code };
     return { success: true, resolvedTag: selection.selection.tag };
   }
@@ -276,7 +312,6 @@ async function upgradeInstanceUnlocked(
   }
 
   const instance = await dbAdapter.getInstanceById(instanceId);
-  if (instance?.runtime_type === "codex") return { success: false, error: "CODEX_UPGRADE_NOT_AVAILABLE: no validated upgrade or rollback release is available." };
   if (!instance) {
     return { success: false, error: "实例未找到。" };
   }
@@ -299,13 +334,17 @@ async function upgradeInstanceUnlocked(
     const selection = resolvePiRuntimeUpgradeSelection({ instance, targetTag });
     if (selection.ok === false) return { success: false, error: selection.error };
     targetTag = selection.selection.tag;
+  } else if (isCodexRuntimeInstance(instance)) {
+    const selection = resolveCodexRuntimeUpgradeSelection({ instance, targetTag });
+    if (selection.ok === false) return { success: false, error: selection.error };
+    targetTag = selection.selection.tag;
   }
   const isFeishu = isFeishuInstance(instance);
   let resolvedTag = targetTag;
   const versions = await dbAdapter.getMyBayVersions();
   let vObj: any = null;
 
-  if (isPiRuntimeInstance(instance)) {
+  if (isPiRuntimeInstance(instance) || isCodexRuntimeInstance(instance)) {
     resolvedTag = targetTag;
   } else if (targetTag === "latest") {
     const resolved = await resolveLatestTag(isFeishu);
@@ -369,6 +408,19 @@ async function upgradeInstanceFlow(
 
   if (isPiRuntimeInstance(instance)) {
     const selection = resolvePiRuntimeUpgradeSelection({
+      instance,
+      targetTag,
+      allowPreviousTag: isDirectRollback,
+    });
+    if (selection.ok === false) return { success: false, error: selection.error };
+    vObj = {
+      version: selection.selection.version,
+      image: selection.selection.image,
+      image_tag: selection.selection.tag,
+      source: "local_docker",
+    };
+  } else if (isCodexRuntimeInstance(instance)) {
+    const selection = resolveCodexRuntimeUpgradeSelection({
       instance,
       targetTag,
       allowPreviousTag: isDirectRollback,
@@ -502,13 +554,19 @@ async function upgradeInstanceFlow(
   const gatewayContainerName = ctx.gatewayContainerName;
   const dashboardContainerName = ctx.dashboardContainerName;
 
-  const { finalEnvMap: envVars } = isPiRuntimeInstance(instance)
-    ? writePiRuntimeEnvironment(instanceId, config)
-    : writePhysicalConfigs(instanceId, config);
+  const { finalEnvMap: envVars } = isCodexRuntimeInstance(instance)
+    ? writeCodexRuntimeEnvironment(instanceId, config)
+    : isPiRuntimeInstance(instance)
+      ? writePiRuntimeEnvironment(instanceId, config)
+      : writePhysicalConfigs(instanceId, config);
   const gatewayEnv: string[] = [
     "TZ=Asia/Shanghai",
     "MYBAY_AGENT_HOME=/opt/data",
-    isPiRuntimeInstance(instance) ? "PI_HOME=/opt/data" : "HERMES_HOME=/opt/data"
+    isCodexRuntimeInstance(instance)
+      ? "CODEX_HOME=/opt/data/codex"
+      : isPiRuntimeInstance(instance)
+        ? "PI_HOME=/opt/data"
+        : "HERMES_HOME=/opt/data"
   ];
   Object.entries(envVars).forEach(([k, v]) => {
     gatewayEnv.push(`${k}=${v}`);
@@ -626,7 +684,13 @@ async function upgradeInstanceFlow(
   let nextCreatedDash: any;
 
   try {
-    if (isPiRuntimeInstance(instance)) {
+    if (isCodexRuntimeInstance(instance)) {
+      await ensureCodexRuntimeDataOwnership({
+        dockerClient: docker,
+        image: finalUpgradeImage,
+        hostInstanceDataDir,
+      });
+    } else if (isPiRuntimeInstance(instance)) {
       await ensurePiRuntimeDataOwnership({
         dockerClient: docker,
         image: finalUpgradeImage,
@@ -647,11 +711,7 @@ async function upgradeInstanceFlow(
     nextCreatedDash = await createDashboardContainer(docker, {
       Image: finalUpgradeImage,
       name: dashboardContainerName,
-      Env: [
-        ...gatewayEnv,
-        `PORT=${ctx.internal_web_port}`,
-        ...(!isPiRuntimeInstance(instance) ? ["GATEWAY_HEALTH_URL=http://127.0.0.1:8642"] : [])
-      ],
+      Env: buildUpgradeContainerEnvironment(instance, gatewayEnv, ctx.internal_web_port),
       Labels: dashboardLabels,
       HostConfig: hostConfig,
       RuntimeType: String(config.runtime_type || instance.runtime_type || "hermes").trim().toLowerCase(),
@@ -664,6 +724,7 @@ async function upgradeInstanceFlow(
     }
 
     await nextCreatedDash.start();
+    refreshManagedRuntimeUpgradeTarget(instanceId);
     await logUpgrade(`[创建新节点] 统一运行 of 麦贝容器启动成功！`);
 
     // Perform network security audit checks
@@ -760,7 +821,7 @@ async function upgradeInstanceFlow(
     }
 
     // Resolve runtime version and save to DB
-    let resolvedVer = isPiRuntimeInstance(instance) && vObj?.version ? vObj.version : targetTag;
+    let resolvedVer = (isPiRuntimeInstance(instance) || isCodexRuntimeInstance(instance)) && vObj?.version ? vObj.version : targetTag;
     if (!isPiRuntimeInstance(instance) && targetTag === "latest") {
       try {
         const latestRow = await dbAdapter.getLatestMyBayVersion();
@@ -881,6 +942,8 @@ async function rollbackFlow(
     if (!rollbackIsTraefik) {
       await rebuildProxyConfig(instance, io, { run: async () => {} });
     }
+
+    refreshManagedRuntimeUpgradeTarget(instanceId);
 
     const enabledChannels = (Array.isArray(config.configuredChannels)
       ? config.configuredChannels

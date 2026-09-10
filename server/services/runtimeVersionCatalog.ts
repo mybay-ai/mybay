@@ -28,17 +28,20 @@ export type RuntimeVersionRow = {
 
 export function listManagedRuntimeVersions(runtimeType: string): RuntimeVersionRow[] {
   const normalized = String(runtimeType || "").trim().toLowerCase();
-  if (normalized === "codex") return [{
-    runtime_type: "codex", familyVersion: CODEX_BUILD.nativeVersion,
-    version: CODEX_BUILD.nativeVersion, tag: CODEX_BUILD.imageTag,
-    image_tag: CODEX_BUILD.imageTag, image: CODEX_BUILD.image,
-    bridge_version: CODEX_BUILD.bridgeVersion, upgradeable: false,
-    changelog: "Pinned local build; upgrade and rollback are not yet validated.",
-    changelog_zh: "当前固定的本地构建；升级与回滚尚未通过验证。",
-    published_at: "", releaseAt: "", channel: "experimental",
-    certification_level: "experimental", is_latest: true, is_prerelease: true,
-    is_prewarmed: false, prewarm_status: "unknown", capabilities: ["core", "streaming", "cancellation", "files"],
-  }];
+  if (normalized === "codex") return listRuntimeReleases("codex")
+    .filter((release) => release.upgradeable)
+    .map((release) => ({
+      runtime_type: "codex", familyVersion: release.runtimeVersion,
+      version: release.runtimeVersion, tag: release.imageTag,
+      image_tag: release.imageTag, image: release.image,
+      bridge_version: CODEX_BUILD.bridgeVersion, upgradeable: true,
+      changelog: release.changelog, changelog_zh: release.changelogZh,
+      published_at: `${release.releasedAt}T00:00:00.000Z`, releaseAt: release.releasedAt,
+      channel: release.channel, certification_level: release.certificationLevel,
+      is_latest: release.isLatest, is_prerelease: true,
+      is_prewarmed: false, prewarm_status: "unknown",
+      capabilities: ["core", "streaming", "cancellation", "files", "backup", "upgrade", "rollback"],
+    }));
   if (normalized !== "pi") return [];
 
   const configured = parsePiRuntimeImageRef(resolveLocalPiImageRef());
