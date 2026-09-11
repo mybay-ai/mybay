@@ -45,6 +45,17 @@
       "runtimeVersion": "Codex 0.154.0; bridge 0.1.0-experimental.3",
       "mybayVersion": "0.1.29-preview.1",
       "headless": false
+    },
+    {
+      "id": "windows-docker-desktop-v0129-codex-release-20260911",
+      "platform": "windows",
+      "platformVersion": "Windows 10 Pro",
+      "architecture": "x64",
+      "containerEngine": "docker-desktop",
+      "containerEngineVersion": "29.7.2",
+      "runtimeVersion": "Codex 0.154.0; bridge 0.1.0-experimental.3",
+      "mybayVersion": "0.1.29",
+      "headless": true
     }
   ],
   "artifacts": [
@@ -79,6 +90,10 @@
     {
       "path": "certification/artifacts/codex-0.154.0-certified-windows-x64-20260911.json",
       "sha256": "657168b915e981b9565f72c96acd8a5be890aa99c422662a815ce8f675725785"
+    },
+    {
+      "path": "certification/artifacts/runtime-v0129-release-promotion-windows-x64-20260911.json",
+      "sha256": "9a33fc6b0485015617e47b3c7d1df5ec894a07c0f3895a6e75a3bb90906356f2"
     }
   ],
   "checks": [
