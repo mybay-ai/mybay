@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM node:22-alpine AS build
+FROM node:26-alpine AS build
 
 WORKDIR /app
 
@@ -15,7 +15,7 @@ ENV VITE_PUBLIC_APP_URL=$VITE_PUBLIC_APP_URL \
 COPY . .
 RUN npm run build
 
-FROM node:22-alpine AS production-dependencies
+FROM node:26-alpine AS production-dependencies
 
 WORKDIR /app
 
@@ -23,7 +23,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts \
     && npm cache clean --force
 
-FROM node:22-alpine AS runtime
+FROM node:26-alpine AS runtime
 
 WORKDIR /app
 
