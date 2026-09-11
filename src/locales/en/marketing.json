@@ -1060,10 +1060,10 @@
     "timelineTip": "Stable release",
     "releases": [
       {
-        "version": "v0.1.29-preview.1",
-        "date": "2026.09.10",
-        "badge": "Preview",
-        "summary": "MyBay Open Source v0.1.29-preview.1 hardens the Hermes, Pi, and Codex Runtime release path with pinned identities, fail-closed certification, safer deployment recovery, and complete model/context presentation.",
+        "version": "v0.1.29",
+        "date": "2026.09.11",
+        "badge": "Stable",
+        "summary": "MyBay Open Source v0.1.29 hardens the Hermes, Pi, and Codex Runtime release path with pinned identities, fail-closed certification, safer deployment recovery, and complete model/context presentation.",
         "sections": [
           {
             "title": "Runtime release identity",
@@ -1071,7 +1071,7 @@
             "items": [
               "Pin every deployable Runtime to a reproducible native version and immutable OCI digest or Docker image ID.",
               "Upgrade retained certification to schema v3 so stale tags, bridge revisions, and mismatched artifacts cannot pass the release gate.",
-              "Promote Codex to Beta after verifying session recovery, file artifacts, usage, tool events, and restart recovery, while reporting its native, bridge, and host-local build identity separately."
+              "Promote Codex to Certified after verifying session recovery, file artifacts, usage, tool events, and restart recovery, while reporting its native, bridge, and host-local build identity separately."
             ]
           },
           {

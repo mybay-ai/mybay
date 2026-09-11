@@ -1060,10 +1060,10 @@
     "timelineTip": "正式版",
     "releases": [
       {
-        "version": "v0.1.29-preview.1",
-        "date": "2026.09.10",
-        "badge": "候选版",
-        "summary": "麦贝开源版 v0.1.29-preview.1 加固 Hermes、Pi 与 Codex Runtime 发布链路，加入固定构建身份、失败关闭认证、安全部署恢复，以及完整的模型和上下文展示。",
+        "version": "v0.1.29",
+        "date": "2026.09.11",
+        "badge": "正式版",
+        "summary": "麦贝开源版 v0.1.29 加固 Hermes、Pi 与 Codex Runtime 发布链路，加入固定构建身份、失败关闭认证、安全部署恢复，以及完整的模型和上下文展示。",
         "sections": [
           {
             "title": "Runtime 发布身份",
@@ -1071,7 +1071,7 @@
             "items": [
               "将所有可部署 Runtime 固定到可复现的原生版本及不可变 OCI 摘要或 Docker 镜像 ID。",
               "将保留认证升级为 schema v3，使过期标签、Bridge 版本和不匹配构建无法通过发布门禁。",
-              "Codex 在补齐会话恢复、文件产物、用量、工具事件和重启恢复证据后提升至 Beta，并继续单独呈现原生版本、Bridge 版本与本机构建身份。"
+              "Codex 在补齐会话恢复、文件产物、用量、工具事件和重启恢复证据后提升至 Certified，并继续单独呈现原生版本、Bridge 版本与本机构建身份。"
             ]
           },
           {

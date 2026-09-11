@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "artifactType": "runtime-release-promotion",
+  "capturedAt": "2026-09-11T09:24:58.058Z",
+  "source": {
+    "version": "0.1.29",
+    "certifiedCandidateVersion": "0.1.29-preview.1",
+    "baseMergeCommit": "d5ae11418942b32c98abba50bdc7153e0ec08c4f",
+    "controlImage": "mybay/local:0.1.29-release-candidate",
+    "controlImageId": "sha256:a5b7232da782778a9a09d4e375de3dd65365d49e805d789201ce474d9cec52b6"
+  },
+  "environment": {
+    "platform": "Windows 10 Pro x64",
+    "runtimePlatform": "Docker Desktop 4.89.0 / Engine 29.7.2 / Linux x86_64",
+    "controlUrl": "http://127.0.0.1:4383",
+    "isolatedData": true,
+    "dataVolume": "mybay-v0129-release-cert-data"
+  },
+  "observations": {
+    "finalImageBuild": "PASS",
+    "finalContainerHealth": "PASS",
+    "healthResponse": {
+      "status": "healthy",
+      "version": "0.1.29"
+    },
+    "containerPackageVersion": "0.1.29",
+    "loopbackPortBinding": "127.0.0.1:4383",
+    "sourceArchiveValidation": {
+      "status": "PASS",
+      "path": "release/mybay-v0.1.29.zip",
+      "files": 1454,
+      "scope": "local pre-tag archive validation; GitHub workflow rebuilds the authoritative asset"
+    },
+    "windowsArchiveValidation": {
+      "status": "PASS",
+      "path": "release/MyBay-Windows-v0.1.29.zip",
+      "files": 22,
+      "scope": "local pre-tag archive validation; GitHub workflow rebuilds the authoritative asset"
+    },
+    "releaseMetadataDiff": {
+      "status": "PASS",
+      "base": "origin/main@d5ae11418942b32c98abba50bdc7153e0ec08c4f",
+      "files": [
+        ".env.example",
+        "README.md",
+        "README.zh-CN.md",
+        "package-lock.json",
+        "package.json",
+        "src/locales/en/marketing.json",
+        "src/locales/zh-CN/marketing.json"
+      ],
+      "implementationFilesChanged": false
+    },
+    "runtimeImages": [
+      {
+        "runtime": "hermes",
+        "imageRef": "nousresearch/hermes-agent:v2026.8.27",
+        "imageId": "sha256:e0df6adebddf29b91112aefc999d4aaf6846c9eb544faca5672a16a13590ff79"
+      },
+      {
+        "runtime": "pi",
+        "imageRef": "mybay/pi-runtime:0.85.1",
+        "imageId": "sha256:b2ad5cf15c9f79a826a72ebda523b45ee2de80e53e438952227e06a8d79e0aa0"
+      },
+      {
+        "runtime": "codex",
+        "imageRef": "mybay/codex-runtime:0.154.0",
+        "imageId": "sha256:20b46c8407fa9f4a40435653db85b00518d9fff132a7333b9482246357f42256"
+      }
+    ]
+  },
+  "promotionBasis": [
+    "The exact final 0.1.29 control image was built from the merged release candidate plus the listed release metadata changes.",
+    "The final image started in an isolated data volume and returned a healthy 0.1.29 response.",
+    "The three Runtime image identities are unchanged from the retained 0.1.29-preview.1 credentialed acceptance evidence.",
+    "The source and Windows release archives were generated from the final-version tree and passed their repository validators."
+  ],
+  "boundaries": [
+    "This promotion run validates the final control image, final package metadata, archive integrity, and unchanged Runtime image identities.",
+    "Credentialed Runtime lifecycle, streaming, cancellation, recovery, upgrade, rollback, backup, restore, and security outcomes remain supported by the retained 0.1.29-preview.1 evidence and were not rerun solely for the version metadata promotion.",
+    "GitHub-hosted release assets, SBOM, SHA256SUMS, multi-architecture image publication, and GitHub Actions results are pending until the v0.1.29 tag workflow completes.",
+    "No credentials or raw model responses are retained in this artifact."
+  ],
+  "containsSecrets": false
+}
