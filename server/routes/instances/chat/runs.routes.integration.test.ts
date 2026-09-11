@@ -86,7 +86,15 @@ describe("Interactive Agent POST /runs integration", () => {
     const runId = "44444444-4444-4444-8444-444444444444";
     getInstanceById.mockResolvedValue({ id: instanceId, user_id: userId, owner_id: userId });
     getConversationForOwnerAndInstance.mockResolvedValue({ id: conversationId, user_id: userId, instance_id: instanceId });
-    const run = { id: runId, user_id: userId, instance_id: instanceId, conversation_id: conversationId, status: "completed", file_diffs: {
+    const run = { id: runId, user_id: userId, instance_id: instanceId, conversation_id: conversationId, status: "completed", usage_evidence: {
+      version: 1, source: "runtime_terminal", scope: "session", counter: "snapshot",
+      inputTokens: 120, outputTokens: 30, totalTokens: 150, cacheReadTokens: 10,
+      cacheWriteTokens: 0, modelCalls: 1, model: "gpt-6-astra", durationMs: 450,
+      durationSource: "runtime", contextTokens: 3_595, contextWindow: 258_400,
+      contextPercent: 1.39, compactionStatus: null, compactionReason: null,
+      compactionTokensBefore: null, compactionEstimatedTokensAfter: null,
+      secret: "must-not-leak",
+    }, file_diffs: {
       version: 1, runId, conversationId, capturedBefore: "2026-08-31T00:00:00Z", capturedAfter: "2026-08-31T00:00:01Z", files: [{ path: "a.txt", before: "BEFORE", after: "AFTER" }],
     } };
     getChatRun.mockResolvedValue(run);
@@ -103,7 +111,10 @@ describe("Interactive Agent POST /runs integration", () => {
       expect(response.status).toBe(200);
       expect(response.headers.get("cache-control")).toBe("no-store");
       expect(await response.json()).toMatchObject({ available: true, file: { path: "a.txt", before: "BEFORE", after: "AFTER" } });
-      expect(JSON.stringify(await (await fetch(base)).json())).not.toContain("BEFORE");
+      const runStatus = await (await fetch(base)).json();
+      expect(JSON.stringify(runStatus)).not.toContain("BEFORE");
+      expect(runStatus.run.usageEvidence).toMatchObject({ model: "gpt-6-astra", contextTokens: 3_595, contextWindow: 258_400 });
+      expect(JSON.stringify(runStatus)).not.toContain("must-not-leak");
       expect((await fetch(`${base}/file-diff?path=a.txt&conversationId=${userId}`)).status).toBe(404);
       expect((await fetch(`${base}/file-diff?path=..%2Fa.txt&conversationId=${conversationId}`)).status).toBe(400);
       getChatRun.mockResolvedValue({ ...run, user_id: "someone-else" });

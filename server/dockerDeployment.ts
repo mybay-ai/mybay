@@ -46,6 +46,7 @@ import {
   connectTraefikToNetwork,
   verifyNetworkSecurity,
 } from "./services/docker/dockerNetworkManager";
+import { createInstanceNetworkWithFallback } from "./services/docker/instanceNetworkAllocator";
 
 export { getDockerProfile, getResourceLimits } from "./services/docker/dockerResourcePolicy";
 export type { DockerProfile } from "./services/docker/dockerResourcePolicy";
@@ -268,7 +269,7 @@ export async function recreateInstance(
       });
       try {
         try {
-          await docker.createNetwork({ Name: options.networkName });
+          await createInstanceNetworkWithFallback(docker, options.networkName);
         } catch (netCreateErr: any) {
           const isAlreadyExists = netCreateErr.statusCode === 409 || (netCreateErr.message && netCreateErr.message.includes("already exists"));
           if (!isAlreadyExists) {
@@ -319,7 +320,7 @@ export async function recreateInstance(
 
       try {
         try {
-          await docker.createNetwork({ Name: options.networkName });
+          await createInstanceNetworkWithFallback(docker, options.networkName);
           console.log(`[启动故障自愈] 重建专属网络 ${options.networkName} 成功`);
           io.emit(`deploy_log_${instanceId}`, {
             timestamp: new Date().toISOString(),
@@ -1182,7 +1183,7 @@ agent.task_completion_guidance=true`
             });
             try {
               try {
-                await docker.createNetwork({ Name: networkName });
+                await createInstanceNetworkWithFallback(docker, networkName);
               } catch (createErr: any) {
                 const isAlreadyExists = createErr.statusCode === 409 || (createErr.message && createErr.message.includes("already exists"));
                 if (!isAlreadyExists) {

@@ -66,6 +66,7 @@ export async function schedulePortConflictRetry(claimedTask: any, instance: any,
     error_code: null,
     error_message: null,
     deployment_error: null,
+    failed_at: null,
     compensated_at: null,
   });
   await deploymentEventsRepo.create({
@@ -232,6 +233,14 @@ export function startLocalDeployWorker(io: SocketIOServer) {
             if (params.status === "running" || params.status === "partial_running") {
               isCurrentTaskActive = false;
               clearExecutionTimers();
+              await dbAdapter.updateInstanceRecord(params.id, {
+                error_code: null,
+                error_message: null,
+                error_detail: null,
+                deployment_error: null,
+                failed_at: null,
+                compensated_at: null,
+              });
               await dbAdapter.updateDeploymentTaskStatus(claimedTask.id, "success");
               console.log(`[Deploy Worker] Task ${claimedTask.id} succeeded.`);
               isProcessingTask = false; // RELEASE LOCK ON TERMINAL STATE

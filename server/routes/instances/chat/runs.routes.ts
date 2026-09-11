@@ -44,6 +44,7 @@ import { cancelManagedRuntimeA2ATask, isManagedRuntimeA2APeer, isNativeA2APeer }
 import { a2aTrackingEnabled } from "../../../services/a2aRelayConfig";
 import { isA2AGroupTransportApplied } from "../../../services/a2aGroupReadiness";
 import { resolveChatGroupOutcome } from "../../../../shared/chatGroupOutcome";
+import { readLocalRunUsage } from "../../../../shared/localRunUsage";
 
 async function cancelRunGroupTasks(run: any, instance: any, req: AuthenticatedRequest) {
   const group = readChatGroupRun(run?.group_collaboration);
@@ -511,6 +512,7 @@ export function registerRunRoutes(router: Router) {
       const runAuthority = await resolveInstanceRunAuthority({ instance: instanceAuthority, runId });
       if (runAuthority.ok === false) return sendAuthorityFailure(res, runAuthority, "未找到目标任务或无权访问。");
       const run = runAuthority.run;
+      const usageEvidence = readLocalRunUsage(run.usage_evidence);
       const groupCollaboration = readChatGroupRun(run.group_collaboration);
       const groupOutcome = groupCollaboration
         ? resolveChatGroupOutcome(run, readStoreCollections(["a2aTaskLinks"]).a2aTaskLinks)
@@ -527,6 +529,7 @@ export function registerRunRoutes(router: Router) {
           usagePromptTokens: run.usage_prompt_tokens,
           usageCompletionTokens: run.usage_completion_tokens,
           usageTotalTokens: run.usage_total_tokens,
+          usageEvidence,
           createdAt: run.created_at,
           started_at: run.started_at,
           completed_at: run.completed_at,

@@ -24,6 +24,7 @@ import { isExternalDeployChannel } from "./ChannelSelector";
 import { SkillsStep } from "./SkillsStep";
 import { DeployReviewStep } from "./DeployReviewStep";
 import { isDeployChannelAllowedByEntitlement } from "../../../shared/planChannelAccess";
+import { HERMES_RUNTIME_DEFINITION } from "../../../shared/runtimeCatalog";
 
 export function DeployWizard({ 
   onSuccess, 
@@ -91,8 +92,8 @@ export function DeployWizard({
     id: Math.random().toString(36).substring(7),
     runtime_type: "hermes",
     path: `agent-${Math.random().toString(36).substring(2, 8)}`,
-    image: "nousresearch/hermes-agent",
-    imageTag: "latest", // Split image and tag
+    image: HERMES_RUNTIME_DEFINITION.runtime.image,
+    imageTag: HERMES_RUNTIME_DEFINITION.runtime.tag,
     channel: "web",
     allowMode: "bind_later",
     modelBillingMode: "byok",
@@ -602,14 +603,15 @@ export function DeployWizard({
     return false;
   });
 
-  const isFeishuCapable = isLatest || (selectedVersionObj ? (
+  const isPinnedCertifiedHermes = data.runtime_type === "hermes" && data.imageTag === HERMES_RUNTIME_DEFINITION.runtime.tag;
+  const isFeishuCapable = isLatest || isPinnedCertifiedHermes || (selectedVersionObj ? (
     selectedVersionObj.capabilities?.includes("feishu") || 
     selectedVersionObj.feishu_capable === true || 
     (data.imageTag && typeof data.imageTag === 'string' && (data.imageTag.toLowerCase().includes("feishu") || data.imageTag.toLowerCase().includes("lark")))
   ) : false);
 
   if (isFeishuChannel && step >= 2) {
-    if (!isLatest && (!selectedVersionObj || !isFeishuCapable)) {
+    if (!isLatest && !isFeishuCapable) {
       nextDisabled = true;
       disableReason = t("validation.feishu_variant_required");
     }

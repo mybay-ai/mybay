@@ -31,4 +31,13 @@ describe("sanitized local diagnostic export", () => {
     expect(report.applicationVersion).toBe("0.1.27.1");
     expect(readLocalDiagnosticExport(report)?.applicationVersion).toBe("0.1.27.1");
   });
+  it("retains a bounded preview version", () => {
+    const report = buildLocalDiagnosticExport({}, "0.1.29-preview.1", null);
+    expect(report.applicationVersion).toBe("0.1.29-preview.1");
+    expect(readLocalDiagnosticExport(report)?.applicationVersion).toBe("0.1.29-preview.1");
+  });
+  it("rejects free-form or oversized version text", () => {
+    expect(buildLocalDiagnosticExport({}, "0.1.29-preview.1 PRIVATE", null).applicationVersion).toBe("unknown");
+    expect(buildLocalDiagnosticExport({}, `0.1.29-${"a".repeat(100)}`, null).applicationVersion).toBe("unknown");
+  });
 });

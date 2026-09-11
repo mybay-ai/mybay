@@ -4,6 +4,7 @@ import os from "node:os";
 import { randomUUID } from "crypto";
 import { DatabaseSync } from "node:sqlite";
 import schemaVersion from "../shared/schema-version.json";
+import { HERMES_RUNTIME_DEFINITION } from "../shared/runtimeCatalog";
 
 export type LocalStoreData = {
   users: any[];
@@ -48,9 +49,9 @@ const defaultData = (): LocalStoreData => ({
   auditLogs: [],
   versions: [{
     id: "local-latest",
-    version: "latest",
-    image: process.env.MY_BAY_IMAGE || "nousresearch/hermes-agent",
-    image_tag: "latest",
+    version: HERMES_RUNTIME_DEFINITION.version,
+    image: process.env.MY_BAY_IMAGE || HERMES_RUNTIME_DEFINITION.runtime.image,
+    image_tag: process.env.MY_BAY_IMAGE_TAG || HERMES_RUNTIME_DEFINITION.runtime.tag,
     source: "local",
     is_latest: true,
     status: "available",

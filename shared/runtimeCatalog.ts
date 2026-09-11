@@ -3,6 +3,12 @@ export type RuntimeType = string;
 
 export type RuntimeSupportStatus = "available" | "spec-only";
 export type RuntimeCertificationLevel = "spec-only" | "experimental" | "beta" | "certified";
+export type RuntimeArtifactIdentityKind = "oci-digest" | "docker-image-id";
+
+export interface RuntimeArtifactIdentity {
+  readonly kind: RuntimeArtifactIdentityKind;
+  readonly value: string;
+}
 
 export interface RuntimeLifecycleCapabilities {
   readonly conversation: {
@@ -42,6 +48,10 @@ export interface RuntimeDefinition {
     readonly supportStatus: RuntimeSupportStatus;
     readonly certificationLevel: RuntimeCertificationLevel;
     readonly deploymentSupported: boolean;
+    /** MyBay-owned bridge revision, or null when no bridge exists. */
+    readonly bridgeVersion: string | null;
+    /** Immutable build admitted by the current release, or null while identity is pending. */
+    readonly artifactIdentity: RuntimeArtifactIdentity | null;
   };
   readonly runtime: {
     readonly type: RuntimeType;
@@ -84,7 +94,12 @@ export type RuntimeManifest = Omit<RuntimeDefinition, "providerKey" | "contractV
 function freezeRuntimeDefinition(definition: RuntimeDefinition): RuntimeDefinition {
   return Object.freeze({
     ...definition,
-    release: Object.freeze({ ...definition.release }),
+    release: Object.freeze({
+      ...definition.release,
+      artifactIdentity: definition.release.artifactIdentity
+        ? Object.freeze({ ...definition.release.artifactIdentity })
+        : null,
+    }),
     runtime: Object.freeze({
       ...definition.runtime,
       environmentVariables: Object.freeze(definition.runtime.environmentVariables.map((item) => Object.freeze({ ...item }))),
@@ -113,19 +128,24 @@ export const HERMES_RUNTIME_DEFINITION = freezeRuntimeDefinition({
   specVersion: "1.0.0",
   name: "hermes-agent",
   displayName: "Hermes Agent",
-  version: "latest",
-  description: "Hermes Agent runtime supported by the current MyBay Open Source preview.",
+  version: "v2026.8.27",
+  description: "Certified Hermes Agent v2026.8.27 runtime supported by the current MyBay Open Source preview.",
   providerKey: "hermes-core",
   contractVersion: 1,
   release: {
     supportStatus: "available",
     certificationLevel: "certified",
     deploymentSupported: true,
+    bridgeVersion: null,
+    artifactIdentity: {
+      kind: "oci-digest",
+      value: "sha256:e0df6adebddf29b91112aefc999d4aaf6846c9eb544faca5672a16a13590ff79",
+    },
   },
   runtime: {
     type: "hermes",
     image: "nousresearch/hermes-agent",
-    tag: "latest",
+    tag: "v2026.8.27",
     internalPort: 9119,
     environmentVariables: [
       {
@@ -190,6 +210,11 @@ export const PI_RUNTIME_DEFINITION = freezeRuntimeDefinition({
     supportStatus: "available",
     certificationLevel: "certified",
     deploymentSupported: true,
+    bridgeVersion: "0.1.1-beta",
+    artifactIdentity: {
+      kind: "docker-image-id",
+      value: "sha256:b2ad5cf15c9f79a826a72ebda523b45ee2de80e53e438952227e06a8d79e0aa0",
+    },
   },
   runtime: {
     type: "pi",
@@ -257,7 +282,14 @@ export const CODEX_RUNTIME_DEFINITION = freezeRuntimeDefinition({
   specVersion: "1.0.0", name: "codex-agent", displayName: "Codex", version: CODEX_BUILD.nativeVersion,
   description: "Experimental Codex App Server Runtime with isolated native sessions.",
   providerKey: "codex-app-server", contractVersion: 1,
-  release: { supportStatus: "available", certificationLevel: "experimental", deploymentSupported: true },
+  release: {
+    supportStatus: "available", certificationLevel: "experimental", deploymentSupported: true,
+    bridgeVersion: CODEX_BUILD.bridgeVersion,
+    artifactIdentity: {
+      kind: "docker-image-id",
+      value: "sha256:20b46c8407fa9f4a40435653db85b00518d9fff132a7333b9482246357f42256",
+    },
+  },
   runtime: { type: "codex", image: CODEX_BUILD.image, tag: CODEX_BUILD.imageTag, internalPort: 8080,
     environmentVariables: [
       { name: "CODEX_BRIDGE_API_KEY", description: "Internal Runtime authentication", required: true, sensitive: true },

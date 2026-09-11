@@ -8,6 +8,10 @@ release:
   supportStatus: available
   certificationLevel: experimental
   deploymentSupported: true
+  bridgeVersion: 0.1.0-experimental.3
+  artifactIdentity:
+    kind: docker-image-id
+    value: sha256:20b46c8407fa9f4a40435653db85b00518d9fff132a7333b9482246357f42256
 runtime:
   type: codex
   image: mybay/codex-runtime

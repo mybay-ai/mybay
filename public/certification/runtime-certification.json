@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "generatedFrom": [
     "shared/runtimeCatalog.ts",
     "shared/runtimeCertification.ts",
@@ -120,6 +120,8 @@
       "declaredLevel": "certified",
       "verifiedLevel": "certified",
       "publicationStatus": "verified",
+      "identityStatus": "exact",
+      "artifactVerification": "oci-digest",
       "environments": [
         {
           "id": "windows-docker-desktop-20260902",
@@ -153,6 +155,28 @@
           "runtimeVersion": "v2026.8.27",
           "mybayVersion": "0.1.28",
           "headless": false
+        },
+        {
+          "id": "windows-docker-desktop-p03-hermes-20260910",
+          "platform": "windows",
+          "platformVersion": "Windows 10 Pro",
+          "architecture": "x64",
+          "containerEngine": "docker-desktop",
+          "containerEngineVersion": "29.7.2",
+          "runtimeVersion": "Hermes v2026.8.27",
+          "mybayVersion": "0.1.28",
+          "headless": false
+        },
+        {
+          "id": "windows-docker-desktop-v0129-preview1-hermes-20260910",
+          "platform": "windows",
+          "platformVersion": "Windows 10 Pro",
+          "architecture": "x64",
+          "containerEngine": "docker-desktop",
+          "containerEngineVersion": "29.7.2",
+          "runtimeVersion": "Hermes v2026.8.27",
+          "mybayVersion": "0.1.29-preview.1",
+          "headless": true
         }
       ],
       "requirements": [
@@ -475,6 +499,8 @@
       "declaredLevel": "certified",
       "verifiedLevel": "certified",
       "publicationStatus": "verified",
+      "identityStatus": "exact",
+      "artifactVerification": "docker-image-id",
       "environments": [
         {
           "id": "windows-docker-desktop-20260906",
@@ -497,6 +523,28 @@
           "runtimeVersion": "Pi 0.85.1; bridge 0.1.1-beta",
           "mybayVersion": "0.1.28",
           "headless": false
+        },
+        {
+          "id": "windows-docker-desktop-p03-pi-20260910",
+          "platform": "windows",
+          "platformVersion": "Windows 10 Pro",
+          "architecture": "x64",
+          "containerEngine": "docker-desktop",
+          "containerEngineVersion": "29.7.2",
+          "runtimeVersion": "Pi 0.85.1; bridge 0.1.1-beta",
+          "mybayVersion": "0.1.28",
+          "headless": false
+        },
+        {
+          "id": "windows-docker-desktop-v0129-preview1-pi-20260910",
+          "platform": "windows",
+          "platformVersion": "Windows 10 Pro",
+          "architecture": "x64",
+          "containerEngine": "docker-desktop",
+          "containerEngineVersion": "29.7.2",
+          "runtimeVersion": "Pi 0.85.1; bridge 0.1.1-beta",
+          "mybayVersion": "0.1.29-preview.1",
+          "headless": true
         }
       ],
       "requirements": [
@@ -800,6 +848,8 @@
       "declaredLevel": "experimental",
       "verifiedLevel": "experimental",
       "publicationStatus": "verified",
+      "identityStatus": "exact",
+      "artifactVerification": "docker-image-id",
       "environments": [
         {
           "id": "windows-docker-desktop-20260910",
@@ -808,9 +858,20 @@
           "architecture": "x64",
           "containerEngine": "docker-desktop",
           "containerEngineVersion": null,
-          "runtimeVersion": "Codex 0.154.0; bridge 0.1.0-experimental.2",
+          "runtimeVersion": "Codex 0.154.0; bridge 0.1.0-experimental.3",
           "mybayVersion": "0.1.28",
           "headless": false
+        },
+        {
+          "id": "windows-docker-desktop-v0129-preview1-codex-20260910",
+          "platform": "windows",
+          "platformVersion": "Windows 10 Pro",
+          "architecture": "x64",
+          "containerEngine": "docker-desktop",
+          "containerEngineVersion": "29.7.2",
+          "runtimeVersion": "Codex 0.154.0; bridge 0.1.0-experimental.3",
+          "mybayVersion": "0.1.29-preview.1",
+          "headless": true
         }
       ],
       "requirements": [
@@ -826,11 +887,10 @@
             "requirementId": "runtime-install",
             "status": "passed",
             "scope": "runtime",
-            "observedAt": "2026-09-10T02:52:04.106Z",
-            "environment": "Windows Docker Desktop, isolated MyBay control, Codex 0.154.0 Runtime, existing ChatGPT account",
+            "observedAt": "2026-09-10T11:32:55.506Z",
+            "environment": "Windows Docker Desktop, localhost:3000 MyBay control, Codex 0.154.0 bridge 0.1.0-experimental.3, existing ChatGPT account",
             "evidenceRefs": [
-              "certification/artifacts/codex-0.154.0-lifecycle-20260910.json#observations.runtimeInstall",
-              "docs/plans/runtime-expansion/codex-upgrade-rollback-20260910.json#observations.upgrade"
+              "certification/artifacts/codex-0.154.0-bridge-3-lifecycle-20260910.json#observations.runtimeInstall"
             ]
           }
         },
@@ -846,11 +906,10 @@
             "requirementId": "task-submit",
             "status": "passed",
             "scope": "runtime",
-            "observedAt": "2026-09-10T02:19:14.582Z",
-            "environment": "Windows Docker Desktop, isolated MyBay control, Codex 0.154.0 Runtime, existing ChatGPT account",
+            "observedAt": "2026-09-10T11:32:55.506Z",
+            "environment": "Windows Docker Desktop, localhost:3000 MyBay control, Codex 0.154.0 bridge 0.1.0-experimental.3, existing ChatGPT account",
             "evidenceRefs": [
-              "certification/artifacts/codex-0.154.0-lifecycle-20260910.json#observations.taskSubmit",
-              "docs/plans/runtime-expansion/codex-upgrade-rollback-20260910.json#observations.restoredConversationContinuity"
+              "certification/artifacts/codex-0.154.0-bridge-3-lifecycle-20260910.json#observations.taskSubmit"
             ]
           }
         },
@@ -866,13 +925,12 @@
             "requirementId": "streaming-output",
             "status": "passed",
             "scope": "runtime",
-            "observedAt": "2026-09-10T02:19:14.582Z",
-            "environment": "Windows Docker Desktop, isolated MyBay control, Codex 0.154.0 Runtime, existing ChatGPT account",
+            "observedAt": "2026-09-10T11:32:55.506Z",
+            "environment": "Windows Docker Desktop, localhost:3000 MyBay control, Codex 0.154.0 bridge 0.1.0-experimental.3, existing ChatGPT account",
             "evidenceRefs": [
-              "certification/artifacts/codex-0.154.0-lifecycle-20260910.json#observations.streamingOutput",
-              "docs/plans/runtime-expansion/codex-upgrade-rollback-20260910.json#observations.restoredConversationContinuity"
+              "certification/artifacts/codex-0.154.0-bridge-3-lifecycle-20260910.json#observations.streamingOutput"
             ],
-            "note": "The retained native run emitted non-empty message deltas and completed with the exact marker."
+            "note": "The retained localhost:3000 run emitted 24 non-empty text events before completing."
           }
         },
         {
@@ -887,11 +945,10 @@
             "requirementId": "cancellation",
             "status": "passed",
             "scope": "runtime",
-            "observedAt": "2026-09-10T02:53:56.170Z",
-            "environment": "Windows Docker Desktop, isolated MyBay control, Codex 0.154.0 Runtime, existing ChatGPT account",
+            "observedAt": "2026-09-10T11:32:55.506Z",
+            "environment": "Windows Docker Desktop, localhost:3000 MyBay control, Codex 0.154.0 bridge 0.1.0-experimental.3, existing ChatGPT account",
             "evidenceRefs": [
-              "certification/artifacts/codex-0.154.0-lifecycle-20260910.json#observations.cancellation",
-              "docs/plans/runtime-expansion/codex-upgrade-rollback-20260910.json#observations.cancellationOnLatest"
+              "certification/artifacts/codex-0.154.0-bridge-3-lifecycle-20260910.json#observations.cancellation"
             ],
             "note": "A live run was observed running, stop was accepted, and the upstream Runtime terminal state was cancelled."
           }

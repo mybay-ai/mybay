@@ -67,7 +67,17 @@ export function createDeploymentsRouter() {
     payload.secureData = { ...(payload.secureData || {}), host_port: port, port: String(port) };
     payload.instance = { ...(payload.instance || instance), config_json: JSON.stringify(config), host_port: port };
     await dbAdapter.updateDeploymentTask(task.id, { status: "retry_wait", next_retry_at: new Date().toISOString(), current_step: "queued", max_attempts: Math.max(Number(task.max_attempts || 3), Number(task.attempt || 0) + 3), error_code: null, error_message: null, error_detail: null, failed_at: null, cancel_requested: false, completed_at: null, payload_json: payload });
-    await dbAdapter.updateInstanceRecord(instance.id, { status: "provisioning", desired_state: "running", error_code: null, deployment_error: null });
+    await dbAdapter.updateInstanceRecord(instance.id, {
+      status: "provisioning",
+      desired_state: "running",
+      health_status: "unknown",
+      error_code: null,
+      error_message: null,
+      error_detail: null,
+      deployment_error: null,
+      failed_at: null,
+      compensated_at: null,
+    });
     res.status(202).json({ instanceId: instance.id, deploymentTaskId: task.id, status: "retry_wait", statusUrl: `/api/deployments/${task.id}` });
   });
 

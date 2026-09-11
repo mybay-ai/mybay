@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "artifactType": "codex-oauth-lifecycle-browser-e2e-acceptance",
+  "capturedAt": "2026-09-11T02:57:14.131Z",
+  "source": {
+    "version": "0.1.29-preview.1",
+    "controlImage": "mybay/local:0.1.29-preview.1-candidate10",
+    "controlImageId": "sha256:3556fe632cb43e3aab317765be837fb5d8019124f85eea887b28d3f974adc3fb",
+    "runtimeImage": "mybay/codex-runtime:0.154.0",
+    "runtimeImageId": "sha256:20b46c8407fa9f4a40435653db85b00518d9fff132a7333b9482246357f42256",
+    "nativeVersion": "0.154.0",
+    "bridgeVersion": "0.1.0-experimental.3"
+  },
+  "environment": {
+    "platform": "Windows 10 Pro x64",
+    "runtimePlatform": "Docker Desktop 29.7.2 Linux x86_64",
+    "controlUrl": "http://127.0.0.1:4372",
+    "browser": "Codex in-app browser",
+    "authMode": "ChatGPT OAuth",
+    "account": "existing test account"
+  },
+  "observations": {
+    "instanceId": "ddcf12de-0c7b-4daa-aceb-d24d15affb65",
+    "conversationId": "8fdcbba5-41e0-48ba-8785-1674dcbb872d",
+    "automaticRefresh": {
+      "status": "PASS",
+      "method": "Replaced only the selected instance live access token with a controlled rejected value while retaining the valid refresh token.",
+      "requestMessageId": "84eac377-73d2-4c62-a175-8b0ba095e449",
+      "responseMessageId": "be1e900f-1fec-461a-b60c-826cac7dd7a0",
+      "requestAt": "2026-09-11T02:51:46.248Z",
+      "tokenRefreshAt": "2026-09-11T02:51:50.159Z",
+      "responseAt": "2026-09-11T02:51:52.945Z",
+      "responseMarker": "P03_OAUTH_AUTO_REFRESH_OK_0911",
+      "reportedModel": "gpt-6-astra",
+      "accessTokenRotated": true,
+      "refreshTokenRotated": true,
+      "idTokenRotated": true,
+      "savedCredentialUpdatedAt": "2026-09-11T02:51:50.215Z"
+    },
+    "restart": {
+      "status": "PASS",
+      "runtimeStartedAt": "2026-09-11T02:53:31.597819686Z",
+      "requestMessageId": "f2a43246-3766-45c4-8187-49e995c39b2d",
+      "responseMessageId": "ac6f1002-6d3f-4d35-8e09-f2c8c2d11a72",
+      "requestAt": "2026-09-11T02:53:38.993Z",
+      "responseAt": "2026-09-11T02:53:42.942Z",
+      "responseMarker": "P03_OAUTH_AFTER_RESTART_OK_0911",
+      "reportedModel": "gpt-6-astra"
+    },
+    "rejectedRefresh": {
+      "status": "PASS",
+      "method": "Replaced only the selected instance live access and refresh tokens with controlled rejected values; the provider account itself was not revoked.",
+      "messageId": "c4b94aad-9094-4102-ae3-7381c12deaa0",
+      "requestAt": "2026-09-11T02:54:21.051Z",
+      "terminalAt": "2026-09-11T02:54:24.570Z",
+      "terminalStatus": "failed",
+      "errorCode": "CODEX_AUTH_REQUIRED",
+      "apiKeyMissingObserved": false,
+      "reconnectActionVisible": true
+    },
+    "rebind": {
+      "status": "PASS",
+      "source": "existing locally encrypted openai-codex credential",
+      "httpStatus": 200,
+      "auditAction": "reconnect_codex_oauth",
+      "auditTimestamp": "2026-09-11T02:55:55.117Z"
+    },
+    "recovery": {
+      "status": "PASS",
+      "requestMessageId": "c8189a5f-d02b-42aa-98a5-50c45b371613",
+      "responseMessageId": "21b7dacf-907b-4c8b-ade1-f704a82a62c3",
+      "requestAt": "2026-09-11T02:56:10.890Z",
+      "responseAt": "2026-09-11T02:56:15.112Z",
+      "responseMarker": "P03_OAUTH_RECOVERY_OK_0911",
+      "reportedModel": "gpt-6-astra"
+    },
+    "persistence": {
+      "status": "PASS",
+      "databaseQuickCheck": "ok",
+      "authFileOwnerUid": 1000,
+      "authFileOwnerGid": 1000,
+      "authFileMode": "0600",
+      "instanceSnapshotPresent": true,
+      "savedCredentialPresent": true
+    }
+  },
+  "boundaries": [
+    "No access token, refresh token, ID token, cookie, password, authorization header, or encrypted credential value is retained in this artifact.",
+    "The rejected-refresh case is a controlled instance-local simulation. The provider account was not globally revoked.",
+    "The reconnect button was observed in the product UI. Recovery used the same authenticated local endpoint with the retained encrypted credential, without repeating the external OAuth consent flow.",
+    "This acceptance covers one exact Codex 0.154.0 Docker image and one Windows Docker Desktop target. It does not cover Linux, macOS, external IM channels, upgrade, rollback, security certification, or backup/restore."
+  ],
+  "containsSecrets": false
+}

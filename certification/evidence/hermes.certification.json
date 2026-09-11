@@ -1,11 +1,16 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "runtime": {
     "type": "hermes",
     "providerKey": "hermes-core",
     "contractVersion": 1,
-    "version": "latest",
-    "imageRef": "nousresearch/hermes-agent:latest"
+    "nativeVersion": "v2026.8.27",
+    "bridgeVersion": null,
+    "imageRef": "nousresearch/hermes-agent:v2026.8.27",
+    "artifactIdentity": {
+      "kind": "oci-digest",
+      "value": "sha256:e0df6adebddf29b91112aefc999d4aaf6846c9eb544faca5672a16a13590ff79"
+    }
   },
   "environments": [
     {
@@ -40,6 +45,28 @@
       "runtimeVersion": "v2026.8.27",
       "mybayVersion": "0.1.28",
       "headless": false
+    },
+    {
+      "id": "windows-docker-desktop-p03-hermes-20260910",
+      "platform": "windows",
+      "platformVersion": "Windows 10 Pro",
+      "architecture": "x64",
+      "containerEngine": "docker-desktop",
+      "containerEngineVersion": "29.7.2",
+      "runtimeVersion": "Hermes v2026.8.27",
+      "mybayVersion": "0.1.28",
+      "headless": false
+    },
+    {
+      "id": "windows-docker-desktop-v0129-preview1-hermes-20260910",
+      "platform": "windows",
+      "platformVersion": "Windows 10 Pro",
+      "architecture": "x64",
+      "containerEngine": "docker-desktop",
+      "containerEngineVersion": "29.7.2",
+      "runtimeVersion": "Hermes v2026.8.27",
+      "mybayVersion": "0.1.29-preview.1",
+      "headless": true
     }
   ],
   "artifacts": [
@@ -86,6 +113,18 @@
     {
       "path": "certification/artifacts/runtime-v0128-streaming-smoke-20260908.json",
       "sha256": "59da8abd22eb8849ae3663e4e86570a8bff6c41fa1f1002de49a5d45d7777892"
+    },
+    {
+      "path": "certification/artifacts/runtime-defaults-p02-windows-x64-20260910.json",
+      "sha256": "fdbf08bc8f84567191caae1cdc82c4d9b4d4c049c8ce76aa878468cf75f5d9cd"
+    },
+    {
+      "path": "certification/artifacts/runtime-hardening-p03-windows-x64-20260910.json",
+      "sha256": "33aff47f243fdf1d3e84a3ef89e9065bea4abaaf9b3f2a42794068b1b62c7429"
+    },
+    {
+      "path": "certification/artifacts/runtime-v0129-preview1-candidate-20260910.json",
+      "sha256": "47bb9ae9ebd31770bcad1208d9405b74d4678355e1f0fe76fbb6e60ca9c4511d"
     }
   ],
   "checks": [

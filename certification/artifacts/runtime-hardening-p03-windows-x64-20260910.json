@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 1,
+  "artifactType": "runtime-hardening-p03-acceptance",
+  "capturedAt": "2026-09-10T08:27:29.0709322Z",
+  "source": {
+    "commit": "c9920d48b68bc27c00d89cdc9bf95079d2a65f25",
+    "controlImage": "mybay/local:p03-runtime-hardening",
+    "controlImageId": "sha256:9c24c664f5677a15305bae218a15118444b69ab2d390aebe8a9776670d401c3a",
+    "mybayVersion": "0.1.28"
+  },
+  "environment": {
+    "platform": "Windows x64",
+    "runtimePlatform": "Docker Desktop Linux x86_64",
+    "dockerVersion": "29.7.2",
+    "isolatedControlUrl": "http://127.0.0.1:4371",
+    "browserAcceptanceUrl": "http://127.0.0.1:4362/app/chat",
+    "localhost3000Changed": false
+  },
+  "validation": {
+    "targetedTests": {
+      "verdict": "PASS",
+      "files": 5,
+      "tests": 21
+    },
+    "typecheck": "PASS",
+    "lint": "PASS",
+    "candidateImageBuild": "PASS"
+  },
+  "observations": {
+    "dockerAddressPoolRecovery": {
+      "verdict": "PASS",
+      "triggerObserved": "Docker reported that all predefined address pools had been fully subnetted.",
+      "policy": "Use only explicitly configured private IPv4 /24-/28 subnets after checking all existing Docker network CIDRs for overlap. Existing networks are never deleted or disconnected.",
+      "instances": [
+        {
+          "runtime": "hermes",
+          "instanceId": "a85fbff0-668a-4e83-a1d8-de5be40abe54",
+          "deploymentTaskId": "a9ec9f35-26bc-4b11-b5dd-f7231ce2b538",
+          "subnet": "10.253.101.0/24",
+          "attempt": 1,
+          "status": "running",
+          "health": "healthy"
+        },
+        {
+          "runtime": "pi",
+          "instanceId": "7daee79a-54d3-4887-b3a3-cea81dd8fc9c",
+          "deploymentTaskId": "17c47965-b2b7-4931-9b71-b240e65e84a2",
+          "subnet": "10.253.102.0/24",
+          "attempt": 1,
+          "status": "running",
+          "health": "healthy"
+        },
+        {
+          "runtime": "codex",
+          "instanceId": "25f674e1-7cc1-40bd-908d-c3ba0346d8a2",
+          "deploymentTaskId": "a3e6ea4a-cff7-4829-86c4-737f2eb30350",
+          "subnet": "10.253.103.0/24",
+          "attempt": 1,
+          "status": "running",
+          "health": "healthy"
+        }
+      ]
+    },
+    "retryMetadataCleanup": {
+      "verdict": "PASS",
+      "liveFieldsChecked": [
+        "error_code",
+        "error_detail",
+        "deployment_error",
+        "failed_at",
+        "compensated_at"
+      ],
+      "detail": "All checked failure fields were null on the three healthy instances. Hermes subsequently stored a positive readiness message in error_message; it was not stale failure text. Manual retry and automatic port-conflict retry clearing are covered by tests."
+    },
+    "runApiUsagePresentation": {
+      "verdict": "PASS",
+      "pi": {
+        "runId": "5b9fea7f-6517-4837-8259-b503b7247bae",
+        "status": "completed",
+        "markerObserved": true,
+        "model": "deepseek-v4-flash",
+        "contextTokens": 3570,
+        "contextWindow": 1000000,
+        "contextPercent": 0.36
+      },
+      "codex": {
+        "runId": "b1dae376-9ccb-44ae-a8cb-a5ae89afe7af",
+        "status": "completed",
+        "markerObserved": true,
+        "model": "gpt-6-astra",
+        "contextTokens": 17357,
+        "contextWindow": 258400,
+        "contextPercent": 6.72
+      },
+      "security": "The authenticated Run DTO passes usage_evidence through the fixed LocalRunUsage allowlist; an injected secret field was rejected by the integration test."
+    },
+    "browserPresentation": {
+      "verdict": "PASS",
+      "candidateImageObserved": true,
+      "modelLabel": "gpt-6-astra",
+      "contextLabel": "Context 6.84% · Details",
+      "boundary": "Older historical Runs that never persisted model evidence continue to show Unknown model. The UI does not invent a model for missing historical data."
+    },
+    "externalChannels": {
+      "verdict": "NOT_RUN"
+    },
+    "crossPlatform": {
+      "verdict": "NOT_RUN"
+    }
+  },
+  "summary": {
+    "p03Accepted": true,
+    "runtimeDeployment": "PASS",
+    "cleanFirstAttemptTask": "PASS",
+    "modelAndContextPresentation": "PASS",
+    "retryFailureStateCleanup": "PASS"
+  },
+  "environmentDisposition": {
+    "p03Control": "stopped",
+    "p03RuntimeContainers": "stopped",
+    "p03DataAndNetworksRetained": true,
+    "browserCandidateContainer": "stopped",
+    "originalBrowserAcceptanceContainer": "restored and healthy",
+    "unrelatedContainersChanged": false
+  },
+  "boundaries": [
+    "Credentials, raw model responses and authentication material are not retained in this artifact.",
+    "P0.3 acceptance covers the three gaps found in P0.2; it is not a complete Runtime release certification.",
+    "This artifact does not certify IM channels, cancellation, upgrade, rollback, backup, restore, Linux host installation or macOS."
+  ],
+  "containsSecrets": false
+}

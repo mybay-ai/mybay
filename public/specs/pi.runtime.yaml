@@ -8,6 +8,10 @@ release:
   supportStatus: available
   certificationLevel: certified
   deploymentSupported: true
+  bridgeVersion: 0.1.1-beta
+  artifactIdentity:
+    kind: docker-image-id
+    value: sha256:b2ad5cf15c9f79a826a72ebda523b45ee2de80e53e438952227e06a8d79e0aa0
 runtime:
   type: pi
   image: mybay/pi-runtime

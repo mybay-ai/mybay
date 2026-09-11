@@ -1060,46 +1060,36 @@
     "timelineTip": "Stable release",
     "releases": [
       {
-        "version": "v0.1.28",
-        "date": "2026.09.07",
-        "badge": "Stable",
-        "summary": "MyBay Open Source v0.1.28 closes streaming recovery, cancellation, group collaboration, and restored Runtime convergence across the current Hermes and Pi control-plane paths.",
+        "version": "v0.1.29-preview.1",
+        "date": "2026.09.10",
+        "badge": "Preview",
+        "summary": "MyBay Open Source v0.1.29-preview.1 hardens the Hermes, Pi, and Codex Runtime release path with pinned identities, fail-closed certification, safer deployment recovery, and complete model/context presentation.",
         "sections": [
           {
-            "title": "A2A collaboration closure",
+            "title": "Runtime release identity",
             "type": "feature",
             "items": [
-              "Complete peer discovery, authenticated calls, tracked task lifecycle, cancellation, retry recovery, and durable activity evidence.",
-              "Add persistent multi-Agent rooms with exact peer routing, per-Agent result cards, and observable partial-failure handling.",
-              "Guide setup and recovery from the instance console so operators can verify A2A readiness without editing container files."
+              "Pin every deployable Runtime to a reproducible native version and immutable OCI digest or Docker image ID.",
+              "Upgrade retained certification to schema v3 so stale tags, bridge revisions, and mismatched artifacts cannot pass the release gate.",
+              "Keep Codex Experimental while reporting its verified native, bridge, and host-local build identity separately from Hermes and Pi Certified status."
             ]
           },
           {
-            "title": "Chat workspace",
-            "type": "feature",
+            "title": "Deployment reliability",
+            "type": "fix",
             "items": [
-              "Add slash commands and @Agent suggestions, attachment previews, safer file and URL rendering, and paginated conversation search.",
-              "Improve Markdown rhythm, responsive composer controls, code blocks, localized run durations, and group-run summaries.",
-              "Refine instance details and activity navigation so collaboration results and failures remain easy to inspect.",
-              "Keep the collaboration-room control and its setup panel visible across narrow, split-pane, and mobile layouts."
+              "Enable Pi deployments by default while preserving an explicit compatibility switch for existing installations.",
+              "Recover safely from exhausted Docker default address pools using only operator-configured private subnets after overlap checks.",
+              "Clear stale failure metadata after manual retries, port-conflict retries, and successful Runtime convergence."
             ]
           },
           {
-            "title": "Hermes model choices",
-            "type": "feature",
+            "title": "Conversation continuity",
+            "type": "fix",
             "items": [
-              "Add Claude Fable 5.1 to the Anthropic and OpenRouter model lists.",
-              "Add the GPT Astra, Astra Fast, Astra Flex, Astra Pro, Astra Pro Fast, and Astra Pro Flex routes available through OpenRouter.",
-              "Keep ChatGPT OAuth model availability tied to live account discovery instead of promising unsupported static models."
-            ]
-          },
-          {
-            "title": "Guided Windows delivery",
-            "type": "feature",
-            "items": [
-              "Allow hosts with 4 to under 8 GB of RAM to continue with a clear experimental low-memory warning.",
-              "Keep 8 GB as the recommended baseline and treat hardware virtualization as a separate mandatory prerequisite.",
-              "Keep guided diagnostics, repair, restart continuation, and data-preserving uninstall in the Windows package."
+              "Stream useful Hermes progress commentary during long tool runs instead of waiting for the final answer.",
+              "Return sanitized Runtime usage evidence so Pi and Codex model and context labels survive reload and run recovery.",
+              "Preserve current run evidence as the fallback for assistant message and context presentation without inventing missing historical data."
             ]
           }
         ]

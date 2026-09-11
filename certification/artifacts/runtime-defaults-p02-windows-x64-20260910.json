@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "artifactType": "runtime-defaults-p02-acceptance",
+  "capturedAt": "2026-09-10T07:46:45.793Z",
+  "source": {
+    "commit": "3d0272855798ef0867be849dea66c4d7f0049fda",
+    "controlImage": "mybay/local:p02-runtime-defaults-3d02728",
+    "controlImageId": "sha256:f981e46c4410159cba868dab8c88b0c5d5d0cab2b0e0fecdf92061da441c3517",
+    "mybayVersion": "0.1.28"
+  },
+  "environment": {
+    "platform": "Windows x64",
+    "runtimePlatform": "Docker Desktop Linux x86_64",
+    "dockerVersion": "29.7.2",
+    "controlUrl": "http://127.0.0.1:4370",
+    "isolatedControl": "mybay-p02-control-3d02728",
+    "freshDatabase": true
+  },
+  "catalog": {
+    "verdict": "PASS",
+    "runtimes": [
+      {
+        "type": "hermes",
+        "version": "v2026.8.27",
+        "imageRef": "nousresearch/hermes-agent:v2026.8.27",
+        "imageId": "sha256:e0df6adebddf29b91112aefc999d4aaf6846c9eb544faca5672a16a13590ff79"
+      },
+      {
+        "type": "pi",
+        "version": "0.85.1",
+        "imageRef": "mybay/pi-runtime:0.85.1",
+        "imageId": "sha256:b2ad5cf15c9f79a826a72ebda523b45ee2de80e53e438952227e06a8d79e0aa0"
+      },
+      {
+        "type": "codex",
+        "version": "0.154.0",
+        "imageRef": "mybay/codex-runtime:0.154.0",
+        "imageId": "sha256:20b46c8407fa9f4a40435653db85b00518d9fff132a7333b9482246357f42256"
+      }
+    ]
+  },
+  "observations": {
+    "cleanFirstAttempt": {
+      "verdict": "FAIL",
+      "affectedRuntimes": ["hermes", "pi", "codex"],
+      "step": "network_creating",
+      "errorCode": "NETWORK_CREATE_FAILED",
+      "cause": "Docker reported that all predefined address pools had been fully subnetted."
+    },
+    "isolatedNetworkRecovery": {
+      "verdict": "PASS",
+      "procedure": "Pre-created only each acceptance instance network on a dedicated 10.253.98.0/24 through 10.253.100.0/24 subnet, then retried the retained deployment task.",
+      "attempt": 2
+    },
+    "hermes": {
+      "deployment": "PASS",
+      "instanceId": "88629102-93d2-4bac-b86e-b2552a95a1bb",
+      "deploymentTaskId": "6630d881-acb0-4f44-b232-36487614d374",
+      "imageRef": "nousresearch/hermes-agent:v2026.8.27",
+      "health": "healthy",
+      "markerRunId": "e9d5e151-fd23-40ea-92f3-27175bba2931",
+      "markerObserved": true,
+      "sameConversationContext": "PASS",
+      "postRestartRecovery": "PASS",
+      "postRestartRunId": "9c830bd7-6be3-49e7-a1d4-2119ebb238c3"
+    },
+    "pi": {
+      "deployment": "PASS",
+      "instanceId": "4f8ada53-60c7-413c-9881-267619acdd7a",
+      "deploymentTaskId": "d9ace471-f725-4830-98f7-a0db9fce68c5",
+      "imageRef": "mybay/pi-runtime:0.85.1",
+      "health": "healthy",
+      "markerRunId": "7ee953d6-3ba3-4e94-8512-4babac62df15",
+      "markerObserved": true,
+      "sameConversationContext": "PASS",
+      "postRestartRecovery": "PASS",
+      "postRestartRunId": "9b2079e1-d61f-48d9-8c4f-b2d94d1188a5",
+      "persistedUsageEvidence": {
+        "model": "deepseek-v4-flash",
+        "contextTokens": 3595,
+        "contextWindow": 1000000,
+        "contextPercent": 0.36
+      }
+    },
+    "codex": {
+      "deployment": "PASS",
+      "instanceId": "d9bb6007-e4b7-40ab-8f8e-fbda8d86fbf7",
+      "deploymentTaskId": "3a18b3bd-1910-4194-8778-cecc6dbca268",
+      "imageRef": "mybay/codex-runtime:0.154.0",
+      "health": "healthy",
+      "conversationId": "973e0ba0-c15c-464e-9d0a-502164b75bb8",
+      "nativeSessionId": "codex-v2-f5d79d6e-6207-4c1b-a14c-2682cc4eb2a6",
+      "markerRunId": "bfec9c97-da75-4726-addd-cc2fba197e94",
+      "nativeTurnId": "8aa550c7-c5ea-4b37-9b20-2b6dbd3490cf",
+      "markerObserved": true,
+      "sameConversationContext": "PASS",
+      "postRestartRecovery": "PASS",
+      "postRestartRunId": "b54739fa-2de4-42c3-9237-e3b58adb2d4a",
+      "persistedUsageEvidence": {
+        "model": "gpt-6-astra",
+        "contextTokens": 17371,
+        "contextWindow": 258400,
+        "contextPercent": 6.72
+      }
+    },
+    "runApiUsagePresentation": {
+      "verdict": "FAIL",
+      "detail": "Pi and Codex model/context evidence was present in persisted usage_evidence but absent from the authenticated GET run response."
+    },
+    "retryMetadataCleanup": {
+      "verdict": "FAIL",
+      "detail": "All three healthy running instances retained error_detail, failed_at and compensated_at from the recovered first deployment attempt."
+    },
+    "browserAcceptance": {
+      "verdict": "NOT_RUN"
+    },
+    "externalChannels": {
+      "verdict": "NOT_RUN"
+    }
+  },
+  "summary": {
+    "runtimeDeploymentAfterIsolatedNetworkRecovery": "PASS",
+    "onlineConversation": "PASS",
+    "sameConversationContext": "PASS",
+    "postRestartRecovery": "PASS",
+    "cleanFirstAttempt": "FAIL",
+    "accepted": false
+  },
+  "environmentDisposition": {
+    "control": "stopped",
+    "runtimes": "stopped",
+    "isolatedDataRetained": true,
+    "isolatedNetworksRetained": true,
+    "unrelatedContainersChanged": false
+  },
+  "boundaries": [
+    "Credentials and raw model responses are not retained in this artifact.",
+    "The initial network failure is specific to the current Docker host address-pool state and remains a valid clean-install failure for this run.",
+    "This artifact does not certify browser UI, IM channels, cancellation, upgrade, rollback, backup, restore or another platform."
+  ],
+  "containsSecrets": false
+}

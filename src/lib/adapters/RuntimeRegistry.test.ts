@@ -6,7 +6,7 @@ describe("client RuntimeRegistry", () => {
     const runtimes = runtimeRegistry.listRegisteredRuntimes();
     expect(runtimes.map((runtime) => runtime.type)).toEqual(["hermes", "pi"]);
     expect(runtimes[0].manifest.runtime.image).toBe("nousresearch/hermes-agent");
-    expect(runtimes[1].manifest.release).toEqual({
+    expect(runtimes[1].manifest.release).toMatchObject({
       supportStatus: "available",
       certificationLevel: "certified",
       deploymentSupported: true,

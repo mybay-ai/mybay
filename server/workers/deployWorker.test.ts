@@ -64,7 +64,11 @@ describe("deployment worker port conflict recovery", () => {
     );
     expect(state.dbAdapter.updateInstanceRecord).toHaveBeenCalledWith(
       "instance-1",
-      expect.objectContaining({ status: "provisioning", desired_state: "running" })
+      expect.objectContaining({
+        status: "provisioning", desired_state: "running", health_status: "unknown",
+        error_code: null, error_message: null, error_detail: null,
+        deployment_error: null, failed_at: null, compensated_at: null,
+      })
     );
   });
 

@@ -29,4 +29,12 @@ describe("Runtime catalog", () => {
       expect(Object.isFrozen(definition.capabilities.imChannels)).toBe(true);
     }
   });
+
+  it("pins every deployable Runtime to a reproducible version and image tag", () => {
+    for (const definition of RUNTIME_DEFINITIONS.filter((item) => item.release.deploymentSupported)) {
+      expect(definition.version).not.toBe("latest");
+      expect(definition.runtime.tag).not.toBe("latest");
+      expect(definition.release.artifactIdentity?.value).toMatch(/^sha256:[a-f0-9]{64}$/);
+    }
+  });
 });

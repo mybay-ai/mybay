@@ -2,6 +2,7 @@ import { dbAdapter } from "../db";
 import { isQuotaConsumingStatus } from "../utils/quota";
 import { buildInstancePublicUrl } from "../utils/publicUrl";
 import { resolveInstanceDiskLimitMb } from "../services/instances/instanceStorageQuotaService";
+import { HERMES_RUNTIME_DEFINITION } from "../../shared/runtimeCatalog";
 
 async function enrichDiskLimitsForInstancesBatch(instances: any[]): Promise<any[]> {
   if (!instances || instances.length === 0) return instances;
@@ -105,9 +106,9 @@ export const instancesRepo = {
       config_json: config_json,
       user_id: userId,
       owner_id: userId,
-      agent_image: instance.agent_image || process.env.MY_BAY_IMAGE || 'nousresearch/hermes-agent',
-      agent_image_tag: instance.agent_image_tag || process.env.MY_BAY_IMAGE_TAG || 'latest',
-      agent_version: instance.agent_version || process.env.MY_BAY_IMAGE_TAG || 'latest',
+      agent_image: instance.agent_image || process.env.MY_BAY_IMAGE || HERMES_RUNTIME_DEFINITION.runtime.image,
+      agent_image_tag: instance.agent_image_tag || process.env.MY_BAY_IMAGE_TAG || HERMES_RUNTIME_DEFINITION.runtime.tag,
+      agent_version: instance.agent_version || process.env.MY_BAY_IMAGE_TAG || HERMES_RUNTIME_DEFINITION.version,
       resolved_version: instance.resolved_version || null,
       previous_image_tag: instance.previous_image_tag || null,
       last_upgrade_at: instance.last_upgrade_at || null,
@@ -204,9 +205,9 @@ export const instancesRepo = {
       createdAt: row.created_at || row.createdAt,
       updatedAt: row.updated_at || row.updatedAt,
       config_json: configJsonStr,
-      agent_image: row.agent_image || process.env.MY_BAY_IMAGE || 'nousresearch/hermes-agent',
-      agent_image_tag: row.agent_image_tag || process.env.MY_BAY_IMAGE_TAG || 'latest',
-      agent_version: row.agent_version || process.env.MY_BAY_IMAGE_TAG || 'latest',
+      agent_image: row.agent_image || process.env.MY_BAY_IMAGE || HERMES_RUNTIME_DEFINITION.runtime.image,
+      agent_image_tag: row.agent_image_tag || process.env.MY_BAY_IMAGE_TAG || HERMES_RUNTIME_DEFINITION.runtime.tag,
+      agent_version: row.agent_version || process.env.MY_BAY_IMAGE_TAG || HERMES_RUNTIME_DEFINITION.version,
       resolved_version: row.resolved_version || null,
       previous_image_tag: row.previous_image_tag || null,
       last_upgrade_at: row.last_upgrade_at || null,

@@ -1,7 +1,7 @@
 {
     "name": "mybay-local",
-    "version": "0.1.28",
-    "description": "A local-first, self-hosted control plane for managing Hermes Agent instances.",
+    "version": "0.1.29-preview.1",
+    "description": "A local-first, self-hosted control plane for isolated Hermes, Pi, and Codex Agent Runtimes.",
     "license": "AGPL-3.0-only",
     "repository": {
         "type": "git",
@@ -123,5 +123,8 @@
         "typescript-eslint": "^8.67.0",
         "vite": "^6.4.3",
         "vitest": "^4.1.8"
+    },
+    "overrides": {
+        "qs": "6.16.0"
     }
 }

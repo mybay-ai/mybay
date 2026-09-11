@@ -30,6 +30,7 @@ import {
   shouldPublishWatchdogStatusUnknown,
   shouldRunTerminalWatchdog,
 } from "./run/runTerminalWatchdog";
+import { readLocalRunUsage, type LocalRunUsage } from "../../../shared/localRunUsage";
 
 export type { RunsCapabilityState } from "./runCapabilityProbe";
 
@@ -43,6 +44,7 @@ export interface ChatRunMetrics {
   usagePromptTokens?: number | null;
   usageCompletionTokens?: number | null;
   usageTotalTokens?: number | null;
+  usageEvidence?: LocalRunUsage | null;
   creditsCharged?: number | null;
   creditBalanceAfter?: number | null;
   startedAt?: string | number | null;
@@ -344,6 +346,7 @@ export function useChatRuns({
     usagePromptTokens: typeof source?.usagePromptTokens === "number" ? source.usagePromptTokens : (typeof source?.usage_prompt_tokens === "number" ? source.usage_prompt_tokens : null),
     usageCompletionTokens: typeof source?.usageCompletionTokens === "number" ? source.usageCompletionTokens : (typeof source?.usage_completion_tokens === "number" ? source.usage_completion_tokens : null),
     usageTotalTokens: typeof source?.usageTotalTokens === "number" ? source.usageTotalTokens : (typeof source?.usage_total_tokens === "number" ? source.usage_total_tokens : null),
+    usageEvidence: readLocalRunUsage(source?.usageEvidence ?? source?.usage_evidence),
     creditsCharged: typeof source?.creditsCharged === "number" ? source.creditsCharged : (typeof source?.credits_charged === "number" ? source.credits_charged : null),
     creditBalanceAfter: typeof source?.creditBalanceAfter === "number" ? source.creditBalanceAfter : (typeof source?.credit_balance_after === "number" ? source.credit_balance_after : null),
     startedAt: source?.startedAt || source?.started_at || null,

@@ -17,7 +17,7 @@ English · [简体中文](./README.zh-CN.md)
 
 </div>
 
-> **Current release: `v0.1.28`.** Public interfaces, Runtime adapters, deployment details, and upgrade behavior may still change during the 0.x series.
+> **Current release candidate: `v0.1.29-preview.1`.** Public interfaces, Runtime adapters, deployment details, and upgrade behavior may still change during the 0.x series.
 
 ![MyBay Open Source overview](./docs/images/main-open-source.png)
 
@@ -50,8 +50,9 @@ MyBay separates the product control plane from the Agent Runtime. You can choose
 
 | Runtime foundation | Release status | Best suited for | Declared product surface |
 | --- | --- | --- | --- |
-| **Hermes Agent** | Certified and verified | General-purpose, tool-rich Agent workflows | Streaming and batch chat, files, shell, browser, schedules, Web and supported messaging channels |
-| **Pi Agent** | Certified and verified | Coding and workspace-oriented Agent workflows | Streaming chat, files, shell, cancellation, session recovery, approvals, usage, and Web access |
+| **Hermes Agent** | Certified; exact OCI identity verified | General-purpose, tool-rich Agent workflows | Streaming and batch chat, files, shell, browser, schedules, Web and supported messaging channels |
+| **Pi Agent** | Certified; exact host-local build verified | Coding and workspace-oriented Agent workflows | Streaming chat, files, shell, cancellation, session recovery, approvals, usage, and Web access |
+| **Codex** | Experimental; exact host-local build verified | Native coding Agent workflows with a Codex / ChatGPT account | Streaming chat, files, shell, cancellation, native session continuity, approvals, and usage evidence |
 | **More foundations** | Roadmap | Additional open-source Agent Runtimes | Integrated through the Runtime manifest, adapter contract, capability guards, and certification ladder |
 
 The generated [Runtime Capability Matrix](./docs/runtime-capability-matrix.md) is the source of truth for currently declared capabilities and channels. [MyBay Runtime Certification](./docs/runtime-certification.md) reports evidence-backed verification separately; registration or a capability declaration alone does not prove product E2E behavior.
@@ -79,7 +80,7 @@ chmod +x quick-start.sh
 ./quick-start.sh
 ```
 
-Open [http://localhost:3000](http://localhost:3000), add a model provider, and deploy your first Agent with the Hermes Agent or Pi Agent foundation. Never share or commit `.env`.
+Open [http://localhost:3000](http://localhost:3000), add a model provider or connect a Codex / ChatGPT account, and deploy your first Agent with Hermes Agent, Pi Agent, or Experimental Codex. Never share or commit `.env`.
 
 For a first task that creates a file, select **Agent mode** beside the chat input. The default **Quick mode** replies with text only and does not execute tools or save files.
 
@@ -107,7 +108,7 @@ Chat with an Agent while viewing execution progress, generated files, file-chang
 
 ## Runtime projects and attribution
 
-MyBay is an independent open-source project. Hermes Agent and Pi Agent are separate third-party projects integrated through their public packages, Runtime, or container interfaces. Their inclusion does not imply sponsorship, endorsement, or affiliation. MyBay is not an official Nous Research or Earendil Works product.
+MyBay is an independent open-source project. Hermes Agent, Pi Agent, and OpenAI Codex are separate third-party projects integrated through their public packages, Runtime, or container interfaces. Their inclusion does not imply sponsorship, endorsement, or affiliation. MyBay is not an official product of Nous Research, Earendil Works, or OpenAI.
 
 See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for licensing and attribution details. The hosted MyBay service at [mybay.ai](https://mybay.ai) is a separate commercial offering and is not required to install or operate this repository.
 
@@ -283,8 +284,9 @@ data/
 
 ## Runtime support status
 
-- **Hermes Agent:** Available, deployable, and verified at MyBay's `certified` level. The declared surface includes streaming and batch conversations, cancellation, files, shell, browser, schedules, Web, and supported messaging channels.
-- **Pi Agent:** Available, deployable, and verified at MyBay's `certified` level. Its declared surface includes streaming conversations, cancellation, files, shell, and Web access, with native session recovery, attributable usage, stable tool events, approval handling, and persisted artifacts.
+- **Hermes Agent:** Available and deployable at MyBay's `certified` level. The pinned v2026.8.27 image is bound to its retained OCI digest and Windows Docker Desktop certification evidence.
+- **Pi Agent:** Available and deployable by default at MyBay's `certified` level. Pi 0.85.1 and bridge 0.1.1-beta are bound to the retained Windows Docker image identity; explicit `MYBAY_ENABLE_PI_RUNTIME=false` remains supported for existing installations.
+- **Codex:** Available and deployable as `experimental`. The current native 0.154.0 / bridge 0.1.0-experimental.3 host-local image is exactly bound to retained lifecycle evidence; cross-platform certification and public image publication remain pending.
 
 The control plane applies capability guards to features a selected Runtime does not declare. Check the generated [capability matrix](./docs/runtime-capability-matrix.md) before depending on a particular channel or conversation mode.
 
@@ -297,7 +299,7 @@ flowchart TD
   C --> S[(SQLite)]
   C --> D[Docker Engine]
   C --> T[Traefik - server mode]
-  D --> R[Hermes or Pi Agent Runtime Container]
+  D --> R[Hermes, Pi, or Codex Agent Runtime Container]
   R --> A[Runtime API and UI]
   R --> M[Model Providers]
 ```
@@ -325,12 +327,13 @@ See [ROADMAP.md](./ROADMAP.md) for completed work and the focused next milestone
 
 ## Agent Runtime Specification (`mybay.runtime.yaml`)
 
-MyBay includes an extensible **Agent Runtime Specification** for additional open-source runtimes. Hermes Agent and Pi Agent are both certified in the current repository evidence:
+MyBay includes an extensible **Agent Runtime Specification** for additional open-source runtimes. Hermes and Pi have exact schema v3 evidence for the current pinned builds; Codex is Experimental with exact host-local evidence:
 
 - **JSON Schema Validation**: `/public/schemas/mybay.runtime.schema.json`
 - **Example Runtimes**:
   - Hermes Agent: `/public/specs/mybay.runtime.yaml`
   - Pi Agent runtime manifest: `/public/specs/pi.runtime.yaml`
+  - Codex runtime manifest: `/public/specs/codex.runtime.yaml`
 
 With the `mybay.runtime.yaml` manifest, developers can declare container ports, health check endpoints, data volume mounts, and supported IM channels (Feishu, Telegram, Discord, Slack, etc.).
 

@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "artifactType": "runtime-control-plane-data-safety-evidence",
+  "phase": "P0.4",
+  "observedAt": "2026-09-11T11:27:44.3397490+08:00",
+  "baseCommit": "85c8bd708604c1cdbfe9cf7957ad0b0fa9530d8e",
+  "packageVersion": "0.1.29-preview.1",
+  "environment": {
+    "host": "Windows x64",
+    "node": "25.2.1",
+    "dockerDesktop": true,
+    "controlUrl": "http://127.0.0.1:4372",
+    "controlImage": "mybay/local:0.1.29-preview.1-candidate10",
+    "controlImageId": "sha256:3556fe632cb43e3aab317765be837fb5d8019124f85eea887b28d3f974adc3fb",
+    "codexImageId": "sha256:20b46c8407fa9f4a40435653db85b00518d9fff132a7333b9482246357f42256"
+  },
+  "observations": {
+    "sqliteStartupGuard": {
+      "status": "passed",
+      "evidence": "A malformed existing SQLite file produced LOCAL_SQLITE_INTEGRITY_FAILED before schema setup; the original bytes remained unchanged and no WAL/SHM sidecars were created."
+    },
+    "gracefulShutdownCheckpoint": {
+      "status": "passed",
+      "evidence": "The local-store test wrote a WAL-backed marker, closed through closeLocalDatabase, reopened read-only, passed quick_check and retained the latest row."
+    },
+    "sealedBackupRestore": {
+      "status": "passed",
+      "evidence": "The existing Node SQLite backup and recovery suites passed with control data, encrypted credentials, conversation history, Codex-shaped native WAL/session state, workspace files, manifest hashes, symlink rejection, restore-to-new-directory and post-copy SQLite integrity verification."
+    },
+    "zipReaderReplacement": {
+      "status": "passed",
+      "from": "adm-zip 0.6.0",
+      "to": "fflate 0.8.3",
+      "evidence": "Production ZIP paths use bounded memory-only reads, inflate only selected members, reject traversal and duplicate paths, and expose no filesystem extraction API. npm audit --omit=dev reported zero known vulnerabilities."
+    },
+    "targetedRegression": {
+      "status": "passed",
+      "tests": {
+        "files": 9,
+        "passed": 87,
+        "skipped": 3
+      },
+      "commands": [
+        "npx vitest run server/utils/readOnlyZip.test.ts server/utils/configArchiveSecurity.test.ts server/utils/uploadSecurity.test.ts server/utils/officeArtifactPreview.test.ts server/localStore.test.ts scripts/create-release.test.ts scripts/mybay-ops.test.ts scripts/mybay-ops.recovery.test.ts --no-file-parallelism",
+        "npx vitest run server/routes/instances/fileUpload.routes.test.ts --no-file-parallelism",
+        "npm run typecheck",
+        "npm run lint -- --quiet",
+        "npm audit --omit=dev --json"
+      ]
+    },
+    "fullSourceGate": {
+      "status": "passed",
+      "evidence": "npm run check passed Runtime and documentation validation, ESLint, three TypeScript boundaries, 375 Vitest files plus 12 native Codex bridge tests, copy/i18n/API-contract guards, and the production build.",
+      "tests": {
+        "vitestPassed": 2094,
+        "vitestSkipped": 6,
+        "codexBridgePassed": 12
+      }
+    },
+    "liveControlDatabase": {
+      "status": "passed",
+      "evidence": "npm run doctor against the active v0.1.29-preview.1 SQLite path reported integrity ok and schema 8. Secret configuration checks were unavailable in the host shell and are not counted here."
+    },
+    "liveServiceContinuity": {
+      "status": "passed",
+      "evidence": "The existing controller returned healthy v0.1.29-preview.1 and both the controller and target Codex Runtime retained restart count 0 during P0.4."
+    }
+  },
+  "notRun": [
+    "Abrupt host power-loss recovery",
+    "A stopped-writer whole-workspace backup and production cutover",
+    "Cross-platform restore",
+    "Lossless recovery of an in-flight tool execution"
+  ],
+  "boundary": "This evidence hardens and validates shared control-plane data handling and ZIP processing. It does not certify Codex backup-restore, upgrade, rollback or security at the Certified level, and it does not raise the declared or verified Codex certification level."
+}

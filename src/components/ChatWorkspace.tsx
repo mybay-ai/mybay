@@ -1432,7 +1432,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
               runtimeType={selectedInstance?.runtime_type}
               selectedInstanceName={selectedInstance?.name}
               runMetrics={selectedRunMetrics}
-              contextUsage={conversationContextUsage}
+              contextUsage={conversationContextUsage ?? selectedRunMetrics?.usageEvidence ?? null}
               manualCompactionSupported={runCapabilities.features.manual_compaction === true}
               chatMode={chatMode}
               onChatModeChange={handleChatModeChange}

@@ -107,8 +107,8 @@ function readStringField(source: unknown, keys: string[]) {
 }
 
 
-function getAssistantTokenUsage(message: ChatMessage) {
-  const evidence = readLocalRunUsage(message.metadata?.usage_evidence);
+function getAssistantTokenUsage(message: ChatMessage, runMetrics?: ChatRunMetrics | null) {
+  const evidence = readLocalRunUsage(message.metadata?.usage_evidence) ?? runMetrics?.usageEvidence ?? null;
   return evidence ? evidence.totalTokens : usageNumber(message.usage_total_tokens);
 }
 
@@ -117,8 +117,8 @@ function formatTokenUsage(value: number | null | undefined) {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(value);
 }
 
-function getAssistantModelPresentation(message: ChatMessage, liveConfiguredModel: string, t: (key: string) => string) {
-  const reportedModel = readLocalRunUsage(message.metadata?.usage_evidence)?.model;
+function getAssistantModelPresentation(message: ChatMessage, liveConfiguredModel: string, t: (key: string) => string, runMetrics?: ChatRunMetrics | null) {
+  const reportedModel = (readLocalRunUsage(message.metadata?.usage_evidence) ?? runMetrics?.usageEvidence ?? null)?.model;
   if (reportedModel) return { label: reportedModel, title: t("chatWorkspace.usage.modelReportedTitle") };
   const configuredSnapshot = readLocalModelEvidence(message.metadata?.model_evidence)?.model;
   if (configuredSnapshot) return { label: configuredSnapshot, title: t("chatWorkspace.usage.modelConfiguredTitle") };
@@ -182,14 +182,14 @@ function ChatMessageBubbleBody({
     setFeedback(message.user_feedback === "like" ? "up" : message.user_feedback === "dislike" ? "down" : null);
   }, [message.id, message.user_feedback]);
 
-  const assistantModel = useMemo(() => getAssistantModelPresentation(message, fallbackModelLabel, t), [message, fallbackModelLabel, t]);
+  const assistantModel = useMemo(() => getAssistantModelPresentation(message, fallbackModelLabel, t, runMetrics), [message, fallbackModelLabel, t, runMetrics]);
   const assistantModelLabel = assistantModel.label;
   const failureInfo = useMemo(() => humanizeChatError(
     { code: message.error_code, message: message.error_message },
     t("chatWorkspace.messageFailed")
   ), [message.error_code, message.error_message, t]);
   const failureMessage = failureInfo.message;
-  const assistantTokenUsage = useMemo(() => getAssistantTokenUsage(message), [message]);
+  const assistantTokenUsage = useMemo(() => getAssistantTokenUsage(message, runMetrics), [message, runMetrics]);
   const assistantTokenUsageLabel = useMemo(() => formatTokenUsage(assistantTokenUsage), [assistantTokenUsage]);
   const assistantDurationLabel = formatLocalizedDuration(message.duration_ms ?? runMetrics?.durationMs, unit => t(`chatWorkspace.timelineDurationUnits.${unit}`));
 

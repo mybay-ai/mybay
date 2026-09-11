@@ -1,11 +1,16 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "runtime": {
     "type": "pi",
     "providerKey": "pi-rpc",
     "contractVersion": 1,
-    "version": "0.85.1",
-    "imageRef": "mybay/pi-runtime:0.85.1"
+    "nativeVersion": "0.85.1",
+    "bridgeVersion": "0.1.1-beta",
+    "imageRef": "mybay/pi-runtime:0.85.1",
+    "artifactIdentity": {
+      "kind": "docker-image-id",
+      "value": "sha256:b2ad5cf15c9f79a826a72ebda523b45ee2de80e53e438952227e06a8d79e0aa0"
+    }
   },
   "environments": [
     {
@@ -29,6 +34,28 @@
       "runtimeVersion": "Pi 0.85.1; bridge 0.1.1-beta",
       "mybayVersion": "0.1.28",
       "headless": false
+    },
+    {
+      "id": "windows-docker-desktop-p03-pi-20260910",
+      "platform": "windows",
+      "platformVersion": "Windows 10 Pro",
+      "architecture": "x64",
+      "containerEngine": "docker-desktop",
+      "containerEngineVersion": "29.7.2",
+      "runtimeVersion": "Pi 0.85.1; bridge 0.1.1-beta",
+      "mybayVersion": "0.1.28",
+      "headless": false
+    },
+    {
+      "id": "windows-docker-desktop-v0129-preview1-pi-20260910",
+      "platform": "windows",
+      "platformVersion": "Windows 10 Pro",
+      "architecture": "x64",
+      "containerEngine": "docker-desktop",
+      "containerEngineVersion": "29.7.2",
+      "runtimeVersion": "Pi 0.85.1; bridge 0.1.1-beta",
+      "mybayVersion": "0.1.29-preview.1",
+      "headless": true
     }
   ],
   "artifacts": [
@@ -39,6 +66,18 @@
     {
       "path": "certification/artifacts/runtime-v0128-streaming-smoke-20260908.json",
       "sha256": "59da8abd22eb8849ae3663e4e86570a8bff6c41fa1f1002de49a5d45d7777892"
+    },
+    {
+      "path": "certification/artifacts/runtime-defaults-p02-windows-x64-20260910.json",
+      "sha256": "fdbf08bc8f84567191caae1cdc82c4d9b4d4c049c8ce76aa878468cf75f5d9cd"
+    },
+    {
+      "path": "certification/artifacts/runtime-hardening-p03-windows-x64-20260910.json",
+      "sha256": "33aff47f243fdf1d3e84a3ef89e9065bea4abaaf9b3f2a42794068b1b62c7429"
+    },
+    {
+      "path": "certification/artifacts/runtime-v0129-preview1-candidate-20260910.json",
+      "sha256": "47bb9ae9ebd31770bcad1208d9405b74d4678355e1f0fe76fbb6e60ca9c4511d"
     }
   ],
   "checks": [
