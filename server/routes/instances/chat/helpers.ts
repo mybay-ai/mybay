@@ -4,7 +4,18 @@ import { dbAdapter } from "../../../db";
 import { resolveProviderRegistryKey } from "../../../../shared/providerRegistryUtils";
 import { providerRegistry } from "../../../../shared/providerRegistry";
 import { isMaskedSecretPlaceholder } from "../../../utils/sanitizer";
-import { decrypt } from "../../../crypto";
+import { decrypt, encrypt } from "../../../crypto";
+import {
+  normalizeCodexAccountAuth,
+  readCodexRuntimeAccountAuth,
+  writeCodexRuntimeAccountAuth,
+} from "../../../runtime/adapters/codex/CodexRuntimeEnvironment";
+import { resolveStoredCredentialApiKey } from "../../../utils/savedProviderCredential";
+
+function isCodexChatGptAccountMode(instance: any, config: any): boolean {
+  return String(instance?.runtime_type || instance?.runtimeType || "").toLowerCase() === "codex"
+    && String(config?.codexAuthMode || "chatgpt").toLowerCase() === "chatgpt";
+}
 export function normalizeChatTemperature(provider: string, model: string, temperature?: number): number | undefined {
   const p = String(provider || "").toLowerCase();
   const m = String(model || "").toLowerCase();
@@ -78,14 +89,25 @@ export async function buildAssistContext(
   instance: any,
   config: any,
   conversation: any,
-  history: any[]
+  history: any[],
+  latestFailure?: any | null
 ): Promise<string> {
-  const provider = config.provider || "gemini";
-  const model = config.model || "gemini-3.5-flash";
+  const isCodexAccountMode = isCodexChatGptAccountMode(instance, config);
+  const rawProvider = isCodexAccountMode
+    ? "openai-codex"
+    : config.provider || config.model_provider || instance.model_provider || "gemini";
+  const provider = resolveProviderRegistryKey(
+    rawProvider,
+    config.model || instance.model_name,
+    config.baseUrl || config.base_url || config.model_base_url || instance.model_base_url
+  );
+  const providerConf = providerRegistry[provider];
+  const model = config.model || config.current_model || config.MODEL || instance.model_name || providerConf?.defaultModel || "unknown";
   let baseUrlHost = "unknown";
-  if (config.baseUrl) {
+  const resolvedBaseUrl = config.baseUrl || config.base_url || config.model_base_url || instance.model_base_url || providerConf?.defaultBaseUrl;
+  if (resolvedBaseUrl) {
     try {
-      let urlStr = config.baseUrl;
+      let urlStr = resolvedBaseUrl;
       if (!urlStr.includes("://")) {
         urlStr = "https://" + urlStr;
       }
@@ -94,7 +116,8 @@ export async function buildAssistContext(
     } catch (err) {}
   }
 
-  const hasApiKey = !!(config.providerApiKey || config.apiKey || config.providerCredentialId);
+  const hasModelCredential = !!(config.providerApiKey || config.apiKey || config.providerCredentialId || config.codexAuthJson);
+  const authentication = isCodexAccountMode ? "ChatGPT OAuth" : "API Key / 已保存凭据";
   const status = instance.status || "unknown";
   const channels = config.channel || instance.configSummary?.channel || [];
 
@@ -104,7 +127,8 @@ export async function buildAssistContext(
 - 供应商 (Provider): ${provider}
 - 模型 (Model): ${model}
 - 基础 API 地址 (BaseUrl Host): ${baseUrlHost}
-- 是否配置了 API 密钥 (HasApiKey): ${hasApiKey}
+- 认证方式 (Authentication): ${authentication}
+- 是否配置了模型凭据 (HasModelCredential): ${hasModelCredential}
 - 实例当前运行状态 (Instance Status): ${status}
 - 启用的通讯渠道 (Channels): ${JSON.stringify(channels)}
 
@@ -116,9 +140,15 @@ export async function buildAssistContext(
 
   if (skillId === "explain_last_error") {
     // Find the last failed or errored message in the current conversation
-    const failedMsg = [...history].reverse().find(h => h.status === 'failed' || h.error_code);
+    const failedMsg = latestFailure || [...history].reverse().find(h => h.status === 'failed' || h.error_code);
     const lastErrorCode = failedMsg?.error_code || "未知";
-    const lastErrorMessage = failedMsg?.content || "无错误细节描述";
+    const knownErrorMessages: Record<string, string> = {
+      API_KEY_MISSING: "控制平面在该次直接回答请求中没有解析到可用的 API Key。",
+      CODEX_AUTH_REQUIRED: "该次请求未获得有效的 Codex ChatGPT OAuth 凭据，需要重新授权。",
+      MODEL_CONFIG_MISSING: "该次请求缺少可用的模型或模型服务商配置。",
+      DIRECT_MODEL_CHAT_FAILED: "该次直接模型调用失败；上游错误详情未持久化时应以错误码和当前配置为准。"
+    };
+    const lastErrorMessage = failedMsg?.content || knownErrorMessages[lastErrorCode] || "错误详情未持久化，请以错误码为准。";
 
     return `你是一位资深全栈工程师和系统诊断专家。正在进行 explain_last_error (解释上一次聊天错误)。
 以下是上下文信息：
@@ -127,6 +157,8 @@ export async function buildAssistContext(
 - 供应商 (Provider): ${provider}
 - 模型 (Model): ${model}
 - 基础 API 地址 (BaseUrl Host): ${baseUrlHost}
+- 认证方式 (Authentication): ${authentication}
+- 当前是否配置模型凭据 (HasModelCredential): ${hasModelCredential}
 - 实例运行状态 (Instance Status): ${status}
 
 请在诊断报告中用中文解答以下内容：
@@ -171,8 +203,12 @@ export async function resolveQuickChatModelConfig(
   reqBodyModel?: string,
   userId?: string
 ) {
+  const isCodexAccountMode = isCodexChatGptAccountMode(instance, config);
+
   // 1. Resolve Provider
-  const rawProvider = config.provider || config.model_provider || instance.model_provider;
+  const rawProvider = isCodexAccountMode
+    ? "openai-codex"
+    : config.provider || config.model_provider || instance.model_provider;
   if (!rawProvider) {
     throw {
       status: 424,
@@ -206,7 +242,22 @@ export async function resolveQuickChatModelConfig(
   }
 
   // 4. Resolve Provider API Key
-  const rawKey = config.providerApiKey || config.apiKey;
+  const credentialId = typeof config.providerCredentialId === "string" ? config.providerCredentialId.trim() : "";
+  let codexCredentialPayload = "";
+  if (isCodexAccountMode && instance?.id) {
+    codexCredentialPayload = readCodexRuntimeAccountAuth(String(instance.id)) || "";
+  }
+  if (isCodexAccountMode && !codexCredentialPayload && credentialId && userId) {
+    try {
+      const credential = await dbAdapter.getCredentialById(credentialId, userId);
+      if (credential?.type === "openai-codex") {
+        codexCredentialPayload = resolveStoredCredentialApiKey(credential.key || credential.encrypted_value || credential.key_encrypted);
+      }
+    } catch (error) {
+      console.warn("[resolveQuickChatModelConfig] Failed to load Codex OAuth credential:", error instanceof Error ? error.message : "unknown");
+    }
+  }
+  const rawKey = isCodexAccountMode ? codexCredentialPayload || config.codexAuthJson : config.providerApiKey || config.apiKey;
   let providerApiKey = "";
 
   if (rawKey && !isMaskedSecretPlaceholder(rawKey)) {
@@ -217,8 +268,20 @@ export async function resolveQuickChatModelConfig(
     }
   }
 
+  if (isCodexAccountMode) {
+    try {
+      providerApiKey = normalizeCodexAccountAuth(providerApiKey);
+    } catch {
+      throw {
+        status: 401,
+        error: "CODEX_AUTH_REQUIRED",
+        message: "当前 Codex 实例需要重新连接 OpenAI OAuth，完成授权后再使用直接回答。"
+      };
+    }
+  }
+
   // Try loading from credential if key is missing or is a masked placeholder
-  if ((!providerApiKey || isMaskedSecretPlaceholder(providerApiKey)) && config.providerCredentialId && userId) {
+  if (!isCodexAccountMode && (!providerApiKey || isMaskedSecretPlaceholder(providerApiKey)) && config.providerCredentialId && userId) {
     try {
       const cred = await dbAdapter.getCredentialById(config.providerCredentialId, userId);
       if (cred && cred.key && !isMaskedSecretPlaceholder(cred.key)) {
@@ -230,7 +293,7 @@ export async function resolveQuickChatModelConfig(
   }
 
   // Fallback to platform environment variables
-  if (!providerApiKey || isMaskedSecretPlaceholder(providerApiKey)) {
+  if (!isCodexAccountMode && (!providerApiKey || isMaskedSecretPlaceholder(providerApiKey))) {
     if (canonicalProvider === "gemini") {
       providerApiKey = process.env.GEMINI_API_KEY || "";
     } else if (canonicalProvider === "openai") {
@@ -244,17 +307,55 @@ export async function resolveQuickChatModelConfig(
 
   if (!providerApiKey || isMaskedSecretPlaceholder(providerApiKey)) {
     throw {
-      status: 424,
-      error: "API_KEY_MISSING",
-      message: `无法获取服务商 "${canonicalProvider}" 的 API 密钥。由于后端无权直接读取容器内局部 .env，请在麦贝控制台的实例设置或平台凭证中心重新配置该供应商的 API 密钥。`
+      status: isCodexAccountMode ? 401 : 424,
+      error: isCodexAccountMode ? "CODEX_AUTH_REQUIRED" : "API_KEY_MISSING",
+      message: isCodexAccountMode
+        ? "当前 Codex 实例需要重新连接 OpenAI OAuth，完成授权后再使用直接回答。"
+        : `无法获取服务商 "${canonicalProvider}" 的 API 密钥。由于后端无权直接读取容器内局部 .env，请在麦贝控制台的实例设置或平台凭证中心重新配置该供应商的 API 密钥。`
     };
   }
+
+  const onOAuthRefresh = isCodexAccountMode && instance?.id && userId
+    ? async (refreshedPayload: Record<string, unknown>) => {
+      const normalizedAuth = normalizeCodexAccountAuth(JSON.stringify(refreshedPayload));
+      const latestInstance: any = await dbAdapter.getInstanceById(String(instance.id));
+      if (!latestInstance) throw new Error("CODEX_OAUTH_PERSIST_INSTANCE_MISSING");
+      const latestConfig = typeof latestInstance.config_json === "string"
+        ? JSON.parse(latestInstance.config_json || "{}")
+        : { ...(latestInstance.config_json || {}) };
+      if (String(latestInstance.runtime_type || "").toLowerCase() !== "codex" || String(latestConfig.codexAuthMode || "chatgpt").toLowerCase() !== "chatgpt") {
+        throw new Error("CODEX_OAUTH_PERSIST_MODE_CHANGED");
+      }
+      latestConfig.codexAuthJson = encrypt(normalizedAuth);
+      latestConfig.provider = "openai";
+      latestConfig.codexAuthMode = "chatgpt";
+      if (credentialId) latestConfig.providerCredentialId = credentialId;
+      writeCodexRuntimeAccountAuth(String(instance.id), normalizedAuth);
+      await dbAdapter.updateInstanceConfig(String(instance.id), JSON.stringify(latestConfig));
+      if (credentialId) {
+        const auth = JSON.parse(normalizedAuth);
+        await dbAdapter.updateCredential(credentialId, userId, {
+          key: encrypt(JSON.stringify({
+            version: 1,
+            provider: "openai-codex",
+            auth_type: "oauth_external",
+            credential_pool: "openai-codex",
+            base_url: "https://chatgpt.com/backend-api/codex",
+            ...auth,
+          })),
+          verification_status: "verified",
+          verified_at: new Date().toISOString(),
+        });
+      }
+    }
+    : undefined;
 
   return {
     provider: canonicalProvider,
     model,
     baseUrl,
-    providerApiKey
+    providerApiKey,
+    ...(onOAuthRefresh ? { onOAuthRefresh } : {}),
   };
 }
 

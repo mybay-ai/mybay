@@ -3,6 +3,7 @@ import { Server, ChevronRight, Zap, Cpu, HardDrive, Globe, Lock } from "lucide-r
 import { Label, Input, Button } from "../../components/ui";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { CODEX_RUNTIME_DEFINITION, HERMES_RUNTIME_DEFINITION, PI_RUNTIME_DEFINITION } from "../../../shared/runtimeCatalog";
 
 interface ContainerConfigStepProps {
   data: any;
@@ -29,6 +30,9 @@ export function ContainerConfigStep({
   const [showAdvanced, setShowAdvanced] = useState(!isTemplateDeployment);
   const canEditAgentImage = currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
   const isPiRuntime = data.runtime_type === "pi";
+  const isCodexRuntime = data.runtime_type === "codex";
+  const runtimeDefinition = isPiRuntime ? PI_RUNTIME_DEFINITION : isCodexRuntime ? CODEX_RUNTIME_DEFINITION : HERMES_RUNTIME_DEFINITION;
+  const isManagedRuntimeImage = isPiRuntime || isCodexRuntime;
 
   const selectedVersion = versions.find(v => {
     if (v.image_tag === data.imageTag || v.tag === data.imageTag || v.version === data.imageTag) return true;
@@ -38,7 +42,9 @@ export function ContainerConfigStep({
 
   const isCurrentTagFeishuCapable = !!(
     data.imageTag && typeof data.imageTag === 'string' && (
-      data.imageTag === 'latest' ||
+      data.imageTag === HERMES_RUNTIME_DEFINITION.runtime.tag ||
+      selectedVersion?.capabilities?.includes("feishu") ||
+      selectedVersion?.feishu_capable === true ||
       data.imageTag.toLowerCase().includes("feishu") ||
       data.imageTag.toLowerCase().includes("lark")
     )
@@ -79,14 +85,14 @@ export function ContainerConfigStep({
             )}
           </div>
           <Input
-            value={data.image || "nousresearch/hermes-agent"}
+            value={data.image || runtimeDefinition.runtime.image}
             onChange={(e: any) => {
               if (canEditAgentImage) update("image", e.target.value);
             }}
-            disabled={!canEditAgentImage || isPiRuntime}
-            readOnly={!canEditAgentImage || isPiRuntime}
-            aria-readonly={!canEditAgentImage || isPiRuntime}
-            className={`h-10 font-mono text-[13px] border-slate-200 dark:border-slate-700 ${canEditAgentImage && !isPiRuntime ? "text-blue-600 dark:text-blue-400 bg-surface-muted" : "text-content-muted bg-surface-muted cursor-not-allowed select-none"}`}
+            disabled={!canEditAgentImage || isManagedRuntimeImage}
+            readOnly={!canEditAgentImage || isManagedRuntimeImage}
+            aria-readonly={!canEditAgentImage || isManagedRuntimeImage}
+            className={`h-10 font-mono text-[13px] border-slate-200 dark:border-slate-700 ${canEditAgentImage && !isManagedRuntimeImage ? "text-blue-600 dark:text-blue-400 bg-surface-muted" : "text-content-muted bg-surface-muted cursor-not-allowed select-none"}`}
             placeholder={t("wizardCopy.container.imagePlaceholder")}
           />
           {!canEditAgentImage && (
@@ -99,15 +105,17 @@ export function ContainerConfigStep({
           <Label className="text-[13px] font-semibold text-content-secondary">{t("container_config.tag_label")}</Label>
           <div className="relative">
             <select
-              value={data.imageTag || "latest"}
+              value={data.imageTag || runtimeDefinition.runtime.tag}
               onChange={(e) => update("imageTag", e.target.value)}
-              disabled={isPiRuntime}
+              disabled={isManagedRuntimeImage}
               className="w-full flex h-10 rounded-lg border border-outline bg-surface px-3 py-2 text-[13px] font-bold text-content shadow-sm focus:border-blue-500 appearance-none outline-none"
             >
-              {isPiRuntime
-                ? <option value="0.1.0-beta">0.1.0-beta</option>
-                : <option value="latest">{t("container_config.latest_option")}</option>}
-              {!isPiRuntime && versions.map(v => {
+              {isManagedRuntimeImage
+                ? <option value={runtimeDefinition.runtime.tag}>{runtimeDefinition.runtime.tag}</option>
+                : <option value={HERMES_RUNTIME_DEFINITION.runtime.tag}>{HERMES_RUNTIME_DEFINITION.runtime.tag}</option>}
+              {!isManagedRuntimeImage && versions.filter(v =>
+                (v.image_tag || v.tag || v.version) !== HERMES_RUNTIME_DEFINITION.runtime.tag
+              ).map(v => {
                 const isFeishu = v.capabilities?.includes("feishu") || v.feishu_capable === true;
                 return (
                   <option key={v.tag || v.version} value={v.image_tag || v.tag}>

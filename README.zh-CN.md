@@ -17,7 +17,7 @@
 
 </div>
 
-> **当前正式版：`v0.1.28`。** 在 0.x 阶段，公共接口、Runtime Adapter、部署细节与升级行为仍可能调整。
+> **当前候选版：`v0.1.29-preview.1`。** 在 0.x 阶段，公共接口、Runtime Adapter、部署细节与升级行为仍可能调整。
 
 ![麦贝开源版概览](./docs/images/main-zh-open-source.png)
 
@@ -50,8 +50,9 @@ MyBay 将产品控制面与 Agent Runtime 分离。你可以按任务选择合�
 
 | Agent 底座 | 发布状态 | 适合的工作 | 当前声明的产品能力 |
 | --- | --- | --- | --- |
-| **Hermes Agent** | 已认证、已验证 | 通用、工具丰富的 Agent 工作流 | 流式与批量对话、文件、Shell、浏览器、定时任务、Web 与已支持的消息渠道 |
-| **Pi Agent** | 已认证、已验证 | 编程和工作区类 Agent 工作流 | 流式对话、文件、Shell、停止、会话恢复、审批、用量和 Web 访问 |
+| **Hermes Agent** | Certified；精确 OCI 身份已验证 | 通用、工具丰富的 Agent 工作流 | 流式与批量对话、文件、Shell、浏览器、定时任务、Web 与已支持的消息渠道 |
+| **Pi Agent** | Certified；本机精确构建已验证 | 编程和工作区类 Agent 工作流 | 流式对话、文件、Shell、停止、会话恢复、审批、用量和 Web 访问 |
+| **Codex** | Certified；本机精确构建已验证 | 使用 Codex / ChatGPT 账号的原生编程 Agent 工作流 | 流式对话、文件、Shell、停止、原生会话连续性、审批、用量、工具事件、重启恢复、升级、回滚和可移植备份恢复 |
 | **更多底座** | 路线图 | 更多开源 Agent Runtime | 通过 Runtime 清单、Adapter 契约、能力守卫和认证阶梯接入 |
 
 自动生成的 [Runtime 能力矩阵](./docs/runtime-capability-matrix.md) 是当前声明能力与渠道的事实来源。[MyBay Runtime Certification](./docs/runtime-certification.md) 单独发布基于证据的验证结果；仅注册 Adapter 或声明能力不代表产品 E2E 已通过。
@@ -79,7 +80,7 @@ chmod +x quick-start.sh
 ./quick-start.sh
 ```
 
-打开 [http://localhost:3000](http://localhost:3000)，添加模型供应商，然后选择 Hermes Agent 或 Pi Agent 底座部署第一个 Agent。不要分享或提交 `.env`。
+打开 [http://localhost:3000](http://localhost:3000)，添加模型供应商或连接 Codex / ChatGPT 账号，然后选择 Hermes Agent、Pi Agent 或 Codex 部署第一个 Agent。不要分享或提交 `.env`。
 
 第一次尝试生成文件时，请在对话输入框旁切换为“Agent模式”。默认的“快速模式”只回复文字，不执行工具或保存文件。
 
@@ -107,7 +108,7 @@ chmod +x quick-start.sh
 
 ## Runtime 项目与署名
 
-MyBay 是独立维护的开源项目。Hermes Agent 与 Pi Agent 是分别维护的第三方项目，MyBay 通过其公开软件包、Runtime 或容器接口进行集成。接入不代表任何赞助、认可或关联；MyBay 不是 Nous Research 或 Earendil Works 的官方产品。
+MyBay 是独立维护的开源项目。Hermes Agent、Pi Agent 与 OpenAI Codex 是分别维护的第三方项目，MyBay 通过其公开软件包、Runtime 或容器接口进行集成。接入不代表任何赞助、认可或关联；MyBay 不是 Nous Research、Earendil Works 或 OpenAI 的官方产品。
 
 许可证与署名详情见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。[mybay.ai](https://mybay.ai) 提供的托管服务属于独立商业服务，安装和运行本仓库不需要注册或依赖该服务。
 
@@ -283,8 +284,9 @@ data/
 
 ## Runtime 支持状态
 
-- **Hermes Agent：** 当前可用、可部署，并已通过 MyBay `certified` 级验证。声明能力包括流式与批量对话、停止、文件、Shell、浏览器、定时任务、Web 和已支持的消息渠道。
-- **Pi Agent：** 当前可用、可部署，并已通过 MyBay `certified` 级验证。声明能力包括流式对话、停止、文件、Shell 和 Web 访问，同时已接通原生会话恢复、可归属用量、稳定工具事件、审批处理和持久化交付物。
+- **Hermes Agent：** 当前可用、可部署，并达到 MyBay `certified` 级别。固定的 v2026.8.27 镜像已绑定保留的 OCI 摘要及 Windows Docker Desktop 认证证据。
+- **Pi Agent：** 当前默认可用、可部署，并达到 MyBay `certified` 级别。Pi 0.85.1 与 bridge 0.1.1-beta 已绑定保留的 Windows Docker 镜像身份；已有安装仍可显式设置 `MYBAY_ENABLE_PI_RUNTIME=false` 保持关闭。
+- **Codex：** 当前以 MyBay `certified` 级别可用、可部署。本机 Codex 0.154.0 / bridge 0.1.0-experimental.3 镜像已和 Windows Docker Desktop 上的部署、执行、流式输出、停止、恢复、文件、用量、工具事件、升级、回滚、安全和可移植备份恢复证据精确绑定。Windows 原生数据到 Linux 的迁移以及公共多架构镜像发布不在本次认证范围内。
 
 控制面会依据所选 Runtime 的能力声明禁用不支持的功能。依赖具体消息渠道或对话模式前，请查看自动生成的 [Runtime 能力矩阵](./docs/runtime-capability-matrix.md)。
 
@@ -297,7 +299,7 @@ flowchart TD
   C --> S[(SQLite)]
   C --> D[Docker Engine]
   C --> T[Traefik - server 模式]
-  D --> R[Hermes 或 Pi Agent Runtime 容器]
+  D --> R[Hermes、Pi 或 Codex Agent Runtime 容器]
   R --> A[Runtime API 与 UI]
   R --> M[模型提供商]
 ```
@@ -325,12 +327,13 @@ desktop、LAN、server 三种模式的 Webhook 默认都要求 secret。历史�
 
 ## Agent 运行态接入规范 (`mybay.runtime.yaml`)
 
-MyBay 提供可扩展的 **Agent Runtime Specification（运行态接入规范）**，用于接入更多开源 Agent。当前仓库证据中，Hermes Agent 与 Pi Agent 均已通过认证：
+MyBay 提供可扩展的 **Agent Runtime Specification（运行态接入规范）**，用于接入更多开源 Agent。Hermes、Pi 与 Codex 均具备当前固定构建的 schema v3 精确证据：
 
 - **JSON Schema 校验规范**：`/public/schemas/mybay.runtime.schema.json`
 - **运行态规格声明示例**：
   - Hermes Agent：`/public/specs/mybay.runtime.yaml`
   - Pi Agent 运行时清单：`/public/specs/pi.runtime.yaml`
+  - Codex 运行时清单：`/public/specs/codex.runtime.yaml`
 
 通过定义 `mybay.runtime.yaml` 规格文件，开发者可以标准化声明 Agent 容器端口、健康检查 Endpoint、挂载卷路径及支持的通讯渠道（飞书、Telegram、Discord、Slack、微信等）。
 

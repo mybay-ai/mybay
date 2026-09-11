@@ -156,17 +156,6 @@ export function registerQuickRoutes(router: Router) {
         } catch (e) {}
       }
 
-      phase = "resolve_quick_config";
-      const quickConfig = await resolveQuickChatModelConfig(instance, config, model, req.user.id);
-      if (config.modelBillingMode === "platform") {
-        return res.status(400).json({
-          success: false,
-          error: "PLATFORM_MODELS_DISABLED",
-          message: "Platform-hosted models are not included in the local open-source edition. Use BYOK credentials instead."
-        });
-      }
-      const apiKey = ""; // Bypass internal API keys for direct chats
-
       // 6. DB Atomic Turn initialization (With retry for SEQUENCE_CONFLICT)
       let timeoutSeconds = 180;
       const envTimeoutStr = process.env.MYBAY_CHAT_PENDING_TIMEOUT_SECONDS;
@@ -225,6 +214,19 @@ export function registerQuickRoutes(router: Router) {
       pendingConversationId = conversationId;
       pendingUserMessageId = userMessageId;
 
+      // Resolve model credentials only after the turn exists so configuration
+      // failures are durable, visible after refresh, and available to Assist.
+      phase = "resolve_quick_config";
+      const quickConfig = await resolveQuickChatModelConfig(instance, config, model, req.user.id);
+      if (config.modelBillingMode === "platform") {
+        throw {
+          status: 400,
+          error: "PLATFORM_MODELS_DISABLED",
+          message: "Platform-hosted models are not included in the local open-source edition. Use BYOK credentials instead."
+        };
+      }
+      const apiKey = ""; // Bypass internal API keys for direct chats
+
       // 7. Context assembly
       phase = "load_chat_context";
       const history = await chatRepo.getLatestCompletedMessagesForContext(conversationId);
@@ -269,7 +271,8 @@ export function registerQuickRoutes(router: Router) {
           provider: quickConfig.provider,
           model: quickConfig.model,
           baseUrl: quickConfig.baseUrl,
-          providerApiKey: quickConfig.providerApiKey
+          providerApiKey: quickConfig.providerApiKey,
+          onOAuthRefresh: quickConfig.onOAuthRefresh,
         }, {
           messages: quickMessages,
           temperature: normalizeChatTemperature(quickConfig.provider, quickConfig.model, temperature),
@@ -288,11 +291,12 @@ export function registerQuickRoutes(router: Router) {
         };
       } catch (e: any) {
         if (syncLifecycle.isCancelled()) throw e;
+        const errorCode = e?.code === "CODEX_AUTH_REQUIRED" ? "CODEX_AUTH_REQUIRED" : "DIRECT_MODEL_CHAT_FAILED";
         upstreamResponse = {
           ok: false,
-          statusCode: e?.name === "AbortError" ? 504 : 502,
-          error: "DIRECT_MODEL_CHAT_FAILED",
-          json: { error: e?.message || "Direct model chat failed" },
+          statusCode: e?.name === "AbortError" ? 504 : e?.statusCode || 502,
+          error: errorCode,
+          json: { error: errorCode === "CODEX_AUTH_REQUIRED" ? "当前 Codex OAuth 已失效，请重新连接 OpenAI OAuth。" : e?.message || "Direct model chat failed" },
           durationMs: Date.now() - startTime
         };
       }
@@ -443,7 +447,13 @@ export function registerQuickRoutes(router: Router) {
         phase = "finish_chat_turn_failure";
         // Upstream failed: clean up pending message to failed in database
         let mapped: any;
-        if (upstreamResponse.error === "DIRECT_MODEL_CHAT_FAILED") {
+        if (upstreamResponse.error === "CODEX_AUTH_REQUIRED") {
+          mapped = {
+            success: false,
+            error: "CODEX_AUTH_REQUIRED",
+            message: "当前 Codex OAuth 已失效，请重新连接 OpenAI OAuth。"
+          };
+        } else if (upstreamResponse.error === "DIRECT_MODEL_CHAT_FAILED") {
           let baseUrlHost: string | null = null;
           if (quickConfig.baseUrl) {
             try {
@@ -555,6 +565,16 @@ export function registerQuickRoutes(router: Router) {
 
           if (cleanupResult.status === "failed_logged" || cleanupResult.status === "TURN_NOT_PENDING") {
             turnFinished = true;
+            if (cleanupResult.status === "failed_logged") {
+              emitChatConversationUpdated({
+                userId: req.user.id,
+                instanceId: id,
+                conversationId,
+                requestId,
+                source: "message_failed",
+                status: "failed"
+              });
+            }
           } else {
             console.error(JSON.stringify({
               operation: "chat_cleanup_exception",

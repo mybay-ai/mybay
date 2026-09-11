@@ -64,7 +64,8 @@ export function createEventsRoutes(deps: { docker: Docker }) {
 
       let disk: { totalBytes: number; freeBytes: number; path: string } | null = null;
       try {
-        const targetPath = fs.existsSync(instance.data_volume_path) ? instance.data_volume_path : process.cwd();
+        const dataVolumePath = typeof instance.data_volume_path === "string" ? instance.data_volume_path : "";
+        const targetPath = dataVolumePath && fs.existsSync(dataVolumePath) ? dataVolumePath : process.cwd();
         const stats = fs.statfsSync(targetPath);
         disk = { path: targetPath, totalBytes: Number(stats.blocks) * Number(stats.bsize), freeBytes: Number(stats.bavail) * Number(stats.bsize) };
       } catch {}

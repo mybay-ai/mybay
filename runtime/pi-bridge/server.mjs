@@ -54,8 +54,13 @@ export const PI_BRIDGE_FEATURES = Object.freeze({
   session_resources: false,
 });
 
-export function normalizeReasoningEffort(modelOptions = {}) {
+export function normalizeReasoningEffort(modelOptions = {}, model = MODEL) {
   const value = String(modelOptions?.reasoning_effort || modelOptions?.reasoning?.effort || "medium").toLowerCase();
+  if (model === "gemini-3.8-flash") {
+    if (["off", "none", "minimal", "low"].includes(value)) return "low";
+    if (["high", "xhigh", "max"].includes(value)) return "high";
+    return "medium";
+  }
   if (["off", "minimal", "low", "medium", "high", "xhigh", "max"].includes(value)) return value;
   if (value === "none") return "off";
   return "medium";
@@ -236,11 +241,29 @@ async function persistRun(run) {
   await rename(temporary, target);
 }
 
-function emit(run, event) {
+function publish(run, event) {
   const normalized = { ...event, run_id: run.id, timestamp: event.timestamp || Date.now() / 1000 };
+  run.eventSequence = (run.eventSequence || run.events.length) + 1;
   run.events.push(normalized);
   if (run.events.length > 500) run.events.shift();
-  for (const subscriber of run.subscribers) subscriber(normalized);
+  for (const subscriber of run.subscribers) subscriber(normalized, run.eventSequence);
+}
+
+export function flushPiDeltas(run) {
+  clearTimeout(run.deltaTimer); run.deltaTimer = undefined;
+  if (!run.pendingDelta) return;
+  const delta = run.pendingDelta; run.pendingDelta = "";
+  publish(run, { type: "message.delta", delta });
+}
+
+export function emit(run, event) {
+  if (event.type === "message.delta" && typeof event.delta === "string") {
+    run.pendingDelta = (run.pendingDelta || "") + event.delta;
+    if (!run.deltaTimer) run.deltaTimer = setTimeout(() => flushPiDeltas(run), 100);
+    return;
+  }
+  flushPiDeltas(run);
+  publish(run, event);
 }
 
 function sendSse(response, event, id) {
@@ -769,11 +792,11 @@ async function handleRequest(request, response) {
     }
     if (request.method === "GET" && match[2] === "events") {
       response.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-cache, no-transform", connection: "keep-alive", "x-accel-buffering": "no" });
-      let sequence = 0;
+      let sequence = (run.eventSequence || run.events.length) - run.events.length;
       for (const event of run.events) sendSse(response, event, ++sequence);
       if (!ACTIVE_RUN_STATUSES.has(run.status)) return response.end();
-      const subscriber = (event) => {
-        sendSse(response, event, ++sequence);
+      const subscriber = (event, eventSequence) => {
+        sendSse(response, event, eventSequence);
         if (["run.completed", "run.failed", "run.cancelled"].includes(event.type)) response.end();
       };
       run.subscribers.add(subscriber);

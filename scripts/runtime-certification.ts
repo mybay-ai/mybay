@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import {
   evaluateRuntimeCertification,
   RUNTIME_CERTIFICATION_REQUIREMENTS,
-  type RuntimeCertificationEvidenceBundle,
+  type AnyRuntimeCertificationEvidenceBundle,
   type RuntimeCertificationEnvironment,
   type RuntimeCertificationReport,
 } from "../shared/runtimeCertification";
@@ -89,12 +89,12 @@ function validateArtifacts(value: unknown): ReadonlySet<string> {
   return paths;
 }
 
-function parseEvidence(relativePath: string): RuntimeCertificationEvidenceBundle | undefined {
+function parseEvidence(relativePath: string): AnyRuntimeCertificationEvidenceBundle | undefined {
   const absolutePath = path.join(projectRoot, relativePath);
   if (!fs.existsSync(absolutePath)) return undefined;
   try {
     const value: unknown = JSON.parse(fs.readFileSync(absolutePath, "utf8"));
-    if (!isRecord(value) || value.schemaVersion !== 2 || !isRecord(value.runtime)
+    if (!isRecord(value) || ![2, 3].includes(Number(value.schemaVersion)) || !isRecord(value.runtime)
       || !Array.isArray(value.environments) || !Array.isArray(value.artifacts) || !Array.isArray(value.checks)) {
       throw new Error("root, runtime, or checks structure is invalid");
     }
@@ -102,6 +102,21 @@ function parseEvidence(relativePath: string): RuntimeCertificationEvidenceBundle
       || typeof value.runtime.providerKey !== "string"
       || !Number.isSafeInteger(value.runtime.contractVersion)) {
       throw new Error("runtime binding is invalid");
+    }
+    if (value.schemaVersion === 2) {
+      if (typeof value.runtime.version !== "string" || typeof value.runtime.imageRef !== "string") {
+        throw new Error("legacy runtime release identity is invalid");
+      }
+    } else {
+      const artifactIdentity = value.runtime.artifactIdentity;
+      if (typeof value.runtime.nativeVersion !== "string"
+        || (value.runtime.bridgeVersion !== null && typeof value.runtime.bridgeVersion !== "string")
+        || typeof value.runtime.imageRef !== "string"
+        || (artifactIdentity !== null && (!isRecord(artifactIdentity)
+          || !["oci-digest", "docker-image-id"].includes(String(artifactIdentity.kind))
+          || !/^sha256:[a-f0-9]{64}$/.test(String(artifactIdentity.value))))) {
+        throw new Error("runtime release identity is invalid");
+      }
     }
     value.environments.forEach((environment, index) => validateEnvironment(environment, index));
     if (new Set(value.environments.map((environment) => (environment as RuntimeCertificationEnvironment).id)).size !== value.environments.length) {
@@ -130,7 +145,7 @@ function parseEvidence(relativePath: string): RuntimeCertificationEvidenceBundle
         }
       }
     }
-    return value as unknown as RuntimeCertificationEvidenceBundle;
+    return value as unknown as AnyRuntimeCertificationEvidenceBundle;
   } catch (error: any) {
     errors.push(`${relativePath}: ${error?.message || "invalid certification evidence"}`);
     return undefined;
@@ -155,7 +170,7 @@ const reports = RUNTIME_DEFINITIONS.map(publishedReport);
 
 function publicDocument(): string {
   return `${JSON.stringify({
-    schemaVersion: 2,
+    schemaVersion: 3,
     generatedFrom: [
       "shared/runtimeCatalog.ts",
       "shared/runtimeCertification.ts",
@@ -172,7 +187,7 @@ function certificationDocument(): string {
       ? report.environments.map((environment) => `${environment.platform}/${environment.architecture ?? "not-retained"} (${environment.containerEngine})`).join(", ")
       : "none";
     const lastVerified = report.requirements.map((requirement) => requirement.evidence?.observedAt).filter(Boolean).sort().at(-1) ?? "none";
-    return `| ${report.runtimeType} | ${report.declaredLevel} | ${report.verifiedLevel} | ${report.publicationStatus} | ${platforms} | ${lastVerified} | ${report.evidenceFile ?? "none"} |`;
+    return `| ${report.runtimeType} | ${report.declaredLevel} | ${report.verifiedLevel} | ${report.identityStatus} | ${report.artifactVerification} | ${report.publicationStatus} | ${platforms} | ${lastVerified} | ${report.evidenceFile ?? "none"} |`;
   });
   const requirementRows = RUNTIME_CERTIFICATION_REQUIREMENTS.map((requirement) =>
     `| ${requirement.level} | ${requirement.id} | ${requirement.title} | ${requirement.minimumEvidenceScope} |`);
@@ -196,8 +211,8 @@ function certificationDocument(): string {
     "",
     "## Current status",
     "",
-    "| Runtime | Declared level | Verified level | Publication status | Verified platforms | Last verified | Evidence bundle |",
-    "| --- | --- | --- | --- | --- | --- | --- |",
+    "| Runtime | Declared level | Verified level | Release identity | Artifact verification | Publication status | Verified platforms | Last verified | Evidence bundle |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ...runtimeRows,
     "",
     "## Evidence-backed capability coverage",
@@ -216,7 +231,7 @@ function certificationDocument(): string {
     "| --- | --- | --- | --- |",
     ...requirementRows,
     "",
-    "Evidence bundles live at `certification/evidence/<runtime-type>.certification.json` and must validate against `public/schemas/mybay.runtime-certification-evidence.schema.json`. Each bundle identifies the real platform and versions it covers, and every local evidence reference is resolved and protected by a retained SHA-256. Secrets and credentials must never be committed.",
+    "Evidence bundles live at `certification/evidence/<runtime-type>.certification.json` and current bundles must validate against `public/schemas/mybay.runtime-certification-evidence.schema.json`. Schema v3 binds native version, explicit nullable bridge version, image reference, and an immutable OCI digest or Docker image ID. Legacy schema v2 evidence remains readable as metadata-compatible history but cannot produce an exact verified publication. Each bundle identifies the real platform and versions it covers, and every local evidence reference is resolved and protected by a retained SHA-256. Secrets and credentials must never be committed.",
     "",
     "Run `npm run runtime:certification` to validate and display the current report. Run `npm run runtime:certify` as the strict release gate; it fails while a Runtime's declared level is not fully verified.",
     "",

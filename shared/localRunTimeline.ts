@@ -1,6 +1,6 @@
 import { classifyLocalFileOperation, safeLocalEvidencePath } from "./localRunFileEvidence";
 
-export interface LocalTimelineEvent { id: number; event: "text" | "step" | "status" | "approval"; data: string }
+export interface LocalTimelineEvent { id: number; event: "text" | "commentary" | "step" | "status" | "approval"; data: string }
 export interface LocalRunTimeline {
   version: 1;
   runId: string;
@@ -26,6 +26,12 @@ function safeEvent(value: unknown): LocalTimelineEvent | null {
   let payload: Record<string, unknown>;
   try { payload = JSON.parse(row.data); } catch { return null; }
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+  if (row.event === "commentary") {
+    const id = identifier(payload.id);
+    const text = typeof payload.text === "string" ? payload.text.trim().slice(0, 8_192) : "";
+    if (!id || !text) return null;
+    return { id: Number(row.id), event: "commentary", data: JSON.stringify({ id, text, timestamp: timestamp(payload.timestamp) }) };
+  }
   if (row.event === "step") {
     const id = identifier(payload.id);
     if (!id) return null;

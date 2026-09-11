@@ -19,4 +19,35 @@ describe("create runtime image selection", () => {
         },
       });
   });
+
+  it("selects the certified pinned Hermes image when no version catalog has been discovered", async () => {
+    await expect(resolveCreateRuntimeImage({ data: { runtime_type: "hermes" }, secureData: {}, userRole: "user" }))
+      .resolves.toEqual({
+        ok: true,
+        selection: {
+          agent_image: "nousresearch/hermes-agent",
+          agent_image_tag: "v2026.8.27",
+          agent_version: "v2026.8.27",
+          resolved_version: "v2026.8.27",
+          myBayVersions: [],
+        },
+      });
+  });
+
+  it("accepts the certified pinned Hermes image for Feishu when discovery is still empty", async () => {
+    await expect(resolveCreateRuntimeImage({
+      data: { runtime_type: "hermes" },
+      secureData: { channel: "feishu" },
+      userRole: "user",
+    })).resolves.toEqual({
+      ok: true,
+      selection: {
+        agent_image: "nousresearch/hermes-agent",
+        agent_image_tag: "v2026.8.27",
+        agent_version: "v2026.8.27",
+        resolved_version: "v2026.8.27",
+        myBayVersions: [],
+      },
+    });
+  });
 });

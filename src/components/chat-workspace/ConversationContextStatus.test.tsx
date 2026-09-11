@@ -12,7 +12,15 @@ describe("conversation context status", () => {
     const html = renderToStaticMarkup(<ConversationContextStatus usage={usage} instanceId="instance-1" conversationId="conversation-1" />);
     expect(html).toContain("usage.contextCompactLabel:1");
     expect(html).toContain('aria-haspopup="dialog"');
+    expect(html).toContain("usage.contextDetails");
     expect(html).not.toContain("usage.compactNow");
+  });
+
+  it("labels context as manageable only when the Runtime reports manual compaction", () => {
+    const usage = createLocalRunUsage({ context_tokens: 9993, context_window: 1_000_000, context_percent: 1 });
+    const html = renderToStaticMarkup(<ConversationContextStatus usage={usage} instanceId="instance-1" conversationId="conversation-1" manualCompactionSupported />);
+    expect(html).toContain("usage.contextManage");
+    expect(html).not.toContain("usage.contextDetails");
   });
 
   it("keeps missing Runtime context evidence truthful", () => {

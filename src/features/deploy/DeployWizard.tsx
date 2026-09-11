@@ -24,6 +24,11 @@ import { isExternalDeployChannel } from "./ChannelSelector";
 import { SkillsStep } from "./SkillsStep";
 import { DeployReviewStep } from "./DeployReviewStep";
 import { isDeployChannelAllowedByEntitlement } from "../../../shared/planChannelAccess";
+import { HERMES_RUNTIME_DEFINITION } from "../../../shared/runtimeCatalog";
+
+function secureRandomSuffix(length = 6): string {
+  return crypto.randomUUID().replaceAll("-", "").slice(0, length);
+}
 
 export function DeployWizard({ 
   onSuccess, 
@@ -88,11 +93,11 @@ export function DeployWizard({
   const planChannelRestrictionMessage = t("validation.plan_channel_restricted");
 
   const [data, setData] = useState<Partial<SetupFormData>>(() => normalizeRuntimeAccessDraft({
-    id: Math.random().toString(36).substring(7),
+    id: crypto.randomUUID(),
     runtime_type: "hermes",
-    path: `agent-${Math.random().toString(36).substring(2, 8)}`,
-    image: "nousresearch/hermes-agent",
-    imageTag: "latest", // Split image and tag
+    path: `agent-${secureRandomSuffix()}`,
+    image: HERMES_RUNTIME_DEFINITION.runtime.image,
+    imageTag: HERMES_RUNTIME_DEFINITION.runtime.tag,
     channel: "web",
     allowMode: "bind_later",
     modelBillingMode: "byok",
@@ -189,7 +194,7 @@ export function DeployWizard({
             const presetConfig = {
               template_id: t.id,
               template_slug: t.slug || t.id,
-              name: `${t.name}-${Math.random().toString(36).substring(7).toUpperCase()}`,
+              name: `${t.name}-${secureRandomSuffix().toUpperCase()}`,
               username: "admin",
               prompt: t.default_prompt || "",
               provider: t.default_provider || "",
@@ -237,7 +242,7 @@ export function DeployWizard({
             setActiveBlueprint(bp);
             setActiveWorkflowTemplate(null);
             const presetConfig = {
-              name: `${bp.name}-${Math.random().toString(36).substring(7).toUpperCase()}`,
+              name: `${bp.name}-${secureRandomSuffix().toUpperCase()}`,
               username: "admin",
               prompt: bp.system_context_preview || "",
               provider: "google",
@@ -602,14 +607,15 @@ export function DeployWizard({
     return false;
   });
 
-  const isFeishuCapable = isLatest || (selectedVersionObj ? (
+  const isPinnedCertifiedHermes = data.runtime_type === "hermes" && data.imageTag === HERMES_RUNTIME_DEFINITION.runtime.tag;
+  const isFeishuCapable = isLatest || isPinnedCertifiedHermes || (selectedVersionObj ? (
     selectedVersionObj.capabilities?.includes("feishu") || 
     selectedVersionObj.feishu_capable === true || 
     (data.imageTag && typeof data.imageTag === 'string' && (data.imageTag.toLowerCase().includes("feishu") || data.imageTag.toLowerCase().includes("lark")))
   ) : false);
 
   if (isFeishuChannel && step >= 2) {
-    if (!isLatest && (!selectedVersionObj || !isFeishuCapable)) {
+    if (!isLatest && !isFeishuCapable) {
       nextDisabled = true;
       disableReason = t("validation.feishu_variant_required");
     }
@@ -667,7 +673,7 @@ export function DeployWizard({
               const presetConfig = {
                 template_id: t.id,
                 template_slug: t.slug || t.id,
-                name: `${t.name}-${Math.random().toString(36).substring(7).toUpperCase()}`,
+                name: `${t.name}-${secureRandomSuffix().toUpperCase()}`,
                 username: "admin",
                 prompt: t.default_prompt || "",
                 provider: t.default_provider || "",

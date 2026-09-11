@@ -56,7 +56,7 @@ export interface DockerProfile {
 }
 
 export function getAgentContainerSecurityProfile(agentRuntimeType: unknown): DockerProfile {
-  if (String(agentRuntimeType || "").trim().toLowerCase() === "pi") {
+  if (["pi", "codex"].includes(String(agentRuntimeType || "").trim().toLowerCase())) {
     return {
       CapDrop: ["ALL"],
       CapAdd: [],

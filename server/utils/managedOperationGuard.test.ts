@@ -25,3 +25,12 @@ describe("managed operation system policy", () => {
     expect(guardManagedOperation("帮我升级 Agent 版本", "pi").message).toContain("Pi Agent 版本升级");
   });
 });
+
+it("identifies Codex without inheriting another runtime identity", () => {
+ const policy = managedOperationSystemPolicy("codex");
+ expect(policy).toContain("你当前是 Codex");
+ expect(policy).not.toContain("Hermes Agent");
+ expect(policy).not.toContain("Pi Agent");
+ expect(guardManagedOperation("帮我升级 Agent 版本", "codex").message).toContain("Codex 版本升级");
+ expect(managedOperationSystemPolicy("hermes")).toContain("你当前是 Hermes Agent");
+});

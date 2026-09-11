@@ -1,4 +1,5 @@
 import base from "./base.json";
+import managedFeishu from "./managedFeishu.json";
 import overview from "./overview.json";
 import templateCenter from "./template_center.json";
 import chatWorkspace from "./chatWorkspace.json";
@@ -10,6 +11,7 @@ import versionRepository from "./versionRepository.json";
 
 const dashboard = {
   ...base,
+  managedFeishu,
   overview,
   template_center: templateCenter,
   chatWorkspace,

@@ -21,6 +21,12 @@ describe("upgrade preflight", () => {
     expect(result.checks.find(check => check.code === "DISK_SPACE")?.status).toBe("blocker");
   });
 
+  it("blocks a cached runtime image whose immutable labels do not match the release", () => {
+    const result = buildUpgradePreflight({ ...base, targetImageVerified: false });
+    expect(result.allowed).toBe(false);
+    expect(result.checks.find(check => check.code === "TARGET_IMAGE")?.status).toBe("blocker");
+  });
+
   it("blocks upgrades without a running container and rollback point", () => {
     const result = buildUpgradePreflight({ ...base, currentContainerRunning: false });
     expect(result.allowed).toBe(false);

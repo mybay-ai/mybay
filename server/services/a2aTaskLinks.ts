@@ -36,7 +36,10 @@ export function beginA2ATaskLink(input: Pick<A2ATaskLink, 'instanceId' | 'peerId
     const live = store.chatRuns.filter(run => run.instance_id === input.instanceId && ['queued', 'running', 'stopping'].includes(run.status) && readChatGroupRun(run.group_collaboration));
     const parent = store.chatRuns.find(run => run.instance_id === input.instanceId && readChatGroupRun(run.group_collaboration)?.contextId === input.contextId);
     const inboundGroup = store.a2aTaskLinks.some(link => link.peerId === input.instanceId && link.parentRunId && link.state !== 'finished');
-    if (inboundGroup) throw Error('A2A_GROUP_RECURSION_BLOCKED');
+    // A member task has no local parent Run, while an independent user-started
+    // room always has one. Permit two top-level rooms to cross in flight, but
+    // keep recursive member delegation fail-closed.
+    if (inboundGroup && !parent) throw Error('A2A_GROUP_RECURSION_BLOCKED');
     if (live.length && (live.length !== 1 || live[0].id !== parent?.id)) throw Error('A2A_GROUP_CONTEXT_REQUIRED');
     if (!parent && input.contextId.startsWith('ctx-mybay-room-')) throw Error('A2A_GROUP_PARENT_REQUIRED');
     let memberCallNumber: number | undefined;

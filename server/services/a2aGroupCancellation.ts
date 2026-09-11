@@ -5,6 +5,8 @@ import { readStoreCollections } from '../localStore';
 import { getA2AInternalUrl, normalizeA2APeerIds } from '../../shared/a2aConfig';
 import { cancelA2ATask } from './a2aTaskCancel';
 import { updateA2ATaskLink, type A2ATaskLink } from './a2aTaskLinks';
+import { cancelManagedRuntimeA2ATask, isManagedRuntimeA2APeer } from './managedRuntimeA2A';
+import { a2aTrackingEnabled } from './a2aRelayConfig';
 
 const configOf = (row: any) => typeof row.config_json === 'string' ? JSON.parse(row.config_json) : row.config_json || {};
 const ownerOf = (row: any) => row?.user_id || row?.owner_id;
@@ -13,7 +15,11 @@ export async function cancelManagedA2ATask(link: A2ATaskLink) {
   const [caller, peer] = await Promise.all([dbAdapter.getInstanceById(link.instanceId), dbAdapter.getInstanceById(link.peerId)]);
   if (!caller || !peer || !ownerOf(caller) || ownerOf(caller) !== ownerOf(peer)) throw Error('A2A_CANCEL_UNCONFIRMED');
   const config = configOf(caller); const peerConfig = configOf(peer);
-  if (!config.a2aEnabled || !peerConfig.a2aEnabled || !peerConfig.a2aBearerToken || !normalizeA2APeerIds(config.a2aPeerIds, link.instanceId).includes(link.peerId)) throw Error('A2A_CANCEL_UNCONFIRMED');
+  if (!config.a2aEnabled || !normalizeA2APeerIds(config.a2aPeerIds, link.instanceId).includes(link.peerId)) throw Error('A2A_CANCEL_UNCONFIRMED');
+  if (a2aTrackingEnabled(link.instanceId) && isManagedRuntimeA2APeer(peer)) {
+    return cancelA2ATask(link, remoteId => cancelManagedRuntimeA2ATask(peer, link.contextId, remoteId));
+  }
+  if (!peerConfig.a2aEnabled || !peerConfig.a2aBearerToken) throw Error('A2A_CANCEL_UNCONFIRMED');
   return cancelA2ATask(link, async remoteId => {
     const id = crypto.randomUUID();
     const response = await fetch(getA2AInternalUrl(link.peerId), { method: 'POST', redirect: 'error', signal: AbortSignal.timeout(5000), headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${decrypt(peerConfig.a2aBearerToken)}` }, body: JSON.stringify({ jsonrpc: '2.0', id, method: 'CancelTask', params: { id: remoteId } }) });

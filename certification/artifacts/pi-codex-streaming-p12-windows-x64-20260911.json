@@ -1,0 +1,219 @@
+{
+  "schemaVersion": 1,
+  "artifactType": "pi-codex-streaming-real-acceptance",
+  "phase": "P1.2",
+  "capturedAt": "2026-09-11T05:25:19.7577656Z",
+  "baseCommit": "85c8bd708604c1cdbfe9cf7957ad0b0fa9530d8e",
+  "source": {
+    "mybayVersion": "0.1.29-preview.1",
+    "controlUrl": "http://127.0.0.1:4372",
+    "controlImage": "mybay/local:0.1.29-preview.1-p12",
+    "controlImageId": "sha256:92e5b14d33a58bff1d8868c0994ac6cbf6e91fa5589a8ac72111e1f72a19ab73"
+  },
+  "environment": {
+    "host": "Windows x64",
+    "runtimePlatform": "Docker Desktop Linux x86_64",
+    "browser": "Microsoft Edge",
+    "desktopViewport": "Codex in-app browser",
+    "mobileViewport": "390x844"
+  },
+  "targets": {
+    "pi": {
+      "instanceId": "1b37e66f-b3c5-4345-b62f-b84299ee2c82",
+      "runtimeImage": "mybay/pi-runtime:0.85.1",
+      "model": "deepseek-v4-flash"
+    },
+    "codex": {
+      "instanceId": "a9307d3c-af4a-4fde-97b9-22c211c2e17e",
+      "runtimeImage": "mybay/codex-runtime:0.154.0",
+      "model": "gpt-6-astra"
+    }
+  },
+  "implementation": {
+    "partialOutputPersistence": "Every normalized message.delta persists cumulative partial output before the event is published. Terminalization waits for pending progress persistence.",
+    "refreshRecovery": "Run detail and conversation recovery prefer the live cumulative partial output while a run is active.",
+    "regeneration": "The latest completed assistant response exposes a Regenerate action that submits the source user message as a new run in the same conversation."
+  },
+  "apiRuntimeAcceptance": {
+    "result": "PASS",
+    "pi": {
+      "incremental": {
+        "result": "PASS",
+        "runId": "642c1d41-2a9a-41a1-be57-c74b4e486a7e",
+        "requestToFirstTextMs": 6005,
+        "acceptedToFirstTextMs": 5821,
+        "textEventCount": 8,
+        "distinctTextDeltaCount": 8,
+        "maxInterTextGapMs": 265,
+        "p95InterTextGapMs": 265,
+        "finalOutputChars": 3359
+      },
+      "cancellation": {
+        "result": "PASS",
+        "runId": "569f155f-3635-42b2-8d06-5646cbb95e65",
+        "terminalStatus": "cancelled",
+        "errorCode": "CANCELLED_UPSTREAM",
+        "partialOutputChars": 688
+      },
+      "refreshRecovery": {
+        "result": "PASS",
+        "runId": "57afb532-612b-4d35-8f59-d5dd8943e8f6",
+        "persistedPartialOutputChars": 573,
+        "firstRecoveredEventId": 12,
+        "recoveredTextEvents": 3
+      },
+      "regeneration": {
+        "result": "PASS",
+        "conversationId": "d76e2817-7b9b-419e-9a4d-3450681a9041",
+        "runIds": [
+          "4777b084-3518-4afa-9926-e6483cc777c6",
+          "da8971cc-40e6-4cd3-9dbb-86e14e01ee6a"
+        ],
+        "sameConversation": true
+      }
+    },
+    "codex": {
+      "incremental": {
+        "result": "PASS",
+        "runId": "b845aeea-3fa5-47f4-a7e2-c59afa083212",
+        "requestToFirstTextMs": 8317,
+        "acceptedToFirstTextMs": 8166,
+        "textEventCount": 92,
+        "distinctTextDeltaCount": 84,
+        "maxInterTextGapMs": 711,
+        "p95InterTextGapMs": 451,
+        "finalOutputChars": 3359
+      },
+      "cancellation": {
+        "result": "PASS",
+        "runId": "3f91241f-ff8d-47f9-b50f-85edc1230bb0",
+        "terminalStatus": "cancelled",
+        "errorCode": "CANCELLED_UPSTREAM",
+        "partialOutputChars": 159
+      },
+      "refreshRecovery": {
+        "result": "PASS",
+        "runId": "6eeb08e5-6f33-49d8-9136-d43eb6b7138b",
+        "persistedPartialOutputChars": 51,
+        "firstRecoveredEventId": 12,
+        "recoveredTextEvents": 5
+      },
+      "regeneration": {
+        "result": "PASS",
+        "conversationId": "c1eb81fd-4bf0-41fe-838c-504b9197df95",
+        "runIds": [
+          "1622ef40-3666-4e7b-8386-f348153e51e3",
+          "92e15ec5-ad18-4e24-922d-a4a450d0e087"
+        ],
+        "sameConversation": true
+      }
+    }
+  },
+  "browserAcceptance": {
+    "result": "PASS",
+    "desktop": {
+      "pi": {
+        "result": "PASS",
+        "marker": "UI-PIDESK-1789104120261",
+        "observations": [
+          { "ms": 407, "visibleLines": 0 },
+          { "ms": 6042, "visibleLines": 2 },
+          { "ms": 6286, "visibleLines": 8 }
+        ],
+        "completedLines": 80,
+        "modelShown": "deepseek-v4-flash",
+        "regenerateActionShown": true
+      },
+      "codex": {
+        "result": "PASS",
+        "marker": "UI-CODEX",
+        "observations": [
+          { "ms": 145, "visibleLines": 0 },
+          { "ms": 7497, "visibleLines": 1 },
+          { "ms": 7848, "visibleLines": 2 },
+          { "ms": 8725, "visibleLines": 4 }
+        ],
+        "refresh": {
+          "beforeVisibleLines": 25,
+          "restoredVisibleLines": 26,
+          "restoredAtMs": 662
+        },
+        "cancellationTerminalMs": 172,
+        "partialOutputRetained": true,
+        "regenerateActionStartedNewRun": true,
+        "modelShown": "gpt-6-astra"
+      }
+    },
+    "mobile": {
+      "pi": {
+        "result": "PASS",
+        "viewport": { "width": 390, "height": 844, "scrollWidth": 390 },
+        "horizontalOverflow": false,
+        "requestToFirstVisibleTextMs": 6154,
+        "visibleLinesBeforeRefresh": 7,
+        "visibleLinesAfterRefresh": 27,
+        "refreshRecoveryMs": 1187,
+        "stopAccepted": true,
+        "terminalObserved": true
+      },
+      "codex": {
+        "result": "PASS",
+        "viewport": { "width": 390, "height": 844, "scrollWidth": 390 },
+        "horizontalOverflow": false,
+        "requestToFirstVisibleTextMs": 5188,
+        "visibleLineObservations": [
+          { "ms": 5188, "visibleLines": 1 },
+          { "ms": 5854, "visibleLines": 2 },
+          { "ms": 6715, "visibleLines": 3 }
+        ],
+        "visibleLinesBeforeRefresh": 3,
+        "visibleLinesAfterRefresh": 6,
+        "refreshRecoveryMs": 1746,
+        "stopAccepted": true,
+        "terminalObserved": true
+      }
+    }
+  },
+  "latencyWaterfall": {
+    "piIncrementalRun": {
+      "queueMs": 544,
+      "dispatchToFirstUpstreamByteMs": 138,
+      "dispatchToFirstVisibleTextMs": 5335,
+      "runtimeMs": 7118,
+      "totalMs": 7662
+    },
+    "codexIncrementalRun": {
+      "queueMs": 630,
+      "dispatchToFirstUpstreamByteMs": 138,
+      "dispatchToFirstVisibleTextMs": 7327,
+      "runtimeMs": 29059,
+      "totalMs": 29689
+    }
+  },
+  "validation": {
+    "targetedTests": { "result": "PASS", "files": 8, "tests": 151 },
+    "typecheck": "PASS",
+    "eslint": "PASS",
+    "i18n": { "result": "PASS", "files": 18, "leafKeys": 4762 },
+    "dockerBuild": "PASS",
+    "controllerHealth": "healthy"
+  },
+  "evidence": {
+    "rawApiResult": "data/p12-pi-codex-streaming-20260911/raw-result.json",
+    "mobilePiResult": "data/p12-pi-codex-streaming-20260911/mobile-pi-browser-result.json",
+    "mobileCodexResult": "data/p12-pi-codex-streaming-20260911/mobile-codex-browser-result.json",
+    "screenshots": [
+      "data/p12-pi-codex-streaming-20260911/mobile-pi-streaming-390x844.png",
+      "data/p12-pi-codex-streaming-20260911/mobile-pi-final-390x844.png",
+      "data/p12-pi-codex-streaming-20260911/mobile-codex-streaming-390x844.png",
+      "data/p12-pi-codex-streaming-20260911/mobile-codex-final-390x844.png"
+    ]
+  },
+  "boundaries": [
+    "The first-visible-text latency includes provider/model generation time and local queueing; it is not a browser-only latency measurement.",
+    "The retained raw browser and API evidence is local and ignored because it includes full conversation output. This artifact contains sanitized metrics and identifiers only.",
+    "This acceptance covers the exact local controller image and Runtime instances listed above on one Windows Docker Desktop host.",
+    "P1.2 validates streaming, cancellation, regeneration and refresh recovery. It does not change the declared certification level of either Runtime."
+  ],
+  "containsSecrets": false
+}

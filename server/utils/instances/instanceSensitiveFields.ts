@@ -1,5 +1,5 @@
 export const instanceSensitiveFields = [
-  'apiKey', 'providerApiKey', 'password', 
+  'codexAuthJson', 'apiKey', 'providerApiKey', 'password',
   'telegramBotToken', 'discordBotToken', 'feishuAppSecret', 'larkAppSecret',
   'qqBotSecret', 'whatsappAccessToken', 'slackBotToken', 
   'slackSigningSecret', 'slackAppToken', 'dingtalkAppSecret', 

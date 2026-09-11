@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { beginA2ATaskLink, updateA2ATaskLink, type A2ATaskLink } from './a2aTaskLinks';
+import { resolveA2ATaskWaitMs } from './a2aTimeoutPolicy';
 
 const validId = (value: unknown): value is string => typeof value === 'string' && /^[a-zA-Z0-9-]{1,160}$/.test(value);
 const normalizedState = (state: string) => state.replace(/^TASK_STATE_/, '').toLowerCase().replaceAll('_', '-');
@@ -35,7 +36,7 @@ export async function trackedA2ASend(options: {
   if (!created) {
     if (link.state === 'finished' && link.task) return { jsonrpc: '2.0', id: body.id, result: body.method === 'SendMessage' ? { task: link.task } : link.task };
     if (!link.remoteTaskId || !options.read) throw Error('A2A_ALREADY_SUBMITTED_CHECK_RECORD');
-    const deadline = Date.now() + 180_000;
+    const deadline = Date.now() + resolveA2ATaskWaitMs();
     let recovered = link;
     while (Date.now() < deadline) {
       recovered = await refreshMappedA2ATask(recovered, options.read);

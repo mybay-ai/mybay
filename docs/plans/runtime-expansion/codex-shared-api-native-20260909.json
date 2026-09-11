@@ -1,0 +1,15 @@
+{
+  "recordedAt": "2026-09-09T11:42:57.918Z",
+  "scenario": "official-codex-app-server-custom-responses",
+  "nativeStatus": "completed",
+  "output": "CODEX_API_NATIVE_OK",
+  "requests": [
+    {
+      "path": "/v1/responses",
+      "method": "POST",
+      "expectedKey": true
+    }
+  ],
+  "verdict": "PASS",
+  "scope": "Real pinned Codex binary with local protocol fixture, not a real external provider certification."
+}

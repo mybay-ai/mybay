@@ -32,6 +32,13 @@ it('rejects a room outsider, changed context, missing parent and recursive membe
   beginA2ATaskLink(input);
   expect(() => beginA2ATaskLink({ ...input, instanceId: 'peer', peerId: 'caller', contextId: 'ctx-fresh' })).toThrow('A2A_GROUP_RECURSION_BLOCKED');
 });
+it('allows independent top-level rooms to cross while each has a verified local parent', () => {
+  beginA2ATaskLink(input);
+  const reverseGroup = createChatGroupRun({ runId: 'reverse', leader: { id: 'peer', name: 'Member' }, peers: [{ id: 'caller', name: 'Host' }], maxRounds: 1 })!;
+  mutateStoreCollections(['chatRuns'], store => store.chatRuns.push({ id: 'reverse', instance_id: 'peer', status: 'running', group_collaboration: reverseGroup }));
+  expect(beginA2ATaskLink({ instanceId: 'peer', peerId: 'caller', contextId: reverseGroup.contextId, callerTaskId: 'task-reverse', fingerprint: 'reverse' }).link)
+    .toMatchObject({ parentRunId: 'reverse', memberCallNumber: 1 });
+});
 it.each(['stopping', 'cancelled', 'completed'])('rejects a new dispatch after the parent becomes %s', status => {
   mutateStoreCollections(['chatRuns'], store => { store.chatRuns[0].status = status; });
   expect(() => beginA2ATaskLink(input)).toThrow('A2A_GROUP_NOT_RUNNING');

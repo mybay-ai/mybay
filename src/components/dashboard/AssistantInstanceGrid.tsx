@@ -1,5 +1,5 @@
 import React from "react";
-import { AlertTriangle, ArrowRight, FolderOpen, MessageSquare, RotateCcw, Settings2 } from "lucide-react";
+import { AlertTriangle, ArrowRight, FolderOpen, MessageSquare, Settings2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { APP_ROUTES } from "../../constants/routes";
@@ -26,7 +26,7 @@ export function AssistantInstanceGrid(props: Props) {
   return (
     <>
       <p className="mb-4 text-sm leading-6 text-content-muted">{t("agent_view_intro")}</p>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, max(260px, calc((100% - 3rem) / 4))), 1fr))" }}>
         {props.instances.map((instance) => {
           const pending = props.deletingIds.has(instance.id);
           const presentation = getAssistantCardPresentation(instance, pending);
@@ -46,7 +46,7 @@ export function AssistantInstanceGrid(props: Props) {
             <article
               key={instance.id}
               aria-label={instance.name}
-              className="flex min-h-[236px] min-w-0 flex-col rounded-2xl border border-outline/60 bg-surface p-5 shadow-xs transition-all duration-150 hover:-translate-y-0.5 hover:border-outline-strong hover:shadow-md"
+              className="flex min-h-[224px] min-w-0 flex-col rounded-2xl border border-outline/60 bg-surface p-5 shadow-xs transition-all duration-150 hover:-translate-y-0.5 hover:border-outline-strong hover:shadow-md"
             >
               <div className="flex items-start gap-3">
                 {props.bulkMode && (
@@ -61,16 +61,24 @@ export function AssistantInstanceGrid(props: Props) {
                 )}
                 <AgentAvatar instance={instance} label={instance.name} />
                 <div className="min-w-0 flex-1">
-                  <h3 className="line-clamp-2 break-words text-base font-semibold leading-6 text-content" title={instance.name}>
-                    {instance.name}
-                  </h3>
+                  <button
+                    type="button"
+                    className="block max-w-full rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+                    aria-label={t("agent_view_manage_named", { name: instance.name })}
+                    title={t("action_manage")}
+                    onClick={() => setManagedInstanceId(instance.id)}
+                  >
+                    <h3 className="line-clamp-2 break-words text-base font-semibold leading-6 text-content transition-colors hover:text-indigo-600 dark:hover:text-indigo-300" title={instance.name}>
+                      {instance.name}
+                    </h3>
+                  </button>
                   <p className="mt-0.5 line-clamp-2 break-words text-xs leading-5 text-content-muted" title={subtitle}>
                     {subtitle}
                   </p>
                 </div>
                 <button
                   type="button"
-                  className="shrink-0 rounded-lg p-2 text-content-muted transition-colors hover:bg-surface-muted hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/30"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg p-2 text-content-muted transition-colors hover:bg-surface-muted hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/30"
                   aria-label={t("agent_view_manage_named", { name: instance.name })}
                   title={t("action_manage")}
                   onClick={() => setManagedInstanceId(instance.id)}
@@ -97,34 +105,25 @@ export function AssistantInstanceGrid(props: Props) {
                 </button>
               )}
 
-              <div className="mt-auto grid grid-cols-2 gap-2 pt-5 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
+              <div className="mt-auto grid grid-cols-1 gap-2 pt-4">
                 <Button
                   disabled={!presentation.canChat}
                   onClick={() => navigate(`${APP_ROUTES.CHAT_WORKSPACE}?instanceId=${encodeURIComponent(instance.id)}`)}
-                  className="col-span-2 min-h-10 min-w-0 gap-2 rounded-xl sm:col-span-1"
+                  className="min-h-11 min-w-0 gap-2 rounded-xl"
                 >
                   <MessageSquare className="h-4 w-4" />
-                  <span className="truncate">{t("agent_view_chat")}</span>
+                  <span className="whitespace-normal">{t("agent_view_chat")}</span>
                 </Button>
                 <Button
                   variant="outline"
                   disabled={!presentation.canOpenFiles}
                   onClick={() => props.handleOpenTerminalView(instance.id, "files")}
-                  className="min-h-10 min-w-0 gap-2 rounded-xl px-3"
+                  className="min-h-11 min-w-0 gap-2 rounded-xl px-3"
                 >
                   <FolderOpen className="h-4 w-4" />
-                  <span className="truncate">{t("agent_view_files")}</span>
+                  <span className="whitespace-normal">{t("agent_view_files")}</span>
                 </Button>
-                <Button
-                  variant="outline"
-                  disabled={instance.archived || pending || props.actioningIds.has(instance.id)}
-                  title={t("tooltip_redeploy")}
-                  onClick={() => props.handleInstanceAction(instance.id, "redeploy", true, t("confirm_redeploy"))}
-                  className="min-h-10 min-w-0 gap-2 rounded-xl px-3 text-amber-700 hover:border-amber-400/60 hover:bg-amber-500/10 hover:text-amber-700 dark:text-amber-300"
-                >
-                  <RotateCcw className={cn("h-4 w-4", props.actioningIds.has(instance.id) && "animate-spin")} />
-                  <span className="truncate">{t("btn_redeploy")}</span>
-                </Button>
+
               </div>
             </article>
           );

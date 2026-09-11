@@ -1,4 +1,5 @@
-import { PI_RUNTIME_DEFINITION, type RuntimeCertificationLevel, type RuntimeType } from "./runtimeCatalog";
+import { CODEX_BUILD } from "./codexBuild";
+import { CODEX_RUNTIME_DEFINITION, PI_RUNTIME_DEFINITION, type RuntimeCertificationLevel, type RuntimeType } from "./runtimeCatalog";
 
 export interface RuntimeReleaseDefinition {
   readonly runtimeType: RuntimeType;
@@ -13,6 +14,8 @@ export interface RuntimeReleaseDefinition {
   readonly isLatest: boolean;
   readonly upgradeable: boolean;
   readonly aliases: readonly string[];
+  /** Immutable MyBay bridge revision expected on retained local images. */
+  readonly bridgeVersion?: string;
 }
 
 function freezeRelease(release: RuntimeReleaseDefinition): RuntimeReleaseDefinition {
@@ -69,8 +72,42 @@ export const PI_RUNTIME_RELEASES: readonly RuntimeReleaseDefinition[] = Object.f
   }),
 ]);
 
+export const CODEX_RUNTIME_RELEASES: readonly RuntimeReleaseDefinition[] = Object.freeze([
+  freezeRelease({
+    runtimeType: "codex",
+    runtimeVersion: CODEX_RUNTIME_DEFINITION.version,
+    image: CODEX_RUNTIME_DEFINITION.runtime.image,
+    imageTag: CODEX_RUNTIME_DEFINITION.runtime.tag,
+    channel: "beta",
+    certificationLevel: CODEX_RUNTIME_DEFINITION.release.certificationLevel,
+    releasedAt: "2026-09-10",
+    changelog: "Certifies the pinned native Codex CLI 0.154.0 build after product deployment, upgrade, rollback, security, backup/restore and credentialed end-to-end acceptance.",
+    changelogZh: "固定使用原生 Codex CLI 0.154.0，并在产品部署、升级、回滚、安全、备份恢复和真实凭据端到端验收通过后达到 Certified。",
+    isLatest: true,
+    upgradeable: true,
+    aliases: [CODEX_RUNTIME_DEFINITION.version, CODEX_RUNTIME_DEFINITION.runtime.tag],
+    bridgeVersion: CODEX_BUILD.bridgeVersion,
+  }),
+  freezeRelease({
+    runtimeType: "codex",
+    runtimeVersion: "0.153.4",
+    image: CODEX_RUNTIME_DEFINITION.runtime.image,
+    imageTag: "0.153.4",
+    channel: "experimental",
+    certificationLevel: "experimental",
+    releasedAt: "2026-09-09",
+    changelog: "Previous pinned Codex CLI build retained as the supported rollback point.",
+    changelogZh: "保留上一版固定的 Codex CLI 构建，作为受支持的回滚点。",
+    isLatest: false,
+    upgradeable: true,
+    aliases: ["0.153.4"],
+    bridgeVersion: "0.1.0-experimental.2",
+  }),
+]);
+
 export function listRuntimeReleases(runtimeType: RuntimeType): readonly RuntimeReleaseDefinition[] {
   if (runtimeType === "pi") return PI_RUNTIME_RELEASES;
+  if (runtimeType === "codex") return CODEX_RUNTIME_RELEASES;
   return Object.freeze([]);
 }
 

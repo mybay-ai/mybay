@@ -236,7 +236,10 @@ export function registerAssistRoutes(router: Router) {
       phase = "build_assist_context";
       const rawHistory = await chatRepo.listMessages(conversationId, CHAT_CONTEXT_MESSAGE_LIMIT);
       const history = selectRecentMessagesForContext(rawHistory.filter((message) => message.id !== userMessageId));
-      const assistPrompt = await buildAssistContext(skillId, instance, config, conversation, history);
+      const latestFailure = skillId === "explain_last_error"
+        ? await chatRepo.getLatestFailedMessage(conversationId)
+        : null;
+      const assistPrompt = await buildAssistContext(skillId, instance, config, conversation, history, latestFailure);
 
       promptLength = content.length;
       messagesCount = history.length + 1;
@@ -262,7 +265,8 @@ export function registerAssistRoutes(router: Router) {
           provider: quickConfig.provider,
           model: quickConfig.model,
           baseUrl: quickConfig.baseUrl,
-          providerApiKey: quickConfig.providerApiKey
+          providerApiKey: quickConfig.providerApiKey,
+          onOAuthRefresh: quickConfig.onOAuthRefresh,
         }, {
           messages: quickMessages,
           temperature: normalizeChatTemperature(quickConfig.provider, quickConfig.model, temperature),
@@ -280,11 +284,12 @@ export function registerAssistRoutes(router: Router) {
         };
       } catch (e: any) {
         if (syncLifecycle.isCancelled()) throw e;
+        const errorCode = e?.code === "CODEX_AUTH_REQUIRED" ? "CODEX_AUTH_REQUIRED" : "DIRECT_MODEL_CHAT_FAILED";
         upstreamResponse = {
           ok: false,
-          statusCode: e?.name === "AbortError" ? 504 : 502,
-          error: "DIRECT_MODEL_CHAT_FAILED",
-          json: { error: e?.message || "Direct model chat failed in Assist mode" },
+          statusCode: e?.name === "AbortError" ? 504 : e?.statusCode || 502,
+          error: errorCode,
+          json: { error: errorCode === "CODEX_AUTH_REQUIRED" ? "当前 Codex OAuth 已失效，请重新连接 OpenAI OAuth。" : e?.message || "Direct model chat failed in Assist mode" },
           durationMs: Date.now() - startTime
         };
       }
@@ -387,7 +392,11 @@ export function registerAssistRoutes(router: Router) {
           } catch (err) {}
         }
 
-        const mapped = {
+        const mapped = upstreamResponse.error === "CODEX_AUTH_REQUIRED" ? {
+          success: false,
+          error: "CODEX_AUTH_REQUIRED",
+          message: "当前 Codex OAuth 已失效，请重新连接 OpenAI OAuth。"
+        } : {
           success: false,
           error: "DIRECT_MODEL_CHAT_FAILED",
           message: upstreamResponse.json?.error || "辅助模式模型调用失败。",

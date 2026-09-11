@@ -2,6 +2,8 @@ import type { SetupFormData } from "../../types";
 
 const LOCAL_DEPLOY_FIELDS = [
   "runtime_type",
+  "codexAuthMode",
+  "codexAuthJson",
   "name",
   "path",
   "username",

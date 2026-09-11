@@ -1,7 +1,8 @@
+import { CODEX_BUILD } from "../../../shared/codexBuild";
 import { dbAdapter } from "../../db";
 import { supportsFeishu } from "../../utils/hermesCapabilities";
 import { parseImageRef } from "./helpers";
-import { PI_RUNTIME_DEFINITION } from "../../../shared/runtimeCatalog";
+import { HERMES_RUNTIME_DEFINITION, PI_RUNTIME_DEFINITION } from "../../../shared/runtimeCatalog";
 import { findRuntimeRelease } from "../../../shared/runtimeReleases";
 
 type RuntimeImageSelection = {
@@ -22,6 +23,7 @@ export async function resolveCreateRuntimeImage(options: {
   userRole: string;
 }): Promise<RuntimeImageSelectionResult> {
   const { data, secureData, userRole } = options;
+  if (data.runtime_type === "codex") return { ok: true, selection: { agent_image: CODEX_BUILD.image, agent_image_tag: CODEX_BUILD.imageTag, agent_version: CODEX_BUILD.nativeVersion, resolved_version: CODEX_BUILD.nativeVersion, myBayVersions: [] } };
   if (String(data.runtime_type || "hermes").trim().toLowerCase() === "pi") {
     const imageRef = process.env.MYBAY_PI_RUNTIME_IMAGE
       || `${PI_RUNTIME_DEFINITION.runtime.image}:${PI_RUNTIME_DEFINITION.runtime.tag}`;
@@ -41,12 +43,20 @@ export async function resolveCreateRuntimeImage(options: {
     };
   }
   const canUseCustomAgentImage = userRole === "admin" || userRole === "super_admin";
-  const systemDefaultAgentImage = process.env.MY_BAY_IMAGE || "nousresearch/hermes-agent";
-  const requestedImage = canUseCustomAgentImage ? (data.image || "") : systemDefaultAgentImage;
+  const configuredHermesImageRef = process.env.MY_BAY_IMAGE
+    || `${HERMES_RUNTIME_DEFINITION.runtime.image}:${HERMES_RUNTIME_DEFINITION.runtime.tag}`;
+  const parsedHermesDefault = parseImageRef(configuredHermesImageRef);
+  const systemDefaultAgentImage = parsedHermesDefault.agent_image;
+  const systemDefaultAgentTag = process.env.MY_BAY_IMAGE_TAG || parsedHermesDefault.agent_image_tag;
+  const requestedImage = canUseCustomAgentImage ? (data.image || configuredHermesImageRef) : configuredHermesImageRef;
   let { agent_image, agent_image_tag } = parseImageRef(requestedImage);
 
   if (data.imageTag) agent_image_tag = data.imageTag;
-  if (!canUseCustomAgentImage) agent_image = systemDefaultAgentImage;
+  else if (requestedImage === configuredHermesImageRef) agent_image_tag = systemDefaultAgentTag;
+  if (!canUseCustomAgentImage) {
+    agent_image = systemDefaultAgentImage;
+    agent_image_tag = systemDefaultAgentTag;
+  }
 
   let agent_version = agent_image_tag;
   let resolved_version: string | null = null;
@@ -64,7 +74,7 @@ export async function resolveCreateRuntimeImage(options: {
   const isFeishu = Boolean(isChannelFeishu || hasFeishuSkill);
   const myBayVersions = await dbAdapter.getMyBayVersions();
 
-  if (!canUseCustomAgentImage && agent_image_tag !== "latest") {
+  if (!canUseCustomAgentImage && agent_image_tag !== "latest" && agent_image_tag !== HERMES_RUNTIME_DEFINITION.runtime.tag) {
     const isRegisteredTag = myBayVersions.some((version: any) => [
       version.image_tag,
       version.tag,
@@ -106,6 +116,14 @@ export async function resolveCreateRuntimeImage(options: {
         const tag = version.image_tag || version.tag || version.version;
         return tag === agent_image_tag || version.version === agent_image_tag;
       });
+      if (!matchingVersion && agent_image_tag === HERMES_RUNTIME_DEFINITION.runtime.tag) {
+        matchingVersion = {
+          image: systemDefaultAgentImage,
+          image_tag: HERMES_RUNTIME_DEFINITION.runtime.tag,
+          version: HERMES_RUNTIME_DEFINITION.version,
+          capabilities: HERMES_RUNTIME_DEFINITION.capabilities.imChannels,
+        };
+      }
       if (!matchingVersion) {
         return {
           ok: false,

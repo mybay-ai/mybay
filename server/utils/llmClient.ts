@@ -1,7 +1,8 @@
 import { usageWithReportedModel } from "../../shared/localRunUsage";
 import { providerRegistry } from "../../shared/providerRegistry";
 import { decrypt } from "../crypto";
-import { checkSSRFSafe } from "./ssrfValidator";
+import { refreshCodexOAuthPayload } from "./codexOAuthRefresh";
+import { safeOutboundFetch } from "../services/system/systemNetworkPolicy";
 
 export interface LLMConfig {
   provider: string;
@@ -9,6 +10,7 @@ export interface LLMConfig {
   baseUrl?: string;
   apiKey?: string;
   providerApiKey?: string;
+  onOAuthRefresh?: (payload: Record<string, unknown>) => Promise<void>;
 }
 
 export interface GenerateTextOptions {
@@ -192,13 +194,18 @@ export async function readOAuthResponsesStream(response: Response): Promise<Chat
   return visibleChatCompletion(content, usage);
 }
 
-async function assertSafeLLMRequestUrl(url: string): Promise<void> {
-  const result = await checkSSRFSafe(url);
-  if (result.safe) return;
-
-  const error = new Error("模型服务地址未通过 SSRF 安全校验，请检查 API Base URL 配置。");
-  (error as Error & { code?: string }).code = "LLM_BASE_URL_UNSAFE";
-  throw error;
+async function safeLLMFetch(url: string, init: RequestInit): Promise<Response> {
+  try {
+    return await safeOutboundFetch(url, init);
+  } catch (error: any) {
+    if (error?.code === "OUTBOUND_URL_REJECTED") {
+      throw Object.assign(new Error(error.message || "LLM base URL is blocked by the outbound network policy"), {
+        code: "LLM_BASE_URL_UNSAFE",
+        cause: error,
+      });
+    }
+    throw error;
+  }
 }
 
 export async function generateChatCompletion(
@@ -320,8 +327,18 @@ export async function generateChatCompletion(
       opts.body = JSON.stringify(body);
     }
 
-    await assertSafeLLMRequestUrl(url);
-    const response = await fetch(url, opts);
+    let response = await safeLLMFetch(url, opts);
+
+    if (!response.ok && strategy === "codex-responses" && regKey === "openai-codex" && [401, 403].includes(response.status) && oauthPayload) {
+      const refreshedPayload = await refreshCodexOAuthPayload(oauthPayload);
+      const refreshedAccessToken = String(refreshedPayload.tokens?.access_token || "");
+      if (llmConfig.onOAuthRefresh) await llmConfig.onOAuthRefresh(refreshedPayload);
+      opts.headers.Authorization = `Bearer ${refreshedAccessToken}`;
+      const refreshedAccountId = resolveOAuthAccountId(refreshedPayload, refreshedAccessToken);
+      if (refreshedAccountId) opts.headers["ChatGPT-Account-Id"] = refreshedAccountId;
+      else delete opts.headers["ChatGPT-Account-Id"];
+      response = await safeLLMFetch(url, opts);
+    }
     clearTimeout(timeoutId);
 
     if (!response.ok) {
@@ -332,7 +349,12 @@ export async function generateChatCompletion(
       } catch (e) {}
 
       const msg = parsedErr?.error?.message || parsedErr?.error || errorText || `HTTP 错误 ${response.status}`;
-      throw new Error(`LLM 供应商 [${llmConfig.provider}] 返回错误: ${msg}`);
+      const providerError = new Error(`LLM 供应商 [${llmConfig.provider}] 返回错误: ${msg}`) as Error & { code?: string; statusCode?: number };
+      providerError.statusCode = response.status;
+      if (regKey === "openai-codex" && (response.status === 401 || response.status === 403)) {
+        providerError.code = "CODEX_AUTH_REQUIRED";
+      }
+      throw providerError;
     }
 
     if (strategy === "codex-responses") {
@@ -479,8 +501,7 @@ export async function generateText(llmConfig: LLMConfig, options: GenerateTextOp
       opts.body = JSON.stringify(body);
     }
 
-    await assertSafeLLMRequestUrl(url);
-    const response = await fetch(url, opts);
+    const response = await safeLLMFetch(url, opts);
     clearTimeout(timeoutId);
 
     if (!response.ok) {

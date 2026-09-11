@@ -26,6 +26,7 @@ export function resolveWorkspaceRunSource(args: {
     runId: result.runId,
     status: execution?.status ?? result.message?.status,
     usageTotalTokens: usage ? usage.totalTokens : usageNumber(result.message?.usage_total_tokens),
+    usageEvidence: usage,
     durationMs: usage?.durationMs,
   };
   // The same projected tool set as the inline timeline. Preserve inferred outcomes.

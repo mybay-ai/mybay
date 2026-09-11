@@ -2,6 +2,7 @@ import { instanceSensitiveFields } from "./instances/instanceSensitiveFields";
 import { providerRegistry } from "../../shared/providerRegistry";
 
 const DEFAULT_SENSITIVE_KEYS = [
+  "codexAuthJson",
   ...instanceSensitiveFields,
   'apiKey', 'api_key', 'token', 'secret', 'password', 'authorization', 
   'credential', 'webhook', 'encrypted', 'private', 'access_token', 
@@ -281,6 +282,7 @@ export function sanitizeInstance(instance: any, mode: 'list' | 'detail' = 'detai
     const summary: any = {
       provider: config.provider || null,
       model: config.model || null,
+      codexAuthMode: config.codexAuthMode === "api" ? "api" : config.codexAuthMode === "chatgpt" ? "chatgpt" : null,
       providerCredentialId: config.providerCredentialId || null,
       baseUrl: (config.baseUrl || config.base_url || instance.model_base_url || instance.baseUrl || instance.base_url) ? resolvedBaseUrl : null,
       baseUrlHost: safeHostname,

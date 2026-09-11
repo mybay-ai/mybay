@@ -7,7 +7,6 @@ import path from "path";
 import os from "os";
 import multer from "multer";
 import { hasZipMagic } from "../../utils/uploadSecurity";
-import AdmZip from "adm-zip";
 import * as archiver from "archiver";
 import { resolveArchiverFactory } from "../../utils/resolveArchiverFactory";
 import { executeDeployment, buildDeploymentContext, rebuildProxyConfig } from "../../deployment";
@@ -35,6 +34,7 @@ import { startPeriodicAgentDbSync } from "../../sqliteAgentSync";
 import { ensureEncryptedDashboardAuthSecret } from "../../utils/dashboardAuthSecret";
 import { applySavedProviderCredential, SavedProviderCredentialError } from "../../utils/savedProviderCredential";
 import { validateConfigArchiveEntries } from "../../utils/configArchiveSecurity";
+import { readOnlyZip, type ReadOnlyZipEntry } from "../../utils/readOnlyZip";
 import {
   isPrivilegedUser,
   parseInstanceConfigJson,
@@ -46,6 +46,28 @@ import {
   collectReservedInstancePorts,
   disableCredentiallessA2AForRestore,
 } from "../../utils/configArchiveRestorePolicy";
+import {
+  isConfigArchiveOutputPath,
+  isConfigArchiveUploadPath,
+} from "../../utils/configArchiveSections";
+
+const CONFIG_ARCHIVE_JSON_FILES = new Set([
+  "manifest.json",
+  "config.redacted.json",
+  "business-config.json",
+  "template-inputs.json",
+]);
+function readConfigArchive(buffer: Buffer, includeRestoreFiles = false): ReadOnlyZipEntry[] {
+  return readOnlyZip(buffer, {
+    include: (entryName) => {
+      const lowerName = entryName.toLowerCase();
+      return CONFIG_ARCHIVE_JSON_FILES.has(lowerName)
+        || (includeRestoreFiles && (
+          isConfigArchiveUploadPath(lowerName) || isConfigArchiveOutputPath(lowerName)
+        ));
+    },
+  });
+}
 
 export function createConfigImportRoutes(deps: RouterDependencies) {
   const router = Router();
@@ -139,17 +161,16 @@ export function createConfigImportRoutes(deps: RouterDependencies) {
         return res.status(400).json({ valid: false, error: "请选择需要上传并校验的备份包文件" });
       }
 
-      let zip: AdmZip;
+      let entries: ReadOnlyZipEntry[];
       if (!hasZipMagic(req.file.buffer)) {
         return res.status(400).json({ error: "Invalid or forged ZIP archive." });
       }
       try {
-        zip = new AdmZip(req.file.buffer);
+        entries = readConfigArchive(req.file.buffer, true);
       } catch (e) {
         return res.status(400).json({ valid: false, error: "备份包损坏或不是有效的 zip 压缩文件" });
       }
 
-      const entries = zip.getEntries();
       const archiveValidation = validateConfigArchiveEntries(entries);
       if (archiveValidation.ok === false) return res.status(400).json({ valid: false, error: archiveValidation.error, code: archiveValidation.code });
 
@@ -182,21 +203,10 @@ export function createConfigImportRoutes(deps: RouterDependencies) {
 
         // Detect uploads/outputs presence
         const lowerName = name.toLowerCase();
-        if (
-          lowerName.startsWith("uploads/") ||
-          lowerName.startsWith("input/") ||
-          lowerName.startsWith("inputs/") ||
-          lowerName.startsWith("documents/") ||
-          lowerName.startsWith("files/")
-        ) {
+        if (isConfigArchiveUploadPath(lowerName)) {
           hasUploads = true;
         }
-        if (
-          lowerName.startsWith("outputs/") ||
-          lowerName.startsWith("output/") ||
-          lowerName.startsWith("results/") ||
-          lowerName.startsWith("artifacts/")
-        ) {
+        if (isConfigArchiveOutputPath(lowerName)) {
           hasOutputs = true;
         }
 
@@ -377,17 +387,16 @@ export function createConfigImportRoutes(deps: RouterDependencies) {
       }
 
       // 3. Extract and parse ZIP
-      let zip: AdmZip;
+      let entries: ReadOnlyZipEntry[];
       if (!hasZipMagic(req.file.buffer)) {
         return res.status(400).json({ error: "Invalid or forged ZIP archive." });
       }
       try {
-        zip = new AdmZip(req.file.buffer);
+        entries = readConfigArchive(req.file.buffer, true);
       } catch (e) {
         return res.status(400).json({ error: "备份包损坏或不是有效的 zip 压缩文件" });
       }
 
-      const entries = zip.getEntries();
       const archiveValidation = validateConfigArchiveEntries(entries);
       if (archiveValidation.ok === false) return res.status(400).json({ error: archiveValidation.error, code: archiveValidation.code });
 
@@ -419,21 +428,10 @@ export function createConfigImportRoutes(deps: RouterDependencies) {
         }
 
         const lowerName = entryName.toLowerCase();
-        if (
-          lowerName.startsWith("uploads/") ||
-          lowerName.startsWith("input/") ||
-          lowerName.startsWith("inputs/") ||
-          lowerName.startsWith("documents/") ||
-          lowerName.startsWith("files/")
-        ) {
+        if (isConfigArchiveUploadPath(lowerName)) {
           hasUploads = true;
         }
-        if (
-          lowerName.startsWith("outputs/") ||
-          lowerName.startsWith("output/") ||
-          lowerName.startsWith("results/") ||
-          lowerName.startsWith("artifacts/")
-        ) {
+        if (isConfigArchiveOutputPath(lowerName)) {
           hasOutputs = true;
         }
 
@@ -583,18 +581,8 @@ export function createConfigImportRoutes(deps: RouterDependencies) {
         const entryName = entry.entryName.replace(/\\/g, "/");
 
         const lowerName = entryName.toLowerCase();
-        const isUpload =
-          lowerName.startsWith("uploads/") ||
-          lowerName.startsWith("input/") ||
-          lowerName.startsWith("inputs/") ||
-          lowerName.startsWith("documents/") ||
-          lowerName.startsWith("files/");
-
-        const isOutput =
-          lowerName.startsWith("outputs/") ||
-          lowerName.startsWith("output/") ||
-          lowerName.startsWith("results/") ||
-          lowerName.startsWith("artifacts/");
+        const isUpload = isConfigArchiveUploadPath(lowerName);
+        const isOutput = isConfigArchiveOutputPath(lowerName);
 
         if (isUpload || isOutput) {
           const targetPath = path.join(instanceDir, entryName);

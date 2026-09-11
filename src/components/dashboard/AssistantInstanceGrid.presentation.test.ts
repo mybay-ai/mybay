@@ -6,14 +6,11 @@ const drawerSource = readFileSync(new URL("./AgentManagementDrawer.tsx", import.
 
 describe("AssistantInstanceGrid presentation", () => {
   it("keeps the Agent card focused on primary work and opens a dedicated management surface", () => {
-    expect(source).toContain("xl:grid-cols-3");
-    expect(source).toContain("min-h-[236px]");
-    expect(source).not.toContain("min-h-[292px]");
     expect(source).toContain('t("agent_view_chat")');
     expect(source).toContain('t("agent_view_files")');
-    expect(source).toContain('t("btn_redeploy")');
-    expect(source).toContain('handleInstanceAction(instance.id, "redeploy", true, t("confirm_redeploy"))');
-    expect(source).toContain("sm:grid-cols-[minmax(0,1fr)_auto_auto]");
+    expect(drawerSource).toContain("onRedeploy");
+    expect(source).toContain('handleInstanceAction(managedInstance.id, "redeploy", true, t("confirm_redeploy"))');
+
     expect(source).toContain('openDetails(instance.id, "diagnostics")');
     expect(source).toContain("props.bulkMode &&");
     expect(source).toContain("AgentManagementDrawer");

@@ -10,6 +10,8 @@ release/
 /runtime/*
 !/runtime/pi-bridge/
 !/runtime/pi-bridge/**
+!/runtime/codex-bridge/
+!/runtime/codex-bridge/**
 **/node_modules/
 /secrets/
 .DS_Store

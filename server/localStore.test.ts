@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { DatabaseSync } from "node:sqlite";
+import schemaVersion from "../shared/schema-version.json";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   closeLocalDatabase,
@@ -57,6 +58,29 @@ describe("local SQLite store", () => {
     expect(preserved.prepare("SELECT name FROM sqlite_master WHERE name = 'chatMessageFeedback'").get()).toBeUndefined();
     expect(preserved.prepare("SELECT value FROM systemSettings WHERE key = 'recovery_marker'").get()?.value).toBe("keep");
     preserved.close();
+  });
+
+  it("fails closed on a corrupt existing database before schema setup can replace it", () => {
+    fs.mkdirSync(testDir, { recursive: true });
+    const corrupt = Buffer.from("not-a-sqlite-database-p04");
+    fs.writeFileSync(sqlitePath, corrupt);
+
+    expect(() => readStore()).toThrow(/LOCAL_SQLITE_INTEGRITY_FAILED.*not migrated or replaced/i);
+    expect(fs.readFileSync(sqlitePath)).toEqual(corrupt);
+    expect(fs.existsSync(`${sqlitePath}-wal`)).toBe(false);
+    expect(fs.existsSync(`${sqlitePath}-shm`)).toBe(false);
+  });
+
+  it("checkpoints WAL state during a graceful close and preserves the latest row", () => {
+    mutateStore((store) => { store.systemSettings.p04_shutdown_marker = "preserved"; });
+    expect(fs.existsSync(`${sqlitePath}-wal`)).toBe(true);
+
+    closeLocalDatabase();
+
+    const reopened = new DatabaseSync(sqlitePath, { readOnly: true });
+    expect(reopened.prepare("PRAGMA quick_check").get()?.quick_check).toBe("ok");
+    expect(reopened.prepare("SELECT value FROM systemSettings WHERE key = ?").get("p04_shutdown_marker")?.value).toBe("preserved");
+    reopened.close();
   });
 
   it("rolls back a failed transaction", () => {
@@ -191,7 +215,7 @@ describe("local SQLite store", () => {
     closeLocalDatabase();
 
     const verified = new DatabaseSync(sqlitePath);
-    expect((verified.prepare("SELECT value FROM localMetadata WHERE key = ?").get("schema_version") as { value: string }).value).toBe("7");
+    expect((verified.prepare("SELECT value FROM localMetadata WHERE key = ?").get("schema_version") as { value: string }).value).toBe(String(schemaVersion.current));
     expect(JSON.parse((verified.prepare("SELECT data FROM chatRuns WHERE id = ?").get("run-old") as { data: string }).data)).toEqual(migrated);
     verified.close();
 

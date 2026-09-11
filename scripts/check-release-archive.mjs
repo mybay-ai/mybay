@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import AdmZip from "adm-zip";
+import { unzipSync } from "fflate";
 import { shouldIncludeReleasePath } from "./create-release.mjs";
 import { checkVersionConsistency } from "./check-version.mjs";
 
@@ -14,36 +14,37 @@ const requiredFiles = [
   "docker-compose.server.yml", "docker-compose.windows.yml", "docker-compose.yml", "package-lock.json", "package.json", "quick-start.ps1", "quick-start.sh",
   "Repair-MyBay.bat", "Start-MyBay.bat", "Stop-MyBay.bat", "Uninstall-MyBay.bat", "View-Logs.bat", "scripts/quick-start-env.ps1", "scripts/quick-start-env.sh",
   "scripts/windows-control.ps1", "scripts/windows-preflight.ps1", "scripts/windows-prerequisites.ps1", "runtime/pi-bridge/Dockerfile",
+  "runtime/codex-bridge/Dockerfile", "runtime/codex-bridge/package.json", "runtime/codex-bridge/package-lock.json", "runtime/codex-bridge/server.mjs", "runtime/codex-bridge/runtime.mjs", "runtime/codex-bridge/app-server.mjs",
   "runtime/pi-bridge/package.json", "runtime/pi-bridge/package-lock.json", "runtime/pi-bridge/server.mjs",
 ];
 
 if (!fs.existsSync(archivePath)) throw new Error("Release archive not found: " + archivePath);
 
-const zip = new AdmZip(archivePath);
-const entries = zip.getEntries().filter((entry) => !entry.isDirectory);
-const names = entries.map((entry) => entry.entryName.replaceAll("\\", "/"));
+const zip = unzipSync(fs.readFileSync(archivePath));
+const names = Object.keys(zip).filter((name) => !name.endsWith("/")).map((name) => name.replaceAll("\\", "/"));
+const readAsText = (name) => Buffer.from(zip[name]).toString("utf8");
 const invalid = names.filter((name) => name.startsWith("/") || name.split("/").includes("..") || !shouldIncludeReleasePath(name));
 const missing = requiredFiles.filter((name) => !names.includes(name));
 const duplicates = names.filter((name, index) => names.indexOf(name) !== index);
-const privateKeyEntries = entries.filter((entry) => {
-  if (entry.header.size > 2 * 1024 * 1024) return false;
+const privateKeyEntries = names.filter((name) => {
+  if (zip[name].byteLength > 2 * 1024 * 1024) return false;
   const pemPrivateKey = /-----BEGIN ((?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY)-----\r?\n(?:[A-Za-z0-9+/=]{16,}\r?\n)+-----END \1-----/;
-  return pemPrivateKey.test(entry.getData().toString("utf8"));
+  return pemPrivateKey.test(readAsText(name));
 });
 
 if (invalid.length) throw new Error("Archive contains forbidden paths:\n- " + invalid.join("\n- "));
 if (missing.length) throw new Error("Archive is missing required files:\n- " + missing.join("\n- "));
 if (duplicates.length) throw new Error("Archive contains duplicate paths:\n- " + [...new Set(duplicates)].join("\n- "));
-if (privateKeyEntries.length) throw new Error("Archive contains private-key material:\n- " + privateKeyEntries.map((entry) => entry.entryName).join("\n- "));
+if (privateKeyEntries.length) throw new Error("Archive contains private-key material:\n- " + privateKeyEntries.join("\n- "));
 
-const archivedPackage = JSON.parse(zip.readAsText("package.json"));
-const archivedLock = JSON.parse(zip.readAsText("package-lock.json"));
-const archivedEnMarketing = JSON.parse(zip.readAsText("src/locales/en/marketing.json"));
-const archivedZhMarketing = JSON.parse(zip.readAsText("src/locales/zh-CN/marketing.json"));
+const archivedPackage = JSON.parse(readAsText("package.json"));
+const archivedLock = JSON.parse(readAsText("package-lock.json"));
+const archivedEnMarketing = JSON.parse(readAsText("src/locales/en/marketing.json"));
+const archivedZhMarketing = JSON.parse(readAsText("src/locales/zh-CN/marketing.json"));
 const archivedPublicMetadata = {
   readmes: [
-    { name: "README.md", content: zip.readAsText("README.md") },
-    { name: "README.zh-CN.md", content: zip.readAsText("README.zh-CN.md") },
+    { name: "README.md", content: readAsText("README.md") },
+    { name: "README.zh-CN.md", content: readAsText("README.zh-CN.md") },
   ],
   changelogs: [
     { name: "src/locales/en/marketing.json", releases: archivedEnMarketing.changelog?.releases },
@@ -56,4 +57,4 @@ if (archivedPackage.version !== packageJson.version) {
   throw new Error("Archive version (" + archivedPackage.version + ") does not match workspace (" + packageJson.version + ")");
 }
 
-console.log("[Release] Clean archive verified: " + archivePath + " (" + entries.length + " files, v" + archivedPackage.version + ").");
+console.log("[Release] Clean archive verified: " + archivePath + " (" + names.length + " files, v" + archivedPackage.version + ").");

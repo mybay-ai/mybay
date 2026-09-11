@@ -4,7 +4,7 @@ import { readLocalRunUsage, usageNumber } from "../../../shared/localRunUsage";
 import { readLocalModelEvidence } from "../../../shared/localModelEvidence";
 import { memo, useEffect, useMemo, useState } from "react";
 import { useChatCallback } from './useChatCallback';
-import { Brain, Check, Clock3, Copy, Gauge, ThumbsDown, ThumbsUp } from "lucide-react";
+import { Brain, Check, Clock3, Copy, Gauge, RefreshCw, ThumbsDown, ThumbsUp } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { AgentInstance, User as UserType } from "../../types";
 import type { ChatMessage } from "../../lib/chatWorkspaceState";
@@ -40,8 +40,11 @@ interface ChatMessageBubbleProps {
   selectedConversationId: string | null;
   sending: boolean;
   onRetry: (message: ChatMessage) => void;
+  canRegenerate?: boolean;
   onEdit?: (message: ChatMessage) => void;
   onSwitchToAssistAndDiagnose?: () => void;
+  onReconnectCodexOAuth?: () => void;
+  reconnectingCodexOAuth?: boolean;
   conversationFiles?: PendingAttachment[];
   onOpenConversationFile?: (file: PendingAttachment) => void;
   onOpenInstanceFilePath?: (filePath: string) => void;
@@ -107,8 +110,8 @@ function readStringField(source: unknown, keys: string[]) {
 }
 
 
-function getAssistantTokenUsage(message: ChatMessage) {
-  const evidence = readLocalRunUsage(message.metadata?.usage_evidence);
+function getAssistantTokenUsage(message: ChatMessage, runMetrics?: ChatRunMetrics | null) {
+  const evidence = readLocalRunUsage(message.metadata?.usage_evidence) ?? runMetrics?.usageEvidence ?? null;
   return evidence ? evidence.totalTokens : usageNumber(message.usage_total_tokens);
 }
 
@@ -117,8 +120,8 @@ function formatTokenUsage(value: number | null | undefined) {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(value);
 }
 
-function getAssistantModelPresentation(message: ChatMessage, liveConfiguredModel: string, t: (key: string) => string) {
-  const reportedModel = readLocalRunUsage(message.metadata?.usage_evidence)?.model;
+function getAssistantModelPresentation(message: ChatMessage, liveConfiguredModel: string, t: (key: string) => string, runMetrics?: ChatRunMetrics | null) {
+  const reportedModel = (readLocalRunUsage(message.metadata?.usage_evidence) ?? runMetrics?.usageEvidence ?? null)?.model;
   if (reportedModel) return { label: reportedModel, title: t("chatWorkspace.usage.modelReportedTitle") };
   const configuredSnapshot = readLocalModelEvidence(message.metadata?.model_evidence)?.model;
   if (configuredSnapshot) return { label: configuredSnapshot, title: t("chatWorkspace.usage.modelConfiguredTitle") };
@@ -135,8 +138,11 @@ function ChatMessageBubbleBody({
   selectedConversationId,
   sending,
   onRetry,
+  canRegenerate = false,
   onEdit,
   onSwitchToAssistAndDiagnose,
+  onReconnectCodexOAuth,
+  reconnectingCodexOAuth,
   conversationFiles = EMPTY_CONVERSATION_FILES,
   onOpenConversationFile,
   onOpenInstanceFilePath,
@@ -182,14 +188,14 @@ function ChatMessageBubbleBody({
     setFeedback(message.user_feedback === "like" ? "up" : message.user_feedback === "dislike" ? "down" : null);
   }, [message.id, message.user_feedback]);
 
-  const assistantModel = useMemo(() => getAssistantModelPresentation(message, fallbackModelLabel, t), [message, fallbackModelLabel, t]);
+  const assistantModel = useMemo(() => getAssistantModelPresentation(message, fallbackModelLabel, t, runMetrics), [message, fallbackModelLabel, t, runMetrics]);
   const assistantModelLabel = assistantModel.label;
   const failureInfo = useMemo(() => humanizeChatError(
     { code: message.error_code, message: message.error_message },
     t("chatWorkspace.messageFailed")
   ), [message.error_code, message.error_message, t]);
   const failureMessage = failureInfo.message;
-  const assistantTokenUsage = useMemo(() => getAssistantTokenUsage(message), [message]);
+  const assistantTokenUsage = useMemo(() => getAssistantTokenUsage(message, runMetrics), [message, runMetrics]);
   const assistantTokenUsageLabel = useMemo(() => formatTokenUsage(assistantTokenUsage), [assistantTokenUsage]);
   const assistantDurationLabel = formatLocalizedDuration(message.duration_ms ?? runMetrics?.durationMs, unit => t(`chatWorkspace.timelineDurationUnits.${unit}`));
 
@@ -290,6 +296,19 @@ function ChatMessageBubbleBody({
             >
               {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
             </button>
+            {canRegenerate && retrySourceMessage && message.status === "completed" && (
+              <button
+                type="button"
+                onClick={() => onRetry(retrySourceMessage)}
+                disabled={sending}
+                className="inline-flex h-7 items-center justify-center gap-1 rounded-full px-2 hover:bg-surface-muted hover:text-content-secondary disabled:opacity-50"
+                title={t("chatWorkspace.regenerateResponse")}
+                aria-label={t("chatWorkspace.regenerateResponse")}
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                <span className="text-[11px] font-semibold">{t("chatWorkspace.regenerateResponse")}</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => handleAssistantFeedback("up")}
@@ -327,7 +346,7 @@ function ChatMessageBubbleBody({
             )}
           </div>
         )}
-        <ChatMessageStatusNotices message={message} isUser={isUser} sending={sending} failureMessage={failureMessage} retryTarget={retryTarget} onRetry={onRetry} onEdit={onEdit} onSwitchToAssistAndDiagnose={onSwitchToAssistAndDiagnose} t={t} />
+        <ChatMessageStatusNotices message={message} isUser={isUser} sending={sending} failureMessage={failureMessage} retryTarget={retryTarget} onRetry={onRetry} onEdit={onEdit} onSwitchToAssistAndDiagnose={onSwitchToAssistAndDiagnose} onReconnectCodexOAuth={onReconnectCodexOAuth} reconnectingCodexOAuth={reconnectingCodexOAuth} t={t} />
       </div>
 
       {isUser && <ChatUserAvatar currentUser={currentUser} />}
@@ -341,12 +360,13 @@ export function ChatMessageBubble(props: ChatMessageBubbleProps) {
   const onRetry = useChatCallback(props.onRetry);
   const onEdit = useChatCallback(props.onEdit);
   const onSwitchToAssistAndDiagnose = useChatCallback(props.onSwitchToAssistAndDiagnose);
+  const onReconnectCodexOAuth = useChatCallback(props.onReconnectCodexOAuth);
   const onOpenConversationFile = useChatCallback(props.onOpenConversationFile);
   const onOpenInstanceFilePath = useChatCallback(props.onOpenInstanceFilePath);
   const onDownloadInstanceFilePath = useChatCallback(props.onDownloadInstanceFilePath);
   const onMessageFeedbackChange = useChatCallback(props.onMessageFeedbackChange);
   const onRespondToApproval = useChatCallback(props.onRespondToApproval);
-  return <MemoizedMessageBubble {...props} onRetry={onRetry} onEdit={onEdit} onSwitchToAssistAndDiagnose={onSwitchToAssistAndDiagnose}
+  return <MemoizedMessageBubble {...props} onRetry={onRetry} onEdit={onEdit} onSwitchToAssistAndDiagnose={onSwitchToAssistAndDiagnose} onReconnectCodexOAuth={onReconnectCodexOAuth}
     onOpenConversationFile={onOpenConversationFile} onOpenInstanceFilePath={onOpenInstanceFilePath} onDownloadInstanceFilePath={onDownloadInstanceFilePath}
     onMessageFeedbackChange={onMessageFeedbackChange} onRespondToApproval={onRespondToApproval} />;
 }

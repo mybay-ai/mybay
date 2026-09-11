@@ -195,6 +195,8 @@ function getRuntimeRunEventController(driver: RuntimeDriver): RuntimeRunEventCon
 
   const controller = driver.events.createController({
     addEvent: (runId, event, data, ownerId) => addEventToCache(runId, event, data, ownerId),
+    persistPartialOutput: (runId, partialOutput, ownerId) =>
+      chatRepo.updateChatRun(runId, { partial_output: partialOutput }, ownerId),
     completeTerminal: (run, outcome, upstreamRunId) =>
       completeRunFromRuntimeEvent(run, outcome, upstreamRunId),
     requestReconcile: () => requestRunsReconcile(),
@@ -205,7 +207,7 @@ function getRuntimeRunEventController(driver: RuntimeDriver): RuntimeRunEventCon
   runtimeRunEventControllers.set(key, controller);
   return controller;
 }
-const runSseStreamController = createRunSseStreamController();
+const runSseStreamController = createRunSseStreamController(1024 * 1024, 100);
 const runTimelineCollector = createLocalTimelineCollector();
 const runLatencyObservability = createRunLatencyObservability();
 const runFileSnapshots = createRunFileSnapshots(event => console.info(JSON.stringify({ operation: "run_file_snapshot", ...event })));
@@ -360,12 +362,23 @@ export function handleRuntimeRunEvent(
   runLatencyObservability.observeRuntimeEvent(run.id, event);
   getRuntimeRunEventController(driver).handle(run, event, upstreamRunId);
 }
+
+/** Returns the latest in-process visible answer while its durable write is settling. */
+export function getLiveRunPartialOutput(runId: string): string | undefined {
+  let latest: string | undefined;
+  for (const controller of runtimeRunEventControllers.values()) {
+    const candidate = controller.get(runId)?.lastPartialOutput;
+    if (typeof candidate === "string" && (latest === undefined || candidate.length > latest.length)) latest = candidate;
+  }
+  return latest;
+}
 function ensureUpstreamRunEventStream(run: any, upstreamRunId: string, driver: RuntimeDriver) {
   runSseStreamController.ensure(
     run.id,
     (signal, onChunk) => driver.runs.streamEvents(run.instance_id, upstreamRunId, signal, onChunk),
     (event) => handleRuntimeRunEvent(driver, run, event, upstreamRunId),
     () => runLatencyObservability.markFirstUpstreamByte(run.id),
+    `${run.instance_id}:${upstreamRunId}`,
   );
 }
 
@@ -1135,9 +1148,6 @@ export async function processSingleRun(
             addEventToCache(run.id, "error", JSON.stringify({ errorCode: "RECOVERY_OUT_OF_BOUNDS" }));
           }
           tracker.lastPartialOutput = newOutput;
-          if (partialOutput.delta) {
-            addEventToCache(run.id, "text", partialOutput.delta);
-          }
         }
 
         // Parse tool steps
@@ -1156,6 +1166,9 @@ export async function processSingleRun(
           leaseLostRuns.add(run.id);
           clearEventsCache(run.id);
           return;
+        }
+        if (partialOutput.changed && partialOutput.delta) {
+          addEventToCache(run.id, "text", partialOutput.delta);
         }
       }
     } else {

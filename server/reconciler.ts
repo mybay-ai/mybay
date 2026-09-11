@@ -593,7 +593,9 @@ export async function startReconciler(intervalMs: number = 60000, options: Recon
                       }
 
                       const containerObj = docker.getContainer(containerName);
-                    const probeRes = runtimeType === "pi"
+                    const probeRes = runtimeType === "codex"
+                      ? await (await import("./runtime/adapters/codex/CodexRuntimeReadiness")).probeCodexRuntimeReadiness(instance)
+                      : runtimeType === "pi"
                       ? await (await import("./runtime/adapters/pi/PiRuntimeReadiness")).probePiRuntimeReadiness(instance)
                       : await probeGatewayReadiness(containerObj, instance.id, logs, enabledChannels);
 

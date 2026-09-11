@@ -2,7 +2,7 @@ import express, { Router, type RequestHandler, type Request, type Response } fro
 import fs from "node:fs";
 import path from "node:path";
 import { createHash, randomUUID } from "node:crypto";
-import AdmZip from "adm-zip";
+import { readOnlyZip } from "../../utils/readOnlyZip";
 import { INSTANCE_UPLOAD_MAX_BYTES, INSTANCE_UPLOAD_TEXT_EXTENSIONS, isInstanceUploadDirectory, isInstanceUploadFilename } from "../../../shared/instanceFileUpload";
 import { validateUploadedFileBuffer } from "../../utils/uploadSecurity";
 import type { StorageQuotaStats } from "../../services/instances/instanceStorageQuotaService";
@@ -37,7 +37,10 @@ function validateContent(buffer: Buffer, name: string) {
   }
   if (extension === ".pptx") {
     try {
-      const names = new AdmZip(buffer).getEntries().map(entry => entry.entryName);
+      const names = readOnlyZip(buffer, {
+        include: name => name === "[Content_Types].xml" || /^ppt\/slides\/slide\d+\.xml$/.test(name),
+        limits: { maxEntryBytes: 20 * 1024 * 1024, maxTotalBytes: 100 * 1024 * 1024 },
+      }).map(entry => entry.entryName);
       if (!names.includes("[Content_Types].xml") || !names.some(name => /^ppt\/slides\/slide\d+\.xml$/.test(name))) reject(400, "UPLOAD_CONTENT_INVALID");
     } catch { reject(400, "UPLOAD_CONTENT_INVALID"); }
     return;

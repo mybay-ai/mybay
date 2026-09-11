@@ -10,6 +10,30 @@ function validDraft() {
 }
 
 describe("quick deployment validation", () => {
+  it("requires a saved OAuth credential rather than an API key for Codex OAuth", () => {
+    const draft = validDraft(); draft.runtimeType = "codex"; draft.codexAuthMode = "api";
+    draft.modelStrategy = { mode: "byok", provider: "openai-codex", model: "test-model" };
+    expect(validateQuickDeployDraft(draft)).toEqual([{ code: "oauthCredentialRequired", field: "modelStrategy.credentialId" }]);
+    draft.modelStrategy = { mode: "saved_credential", credentialId: "oauth-1", provider: "openai-codex", model: "test-model" };
+    expect(validateQuickDeployDraft(draft)).toEqual([]);
+  });
+  it("uses the shared credential strategy for Codex API mode without an account import", () => {
+    const draft = validDraft(); draft.runtimeType = "codex"; draft.codexAuthMode = "api";
+    draft.modelStrategy = { mode: "saved_credential", credentialId: "key-1", provider: "openai", model: "test-model" };
+    expect(validateQuickDeployDraft(draft)).toEqual([]);
+    draft.modelStrategy = { mode: "byok", provider: "custom-openai-compatible", model: "org/model", baseUrl: "https://gateway.example/v1" };
+    expect(validateQuickDeployDraft(draft)).toContainEqual({ code: "apiKeyRequired", field: "modelStrategy.apiKey" });
+    draft.modelStrategy.apiKey = "test-key";
+    expect(validateQuickDeployDraft(draft)).toEqual([]);
+  });
+  it("accepts Codex account authentication without an API key or a forced model", () => {
+    const draft = validDraft(); draft.runtimeType = "codex"; draft.codexAuthJson = "account-import-fixture";
+    draft.modelStrategy = { mode: "byok", provider: "openai", model: "" };
+    draft.dashboardUsername = ""; draft.dashboardPassword = "";
+    expect(validateQuickDeployDraft(draft)).toEqual([]);
+    delete draft.codexAuthJson;
+    expect(validateQuickDeployDraft(draft)).toContainEqual({ code: "codexAccountRequired", field: "codexAuthJson" });
+  });
   it("accepts the Hermes Web saved-credential happy path", () => {
     expect(validateQuickDeployDraft(validDraft())).toEqual([]);
     expect(canSubmitQuickDeploy(validDraft())).toBe(true);

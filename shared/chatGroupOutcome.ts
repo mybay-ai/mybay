@@ -6,9 +6,9 @@ export function resolveChatGroupOutcome(run: { id: string; status: string; group
   if (!run || !group) return 'unknown';
   const calls = links.filter(link => link.parentRunId === run.id && group.selectedPeerIds?.includes(link.peerId));
   const missing = group.selectedPeerIds?.some(id => !calls.some(call => call.peerId === id));
-  const state = (link: Link) => String(link.remoteState || '').replace(/^TASK_STATE_/, '').toLowerCase();
+  const state = (link: Link) => String(link.remoteState || '').replace(/^TASK_STATE_/, '').toLowerCase().replaceAll('_', '-');
   const completed = calls.filter(link => link.state === 'finished' && state(link) === 'completed' && !link.lookupState).length;
-  const failed = calls.filter(link => link.state === 'finished' && ['failed', 'canceled', 'cancelled', 'rejected'].includes(state(link))).length;
+  const failed = calls.filter(link => link.state === 'finished' && ['failed', 'canceled', 'cancelled', 'rejected', 'auth-required', 'input-required'].includes(state(link))).length;
   const unresolved = calls.length - completed - failed;
   if (missing || unresolved) return ['queued', 'running'].includes(run.status) ? 'in_progress' : 'unknown';
   if (!calls.length) return 'unknown';

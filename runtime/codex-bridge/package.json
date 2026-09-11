@@ -1,0 +1,16 @@
+{
+  "name": "@mybay/codex-runtime-bridge",
+  "version": "0.1.0-experimental.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test *.test.mjs"
+  },
+  "dependencies": {
+    "@openai/codex": "0.154.0"
+  }
+}

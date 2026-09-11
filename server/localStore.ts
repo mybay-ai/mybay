@@ -4,6 +4,7 @@ import os from "node:os";
 import { randomUUID } from "crypto";
 import { DatabaseSync } from "node:sqlite";
 import schemaVersion from "../shared/schema-version.json";
+import { HERMES_RUNTIME_DEFINITION } from "../shared/runtimeCatalog";
 
 export type LocalStoreData = {
   users: any[];
@@ -13,6 +14,7 @@ export type LocalStoreData = {
   versions: any[];
   userResourcePolicies: any[];
   channelAuthEvents: any[];
+  channelMessages: any[];
   deploymentTasks: any[];
   deploymentEvents: any[];
   files: any[];
@@ -35,7 +37,7 @@ type CollectionName = Exclude<keyof LocalStoreData, "systemSettings">;
 
 const COLLECTIONS: CollectionName[] = [
   "users", "instances", "credentials", "auditLogs", "versions",
-  "userResourcePolicies", "channelAuthEvents", "deploymentTasks",
+  "userResourcePolicies", "channelAuthEvents", "channelMessages", "deploymentTasks",
   "deploymentEvents", "files", "tasks", "scheduledJobs", "scheduledFires", "templates", "blueprints",
   "chatProjects", "conversations", "chatMessages", "chatRuns", "chatMessageFeedback", "a2aTaskLinks", "instanceFileUploads"
 ];
@@ -47,9 +49,9 @@ const defaultData = (): LocalStoreData => ({
   auditLogs: [],
   versions: [{
     id: "local-latest",
-    version: "latest",
-    image: process.env.MY_BAY_IMAGE || "nousresearch/hermes-agent",
-    image_tag: "latest",
+    version: HERMES_RUNTIME_DEFINITION.version,
+    image: process.env.MY_BAY_IMAGE || HERMES_RUNTIME_DEFINITION.runtime.image,
+    image_tag: process.env.MY_BAY_IMAGE_TAG || HERMES_RUNTIME_DEFINITION.runtime.tag,
     source: "local",
     is_latest: true,
     status: "available",
@@ -58,6 +60,7 @@ const defaultData = (): LocalStoreData => ({
   }],
   userResourcePolicies: [],
   channelAuthEvents: [],
+  channelMessages: [],
   deploymentTasks: [],
   deploymentEvents: [],
   files: [],
@@ -141,78 +144,86 @@ function validateLegacyData(value: unknown): LocalStoreData {
 
 function initializeSchema(db: DatabaseSync) {
   db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;");
-  for (const collection of COLLECTIONS) {
-    db.exec(`CREATE TABLE IF NOT EXISTS ${quoteIdentifier(collection)} (id TEXT PRIMARY KEY NOT NULL, data TEXT NOT NULL)`);
+  // Commit schema creation once; keep FULL durability without one fsync per table.
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    for (const collection of COLLECTIONS) {
+      db.exec(`CREATE TABLE IF NOT EXISTS ${quoteIdentifier(collection)} (id TEXT PRIMARY KEY NOT NULL, data TEXT NOT NULL)`);
+    }
+    db.exec("CREATE TABLE IF NOT EXISTS systemSettings (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL)");
+    db.exec("CREATE TABLE IF NOT EXISTS localMetadata (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL)");
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS instanceIdentities (
+        instance_id TEXT PRIMARY KEY NOT NULL,
+        path TEXT NOT NULL COLLATE NOCASE UNIQUE,
+        created_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS deploymentTasksCore (
+        id TEXT PRIMARY KEY NOT NULL,
+        instance_id TEXT NOT NULL,
+        status TEXT NOT NULL,
+        worker_id TEXT,
+        locked_at TEXT,
+        lease_until TEXT,
+        heartbeat_at TEXT,
+        attempt INTEGER NOT NULL DEFAULT 0,
+        max_attempts INTEGER NOT NULL DEFAULT 3,
+        current_step TEXT NOT NULL DEFAULT 'queued',
+        next_retry_at TEXT,
+        error_code TEXT,
+        error_message TEXT,
+        error_detail TEXT,
+        failed_at TEXT,
+        cancel_requested INTEGER NOT NULL DEFAULT 0,
+        payload_json TEXT,
+        created_by TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        completed_at TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_deployment_claim
+        ON deploymentTasksCore(status, next_retry_at, lease_until, created_at);
+      CREATE INDEX IF NOT EXISTS idx_deployment_instance
+        ON deploymentTasksCore(instance_id, status);
+      CREATE TABLE IF NOT EXISTS instancePortReservations (
+        port INTEGER PRIMARY KEY NOT NULL,
+        instance_id TEXT NOT NULL UNIQUE,
+        status TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        released_at TEXT
+      );
+      CREATE TABLE IF NOT EXISTS idempotencyRecords (
+        idempotency_key TEXT PRIMARY KEY NOT NULL,
+        request_hash TEXT NOT NULL,
+        instance_id TEXT NOT NULL,
+        deployment_task_id TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS cleanupTasks (
+        id TEXT PRIMARY KEY NOT NULL,
+        instance_id TEXT NOT NULL,
+        status TEXT NOT NULL,
+        cleanup_mode TEXT NOT NULL DEFAULT 'delete',
+        worker_id TEXT,
+        lease_until TEXT,
+        attempt INTEGER NOT NULL DEFAULT 0,
+        error_code TEXT,
+        error_message TEXT,
+        created_at TEXT NOT NULL,
+        error_detail TEXT,
+        failed_at TEXT,
+        current_step TEXT NOT NULL DEFAULT 'queued',
+        next_retry_at TEXT,
+        updated_at TEXT NOT NULL,
+        completed_at TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_cleanup_claim ON cleanupTasks(status, lease_until, created_at);
+    `);
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
   }
-  db.exec("CREATE TABLE IF NOT EXISTS systemSettings (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL)");
-  db.exec("CREATE TABLE IF NOT EXISTS localMetadata (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL)");
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS instanceIdentities (
-      instance_id TEXT PRIMARY KEY NOT NULL,
-      path TEXT NOT NULL COLLATE NOCASE UNIQUE,
-      created_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS deploymentTasksCore (
-      id TEXT PRIMARY KEY NOT NULL,
-      instance_id TEXT NOT NULL,
-      status TEXT NOT NULL,
-      worker_id TEXT,
-      locked_at TEXT,
-      lease_until TEXT,
-      heartbeat_at TEXT,
-      attempt INTEGER NOT NULL DEFAULT 0,
-      max_attempts INTEGER NOT NULL DEFAULT 3,
-      current_step TEXT NOT NULL DEFAULT 'queued',
-      next_retry_at TEXT,
-      error_code TEXT,
-      error_message TEXT,
-      error_detail TEXT,
-      failed_at TEXT,
-      cancel_requested INTEGER NOT NULL DEFAULT 0,
-      payload_json TEXT,
-      created_by TEXT,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL,
-      completed_at TEXT
-    );
-    CREATE INDEX IF NOT EXISTS idx_deployment_claim
-      ON deploymentTasksCore(status, next_retry_at, lease_until, created_at);
-    CREATE INDEX IF NOT EXISTS idx_deployment_instance
-      ON deploymentTasksCore(instance_id, status);
-    CREATE TABLE IF NOT EXISTS instancePortReservations (
-      port INTEGER PRIMARY KEY NOT NULL,
-      instance_id TEXT NOT NULL UNIQUE,
-      status TEXT NOT NULL,
-      created_at TEXT NOT NULL,
-      released_at TEXT
-    );
-    CREATE TABLE IF NOT EXISTS idempotencyRecords (
-      idempotency_key TEXT PRIMARY KEY NOT NULL,
-      request_hash TEXT NOT NULL,
-      instance_id TEXT NOT NULL,
-      deployment_task_id TEXT NOT NULL,
-      created_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS cleanupTasks (
-      id TEXT PRIMARY KEY NOT NULL,
-      instance_id TEXT NOT NULL,
-      status TEXT NOT NULL,
-      cleanup_mode TEXT NOT NULL DEFAULT 'delete',
-      worker_id TEXT,
-      lease_until TEXT,
-      attempt INTEGER NOT NULL DEFAULT 0,
-      error_code TEXT,
-      error_message TEXT,
-      created_at TEXT NOT NULL,
-      error_detail TEXT,
-      failed_at TEXT,
-      current_step TEXT NOT NULL DEFAULT 'queued',
-      next_retry_at TEXT,
-      updated_at TEXT NOT NULL,
-      completed_at TEXT
-    );
-    CREATE INDEX IF NOT EXISTS idx_cleanup_claim ON cleanupTasks(status, lease_until, created_at);
-  `);
 }
 
 function readRows(db: DatabaseSync, collection: CollectionName): any[] {
@@ -387,6 +398,10 @@ function applySchemaMigrations(db: DatabaseSync) {
       // makes backup/restore compatibility explicit for durable file-upload receipts.
       version = 7;
     }
+    if (version < 8) {
+      // Durable managed-Runtime IM receipts participate in normal DB backups.
+      version = 8;
+    }
     db.prepare("INSERT OR REPLACE INTO localMetadata (key, value) VALUES (?, ?)").run("schema_version", String(version));
     db.exec("COMMIT");
   } catch (error) {
@@ -430,6 +445,27 @@ function migrateLegacyStore(db: DatabaseSync, legacyPath: string, sqlitePath: st
   console.info("[LocalDatabase] Existing local data migrated to SQLite successfully.");
 }
 
+export function verifyLocalDatabaseIntegrity(sqlitePath = getLocalDatabasePath()): void {
+  if (!fs.existsSync(sqlitePath)) return;
+  let db: DatabaseSync | null = null;
+  try {
+    db = new DatabaseSync(sqlitePath, { readOnly: true });
+    const rows = db.prepare("PRAGMA quick_check").all();
+    const messages = rows.map(row => String(Object.values(row)[0] ?? "unknown"));
+    if (messages.length !== 1 || messages[0].toLowerCase() !== "ok") {
+      throw new Error(messages.join("; "));
+    }
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `LOCAL_SQLITE_INTEGRITY_FAILED: ${detail}. Restore a verified backup; the existing database was not migrated or replaced.`,
+      { cause: error },
+    );
+  } finally {
+    db?.close();
+  }
+}
+
 function openDatabase(): DatabaseSync {
   const sqlitePath = getLocalDatabasePath();
   if (activeDb && activeDbPath === sqlitePath) return activeDb;
@@ -437,6 +473,7 @@ function openDatabase(): DatabaseSync {
 
   fs.mkdirSync(path.dirname(sqlitePath), { recursive: true });
   const existed = fs.existsSync(sqlitePath);
+  if (existed) verifyLocalDatabaseIntegrity(sqlitePath);
   const db = new DatabaseSync(sqlitePath);
   try {
     // Reject newer databases before any DDL, WAL setup or migration can mutate
@@ -871,6 +908,19 @@ export function deleteProvisioningRecords(instanceId: string) {
 
 export function closeLocalDatabase() {
   if (!activeDb) return;
+  try {
+    const checkpoint = activeDb.prepare("PRAGMA wal_checkpoint(TRUNCATE)").get() as {
+      busy?: number;
+      log?: number;
+      checkpointed?: number;
+    } | undefined;
+    if (Number(checkpoint?.busy || 0) !== 0) {
+      console.warn("[LocalDatabase] SQLite WAL checkpoint remained busy during shutdown; SQLite will recover it on the next verified open.");
+    }
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    console.warn(`[LocalDatabase] SQLite WAL checkpoint failed during shutdown: ${detail}`);
+  }
   activeDb.close();
   activeDb = null;
   activeDbPath = "";

@@ -1,0 +1,265 @@
+{
+  "schemaVersion": 1,
+  "artifactType": "runtime-v0129-preview1-candidate-acceptance",
+  "capturedAt": "2026-09-10T14:36:20.471Z",
+  "source": {
+    "version": "0.1.29-preview.1",
+    "controlImage": "mybay/local:0.1.29-preview.1-candidate2",
+    "baseCommit": "85c8bd708604c1cdbfe9cf7957ad0b0fa9530d8e",
+    "controlImageId": "sha256:7e1a62f2bcf42f0e765bdcf207b5a4e09ec49302ecb0465e5233ccf96604c3a1"
+  },
+  "environment": {
+    "platform": "Windows x64",
+    "runtimePlatform": "Docker Desktop Linux x86_64",
+    "controlUrl": "http://127.0.0.1:4372",
+    "isolatedData": true,
+    "sanitizedDatabaseClone": true,
+    "dockerVersion": "29.7.2"
+  },
+  "observations": {
+    "health": "PASS",
+    "deployments": "PASS",
+    "onlineConversation": "PASS",
+    "markerContinuityAfterRestart": "PASS",
+    "runtimes": [
+      {
+        "runtime": "hermes",
+        "provider": "deepseek",
+        "configuredModel": "deepseek-v4-flash",
+        "instanceId": "7f481690-8cf3-4d38-910a-fe9a201ad702",
+        "deploymentTaskId": "f55b93b4-31a1-405a-99b8-6e8f9cd83e44",
+        "deploymentAttempt": 1,
+        "instanceStatus": "running",
+        "healthStatus": "healthy",
+        "conversationId": "bb100cc9-14ba-4da3-8315-8fcfcfc5db5c",
+        "marker": "V0129_HERMES_182E2F427943",
+        "initialRun": {
+          "runId": "a1dfed86-44bc-4aca-a0ce-86521ebdd83f",
+          "status": "completed",
+          "markerObserved": true,
+          "usageEvidence": {
+            "version": 1,
+            "source": "runtime_terminal",
+            "counter": "snapshot",
+            "scope": "unknown",
+            "inputTokens": 12146,
+            "outputTokens": 15,
+            "totalTokens": 12161,
+            "cacheReadTokens": null,
+            "cacheWriteTokens": null,
+            "modelCalls": null,
+            "model": null,
+            "durationMs": null,
+            "durationSource": "unknown",
+            "contextTokens": null,
+            "contextWindow": null,
+            "contextPercent": null,
+            "compactionStatus": null,
+            "compactionReason": null,
+            "compactionTokensBefore": null,
+            "compactionEstimatedTokensAfter": null
+          }
+        },
+        "postRestart": {
+          "runId": "ce90f866-41bb-4b8d-a20a-90ab550ed13c",
+          "status": "completed",
+          "markerRecovered": true,
+          "usageEvidence": {
+            "version": 1,
+            "source": "runtime_terminal",
+            "counter": "snapshot",
+            "scope": "unknown",
+            "inputTokens": 12182,
+            "outputTokens": 15,
+            "totalTokens": 12197,
+            "cacheReadTokens": null,
+            "cacheWriteTokens": null,
+            "modelCalls": null,
+            "model": null,
+            "durationMs": null,
+            "durationSource": "unknown",
+            "contextTokens": null,
+            "contextWindow": null,
+            "contextPercent": null,
+            "compactionStatus": null,
+            "compactionReason": null,
+            "compactionTokensBefore": null,
+            "compactionEstimatedTokensAfter": null
+          }
+        }
+      },
+      {
+        "runtime": "pi",
+        "provider": "deepseek",
+        "configuredModel": "deepseek-v4-flash",
+        "instanceId": "1b37e66f-b3c5-4345-b62f-b84299ee2c82",
+        "deploymentTaskId": "b3bbded7-51a4-408f-95f2-f8a8d2834c4c",
+        "deploymentAttempt": 1,
+        "instanceStatus": "running",
+        "healthStatus": "healthy",
+        "conversationId": "60e5d919-97ec-4fa6-85c2-4827627d51fa",
+        "marker": "V0129_PI_60E52C1E1FCA",
+        "initialRun": {
+          "runId": "9184b5ca-7db3-43ca-8a09-8ec25a134c66",
+          "status": "completed",
+          "markerObserved": true,
+          "usageEvidence": {
+            "version": 1,
+            "source": "runtime_terminal",
+            "counter": "snapshot",
+            "scope": "session",
+            "inputTokens": null,
+            "outputTokens": null,
+            "totalTokens": 3600,
+            "cacheReadTokens": null,
+            "cacheWriteTokens": null,
+            "modelCalls": null,
+            "model": "deepseek-v4-flash",
+            "durationMs": 4356,
+            "durationSource": "runtime",
+            "contextTokens": 3600,
+            "contextWindow": 1000000,
+            "contextPercent": 0.36,
+            "compactionStatus": null,
+            "compactionReason": null,
+            "compactionTokensBefore": null,
+            "compactionEstimatedTokensAfter": null
+          }
+        },
+        "postRestart": {
+          "runId": "91be2080-f2a3-4e02-9579-3e601b42ea11",
+          "status": "completed",
+          "markerRecovered": true,
+          "usageEvidence": {
+            "version": 1,
+            "source": "runtime_terminal",
+            "counter": "snapshot",
+            "scope": "session",
+            "inputTokens": null,
+            "outputTokens": null,
+            "totalTokens": 4559,
+            "cacheReadTokens": null,
+            "cacheWriteTokens": null,
+            "modelCalls": null,
+            "model": "deepseek-v4-flash",
+            "durationMs": 5059,
+            "durationSource": "runtime",
+            "contextTokens": 4559,
+            "contextWindow": 1000000,
+            "contextPercent": 0.46,
+            "compactionStatus": null,
+            "compactionReason": null,
+            "compactionTokensBefore": null,
+            "compactionEstimatedTokensAfter": null
+          }
+        }
+      },
+      {
+        "runtime": "codex",
+        "provider": "openai-codex",
+        "configuredModel": "gpt-6-astra",
+        "instanceId": "a9307d3c-af4a-4fde-97b9-22c211c2e17e",
+        "deploymentTaskId": "fd3412e9-53d5-4658-9193-c0985bc930aa",
+        "deploymentAttempt": 1,
+        "instanceStatus": "running",
+        "healthStatus": "healthy",
+        "conversationId": "8818e9c6-9f98-4332-b928-d417998ed393",
+        "marker": "V0129_CODEX_044148C931C9",
+        "initialRun": {
+          "runId": "5a6a0d8f-c06c-4dad-bee1-778f7415fb7e",
+          "status": "completed",
+          "markerObserved": true,
+          "usageEvidence": {
+            "version": 1,
+            "source": "runtime_terminal",
+            "counter": "snapshot",
+            "scope": "run",
+            "inputTokens": 16224,
+            "outputTokens": 16,
+            "totalTokens": 16240,
+            "cacheReadTokens": 12160,
+            "cacheWriteTokens": null,
+            "modelCalls": null,
+            "model": "gpt-6-astra",
+            "durationMs": null,
+            "durationSource": "unknown",
+            "contextTokens": 16240,
+            "contextWindow": 258400,
+            "contextPercent": 6.28,
+            "compactionStatus": null,
+            "compactionReason": null,
+            "compactionTokensBefore": null,
+            "compactionEstimatedTokensAfter": null
+          }
+        },
+        "postRestart": {
+          "runId": "6dcfe502-1d90-4f8f-82ab-27070f153423",
+          "status": "completed",
+          "markerRecovered": true,
+          "usageEvidence": {
+            "version": 1,
+            "source": "runtime_terminal",
+            "counter": "snapshot",
+            "scope": "run",
+            "inputTokens": 16262,
+            "outputTokens": 16,
+            "totalTokens": 16278,
+            "cacheReadTokens": 16000,
+            "cacheWriteTokens": null,
+            "modelCalls": null,
+            "model": "gpt-6-astra",
+            "durationMs": null,
+            "durationSource": "unknown",
+            "contextTokens": 16278,
+            "contextWindow": 258400,
+            "contextPercent": 6.3,
+            "compactionStatus": null,
+            "compactionReason": null,
+            "compactionTokensBefore": null,
+            "compactionEstimatedTokensAfter": null
+          }
+        }
+      }
+    ],
+    "browserVisual": "NOT_RUN",
+    "externalChannels": "NOT_RUN",
+    "crossPlatform": "NOT_RUN"
+  },
+  "boundaries": [
+    "Credentials and raw model responses are not retained in this artifact.",
+    "The candidate reused encrypted local credential records in an isolated sanitized SQLite backup; live instances, runs, messages, and deployment records were removed before startup.",
+    "This run does not certify browser visual presentation, external channels, upgrade, rollback, backup restore, Linux host installation, or macOS."
+  ],
+  "containsSecrets": false,
+  "runtimeImages": [
+    {
+      "imageRef": "nousresearch/hermes-agent:v2026.8.27",
+      "imageId": "sha256:e0df6adebddf29b91112aefc999d4aaf6846c9eb544faca5672a16a13590ff79",
+      "repoDigests": [
+        "nousresearch/hermes-agent@sha256:e0df6adebddf29b91112aefc999d4aaf6846c9eb544faca5672a16a13590ff79"
+      ]
+    },
+    {
+      "imageRef": "mybay/pi-runtime:0.85.1",
+      "imageId": "sha256:b2ad5cf15c9f79a826a72ebda523b45ee2de80e53e438952227e06a8d79e0aa0",
+      "repoDigests": [
+        "mybay/pi-runtime@sha256:b2ad5cf15c9f79a826a72ebda523b45ee2de80e53e438952227e06a8d79e0aa0"
+      ]
+    },
+    {
+      "imageRef": "mybay/codex-runtime:0.154.0",
+      "imageId": "sha256:20b46c8407fa9f4a40435653db85b00518d9fff132a7333b9482246357f42256",
+      "repoDigests": [
+        "mybay/codex-runtime@sha256:20b46c8407fa9f4a40435653db85b00518d9fff132a7333b9482246357f42256"
+      ]
+    }
+  ],
+  "productionDependencyAudit": {
+    "status": "PASS_WITH_BOUNDARY",
+    "critical": 0,
+    "high": 0,
+    "moderate": 1,
+    "unresolvedPackage": "adm-zip@0.6.0",
+    "boundary": "The reported advisory concerns extraction to disk through destination symlinks. This source tree does not call extractAllTo or extractEntryTo."
+  }
+}

@@ -14,6 +14,7 @@ import { createFilesRoutes } from "./files.routes";
 import { createConfigRoutes } from "./config.routes";
 import { createTemplatesRoutes } from "./templates.routes";
 import { createChannelsRoutes } from "./channels.routes";
+import { createManagedFeishuRoutes } from "./managedFeishu.routes";
 import { createTelemetryRoutes } from "./telemetry.routes";
 import { createVersionsRoutes } from "./versions.routes";
 import { createChatRoutes } from "./chat.routes";
@@ -57,6 +58,7 @@ export function createInstancesRouter(io: SocketIOServer) {
 
   router.use("/template-files", templateFilesRouter);
   router.use(createListRoutes(deps));
+  router.use(createManagedFeishuRoutes());
   router.use(createCreateRoutes(deps));
   router.use(createLifecycleRoutes(deps));
   router.use(createActionsRoutes(deps));

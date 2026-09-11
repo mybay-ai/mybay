@@ -1,0 +1,14 @@
+{
+  "recordedAt": "2026-09-09T11:03:07.902Z",
+  "scenario": "codex-default-availability",
+  "enableFlagAbsent": true,
+  "deploymentSupported": true,
+  "certificationLevel": "experimental",
+  "missingAccountResponse": {
+    "status": 400,
+    "code": "CODEX_ACCOUNT_AUTH_INVALID",
+    "error": "Import a valid Codex ChatGPT account auth.json."
+  },
+  "scope": "Live catalog and create validation; no new Runtime or paid model run created.",
+  "verdict": "PASS"
+}

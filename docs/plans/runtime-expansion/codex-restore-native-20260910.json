@@ -1,0 +1,28 @@
+{
+  "scope": "isolated host-native backup/restore, not product or Docker certification",
+  "nativeVersion": "0.153.4",
+  "before": {
+    "id": "779a7e86-cc76-4e3c-9c55-8f67b56d8364",
+    "status": "completed",
+    "session": "codex-v2-2b1e26c9-387f-4d04-943f-00a05b9ae498",
+    "thread": "01a0875f-1eb7-7462-af1e-37f1c715d545"
+  },
+  "verified": true,
+  "workspacePreserved": true,
+  "after": {
+    "id": "e5f16880-7b4e-449b-9463-f2d073ff8654",
+    "status": "completed",
+    "session": "codex-v2-2b1e26c9-387f-4d04-943f-00a05b9ae498",
+    "thread": "01a0875f-1eb7-7462-af1e-37f1c715d545"
+  },
+  "markerRecalled": true,
+  "sameThread": true,
+  "verdict": "PASS",
+  "auth": "isolated copy of previously authorized existing ChatGPT login; no post-restore reauthentication",
+  "feishu": "not started",
+  "limitations": [
+    "Host-native only; no Docker or product restore",
+    "No full product database restore or service cutover",
+    "No upgrade/rollback acceptance"
+  ]
+}

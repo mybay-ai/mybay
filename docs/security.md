@@ -41,6 +41,8 @@ Never commit or publish:
 
 File previews and downloads must enforce instance ownership, safe paths, and sensitive-file checks. Block `.env`, private keys, secret-bearing text, and untrusted archives. Redact container names, domains, tokens, and request headers before posting an issue.
 
+ZIP imports and Office previews use a memory-only reader with entry-count, expanded-size, compression-ratio, duplicate-name, absolute-path, and traversal checks before selected members are inflated. Archive members are written only as regular files after MyBay confines the destination path; no ZIP-library filesystem extraction API is used.
+
 ## Backup and Recovery
 
 Back up `data/` and the protected `.env` regularly and store them encrypted and separately. Restore with the original `ENCRYPTION_KEY`; otherwise encrypted model credentials may be unreadable.

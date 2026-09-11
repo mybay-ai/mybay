@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
-import AdmZip from "adm-zip";
+import { unzipSync } from "fflate";
 import { afterEach, describe, expect, it } from "vitest";
 import { createReleaseArchive, shouldIncludeReleasePath } from "./create-release.mjs";
 
@@ -54,7 +54,7 @@ describe("release package path filtering", () => {
     const second = path.join(root, "release", "two.zip");
     await createReleaseArchive(first, { projectRoot: root });
     await createReleaseArchive(second, { projectRoot: root });
-    const names = new AdmZip(first).getEntries().filter((entry) => !entry.isDirectory).map((entry) => entry.entryName);
+    const names = Object.keys(unzipSync(fs.readFileSync(first))).filter(name => !name.endsWith("/"));
 
     expect(names).toEqual([...tracked].sort((a, b) => a.localeCompare(b, "en")));
     expect(names).not.toContain("local-secret-test.txt");

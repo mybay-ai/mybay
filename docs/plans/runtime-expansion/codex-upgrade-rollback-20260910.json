@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-09-10T02:55:00.000Z",
+  "scope": "isolated MyBay product upgrade, rollback, restored-session continuation, cancellation, and browser UI acceptance",
+  "environment": {
+    "platform": "Windows x64",
+    "containerEngine": "Docker Desktop",
+    "controlUrl": "http://127.0.0.1:4362",
+    "mybayVersion": "0.1.28",
+    "runtimeType": "codex",
+    "providerKey": "codex-app-server",
+    "bridgeVersion": "0.1.0-experimental.2",
+    "instanceId": "3595693f-2a43-4b6e-9db9-fdd41ce01e9b",
+    "managedFeishuEnabled": false
+  },
+  "releaseCatalog": [
+    {
+      "version": "0.154.0",
+      "imageRef": "mybay/codex-runtime:0.154.0",
+      "imageId": "sha256:e3cee1fbcafd6991c4ff4feabee1c901ccb91117b684489ba9fc4b210b9ba07e",
+      "role": "latest"
+    },
+    {
+      "version": "0.153.4",
+      "imageRef": "mybay/codex-runtime:0.153.4",
+      "imageId": "sha256:83982840a9189cc92745e2addafb8adfc4b7be8656fc75e3da06d2527c90138c",
+      "role": "rollback"
+    }
+  ],
+  "preflight": {
+    "verdict": "PASS",
+    "target": "0.154.0",
+    "passed": 9,
+    "warnings": 2,
+    "blockers": 0
+  },
+  "observations": {
+    "upgrade": {
+      "verdict": "PASS",
+      "from": "0.153.4",
+      "to": "0.154.0",
+      "phase": "completed",
+      "status": "running",
+      "completedAt": "2026-09-10T02:52:03.130Z",
+      "containerPortValues": [
+        "PORT=9119"
+      ],
+      "portValueCount": 1
+    },
+    "rollback": {
+      "verdict": "PASS",
+      "from": "0.154.0",
+      "to": "0.153.4",
+      "phase": "rolled_back",
+      "continuedConversation": true
+    },
+    "restoredConversationContinuity": {
+      "verdict": "PASS",
+      "conversationId": "b572bada-0987-44b6-a307-21c359e50cde",
+      "nativeThreadId": "01a088fa-03b9-7823-aaf0-6132d63bfd52",
+      "marker": "PRODUCT_RESTORE_7095E15D5B6A4B37",
+      "upgradeRun": {
+        "mybayRunId": "e1d27b3e-62cb-446a-9f9b-6af361d70b89",
+        "upstreamRunId": "0250d49a-2dfb-46a9-8324-fc4a72c6fda4",
+        "nativeTurnId": "01a0891c-984b-7ef0-9406-c45c42cfa4c7",
+        "status": "completed"
+      },
+      "rollbackRun": {
+        "mybayRunId": "d039189a-544c-4c67-abaa-87937fd99063",
+        "upstreamRunId": "789da163-fbdd-40f4-b6c2-de1cfbe443ae",
+        "nativeTurnId": "01a0891e-15d2-7dd2-a907-d9e647724f39",
+        "status": "completed"
+      }
+    },
+    "cancellationOnLatest": {
+      "verdict": "PASS",
+      "runtimeVersion": "0.154.0",
+      "mybayRunId": "0e8ea4c8-625e-425a-b609-3990b7f6d3e2",
+      "upstreamRunId": "86dfc897-b2e5-497d-b31f-2df393df5933",
+      "nativeThreadId": "01a088fa-03b9-7823-aaf0-6132d63bfd52",
+      "runningObserved": true,
+      "stopAccepted": true,
+      "stopRequested": true,
+      "terminalStatus": "cancelled",
+      "errorCode": "CANCELLED_UPSTREAM",
+      "createdAt": "2026-09-10T02:53:52.949Z",
+      "completedAt": "2026-09-10T02:53:56.170Z"
+    },
+    "browserVersionRepository": {
+      "verdict": "PASS",
+      "url": "http://127.0.0.1:4362/app?tab=versions&acceptance=codex-upgrade3",
+      "latestDisplayed": "0.154.0",
+      "rollbackDisplayed": "0.153.4",
+      "currentInstanceVersionDisplayed": "0.154.0",
+      "rollbackActionEnabled": true,
+      "preflightDialogObserved": {
+        "passed": 9,
+        "warnings": 2,
+        "blockers": 0
+      }
+    }
+  },
+  "retainedFailures": [
+    {
+      "stage": "initial Codex upgrade readiness",
+      "verdict": "FAIL",
+      "symptom": "Hermes-specific readiness reported gateway unknown and chat_ready false for a healthy Codex Runtime.",
+      "correction": "Use Runtime-aware readiness for managed Pi and Codex upgrades and rollbacks."
+    },
+    {
+      "stage": "repeat upgrade after control recreation",
+      "verdict": "FAIL",
+      "symptom": "The control plane reused a cached Runtime target after container replacement.",
+      "correction": "Invalidate and re-resolve the managed Runtime target after start and before rollback readiness."
+    },
+    {
+      "stage": "repeat upgrade chat readiness",
+      "verdict": "FAIL",
+      "symptom": "The upgraded container received PORT=8080 and PORT=9119; discovery selected the first value while the Runtime listened on 9119.",
+      "correction": "Remove inherited PORT and GATEWAY_HEALTH_URL values before adding the authoritative Runtime port."
+    }
+  ],
+  "boundaries": {
+    "certificationLevel": "experimental",
+    "mainLocalhost3000Changed": false,
+    "hermesInstancesChanged": false,
+    "feishuConnectionActivated": false,
+    "remotePublication": false,
+    "crossPlatformUpgrade": "NOT_RUN",
+    "windowsNativeToLinuxRestore": "NOT_RUN",
+    "productionRelease": "NOT_RUN"
+  },
+  "containsSecrets": false
+}

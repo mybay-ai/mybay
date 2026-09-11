@@ -51,6 +51,7 @@ import { startSchedulerRunner, stopSchedulerRunner } from "./server/schedulerRun
 import { startReconciler, stopReconciler } from "./server/reconciler";
 import { startStorageQuotaEnforcer, stopStorageQuotaEnforcer } from "./server/storageQuotaEnforcer";
 import { startRunsReconciler, stopRunsReconciler } from "./server/services/runsReconciler";
+import { startManagedFeishuWorker, stopManagedFeishuWorker } from "./server/services/channels/managedFeishuWorker";
 import { closeLocalDatabase, getLocalDatabasePath, initializeLocalDatabase } from "./server/localStore";
 import { createApplicationHealth } from "./server/appVersion";
 import { isTemplateWorkflowsEnabled } from "./server/utils/templateWorkflowsFeature";
@@ -919,6 +920,7 @@ async function startServer() {
   // Start Local Pure background services. Each starter is idempotent and owns its timer lifecycle.
   await startReconciler(60000, { io });
   await startRunsReconciler();
+  startManagedFeishuWorker();
   await startStorageQuotaEnforcer();
   startSchedulerRunner();
 
@@ -963,6 +965,7 @@ async function startServer() {
     stopSchedulerRunner();
     stopReconciler();
     stopRunsReconciler();
+    stopManagedFeishuWorker();
     stopStorageQuotaEnforcer();
     httpServer.close(() => {
       closeLocalDatabase();

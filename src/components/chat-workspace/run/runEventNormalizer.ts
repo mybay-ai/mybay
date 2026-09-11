@@ -1,5 +1,6 @@
 import type {
   ApprovalEventPayload,
+  CommentaryEventPayload,
   NormalizedRunEvent,
   RunExecutionStatus,
   StatusEventPayload,
@@ -72,6 +73,17 @@ export function normalizeSseRunEvent(context: EventContext): NormalizedRunEvent 
 
   const record = parseObject(context.data);
   if (!record) return null;
+
+  if (context.event === "commentary") {
+    const text = readString(record, "text", "content");
+    if (!text) return null;
+    const payload: CommentaryEventPayload = {
+      id: readString(record, "id", "message_id") || `commentary-${context.seq}`,
+      text,
+      timestamp: readNumber(record, "timestamp"),
+    };
+    return { ...base, type: "commentary.added", payload };
+  }
 
   if (context.event === "step") {
     const status = readString(record, "status").toLowerCase();

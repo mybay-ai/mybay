@@ -179,7 +179,12 @@ export async function terminalizeRun(
   const assistantContent = input.assistantContent ?? "";
   const leakedToolProtocol = input.finalStatus === "completed" && containsDsmlToolCallProtocol(assistantContent);
   const effectiveStatus: RunTerminalStatus = leakedToolProtocol ? "failed" : input.finalStatus;
-  const effectiveAssistantContent = leakedToolProtocol ? "" : assistantContent;
+  let effectiveAssistantContent = leakedToolProtocol ? "" : assistantContent;
+  if (!leakedToolProtocol && input.finalStatus !== "completed" && !assistantContent) {
+    const previous = await dependencies.getRun(input.runId);
+    const partial = typeof previous?.partial_output === "string" ? previous.partial_output : "";
+    if (!containsDsmlToolCallProtocol(partial)) effectiveAssistantContent = partial;
+  }
   const safeErrorCode = effectiveStatus === "completed"
     ? undefined
     : sanitizeRunErrorCode(leakedToolProtocol ? DSML_TOOL_CALL_ERROR_CODE : input.errorCode);

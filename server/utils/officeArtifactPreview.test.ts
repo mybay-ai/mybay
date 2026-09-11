@@ -1,7 +1,7 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
-import AdmZip from "adm-zip";
+import { strToU8, zipSync } from "fflate";
 import * as XLSX from "@e965/xlsx";
 import { afterEach, describe, expect, it } from "vitest";
 import { escapeOfficePreviewHtml, extractLegacyPresentationText, renderLocalOfficePreview } from "./officeArtifactPreview";
@@ -44,9 +44,9 @@ describe("office artifact preview", () => {
 
   it("renders PPTX slide text without executing markup", async () => {
     const filePath = path.join(createTempDirectory(), "deck.pptx");
-    const archive = new AdmZip();
-    archive.addFile("ppt/slides/slide1.xml", Buffer.from('<p:sld xmlns:p="p" xmlns:a="a"><a:p><a:r><a:t>&lt;img onerror=&quot;x&quot;&gt;</a:t></a:r></a:p></p:sld>'));
-    archive.writeZip(filePath);
+    fs.writeFileSync(filePath, zipSync({
+      "ppt/slides/slide1.xml": strToU8('<p:sld xmlns:p="p" xmlns:a="a"><a:p><a:r><a:t>&lt;img onerror=&quot;x&quot;&gt;</a:t></a:r></a:p></p:sld>'),
+    }));
     const preview = await renderLocalOfficePreview(filePath);
     expect(preview.mode).toBe("presentation");
     expect(preview.html).toContain("Slide 1");
@@ -56,10 +56,10 @@ describe("office artifact preview", () => {
 
   it("renders DOCX body text locally", async () => {
     const filePath = path.join(createTempDirectory(), "document.docx");
-    const archive = new AdmZip();
-    archive.addFile("[Content_Types].xml", Buffer.from('<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>'));
-    archive.addFile("word/document.xml", Buffer.from('<?xml version="1.0"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>Local DOCX preview</w:t></w:r></w:p></w:body></w:document>'));
-    archive.writeZip(filePath);
+    fs.writeFileSync(filePath, zipSync({
+      "[Content_Types].xml": strToU8('<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>'),
+      "word/document.xml": strToU8('<?xml version="1.0"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>Local DOCX preview</w:t></w:r></w:p></w:body></w:document>'),
+    }));
     const preview = await renderLocalOfficePreview(filePath);
     expect(preview.mode).toBe("document");
     expect(preview.html).toContain("Local DOCX preview");

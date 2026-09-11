@@ -1,4 +1,4 @@
-import AdmZip from "adm-zip";
+import { strToU8, zipSync } from "fflate";
 import { describe, expect, it } from "vitest";
 import { hasZipMagic, resolveContentValidatedExtensions, validateUploadedFileBuffer } from "./uploadSecurity";
 
@@ -29,10 +29,10 @@ describe("upload security", () => {
   });
 
   it("validates OOXML package structure", () => {
-    const docx = new AdmZip();
-    docx.addFile("[Content_Types].xml", Buffer.from("<Types/>"));
-    docx.addFile("word/document.xml", Buffer.from("<document/>"));
-    const data = docx.toBuffer();
+    const data = Buffer.from(zipSync({
+      "[Content_Types].xml": strToU8("<Types/>"),
+      "word/document.xml": strToU8("<document/>"),
+    }));
     expect(hasZipMagic(data)).toBe(true);
     expect(validate(data, "file.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document").ok).toBe(true);
     expect(validate(data, "file.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet").ok).toBe(false);

@@ -21,7 +21,8 @@ describe("chatRuntimeErrors", () => {
   ])("explains an upstream execution failure without showing only its code", (error) => {
     const result = humanizeChatError(error);
     expect(result).toMatchObject({ code: "UPSTREAM_FAILED", known: true });
-    expect(result.message).toContain("Agent 执行失败");
+    expect(result.message).toContain("Agent 执行意外中断");
+    expect(result.message).toContain("部分输出");
     expect(result.message).toContain("重试");
     expect(result.message).not.toBe("UPSTREAM_FAILED");
   });
@@ -31,7 +32,7 @@ describe("chatRuntimeErrors", () => {
       code: "UPSTREAM_FAILED",
       message: "The requested test model does not exist.",
     });
-    expect(result.message).toContain("模型配置");
+    expect(result.message).toContain("实例状态");
     expect(result.technicalMessage).toBe("The requested test model does not exist.");
     expect(result.code).toBe("UPSTREAM_FAILED");
   });

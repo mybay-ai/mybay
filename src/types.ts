@@ -20,6 +20,8 @@ export interface AgentInstance {
   name: string;
   path: string;
   runtime_type?: string;
+  codexAuthMode?: "chatgpt" | "api";
+  codexAuthJson?: string;
   avatar_url?: string | null;
   status: "deploying" | "initializing" | "running" | "partial_running" | "stopped" | "failed" | "restarting" | "container_starting" | "dashboard_ready" | "gateway_starting" | "gateway_syncing" | "gateway_ready" | "unhealthy" | "frontend_missing_build" | "deleting" | "archiving" | "archived" | "cleanup_failed";
   url: string;
@@ -34,6 +36,7 @@ export interface AgentInstance {
   configSummary?: {
     provider?: string | null;
     model?: string | null;
+    codexAuthMode?: "chatgpt" | "api" | null;
     providerCredentialId?: string | null;
     baseUrl?: string | null;
     channel?: string;
@@ -180,6 +183,8 @@ export interface InstanceStats {
 }
 
 export interface SetupFormData {
+  codexAuthMode?: "chatgpt" | "api";
+  codexAuthJson?: string;
   id?: string;
   runtime_type?: string;
   allowMode?: string;

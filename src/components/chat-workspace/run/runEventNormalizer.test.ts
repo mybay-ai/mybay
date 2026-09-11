@@ -11,6 +11,17 @@ describe("normalizeSseRunEvent", () => {
     });
   });
 
+  it("normalizes structured interim commentary without treating it as final text", () => {
+    expect(normalizeSseRunEvent({
+      ...base,
+      event: "commentary",
+      data: JSON.stringify({ id: "interim-1", text: "Repository structure inspected.", timestamp: 123 })
+    })).toMatchObject({
+      type: "commentary.added",
+      payload: { id: "interim-1", text: "Repository structure inspected.", timestamp: 123 }
+    });
+  });
+
   it("rejects malformed structured events", () => {
     expect(normalizeSseRunEvent({ ...base, event: "step", data: "{bad" })).toBeNull();
     expect(normalizeSseRunEvent({ ...base, event: "status", data: "{}" })).toBeNull();

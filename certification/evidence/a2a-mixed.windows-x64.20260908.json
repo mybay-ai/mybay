@@ -1,0 +1,256 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-08T06:40:50.188Z",
+  "environment": {
+    "platform": "win32",
+    "arch": "x64",
+    "node": "v25.2.1"
+  },
+  "target": {
+    "baseUrl": "http://127.0.0.1:4348",
+    "runtimes": {
+      "pi": {
+        "instanceId": "1a5c4df7-4d95-4b0d-b758-84464ede0c6d",
+        "name": "PiAcceptance"
+      },
+      "hermes": {
+        "instanceId": "f4343d7e-b1c5-4869-b0c1-4798310fd240",
+        "name": "HermesAcceptance"
+      }
+    }
+  },
+  "strict": false,
+  "results": [
+    {
+      "name": "hermes-to-pi",
+      "verdict": "PASS",
+      "durationMs": 37877,
+      "evidence": {
+        "host": {
+          "instanceId": "f4343d7e-b1c5-4869-b0c1-4798310fd240",
+          "name": "HermesAcceptance"
+        },
+        "peer": {
+          "instanceId": "1a5c4df7-4d95-4b0d-b758-84464ede0c6d",
+          "name": "PiAcceptance"
+        },
+        "conversationId": "729563eb-09b4-465d-9297-0fa0ca63ee9c",
+        "callerState": "ready",
+        "toolState": "ready",
+        "peerState": "ready",
+        "runId": "43b84889-3285-4d37-9ee3-de80c3fd401f",
+        "runStatus": "completed",
+        "contextId": "ctx-mybay-room-43b8488932854d379ee3de80c3fd401f",
+        "selectedPeerIds": [
+          "1a5c4df7-4d95-4b0d-b758-84464ede0c6d"
+        ],
+        "groupOutcome": "completed",
+        "activityGroupOutcome": "completed",
+        "memberStatus": "completed",
+        "memberTaskId": "task-d565f00a0bb94662",
+        "markerObserved": true
+      }
+    },
+    {
+      "name": "pi-to-hermes",
+      "verdict": "PASS",
+      "durationMs": 18667,
+      "evidence": {
+        "host": {
+          "instanceId": "1a5c4df7-4d95-4b0d-b758-84464ede0c6d",
+          "name": "PiAcceptance"
+        },
+        "peer": {
+          "instanceId": "f4343d7e-b1c5-4869-b0c1-4798310fd240",
+          "name": "HermesAcceptance"
+        },
+        "conversationId": "efc26013-768f-423b-b363-2853975a749d",
+        "callerState": "ready",
+        "toolState": "ready",
+        "peerState": "ready",
+        "runId": "c8d37c51-8b3b-4d41-a3dc-41f15e6e9d91",
+        "runStatus": "completed",
+        "contextId": "ctx-mybay-room-c8d37c518b3b4d41a3dc41f15e6e9d91",
+        "selectedPeerIds": [
+          "f4343d7e-b1c5-4869-b0c1-4798310fd240"
+        ],
+        "groupOutcome": "completed",
+        "activityGroupOutcome": "completed",
+        "memberStatus": "completed",
+        "memberTaskId": "87910943-b799-4f7b-950f-f8bd04939c51",
+        "markerObserved": true
+      }
+    },
+    {
+      "name": "parallel",
+      "verdict": "PASS",
+      "durationMs": 44669,
+      "evidence": {
+        "directions": [
+          {
+            "host": {
+              "instanceId": "f4343d7e-b1c5-4869-b0c1-4798310fd240",
+              "name": "HermesAcceptance"
+            },
+            "peer": {
+              "instanceId": "1a5c4df7-4d95-4b0d-b758-84464ede0c6d",
+              "name": "PiAcceptance"
+            },
+            "conversationId": "a7cd515f-47a6-4d47-b9d4-2143fdb018d2",
+            "callerState": "ready",
+            "toolState": "ready",
+            "peerState": "ready",
+            "runId": "03b3bccc-4a23-4480-80ee-6c5b0021225f",
+            "runStatus": "completed",
+            "contextId": "ctx-mybay-room-03b3bccc4a23448080ee6c5b0021225f",
+            "selectedPeerIds": [
+              "1a5c4df7-4d95-4b0d-b758-84464ede0c6d"
+            ],
+            "groupOutcome": "completed",
+            "activityGroupOutcome": "completed",
+            "memberStatus": "completed",
+            "memberTaskId": "task-588d62e84d5b485f",
+            "markerObserved": true
+          },
+          {
+            "host": {
+              "instanceId": "1a5c4df7-4d95-4b0d-b758-84464ede0c6d",
+              "name": "PiAcceptance"
+            },
+            "peer": {
+              "instanceId": "f4343d7e-b1c5-4869-b0c1-4798310fd240",
+              "name": "HermesAcceptance"
+            },
+            "conversationId": "8c12da29-bfdb-4c8f-9ac2-a6a1dd9adf5d",
+            "callerState": "ready",
+            "toolState": "ready",
+            "peerState": "ready",
+            "runId": "c3949729-58b7-4de2-bc21-04c1e957bfa2",
+            "runStatus": "completed",
+            "contextId": "ctx-mybay-room-c394972958b74de2bc2104c1e957bfa2",
+            "selectedPeerIds": [
+              "f4343d7e-b1c5-4869-b0c1-4798310fd240"
+            ],
+            "groupOutcome": "completed",
+            "activityGroupOutcome": "completed",
+            "memberStatus": "completed",
+            "memberTaskId": "7997583f-44cc-4c6d-844a-0f38dadc956d",
+            "markerObserved": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "partial-failure",
+      "verdict": "NOT_RUN",
+      "reason": "scenario was not selected"
+    },
+    {
+      "name": "group-cancellation",
+      "verdict": "PASS",
+      "durationMs": 21546,
+      "evidence": {
+        "host": {
+          "instanceId": "f4343d7e-b1c5-4869-b0c1-4798310fd240",
+          "name": "HermesAcceptance"
+        },
+        "peer": {
+          "instanceId": "1a5c4df7-4d95-4b0d-b758-84464ede0c6d",
+          "name": "PiAcceptance"
+        },
+        "conversationId": "7b855f2d-8100-4aaa-bac6-41cc99f2daf8",
+        "runId": "313e6f18-a3d9-4546-8b6c-0b9ace26c271",
+        "contextId": "ctx-mybay-room-313e6f18a3d945468b6c0b9ace26c271",
+        "callerState": "ready",
+        "toolState": "ready",
+        "peerState": "ready",
+        "runStatus": "cancelled",
+        "groupOutcome": "cancelled",
+        "activityGroupOutcome": "cancelled",
+        "memberStatus": "cancelled",
+        "cancellation": {
+          "attempted": 1,
+          "confirmed": 1,
+          "unconfirmed": 0
+        }
+      }
+    },
+    {
+      "name": "refresh-recovery",
+      "verdict": "PASS",
+      "durationMs": 61551,
+      "evidence": {
+        "host": {
+          "instanceId": "f4343d7e-b1c5-4869-b0c1-4798310fd240",
+          "name": "HermesAcceptance"
+        },
+        "peer": {
+          "instanceId": "1a5c4df7-4d95-4b0d-b758-84464ede0c6d",
+          "name": "PiAcceptance"
+        },
+        "conversationId": "a6a4f34b-5409-441c-ba81-9f3291a27d5d",
+        "callerState": "ready",
+        "toolState": "ready",
+        "peerState": "ready",
+        "runId": "8e98c6e8-9981-418a-9b8c-57a417c8a9b0",
+        "runStatus": "completed",
+        "contextId": "ctx-mybay-room-8e98c6e89981418a9b8c57a417c8a9b0",
+        "selectedPeerIds": [
+          "1a5c4df7-4d95-4b0d-b758-84464ede0c6d"
+        ],
+        "groupOutcome": "completed",
+        "activityGroupOutcome": "completed",
+        "memberStatus": "completed",
+        "memberTaskId": "task-fd0af96f11bf42d5",
+        "markerObserved": true,
+        "refreshRequested": true,
+        "refreshedMemberStatus": "completed",
+        "remoteRecordState": "finished",
+        "remoteState": "TASK_STATE_COMPLETED"
+      }
+    },
+    {
+      "name": "control-restart-recovery",
+      "verdict": "PASS",
+      "durationMs": 46408,
+      "evidence": {
+        "host": {
+          "instanceId": "f4343d7e-b1c5-4869-b0c1-4798310fd240",
+          "name": "HermesAcceptance"
+        },
+        "peer": {
+          "instanceId": "1a5c4df7-4d95-4b0d-b758-84464ede0c6d",
+          "name": "PiAcceptance"
+        },
+        "conversationId": "166f3ba4-cdd5-4512-b180-46045f849e2c",
+        "callerState": "ready",
+        "toolState": "ready",
+        "peerState": "ready",
+        "runId": "06aa9eb8-48cb-498e-b697-90605f40b497",
+        "runStatus": "completed",
+        "contextId": "ctx-mybay-room-06aa9eb848cb498eb69790605f40b497",
+        "selectedPeerIds": [
+          "1a5c4df7-4d95-4b0d-b758-84464ede0c6d"
+        ],
+        "groupOutcome": "completed",
+        "activityGroupOutcome": "completed",
+        "memberStatus": "completed",
+        "memberTaskId": "task-bb4674c8c3b244e6",
+        "markerObserved": true,
+        "controlRestarted": true,
+        "healthRecovered": true,
+        "persistedRunStatus": "completed",
+        "persistedGroupOutcome": "completed",
+        "persistedActivityGroupOutcome": "completed",
+        "sameContext": true
+      }
+    }
+  ],
+  "summary": {
+    "PASS": 6,
+    "FAIL": 0,
+    "NOT_RUN": 1,
+    "accepted": true
+  },
+  "evidenceScope": "Windows x64 localhost Docker; two Runtime topology; partial-failure NOT_RUN because a third member was unavailable"
+}

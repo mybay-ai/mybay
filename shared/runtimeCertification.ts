@@ -9,6 +9,8 @@ export type RuntimeCertificationCheckStatus = "passed" | "failed";
 export type RuntimeCertificationRequirementStatus = "passed" | "failed" | "missing" | "invalid";
 export type RuntimeVerifiedCertificationLevel = RuntimeCertificationLevel | "unverified";
 export type RuntimeCertificationPlatform = "windows" | "linux" | "macos";
+export type RuntimeCertificationIdentityStatus = "exact" | "metadata-compatible" | "missing" | "mismatch";
+export type RuntimeCertificationArtifactVerification = "oci-digest" | "docker-image-id" | "pending";
 
 export type RuntimeCertificationRequirementId =
   | "runtime-install"
@@ -47,7 +49,7 @@ export interface RuntimeCertificationEvidenceCheck {
   readonly note?: string;
 }
 
-export interface RuntimeCertificationEvidenceBundle {
+export interface LegacyRuntimeCertificationEvidenceBundle {
   readonly schemaVersion: 2;
   readonly runtime: {
     readonly type: string;
@@ -60,6 +62,29 @@ export interface RuntimeCertificationEvidenceBundle {
   readonly artifacts: readonly RuntimeCertificationArtifact[];
   readonly checks: readonly RuntimeCertificationEvidenceCheck[];
 }
+
+export interface RuntimeCertificationEvidenceBundle {
+  readonly schemaVersion: 3;
+  readonly runtime: {
+    readonly type: string;
+    readonly providerKey: string;
+    readonly contractVersion: number;
+    readonly nativeVersion: string;
+    readonly bridgeVersion: string | null;
+    readonly imageRef: string;
+    readonly artifactIdentity: {
+      readonly kind: "oci-digest" | "docker-image-id";
+      readonly value: string;
+    } | null;
+  };
+  readonly environments: readonly RuntimeCertificationEnvironment[];
+  readonly artifacts: readonly RuntimeCertificationArtifact[];
+  readonly checks: readonly RuntimeCertificationEvidenceCheck[];
+}
+
+export type AnyRuntimeCertificationEvidenceBundle =
+  | LegacyRuntimeCertificationEvidenceBundle
+  | RuntimeCertificationEvidenceBundle;
 
 export interface RuntimeCertificationEnvironment {
   readonly id: string;
@@ -91,6 +116,8 @@ export interface RuntimeCertificationReport {
   readonly declaredLevel: RuntimeCertificationLevel;
   readonly verifiedLevel: RuntimeVerifiedCertificationLevel;
   readonly publicationStatus: "spec-only" | "verified" | "pending" | "invalid";
+  readonly identityStatus: RuntimeCertificationIdentityStatus;
+  readonly artifactVerification: RuntimeCertificationArtifactVerification;
   readonly environments: readonly RuntimeCertificationEnvironment[];
   readonly requirements: readonly RuntimeCertificationRequirementResult[];
   readonly errors: readonly string[];
@@ -225,6 +252,14 @@ function isValidTimestamp(value: string): boolean {
   return typeof value === "string" && value.trim() !== "" && Number.isFinite(Date.parse(value));
 }
 
+function isValidArtifactIdentity(value: unknown): value is NonNullable<RuntimeDefinition["release"]["artifactIdentity"]> {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as { kind?: unknown; value?: unknown };
+  return (candidate.kind === "oci-digest" || candidate.kind === "docker-image-id")
+    && typeof candidate.value === "string"
+    && /^sha256:[a-f0-9]{64}$/.test(candidate.value);
+}
+
 function requirementResult(
   requirement: RuntimeCertificationRequirement,
   evidence: RuntimeCertificationEvidenceCheck | undefined,
@@ -283,7 +318,7 @@ function levelRank(level: RuntimeCertificationLevel | "unverified"): number {
 
 export function evaluateRuntimeCertification(
   definition: RuntimeDefinition,
-  bundle?: RuntimeCertificationEvidenceBundle,
+  bundle?: AnyRuntimeCertificationEvidenceBundle,
   options: { readonly now?: number; readonly expectedMybayVersion?: string } = {},
 ): RuntimeCertificationReport {
   const errors: string[] = [];
@@ -299,21 +334,54 @@ export function evaluateRuntimeCertification(
       declaredLevel,
       verifiedLevel: "spec-only",
       publicationStatus: errors.length > 0 ? "invalid" : "spec-only",
+      identityStatus: bundle ? "mismatch" : "missing",
+      artifactVerification: "pending",
       environments: Object.freeze([]),
       requirements: Object.freeze([]),
       errors: Object.freeze(errors),
     });
   }
 
+  let identityStatus: RuntimeCertificationIdentityStatus = bundle ? "metadata-compatible" : "missing";
+  let artifactVerification: RuntimeCertificationArtifactVerification = "pending";
+
   if (bundle) {
-    if (bundle.schemaVersion !== 2) errors.push("Certification evidence schemaVersion must be 2.");
-    if (bundle.runtime.type !== definition.runtime.type
-      || bundle.runtime.providerKey !== definition.providerKey
-      || bundle.runtime.contractVersion !== definition.contractVersion
-      || bundle.runtime.version !== definition.version
-      || bundle.runtime.imageRef !== `${definition.runtime.image}:${definition.runtime.tag}`) {
-      runtimeBindingMatches = false;
-      errors.push("Certification evidence Runtime Binding does not match the catalog.");
+    const expectedImageRef = `${definition.runtime.image}:${definition.runtime.tag}`;
+    const baseBindingMatches = bundle.runtime.type === definition.runtime.type
+      && bundle.runtime.providerKey === definition.providerKey
+      && bundle.runtime.contractVersion === definition.contractVersion;
+    if (bundle.schemaVersion === 2) {
+      if (!baseBindingMatches
+        || bundle.runtime.version !== definition.version
+        || bundle.runtime.imageRef !== expectedImageRef) {
+        runtimeBindingMatches = false;
+      }
+    } else {
+      if (!baseBindingMatches
+        || bundle.runtime.nativeVersion !== definition.version
+        || bundle.runtime.bridgeVersion !== definition.release.bridgeVersion
+        || bundle.runtime.imageRef !== expectedImageRef) {
+        runtimeBindingMatches = false;
+      }
+      const expectedArtifact = definition.release.artifactIdentity;
+      const evidenceArtifact = bundle.runtime.artifactIdentity;
+      if (expectedArtifact && evidenceArtifact) {
+        if (!isValidArtifactIdentity(expectedArtifact)
+          || !isValidArtifactIdentity(evidenceArtifact)
+          || expectedArtifact.kind !== evidenceArtifact.kind
+          || expectedArtifact.value !== evidenceArtifact.value) {
+          runtimeBindingMatches = false;
+        } else {
+          identityStatus = "exact";
+          artifactVerification = evidenceArtifact.kind;
+        }
+      } else if (expectedArtifact || evidenceArtifact) {
+        identityStatus = "metadata-compatible";
+      }
+    }
+    if (!runtimeBindingMatches) {
+      identityStatus = "mismatch";
+      errors.push("Certification evidence does not match current runtime release identity.");
     }
     if (!Array.isArray(bundle.environments) || bundle.environments.length === 0) {
       errors.push("Certification evidence must identify at least one structured environment.");
@@ -351,7 +419,7 @@ export function evaluateRuntimeCertification(
   const hasInvalidRequirement = requirements.some((requirement) => requirement.status === "invalid");
   const publicationStatus = errors.length > 0 || hasInvalidRequirement
     ? "invalid"
-    : levelRank(verified) >= levelRank(declaredLevel)
+    : identityStatus === "exact" && levelRank(verified) >= levelRank(declaredLevel)
       ? "verified"
       : "pending";
 
@@ -362,6 +430,8 @@ export function evaluateRuntimeCertification(
     declaredLevel,
     verifiedLevel: verified,
     publicationStatus,
+    identityStatus,
+    artifactVerification,
     environments: Object.freeze([...(bundle?.environments ?? [])]),
     requirements,
     errors: Object.freeze(errors),

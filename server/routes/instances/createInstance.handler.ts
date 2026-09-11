@@ -1,3 +1,4 @@
+import { applyCodexOAuthCredential, normalizeCodexAccountAuth, validateCodexConnection } from "../../runtime/adapters/codex/CodexRuntimeEnvironment";
 import { Router, Response } from "express";
 import { AuthenticatedRequest, authenticateToken } from "../../middlewares/auth";
 import { dbAdapter } from "../../db";
@@ -93,6 +94,14 @@ export function createInstanceHandler(deps: RouterDependencies) {
         throw entitlementErr;
       }
 
+      if (requestedRuntimeType === "codex") {
+        try { if (req.body.provider !== "openai-codex" && (req.body.codexAuthMode || "chatgpt") === "chatgpt") req.body.codexAuthJson = normalizeCodexAccountAuth(req.body.codexAuthJson); }
+        catch { return res.status(400).json({ code: "CODEX_ACCOUNT_AUTH_INVALID", error: "Import a valid Codex ChatGPT account auth.json." }); }
+        if (req.body.channel && req.body.channel !== "web" || req.body.skills?.length || req.body.a2aEnabled) {
+          return res.status(400).json({ code: "CODEX_CAPABILITY_UNSUPPORTED", error: "Codex currently supports Web chat without external channels, injected skills or A2A." });
+        }
+        req.body.enableDashboard = false;
+      }
       const rawBody = req.body;
       const data = rawBody;
       if (!isTemplateWorkflowsEnabled() && hasTemplateDeploymentPayload(rawBody)) {
@@ -203,6 +212,10 @@ export function createInstanceHandler(deps: RouterDependencies) {
         try {
           const cred = await dbAdapter.getCredentialById(data.providerCredentialId, req.user.id);
           applySavedProviderCredential(data, cred);
+          if (requestedRuntimeType === "codex" && data.provider === "openai-codex") {
+            try { applyCodexOAuthCredential(data, cred?.type); }
+            catch { return res.status(400).json({ code: "CODEX_ACCOUNT_AUTH_INVALID", error: "Reconnect OpenAI Codex OAuth with a complete account credential." }); }
+          }
         } catch (err: any) {
           console.error("Failed to resolve credential for instance creation:", err);
           const code = err instanceof SavedProviderCredentialError ? err.code : "CREDENTIAL_RESOLUTION_FAILED";
@@ -216,6 +229,11 @@ export function createInstanceHandler(deps: RouterDependencies) {
                 : "Failed to resolve the selected saved credential."
           });
         }
+      }
+
+      if (requestedRuntimeType === "codex") {
+        try { validateCodexConnection(data); }
+        catch (error) { return res.status(400).json({ code: "CODEX_CONNECTION_INVALID", error: error instanceof Error ? error.message : "CODEX_CONNECTION_INVALID" }); }
       }
 
       // Handle Demo Mode token minting and config override
@@ -368,7 +386,7 @@ export function createInstanceHandler(deps: RouterDependencies) {
       const { isTraefik } = parseTraefikEnv(process.env);
 
       // Default internal web port (default 9119 as required)
-      data.internal_web_port = requestedRuntimeType === "pi"
+      data.internal_web_port = ["pi", "codex"].includes(requestedRuntimeType)
         ? 8080
         : data.internal_web_port ? parseInt(String(data.internal_web_port), 10) : 9119;
 
@@ -473,6 +491,7 @@ export function createInstanceHandler(deps: RouterDependencies) {
         data.template_inputs = secureData.template_inputs;
       }
       const sensitiveFields = [
+        "codexAuthJson",
         'apiKey', 'providerApiKey', 'password', 'telegramBotToken', 'discordBotToken',
         'feishuAppSecret', 'qqBotSecret', 'whatsappAccessToken', 'slackBotToken',
         'slackSigningSecret', 'slackAppToken', 'dingtalkAppSecret', 'dingtalkRobotSecret',
@@ -531,6 +550,7 @@ export function createInstanceHandler(deps: RouterDependencies) {
 
       if (secureData.chatApiKey) secureData.chatApiKey = encrypt(secureData.chatApiKey);
 
+      if (secureData.codexAuthJson) secureData.codexAuthJson = encrypt(secureData.codexAuthJson);
       if (secureData.apiKey) secureData.apiKey = encrypt(secureData.apiKey);
       if (secureData.providerApiKey) secureData.providerApiKey = encrypt(secureData.providerApiKey);
       if (secureData.telegramBotToken) secureData.telegramBotToken = encrypt(secureData.telegramBotToken);

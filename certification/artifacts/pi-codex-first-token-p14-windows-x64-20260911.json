@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "artifactType": "pi-codex-first-token-latency-acceptance",
+  "phase": "P1.4",
+  "capturedAt": "2026-09-11T06:30:38.996Z",
+  "baseCommit": "85c8bd708604c1cdbfe9cf7957ad0b0fa9530d8e",
+  "environment": {
+    "controlUrl": "http://127.0.0.1:4372",
+    "controlImage": "mybay/local:0.1.29-preview.1-p13",
+    "host": "Windows x64",
+    "runtimePlatform": "Docker Desktop Linux x86_64"
+  },
+  "targets": {
+    "pi": {
+      "instanceId": "1b37e66f-b3c5-4345-b62f-b84299ee2c82",
+      "runtimeImage": "mybay/pi-runtime:0.85.1",
+      "model": "deepseek-v4-flash"
+    },
+    "codex": {
+      "instanceId": "a9307d3c-af4a-4fde-97b9-22c211c2e17e",
+      "runtimeImage": "mybay/codex-runtime:0.154.0",
+      "model": "gpt-6-astra"
+    }
+  },
+  "acceptance": {
+    "result": "PASS",
+    "realRuns": 24,
+    "completedWithExactOutput": 24,
+    "pi": {
+      "containerRestartFirstTurnMs": 4484,
+      "warmContainerNewSessionMedianMs": 4767,
+      "warmNativeSessionMedianMs": 1899,
+      "nativeSessionReuseReductionPercent": 60,
+      "primaryMatrixAcceptMedianMs": 103
+    },
+    "codex": {
+      "containerRestartFirstTurnMs": 12709,
+      "warmContainerNewSessionMedianMs": 8089,
+      "warmNativeSessionMedianMs": 3728,
+      "nativeSessionReuseReductionPercent": 54,
+      "primaryMatrixAcceptMedianMs": 115
+    },
+    "localPath": {
+      "controlAcceptP95TargetMs": 1000,
+      "firstFeedbackP95TargetMs": 1500,
+      "targetsPassed": true,
+      "finding": "Control persistence, snapshot preparation, session binding and Runtime transport are sub-second in the retained matrix. Most first-text time occurs after Runtime acceptance."
+    },
+    "reasoningEffort": {
+      "finding": "Alternating fast and balanced samples did not show a stable fast-mode latency advantage on either retained target.",
+      "decision": "Keep balanced as the product default to avoid an unsupported quality tradeoff."
+    }
+  },
+  "implementation": {
+    "productCodeChanged": false,
+    "reason": "The measured local path is already below the acceptance targets and the dominant latency is Runtime/model dependent.",
+    "existingOptimizationValidated": "Pi and Codex retain and resume their native session instead of rebuilding managed history on every turn.",
+    "reusableAcceptanceTool": "scripts/runtime-first-token-acceptance.mjs"
+  },
+  "validation": {
+    "scriptSyntax": "PASS",
+    "scriptHelp": "PASS",
+    "eslint": "PASS",
+    "reusableScriptRealRuns": {
+      "pi": "2/2 PASS",
+      "codex": "2/2 PASS"
+    },
+    "controllerHealth": "healthy",
+    "runtimeContainers": "running"
+  },
+  "evidence": {
+    "piColdAndWarmSession": "data/p14-first-token-20260911/pi-browser-api.json",
+    "codexColdAndWarmSession": "data/p14-first-token-20260911/codex-browser-api.json",
+    "piWarmNewSessions": "data/p14-first-token-20260911/pi-new-session.json",
+    "codexWarmNewSessions": "data/p14-first-token-20260911/codex-new-session.json",
+    "piReusableScript": "data/p14-first-token-20260911/pi-reusable-script.json",
+    "codexReusableScript": "data/p14-first-token-20260911/codex-reusable-script.json",
+    "serverTimings": "data/p14-first-token-20260911/server-timings.jsonl"
+  },
+  "boundaries": [
+    "These are local observations for the listed models, account, host and exact Runtime images; they are not provider-wide latency guarantees.",
+    "The first feedback metric covers MyBay lifecycle feedback. First visible text remains dependent on Runtime, provider, model, prompt and service load.",
+    "Automatic model warm-up was not added because it would consume provider quota and create hidden native conversation state.",
+    "No certification level was changed by this acceptance."
+  ],
+  "containsSecrets": false
+}

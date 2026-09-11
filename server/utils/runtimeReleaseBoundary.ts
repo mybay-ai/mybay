@@ -8,10 +8,12 @@ export function isPiRuntimeRequest(runtimeType: unknown): boolean {
 }
 
 export function isPiRuntimeBetaEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
-  return String(env.MYBAY_ENABLE_PI_RUNTIME || "").trim().toLowerCase() === "true";
+  const configured = String(env.MYBAY_ENABLE_PI_RUNTIME || "").trim().toLowerCase();
+  if (!configured) return true;
+  return configured === "true";
 }
 
-export function getRuntimeReleaseBoundary(runtimeType: unknown) {
+export function getRuntimeReleaseBoundary(runtimeType: unknown, env: NodeJS.ProcessEnv = process.env) {
   const normalized = runtimeType === undefined || runtimeType === null || runtimeType === ""
     ? "hermes"
     : typeof runtimeType === "string"
@@ -25,11 +27,11 @@ export function getRuntimeReleaseBoundary(runtimeType: unknown) {
       error: `Runtime '${String(runtimeType)}' is not registered.`,
     } as const;
   }
-  if (normalized === "pi" && !isPiRuntimeBetaEnabled()) {
+  if (normalized === "pi" && !isPiRuntimeBetaEnabled(env)) {
     return {
       status: 400,
       code: PI_RUNTIME_RELEASE_CODE,
-      error: "Pi Agent Beta is disabled on this installation. Set MYBAY_ENABLE_PI_RUNTIME=true to enable it.",
+      error: "Pi Agent is disabled by this installation's configuration. Set MYBAY_ENABLE_PI_RUNTIME=true to enable it.",
     } as const;
   }
   if (definition.release.deploymentSupported) return null;

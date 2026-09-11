@@ -9,6 +9,20 @@ afterEach(() => {
 });
 
 describe("managed Runtime version catalog", () => {
+  it("exposes the admitted Codex upgrade and rollback pair", () => {
+    expect(listManagedRuntimeVersions("codex")).toEqual([
+      expect.objectContaining({
+        runtime_type: "codex", version: "0.154.0", bridge_version: "0.1.0-experimental.3",
+        image: "mybay/codex-runtime", image_tag: "0.154.0", upgradeable: true, is_latest: true,
+        channel: "beta", certification_level: "certified",
+      }),
+      expect.objectContaining({
+        runtime_type: "codex", version: "0.153.4", image_tag: "0.153.4", upgradeable: true, is_latest: false,
+        channel: "experimental", certification_level: "experimental",
+      }),
+    ]);
+    expect(listManagedRuntimeVersions("codex")[0].capabilities).toEqual(expect.arrayContaining(["upgrade", "rollback"]));
+  });
   it("maps the latest Pi release to the configured distributable image", () => {
     process.env.MYBAY_PI_RUNTIME_IMAGE = "ghcr.io/mybay-ai/pi-runtime:0.85.1";
     const versions = listManagedRuntimeVersions("pi");
@@ -32,7 +46,7 @@ describe("managed Runtime version catalog", () => {
     const cached = await enrichRuntimeVersionCacheStatus(versions, {
       getImage: () => ({ inspect: async () => ({ Id: "sha256:cached" }) }),
     });
-    expect(cached[0]).toMatchObject({ is_prewarmed: true, prewarm_status: "cached" });
+    expect(cached[0]).toMatchObject({ is_prewarmed: true, prewarm_status: "cached", image_id: "sha256:cached", repo_digests: [] });
 
     const missing = await enrichRuntimeVersionCacheStatus(versions, {
       getImage: () => ({ inspect: async () => { throw { statusCode: 404 }; } }),

@@ -57,6 +57,7 @@ import { readA2ARetryNavigationState } from "./chat-workspace/a2aRetryNavigation
 import type { ChatGroupConfig } from "../../shared/chatCollaboration";
 import type { GroupRunActivity, GroupRunMissingMember } from "./chat-workspace/ChatGroupRunSummary";
 import { readLocalRunUsage } from "../../shared/localRunUsage";
+import { useProviderOAuth } from "../features/deploy/useProviderOAuth";
 
 export { generateUUIDv4 } from "./chat-workspace/chatWorkspaceSendPolicy";
 
@@ -130,6 +131,7 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
   const historyAbortRef = useRef<AbortController | null>(null);
   const selectionRevisionRef = useRef(0);
   const activeChatRequestIdRef = useRef<string | null>(null);
+  const codexOAuthReconnectInstanceIdRef = useRef<string | null>(null);
   const shouldScrollToBottomRef = useRef<boolean>(true);
   
   const instanceGenerationRef = useRef(0);
@@ -732,6 +734,36 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
   const hasAnyReady = Object.values(chatReadiness).some(r => r.ready);
 
   const selectedInstance = instances.find(inst => inst.id === selectedId);
+  const isCodexAccountInstance = String(selectedInstance?.runtime_type || "").toLowerCase() === "codex"
+    && String(selectedInstance?.codexAuthMode || selectedInstance?.configSummary?.codexAuthMode || "chatgpt").toLowerCase() === "chatgpt";
+  const codexOAuth = useProviderOAuth({
+    provider: "openai-codex",
+    enabled: isCodexAccountInstance,
+    onComplete: async (credential) => {
+      const targetInstanceId = codexOAuthReconnectInstanceIdRef.current;
+      if (!targetInstanceId) throw new Error(t("dashboard:chatWorkspace.codexOAuthReconnectFailed"));
+      await api.post(`/api/instances/${encodeURIComponent(targetInstanceId)}/codex-oauth`, { credentialId: credential.id });
+      setInstances(previous => previous.map(instance => instance.id === targetInstanceId ? {
+        ...instance,
+        model_provider: "openai-codex",
+        configSummary: { ...(instance.configSummary || {}), provider: "openai", providerCredentialId: credential.id },
+      } : instance));
+      const probe = await api.get(`/api/instances/${encodeURIComponent(targetInstanceId)}/chat-readiness`);
+      setChatReadiness(previous => ({
+        ...previous,
+        [targetInstanceId]: normalizeChatReadinessProbe({ ...probe, checkedAt: new Date().toISOString(), probeStatus: "checked" }),
+      }));
+      showToast(t("dashboard:chatWorkspace.codexOAuthReconnected"), "success");
+    },
+  });
+  useEffect(() => {
+    if (codexOAuth.error) showToast(t("dashboard:chatWorkspace.codexOAuthReconnectFailed"), "error");
+  }, [codexOAuth.error, showToast, t]);
+  const handleReconnectCodexOAuth = useCallback(() => {
+    if (!selectedId || !isCodexAccountInstance) return;
+    codexOAuthReconnectInstanceIdRef.current = selectedId;
+    void codexOAuth.connect();
+  }, [codexOAuth.connect, isCodexAccountInstance, selectedId]);
 
   // Group instances into Ready, Probing, and Unready for clean frontend ordering
   const groupedInstances = useMemo(() => {
@@ -1391,6 +1423,8 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
             onRetry={handleRetry}
             onEditMessage={handleEditMessage}
             onSwitchToAssistAndDiagnose={handleSwitchToAssistAndDiagnose}
+            onReconnectCodexOAuth={isCodexAccountInstance ? handleReconnectCodexOAuth : undefined}
+            reconnectingCodexOAuth={codexOAuth.loading}
             conversationFiles={conversationFiles}
             onOpenConversationFile={handleOpenConversationFileFromChat}
             onOpenInstanceFilePath={handleOpenInstanceFileFromChat}
@@ -1432,7 +1466,8 @@ export function ChatWorkspace({ currentUser, socket }: { currentUser?: UserType 
               runtimeType={selectedInstance?.runtime_type}
               selectedInstanceName={selectedInstance?.name}
               runMetrics={selectedRunMetrics}
-              contextUsage={conversationContextUsage}
+              contextUsage={conversationContextUsage ?? selectedRunMetrics?.usageEvidence ?? null}
+              manualCompactionSupported={runCapabilities.features.manual_compaction === true}
               chatMode={chatMode}
               onChatModeChange={handleChatModeChange}
               reasoningEffort={reasoningEffort}

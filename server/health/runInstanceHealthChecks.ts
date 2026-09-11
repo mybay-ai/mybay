@@ -1,3 +1,4 @@
+import { probeCodexRuntimeReadiness } from "../runtime/adapters/codex/CodexRuntimeReadiness";
 import fs from "fs";
 import path from "path";
 import Docker from "dockerode";
@@ -61,11 +62,12 @@ async function runPiRuntimeHealthChecks(options: {
   updateInstanceStatusStmt: any;
 }) {
   const { instanceId, containerName, internalPort, instance, io, updateInstanceStatusStmt } = options;
+  const runtimeType = String(options.config?.runtime_type || instance?.runtime_type || "pi").trim().toLowerCase();
   const isTestEnv = process.env.NODE_ENV === "test" || process.env.VITEST === "true";
   for (let attempt = 0; attempt < 30; attempt++) {
     const state = await getContainerState(containerName);
     const portListening = state.Running && await checkContainerPortListening(containerName, internalPort);
-    const readiness = portListening ? await probePiRuntimeReadiness(instance) : null;
+    const readiness = portListening ? (runtimeType === "codex" ? await probeCodexRuntimeReadiness(instance) : await probePiRuntimeReadiness(instance)) : null;
     const ready = readiness?.gateway_ready === true;
     if (ready) {
       const checkedAt = new Date().toISOString();
@@ -79,7 +81,7 @@ async function runPiRuntimeHealthChecks(options: {
           gateway_status: "running",
           gateway_ready: true,
           chat_ready: true,
-          runtime_type: "pi",
+          runtime_type: runtimeType,
           runtime_transport: "rpc-jsonl",
           gateway_checked_at: checkedAt,
         },
@@ -89,11 +91,11 @@ async function runPiRuntimeHealthChecks(options: {
         owner_id: instance?.owner_id || instance?.user_id,
         step: "health_ready",
         status: "success",
-        message: "Pi Runtime 容器、内部端口与鉴权能力接口均已就绪",
+        message: "Runtime 容器、内部端口与鉴权能力接口均已就绪",
       }).catch(() => {});
       await updateInstanceStatusStmt.run({ status: "running", id: instanceId });
       io.emit(`deploy_status_${instanceId}`, "running");
-      io.emit(`deploy_log_${instanceId}`, { timestamp: checkedAt, message: "[Pi Runtime Beta] 已就绪，可开始 Web 对话。" });
+      io.emit(`deploy_log_${instanceId}`, { timestamp: checkedAt, message: "[Runtime] 已就绪，可开始 Web 对话。" });
       return;
     }
     if (!state.Running && (state.Status === "exited" || state.Dead || state.OOMKilled)) break;
@@ -188,7 +190,7 @@ export async function runInstanceHealthChecks(instanceId: string, gatewayHostPor
   const host_port = ctx.host_port || gatewayHostPort || 15929;
   const dashboardAccessEnabled = ctx.enableDashboard !== false;
 
-  if (String(configObj.runtime_type || instance?.runtime_type || "hermes").trim().toLowerCase() === "pi") {
+  if (["pi", "codex"].includes(String(configObj.runtime_type || instance?.runtime_type || "hermes").trim().toLowerCase())) {
     return runPiRuntimeHealthChecks({
       instanceId,
       containerName: dashboardContainerName,

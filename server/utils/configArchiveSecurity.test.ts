@@ -1,4 +1,5 @@
-import AdmZip from "adm-zip";
+import { strToU8, zipSync } from "fflate";
+import { readOnlyZip } from "./readOnlyZip";
 import { describe, expect, it } from "vitest";
 import { CONFIG_ARCHIVE_MAX_ENTRIES, CONFIG_ARCHIVE_MAX_ENTRY_BYTES, CONFIG_ARCHIVE_MAX_TOTAL_BYTES, validateConfigArchiveEntries } from "./configArchiveSecurity";
 
@@ -8,10 +9,11 @@ function entry(name: string, size = 1, compressedSize = size, externalFileAttr =
 
 describe("config archive security", () => {
   it("accepts a normal in-memory MyBay archive", () => {
-    const archive = new AdmZip();
-    archive.addFile("manifest.json", Buffer.from('{"platform":"MyBay"}'));
-    archive.addFile("config.redacted.json", Buffer.from("{}"));
-    expect(validateConfigArchiveEntries(new AdmZip(archive.toBuffer()).getEntries())).toMatchObject({ ok: true });
+    const archive = zipSync({
+      "manifest.json": strToU8('{"platform":"MyBay"}'),
+      "config.redacted.json": strToU8("{}"),
+    });
+    expect(validateConfigArchiveEntries(readOnlyZip(archive))).toMatchObject({ ok: true });
   });
 
   it("enforces entry count and expanded size limits", () => {

@@ -1,0 +1,34 @@
+{
+  "recordedAt": "2026-09-09T12:40:40.117Z",
+  "toolReadPassed": true,
+  "toolStatus": "completed",
+  "multiTurnPassed": true,
+  "streamDeltaObserved": true,
+  "scenario": "official-codex-app-server-custom-responses",
+  "nativeStatus": "completed",
+  "output": "CODEX_API_NATIVE_OK",
+  "requests": [
+    {
+      "path": "/v1/responses",
+      "method": "POST",
+      "expectedKey": true
+    },
+    {
+      "path": "/v1/responses",
+      "method": "POST",
+      "expectedKey": true
+    },
+    {
+      "path": "/v1/responses",
+      "method": "POST",
+      "expectedKey": true
+    },
+    {
+      "path": "/v1/responses",
+      "method": "POST",
+      "expectedKey": true
+    }
+  ],
+  "verdict": "PASS",
+  "scope": "Real Codex binary and DeepSeek V4 Flash Responses, isolated workspace; text, scoped file read and same-session follow-up."
+}

@@ -25,8 +25,14 @@ import {
   instanceOperationCoordinator,
 } from "../../services/instances/instanceOperationCoordinator";
 import { buildUpgradePreflight } from "../../services/instances/upgradePreflightService";
-import { isPiRuntimeInstance, resolvePiRuntimeUpgradeSelection } from "../../services/instances/runtimeUpgradeSelection";
+import {
+  isCodexRuntimeInstance,
+  isPiRuntimeInstance,
+  resolveCodexRuntimeUpgradeSelection,
+  resolvePiRuntimeUpgradeSelection,
+} from "../../services/instances/runtimeUpgradeSelection";
 import { enrichRuntimeVersionCacheStatus, listManagedRuntimeVersions } from "../../services/runtimeVersionCatalog";
+import { isVerifiedLocalCodexRuntimeImage } from "../../services/localCodexRuntime";
 
 function respondIfInstanceOperationActive(res: Response, instanceIds: string[]): boolean {
   for (const instanceId of instanceIds) {
@@ -58,9 +64,9 @@ export function createVersionsRoutes(deps: RouterDependencies) {
   router.get("/agent-versions", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const runtimeType = String(req.query.runtimeType || "hermes").trim().toLowerCase();
-      if (runtimeType === "pi") {
+      if (runtimeType === "pi" || runtimeType === "codex") {
         res.setHeader("Cache-Control", "no-store");
-        return res.json(await enrichRuntimeVersionCacheStatus(listManagedRuntimeVersions("pi"), docker));
+        return res.json(await enrichRuntimeVersionCacheStatus(listManagedRuntimeVersions(runtimeType), docker));
       }
       if (runtimeType !== "hermes") {
         return res.status(400).json({ code: "UNSUPPORTED_RUNTIME_TYPE", error: "Unsupported Runtime type." });
@@ -113,8 +119,12 @@ export function createVersionsRoutes(deps: RouterDependencies) {
         const piSelection = isPiRuntimeInstance(instance)
           ? resolvePiRuntimeUpgradeSelection({ instance, targetTag: resolvedTag })
           : null;
-        const targetImage = piSelection?.ok
-          ? piSelection.selection.imageRef
+        const codexSelection = isCodexRuntimeInstance(instance)
+          ? resolveCodexRuntimeUpgradeSelection({ instance, targetTag: resolvedTag })
+          : null;
+        const managedSelection = piSelection?.ok ? piSelection : codexSelection?.ok ? codexSelection : null;
+        const targetImage = managedSelection?.ok
+          ? managedSelection.selection.imageRef
           : `${version?.image || instance.agent_image || process.env.MY_BAY_IMAGE || "nousresearch/hermes-agent"}:${version?.image_tag || version?.tag || resolvedTag}`;
         const imageInspect: any = await docker.getImage(targetImage).inspect().catch(() => null);
         const context = buildDeploymentContext(instance);
@@ -136,6 +146,9 @@ export function createVersionsRoutes(deps: RouterDependencies) {
           dataDirectoryExists: fs.existsSync(dataPath),
           currentContainerRunning: containerInspect?.State?.Running === true,
           targetImageCached: !!imageInspect,
+          targetImageVerified: codexSelection?.ok && imageInspect
+            ? isVerifiedLocalCodexRuntimeImage(targetImage, imageInspect)
+            : null,
           architectureCompatible: imageInspect?.Architecture && dockerInfo?.Architecture
             ? normalizeArchitecture(imageInspect.Architecture) === normalizeArchitecture(dockerInfo.Architecture)
             : null,

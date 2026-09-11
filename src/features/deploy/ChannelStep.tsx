@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { ChannelSetupGuidePanel } from "./ChannelSetupGuidePanel";
 import { ChannelManualConfigForm } from "./ChannelManualConfigForm";
 import { ChannelSelector } from "./ChannelSelector";
+import { HERMES_RUNTIME_DEFINITION } from "../../../shared/runtimeCatalog";
 
 interface ChannelStepProps {
   data: any;
@@ -169,7 +170,9 @@ export function ChannelStep({ data, update, testChannel, testStatus, onViewGuide
           return false;
         });
         const isLatest = !data.imageTag || data.imageTag === "latest";
-        const isVerFeishu = !!(
+        const isVerFeishu = data.imageTag === HERMES_RUNTIME_DEFINITION.runtime.tag || !!(
+          selectedVer?.capabilities?.includes("feishu") ||
+          selectedVer?.feishu_capable === true ||
           data.imageTag && typeof data.imageTag === 'string' && (
             data.imageTag.toLowerCase().includes("feishu") ||
             data.imageTag.toLowerCase().includes("lark")

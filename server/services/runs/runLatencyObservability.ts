@@ -3,6 +3,7 @@ type RuntimeEvent = Record<string, unknown>;
 interface RunLatencyState {
   firstUpstreamByteAtMs?: number;
   firstRuntimeEventAtMs?: number;
+  firstInterimMessageAtMs?: number;
   firstVisibleTextAtMs?: number;
   firstToolStartedAtMs?: number;
   lastToolCompletedAtMs?: number;
@@ -15,6 +16,7 @@ export interface RunLatencyWaterfall {
   queueMs: number | null;
   dispatchToFirstUpstreamByteMs: number | null;
   dispatchToFirstRuntimeEventMs: number | null;
+  dispatchToFirstInterimMessageMs: number | null;
   dispatchToFirstVisibleTextMs: number | null;
   dispatchToFirstToolMs: number | null;
   toolSpanMs: number | null;
@@ -70,6 +72,9 @@ export function createRunLatencyObservability(now: () => number = () => Date.now
       if (eventType === "message.delta" && typeof event.delta === "string" && event.delta) {
         state.firstVisibleTextAtMs ??= observedAt;
       }
+      if (eventType === "message.interim" && typeof event.text === "string" && event.text.trim()) {
+        state.firstInterimMessageAtMs ??= observedAt;
+      }
       if (eventType === "tool.started" || eventType === "tool.start") {
         state.firstToolStartedAtMs ??= observedAt;
       }
@@ -91,6 +96,7 @@ export function createRunLatencyObservability(now: () => number = () => Date.now
         queueMs: elapsed(createdAt, startedAt),
         dispatchToFirstUpstreamByteMs: elapsed(startedAt, state.firstUpstreamByteAtMs),
         dispatchToFirstRuntimeEventMs: elapsed(startedAt, state.firstRuntimeEventAtMs),
+        dispatchToFirstInterimMessageMs: elapsed(startedAt, state.firstInterimMessageAtMs),
         dispatchToFirstVisibleTextMs: elapsed(startedAt, state.firstVisibleTextAtMs),
         dispatchToFirstToolMs: elapsed(startedAt, state.firstToolStartedAtMs),
         toolSpanMs: elapsed(state.firstToolStartedAtMs, state.lastToolCompletedAtMs),

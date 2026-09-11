@@ -13,6 +13,7 @@ import { docker } from "../../routes/instances/index"; // Wait, circular depende
 
 export const isSensitiveFile = (filename: string) => {
   const sensitivePatterns = [
+    /^codex(?:-bridge)?$/i,
     // Hidden files and directories commonly contain credentials, runtime
     // metadata, or package-manager state. They are not product artifacts.
     /^\./,

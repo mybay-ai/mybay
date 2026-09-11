@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { CheckCircle2, ChevronDown, ChevronRight, CircleHelp, CircleStop, LoaderCircle, ShieldQuestion, Wrench, XCircle } from "lucide-react";
+import { CheckCircle2, ChevronDown, ChevronRight, CircleHelp, CircleStop, LoaderCircle, MessageSquareText, ShieldQuestion, Wrench, XCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ChatRunMetrics } from "../useChatRuns";
 import type { RunBlock, RunExecutionState, ToolRunBlock } from "./runTypes";
@@ -28,7 +28,7 @@ function ToolBlock({ block, execution }: { block: ToolRunBlock; execution: RunEx
           displayStatus === "stopped" || displayStatus === "unknown" ? "text-amber-500" : "text-rose-500"
   );
   return (
-    <div className="flex items-start gap-2 rounded-xl border border-outline/80 bg-surface-muted/55 px-3 py-2 text-[12px]">
+    <div className="flex items-start gap-2 rounded-xl border border-outline/80 bg-surface-muted/55 px-3 py-2 text-[12px]" aria-live={block.stepType === "model_reasoning" && displayStatus === "running" ? "polite" : undefined}>
       <Icon className={iconClass} />
       <div className="min-w-0 flex-1">
         <div className="truncate font-medium text-content">{block.completionInferred ? t("chatWorkspace.timelineGenericStep") : translateToolStepLabel(t, block.label || block.tool, block.tool)}</div>
@@ -42,6 +42,15 @@ function ToolBlock({ block, execution }: { block: ToolRunBlock; execution: RunEx
 function TimelineBlock({ block, execution, renderText }: { block: RunBlock; execution: RunExecutionState; renderText?: (content: string) => ReactNode }) {
   const { t } = useTranslation("dashboard");
   if (block.type === "text") return <div className="px-1 text-[14px]" data-timeline-text>{renderText ? renderText(block.content) : block.content}</div>;
+  if (block.type === "commentary") return (
+    <div className="rounded-xl border border-indigo-100/90 bg-indigo-50/45 px-3 py-2.5 dark:border-indigo-400/20 dark:bg-indigo-500/10" data-timeline-commentary>
+      <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-medium text-indigo-600 dark:text-indigo-300">
+        <MessageSquareText className="h-3.5 w-3.5" />
+        {t("chatWorkspace.timelineCommentary")}
+      </div>
+      <div className="text-[14px] leading-6 text-content-secondary">{renderText ? renderText(block.content) : block.content}</div>
+    </div>
+  );
   if (block.type === "tool") return <ToolBlock block={block} execution={execution} />;
   if (block.type === "approval") {
     return (
@@ -113,7 +122,7 @@ export function InlineRunTimeline({
   const [now, setNow] = useState(Date.now());
   const visibleBlocks = useMemo(() => execution.blocks.filter(block => !hideApprovalBlocks || block.type !== "approval"), [execution.blocks, hideApprovalBlocks]);
   const rows = useMemo(() => groupTimelineBlocks(visibleBlocks), [visibleBlocks]);
-  const stepCount = execution.blocks.filter(block => block.type === "tool").length;
+  const stepCount = execution.blocks.filter(block => block.type === "tool" && block.stepType !== "model_reasoning" && block.stepType !== "final").length;
   const archivedWithoutDuration = terminal && execution.timelinePartial !== undefined && metrics?.durationMs == null;
   const duration = archivedWithoutDuration ? "" : formatTimelineDuration(resolveRunDurationMs({
     metrics,

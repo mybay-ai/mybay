@@ -2,6 +2,8 @@ import type { ChatToolStep } from "../ChatToolProgress";
 import type {
   ApprovalEventPayload,
   ApprovalRunBlock,
+  CommentaryEventPayload,
+  CommentaryRunBlock,
   NormalizedRunEvent,
   RunBlock,
   RunExecutionState,
@@ -96,6 +98,29 @@ function reduceTextDelta(state: RunExecutionState, event: NormalizedRunEvent<Tex
     content: delta
   };
   return { ...state, assistantText, streamText, blocks: [...state.blocks, block], lastProcessedSeq: event.seq };
+}
+
+function reduceCommentary(state: RunExecutionState, event: NormalizedRunEvent<CommentaryEventPayload>): RunExecutionState {
+  const payload = event.payload;
+  const commentaryId = String(payload?.id || `commentary-${event.seq}`);
+  const content = typeof payload?.text === "string" ? payload.text.trim() : "";
+  if (!content) return { ...state, lastProcessedSeq: event.seq };
+  const index = state.blocks.findIndex(block => block.type === "commentary" && block.commentaryId === commentaryId);
+  if (index >= 0) {
+    const current = state.blocks[index] as CommentaryRunBlock;
+    const updated: CommentaryRunBlock = { ...current, content, timestamp: payload.timestamp ?? current.timestamp, lastSeq: event.seq };
+    return { ...state, blocks: replaceBlock(state.blocks, index, updated), lastProcessedSeq: event.seq };
+  }
+  const block: CommentaryRunBlock = {
+    id: `${state.runId}-commentary-${commentaryId}`,
+    type: "commentary",
+    firstSeq: event.seq,
+    lastSeq: event.seq,
+    commentaryId,
+    content,
+    timestamp: payload.timestamp,
+  };
+  return { ...state, blocks: [...state.blocks, block], lastProcessedSeq: event.seq };
 }
 
 function reduceToolEvent(state: RunExecutionState, event: NormalizedRunEvent<ToolEventPayload>): RunExecutionState {
@@ -211,6 +236,8 @@ export function runReducer(state: RunExecutionState, event: NormalizedRunEvent):
   switch (event.type) {
     case "text.delta":
       return reduceTextDelta(state, event as NormalizedRunEvent<TextDeltaPayload>);
+    case "commentary.added":
+      return reduceCommentary(state, event as NormalizedRunEvent<CommentaryEventPayload>);
     case "tool.started":
     case "tool.completed":
     case "tool.failed":

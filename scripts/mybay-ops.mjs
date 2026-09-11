@@ -28,6 +28,11 @@ function isExcludedInstanceRuntimeFile(basename) {
     || basename.endsWith("-shm");
 }
 
+function isExcludedInstanceRuntimeDirectory(relative) {
+  const normalized = relative.replaceAll("\\", "/");
+  return /^instances\/[^/]+\/codex\/tmp(?:\/|$)/i.test(normalized);
+}
+
 function parseArgs(argv) {
   const args = { command: argv[0] || "doctor", json: false, database: "", output: "", backup: "" };
   for (let index = 1; index < argv.length; index += 1) {
@@ -131,16 +136,23 @@ function restrictBackupPermissions(target, mode) {
   fs.chmodSync(target, mode);
 }
 
-function copyOptionalDataDirectory(name, destination, sourceDataRoot, skippedPaths) {
+async function copyOptionalDataDirectory(name, destination, sourceDataRoot, skippedPaths) {
   const source = path.join(sourceDataRoot, name);
   if (!fs.existsSync(source) && !fs.lstatSync(source, { throwIfNoEntry: false })) return;
-  function copy(relative) {
+  async function copy(relative) {
     const current = path.join(sourceDataRoot, relative);
     const basename = path.basename(relative);
     // Docker-created Unix sockets cannot be inspected from a Windows host and
     // PID, lock, log, and SQLite sidecar files are all recreated by Hermes.
     // Exclude them by name before lstat so a live gateway.sock cannot abort the backup.
     if (name === "instances" && relative !== name && isExcludedInstanceRuntimeFile(basename)) {
+      skippedPaths.push(`data/${relative.replaceAll("\\", "/")}`);
+      return;
+    }
+    // Codex creates short-lived helper executables and platform-specific links
+    // under CODEX_HOME/tmp. They are regenerated on startup and can be
+    // unreadable from a Windows host even after the Runtime has stopped.
+    if (name === "instances" && relative !== name && isExcludedInstanceRuntimeDirectory(relative)) {
       skippedPaths.push(`data/${relative.replaceAll("\\", "/")}`);
       return;
     }
@@ -156,15 +168,26 @@ function copyOptionalDataDirectory(name, destination, sourceDataRoot, skippedPat
     if (stat.isDirectory()) {
       fs.mkdirSync(target, { mode: OWNER_DIRECTORY_MODE });
       restrictBackupPermissions(target, OWNER_DIRECTORY_MODE);
-      for (const entry of fs.readdirSync(current).sort()) copy(path.join(relative, entry));
+      for (const entry of fs.readdirSync(current).sort()) await copy(path.join(relative, entry));
     } else if (stat.isFile()) {
-      fs.copyFileSync(current, target, fs.constants.COPYFILE_EXCL);
+      // Native Runtime databases can retain committed state only in WAL.
+      // Snapshot them before omitting sidecars; a raw main-file copy loses it.
+      const header = Buffer.alloc(16);
+      const descriptor = fs.openSync(current, "r");
+      try { fs.readSync(descriptor, header, 0, 16, 0); } finally { fs.closeSync(descriptor); }
+      if (name === "instances" && header.toString("binary") === "SQLite format 3\u0000") {
+        const sourceDatabase = new DatabaseSync(current, { readOnly: true });
+        try { await sqliteBackup(sourceDatabase, target); } finally { sourceDatabase.close(); }
+        sealSnapshot(target);
+      } else {
+        fs.copyFileSync(current, target, fs.constants.COPYFILE_EXCL);
+      }
       restrictBackupPermissions(target, OWNER_FILE_MODE);
     } else {
       throw new Error(`Backup contains an unsupported filesystem entry: ${relative}`);
     }
   }
-  copy(name);
+  await copy(name);
 }
 
 function isWithin(root, target) {
@@ -215,9 +238,9 @@ export async function createBackup(options = {}) {
   sealSnapshot(snapshot);
   const sqlite = checkSqlite(snapshot);
   const skippedPaths = [];
-  copyOptionalDataDirectory("instances", destination, path.dirname(dbFile), skippedPaths);
+  await copyOptionalDataDirectory("instances", destination, path.dirname(dbFile), skippedPaths);
   restrictBackupPermissions(snapshot, OWNER_FILE_MODE);
-  copyOptionalDataDirectory("uploads", destination, path.dirname(dbFile), skippedPaths);
+  await copyOptionalDataDirectory("uploads", destination, path.dirname(dbFile), skippedPaths);
 
   const files = listFiles(destination).map((relativePath) => ({
     path: relativePath,

@@ -1,0 +1,20 @@
+{
+  "recordedAt": "2026-09-09T11:22:43.866Z",
+  "url": "http://localhost:3000/app/deploy",
+  "image": "sha256:533cdda11f38ca3dc5fca9e968744ae5e363e0f6f160fea83e21993b523208d6",
+  "containerId": "73a8b552d7471b310a96481bd45831b4550deff7f27561a36292c88e5cf720d5",
+  "health": "healthy",
+  "httpStatus": 200,
+  "schemaBefore": "7",
+  "schemaAfter": "7",
+  "instanceCount": 38,
+  "instanceIdsPreserved": true,
+  "browser": {
+    "codexOptionVisible": true,
+    "codexOptionSelected": true,
+    "accountImportVisible": true,
+    "deployCodexButtonVisible": true
+  },
+  "backupPath": "G:\\ReactProject\\MyBay Runtime\\开源版\\hermes-platform-opensource-v1.12\\backups\\codex-open-20260909-1788952848948",
+  "scope": "Control service upgrade and creation-entry verification; no new Agent created in this turn."
+}

@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "artifactType": "codex-beta-file-tool-events-acceptance",
+  "capturedAt": "2026-09-10T16:13:31.473Z",
+  "source": {
+    "version": "0.1.29-preview.1",
+    "controlImage": "mybay/local:0.1.29-preview.1-candidate2",
+    "controlImageId": "sha256:7e1a62f2bcf42f0e765bdcf207b5a4e09ec49302ecb0465e5233ccf96604c3a1",
+    "runtimeImage": "mybay/codex-runtime:0.154.0",
+    "runtimeImageId": "sha256:20b46c8407fa9f4a40435653db85b00518d9fff132a7333b9482246357f42256",
+    "nativeVersion": "0.154.0",
+    "bridgeVersion": "0.1.0-experimental.3"
+  },
+  "environment": {
+    "platform": "Windows x64",
+    "runtimePlatform": "Docker Desktop Linux x86_64",
+    "controlUrl": "http://127.0.0.1:4372",
+    "isolatedData": true,
+    "sanitizedDatabaseClone": true
+  },
+  "observations": {
+    "fileArtifact": "PASS",
+    "toolEvents": "PASS",
+    "instanceId": "a9307d3c-af4a-4fde-97b9-22c211c2e17e",
+    "conversationId": "bf6a8543-555a-4f1f-9f28-9930de08805b",
+    "runId": "6271609f-0386-44df-b6d7-eb53b4bdf0f1",
+    "terminalStatus": "completed",
+    "outputMarkerObserved": true,
+    "usageEvidencePresent": true,
+    "file": {
+      "path": "workspace/outputs/codex-beta-49258212.txt",
+      "kind": "added",
+      "contentSha256": "3a4f7cdb1b578a3149e1f29833f1bb1599c8b373bcbccd87b481f067883b595d",
+      "contentMarkerMatched": true,
+      "storedDiffAvailable": true,
+      "capturedBefore": "2026-09-10T16:13:15.551Z",
+      "capturedAfter": "2026-09-10T16:13:30.934Z"
+    },
+    "toolEventPairs": 3,
+    "fileToolEventConfirmed": true,
+    "events": [
+      {
+        "sequence": 1,
+        "id": "6271609f-0386-44df-b6d7-eb53b4bdf0f1-task_queued",
+        "status": "running",
+        "tool": "unknown",
+        "filePath": null,
+        "fileEvidenceConfirmed": false
+      },
+      {
+        "sequence": 2,
+        "id": "6271609f-0386-44df-b6d7-eb53b4bdf0f1-worker-claimed",
+        "status": "completed",
+        "tool": "unknown",
+        "filePath": null,
+        "fileEvidenceConfirmed": false
+      },
+      {
+        "sequence": 3,
+        "id": "6271609f-0386-44df-b6d7-eb53b4bdf0f1-dispatch-preparing",
+        "status": "running",
+        "tool": "unknown",
+        "filePath": null,
+        "fileEvidenceConfirmed": false
+      },
+      {
+        "sequence": 5,
+        "id": "6271609f-0386-44df-b6d7-eb53b4bdf0f1-dispatch-preparing",
+        "status": "completed",
+        "tool": "unknown",
+        "filePath": null,
+        "fileEvidenceConfirmed": false
+      },
+      {
+        "sequence": 6,
+        "id": "6271609f-0386-44df-b6d7-eb53b4bdf0f1-agent-running",
+        "status": "running",
+        "tool": "unknown",
+        "filePath": null,
+        "fileEvidenceConfirmed": false
+      },
+      {
+        "sequence": 8,
+        "id": "6271609f-0386-44df-b6d7-eb53b4bdf0f1-task_received",
+        "status": "completed",
+        "tool": "unknown",
+        "filePath": null,
+        "fileEvidenceConfirmed": false
+      },
+      {
+        "sequence": 9,
+        "id": "6271609f-0386-44df-b6d7-eb53b4bdf0f1-model-reasoning",
+        "status": "running",
+        "tool": "unknown",
+        "filePath": null,
+        "fileEvidenceConfirmed": false
+      },
+      {
+        "sequence": 13,
+        "id": "step-exec-ab870825-23c3-42e1-99d6-935c0409a0a6:0",
+        "status": "running",
+        "tool": "unknown",
+        "filePath": "workspace/outputs/codex-beta-49258212.txt",
+        "fileEvidenceConfirmed": false
+      },
+      {
+        "sequence": 18,
+        "id": "step-exec-ab870825-23c3-42e1-99d6-935c0409a0a6:0",
+        "status": "completed",
+        "tool": "unknown",
+        "filePath": "workspace/outputs/codex-beta-49258212.txt",
+        "fileEvidenceConfirmed": true
+      },
+      {
+        "sequence": 19,
+        "id": "step-exec-b133073e-9a38-4278-b611-a014ad7d8540",
+        "status": "running",
+        "tool": "unknown",
+        "filePath": null,
+        "fileEvidenceConfirmed": false
+      },
+      {
+        "sequence": 24,
+        "id": "step-exec-b133073e-9a38-4278-b611-a014ad7d8540",
+        "status": "completed",
+        "tool": "unknown",
+        "filePath": null,
+        "fileEvidenceConfirmed": false
+      },
+      {
+        "sequence": 28,
+        "id": "6271609f-0386-44df-b6d7-eb53b4bdf0f1-final",
+        "status": "completed",
+        "tool": "unknown",
+        "filePath": null,
+        "fileEvidenceConfirmed": false
+      }
+    ]
+  },
+  "boundaries": [
+    "Credentials, raw model output, approval descriptions, commands, tool arguments, and file contents are not retained.",
+    "This acceptance covers one exact Codex 0.154.0 Docker image with bridge 0.1.0-experimental.3 on Windows Docker Desktop.",
+    "External channels, cross-platform behavior, browser tools, scheduled tasks, and Certified-level lifecycle requirements are not covered."
+  ],
+  "containsSecrets": false
+}

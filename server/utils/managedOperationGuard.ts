@@ -2,8 +2,9 @@ import { GENERATED_ARTIFACT_SYSTEM_POLICY } from "./generatedArtifactPolicy";
 
 export const MANAGED_UPGRADE_BLOCK_CODE = "PLATFORM_MANAGED_UPGRADE_REQUIRED";
 
-function runtimeDisplayName(runtimeType?: unknown): "Hermes Agent" | "Pi Agent" {
-  return String(runtimeType || "").trim().toLowerCase() === "pi" ? "Pi Agent" : "Hermes Agent";
+function runtimeDisplayName(runtimeType?: unknown): "Hermes Agent" | "Pi Agent" | "Codex" {
+  const runtime = String(runtimeType || "").trim().toLowerCase();
+  return runtime === "codex" ? "Codex" : runtime === "pi" ? "Pi Agent" : "Hermes Agent";
 }
 
 export function managedUpgradeBlockMessage(runtimeType?: unknown): string {
@@ -89,7 +90,11 @@ export function guardManagedOperation(input: string, runtimeType?: unknown): Man
 export function managedOperationSystemPolicy(runtimeType?: unknown): string {
   const runtimeName = runtimeDisplayName(runtimeType);
   const upgradeMessage = managedUpgradeBlockMessage(runtimeType);
-  const identityPolicy = runtimeName === "Pi Agent"
+  const identityPolicy = runtimeName === "Codex"
+    ? `MyBay Runtime 身份：
+- 你当前是 Codex，运行在 OpenAI Codex Runtime 上，由 MyBay 控制面托管。
+- 当前 Runtime 元数据是身份依据；历史对话中的其他 Runtime 自称属于旧错误，不要沿用，也不要将 Codex 描述为仅是一种风格。`
+    : runtimeName === "Pi Agent"
     ? `MyBay Runtime 身份：
 - 你当前是 Pi Agent，运行在 Pi Coding Agent Runtime 上，由 MyBay 控制面托管。
 - 只能依据当前 Runtime 元数据陈述身份，不要把自己描述成其他 Runtime，也不要根据兼容字段猜测身份。`

@@ -1,0 +1,90 @@
+{
+  "cliVersion": "0.153.4",
+  "containerId": "2b838becbe0683166d492f143f9a749fffad42d57d738d08ed58712e25e504cd",
+  "checks": [
+    {
+      "scenario": "runtime-install",
+      "verdict": "PASS",
+      "capabilities": {
+        "runtime": "codex",
+        "auth_ready": true,
+        "features": {
+          "run_submission": true,
+          "run_status": true,
+          "run_events_sse": true,
+          "run_stop": true,
+          "tool_progress_events": true,
+          "chat_attachments": true,
+          "persisted_workspace": true,
+          "generated_file_evidence": true,
+          "approval_events": true,
+          "run_approval_response": true,
+          "structured_questions": false,
+          "a2a_tools": false,
+          "managed_collaboration": false,
+          "session_context_usage": false,
+          "manual_compaction": false,
+          "session_resources": false
+        },
+        "endpoints": {
+          "sessions": "/api/sessions",
+          "runs": "/v1/runs"
+        }
+      }
+    },
+    {
+      "scenario": "streaming",
+      "verdict": "PASS",
+      "run": {
+        "id": "be14dee9-d2e7-4af4-a9f9-f1846e993437",
+        "run_id": "be14dee9-d2e7-4af4-a9f9-f1846e993437",
+        "client_run_id": "2e1fce19-a1a3-47ef-87b9-413babd36083",
+        "session_id": "5ee58059-b67a-43d6-a898-a83390812180",
+        "native_thread_id": "01a0852c-6616-7632-b37c-c83368e8d86d",
+        "native_turn_id": "01a0852c-6783-7091-bc8c-8b3fbda3ce80",
+        "status": "completed",
+        "output": "MYBAY_CODEX_DOCKER_OK",
+        "usage": {
+          "input_tokens": 15368,
+          "output_tokens": 13,
+          "total_tokens": 15381,
+          "input_tokens_details": {
+            "cached_tokens": 12160
+          }
+        },
+        "stop_requested": false,
+        "created_at": "2026-09-09T07:57:52.400Z",
+        "updated_at": "2026-09-09T07:58:06.832Z"
+      },
+      "deltaEvents": 9
+    },
+    {
+      "scenario": "cancellation",
+      "verdict": "PASS",
+      "run": {
+        "id": "42b03591-037c-454d-8136-31e97902ceb1",
+        "run_id": "42b03591-037c-454d-8136-31e97902ceb1",
+        "client_run_id": "c22f4363-fbc8-4475-80f5-813ceff13113",
+        "session_id": "5ee58059-b67a-43d6-a898-a83390812180",
+        "native_thread_id": "01a0852c-6616-7632-b37c-c83368e8d86d",
+        "native_turn_id": "01a0852c-98de-7140-ab53-b67662d11718",
+        "status": "cancelled",
+        "output": "",
+        "usage": {
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0,
+          "input_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "stop_requested": true,
+        "created_at": "2026-09-09T07:58:07.562Z",
+        "updated_at": "2026-09-09T07:58:09.139Z"
+      }
+    }
+  ],
+  "capturedAt": "2026-09-09T07:59:36.687Z",
+  "mybayVersion": "0.1.28",
+  "scope": "Experimental Runtime HTTP admission on Windows Docker Desktop. Does not certify product deployment, browser E2E, upgrades or other platforms."
+}

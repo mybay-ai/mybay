@@ -1,0 +1,289 @@
+{
+  "capturedAt": "2026-09-09T08:41:04.565Z",
+  "platform": "Windows Docker Desktop x64",
+  "runtimeVersion": "0.153.4",
+  "mybayVersion": "0.1.28",
+  "instanceId": "3595693f-2a43-4b6e-9db9-fdd41ce01e9b",
+  "runtimeContainerId": "5adabd65f929c424b4e6bd3b5c6268ea00676a48dd1535466f24112a9706ada6",
+  "runtimeImageId": "sha256:5ef5796b887a8dace2c66c6e3fa4193a4b849465cb0fe667f4fb9e0b20e303da",
+  "controlContainerId": "d3b1050a9c467b4d13a9e25bbf85fc6758ffe9b7c4ff9bdadc513db400bdcf25",
+  "security": {
+    "user": "node",
+    "readOnlyRootfs": true,
+    "capDrop": [
+      "ALL"
+    ],
+    "externalSandbox": true
+  },
+  "bridgeSourceSha256": "2cdc1e8bba2745fc44238ea5a8365ea8933c67ed78c9c98c6b3f771201c47188",
+  "serverBundleSha256": "945f89f706b220e928055350557c4445676841e88d9394e682637ce59ca64662",
+  "checks": [
+    {
+      "scenario": "browser-account-import-and-deploy",
+      "verdict": "PASS",
+      "note": "Fresh empty control; environment network/port conflicts and deployment defects were corrected before readiness."
+    },
+    {
+      "scenario": "browser-conversation",
+      "verdict": "PASS",
+      "runId": "39819676-f8ab-4612-85b9-de7b1a466232"
+    },
+    {
+      "scenario": "refresh-context-and-file",
+      "verdict": "PASS",
+      "fileContent": "JADE9361\n"
+    },
+    {
+      "scenario": "redeploy-session-and-shell",
+      "verdict": "PASS",
+      "runId": "36984172-5141-4f85-b190-641d8b632cfc"
+    },
+    {
+      "scenario": "browser-denial",
+      "verdict": "PASS",
+      "runId": "05476321-3562-478e-8994-308fa94ef895",
+      "fileExists": false
+    },
+    {
+      "scenario": "browser-stop-before-output",
+      "verdict": "PASS",
+      "runId": "b5d022d3-9fb9-4476-b6d6-cc956be583be"
+    },
+    {
+      "scenario": "browser-stop-during-output",
+      "verdict": "PASS",
+      "runId": "42e106f8-41b4-4d01-8c8c-79faf881390c"
+    },
+    {
+      "scenario": "control-health-after-stop",
+      "verdict": "PASS"
+    }
+  ],
+  "runs": [
+    {
+      "mybayRunId": "39819676-f8ab-4612-85b9-de7b1a466232",
+      "upstreamRunId": "3dea746d-0b68-445a-8bfd-41582402e5fc",
+      "nativeThreadId": "01a08545-4f41-7803-97ba-141bffac494d",
+      "nativeTurnId": "01a08545-5aa4-74d2-8755-8f75d9d13e4f",
+      "status": "completed",
+      "error": null,
+      "stopRequested": false,
+      "outputPreview": "MYBAY_CODEX_BROWSER_OK",
+      "outputChars": 22,
+      "outputSha256": "27c483b328cec24266858194a50645e4a1e3c5dbccc7fd2c2bdcbc2530a6861f",
+      "deltaEvents": 7,
+      "approvalChoices": [],
+      "terminalEvent": "run.completed",
+      "usage": {
+        "input_tokens": 17474,
+        "output_tokens": 11,
+        "total_tokens": 17485,
+        "input_tokens_details": {
+          "cached_tokens": 12160
+        }
+      }
+    },
+    {
+      "mybayRunId": "2732b985-784d-4ba2-a060-8fb36580880c",
+      "upstreamRunId": "19a04c98-928b-4290-ad1d-09d5532c87ff",
+      "nativeThreadId": "01a08545-4f41-7803-97ba-141bffac494d",
+      "nativeTurnId": "01a08546-1bfe-7b20-9da1-456dc4b4078a",
+      "status": "failed",
+      "error": "CODEX_PROCESS_CLOSED",
+      "stopRequested": false,
+      "outputPreview": "I’ll create `p2-browser.txt` in the workspace with the remembered word.",
+      "outputChars": 71,
+      "outputSha256": "0f16b8d3125580b61e4d2b43669cb2e89e8e9c7bd695ad1348552faa3d367682",
+      "deltaEvents": 17,
+      "approvalChoices": [
+        "once",
+        "once"
+      ],
+      "terminalEvent": "run.failed",
+      "usage": {
+        "input_tokens": 35193,
+        "output_tokens": 122,
+        "total_tokens": 35315,
+        "input_tokens_details": {
+          "cached_tokens": 34688
+        }
+      }
+    },
+    {
+      "mybayRunId": "36984172-5141-4f85-b190-641d8b632cfc",
+      "upstreamRunId": "4221e58e-a9d1-4d7f-85c2-4f49a7c38010",
+      "nativeThreadId": "01a08545-4f41-7803-97ba-141bffac494d",
+      "nativeTurnId": "01a0854a-33cf-76d3-b5fc-af53a5e1cfbc",
+      "status": "completed",
+      "error": null,
+      "stopRequested": false,
+      "outputPreview": "I’ll read `p2-browser.txt` with the shell tool.SHELL_OK JADE9361",
+      "outputChars": 64,
+      "outputSha256": "fca9b8c56fcdf2121cc7fc2766c0fd97cb6f91b15618b9402a9643813c515f18",
+      "deltaEvents": 21,
+      "approvalChoices": [
+        "once"
+      ],
+      "terminalEvent": "run.completed",
+      "usage": {
+        "input_tokens": 54505,
+        "output_tokens": 97,
+        "total_tokens": 54602,
+        "input_tokens_details": {
+          "cached_tokens": 53632
+        }
+      }
+    },
+    {
+      "mybayRunId": "05476321-3562-478e-8994-308fa94ef895",
+      "upstreamRunId": "ce305ca2-ecf0-4dde-b555-4c8235b4e479",
+      "nativeThreadId": "01a08545-4f41-7803-97ba-141bffac494d",
+      "nativeTurnId": "01a0854b-95bc-7272-a480-d53a53e9e5b9",
+      "status": "completed",
+      "error": null,
+      "stopRequested": false,
+      "outputPreview": "I’ll attempt the file creation once using `apply_patch`.DENIED_CONFIRMED",
+      "outputChars": 72,
+      "outputSha256": "5e3fe147835851f2e8f6c8af935352ba7047de73f96311ec5f1f5d93907bcca9",
+      "deltaEvents": 17,
+      "approvalChoices": [
+        "deny"
+      ],
+      "terminalEvent": "run.completed",
+      "usage": {
+        "input_tokens": 36718,
+        "output_tokens": 73,
+        "total_tokens": 36791,
+        "input_tokens_details": {
+          "cached_tokens": 36224
+        }
+      }
+    },
+    {
+      "mybayRunId": "bd63ce97-cd1a-458a-b47f-0f1621436cc1",
+      "upstreamRunId": "f569a329-c2b9-41b4-820a-a3500aca8b0b",
+      "nativeThreadId": "01a08545-4f41-7803-97ba-141bffac494d",
+      "nativeTurnId": "01a0854c-7e1c-7a11-941a-797dda749128",
+      "status": "completed",
+      "error": null,
+      "stopRequested": false,
+      "outputPreview": "All 5,000 sentences exceed a single reply’s length limit. Here are the first 500.\n\n1. Double 1 is 2.\n2. Double 2 is 4.\n3. Double 3 is 6.\n4. Double 4 is 8.\n5. Double 5 is 10.\n6. Double 6 is 12.\n7. Doub",
+      "outputChars": 13597,
+      "outputSha256": "f07724beb8298a68e0566bf51d5c56b187d0b96ddccb3292e8ca6d7f6caedc63",
+      "deltaEvents": 5421,
+      "approvalChoices": [],
+      "terminalEvent": "run.completed",
+      "usage": {
+        "input_tokens": 18450,
+        "output_tokens": 5768,
+        "total_tokens": 24218,
+        "input_tokens_details": {
+          "cached_tokens": 12160
+        }
+      }
+    },
+    {
+      "mybayRunId": "b5d022d3-9fb9-4476-b6d6-cc956be583be",
+      "upstreamRunId": "c095035b-8e96-464f-bb81-69209d145faa",
+      "nativeThreadId": "01a08545-4f41-7803-97ba-141bffac494d",
+      "nativeTurnId": "01a08551-0bc9-7123-8899-60818db68df3",
+      "status": "cancelled",
+      "error": null,
+      "stopRequested": true,
+      "outputPreview": "",
+      "outputChars": 0,
+      "outputSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "deltaEvents": 0,
+      "approvalChoices": [],
+      "terminalEvent": "run.cancelled"
+    },
+    {
+      "mybayRunId": "42e106f8-41b4-4d01-8c8c-79faf881390c",
+      "upstreamRunId": "b85f54fe-33a6-42f3-b19e-936188d7944b",
+      "nativeThreadId": "01a08545-4f41-7803-97ba-141bffac494d",
+      "nativeTurnId": "01a08551-b4c3-7280-b2fc-73a1ce101353",
+      "status": "cancelled",
+      "error": null,
+      "stopRequested": true,
+      "outputPreview": "1. 0<1.\n2. 1<2.\n3. 2<3.\n4. 3<4.\n5. 4<5.\n6. 5<6.\n7. 6<7.\n8. 7<8.\n9. 8<9.\n10. 9<10.\n11. 0<2.\n12. 1<3.\n13. 2<4.\n14. 3<5.\n15. 4<6.\n16. 5<7.\n17. 6<8.\n18. 7<9.\n19. 8<10.\n20. 9<11.\n21. 0<3.\n22. 1<4.\n23. 2<5.",
+      "outputChars": 1209,
+      "outputSha256": "421db363c78dfb2e222de21411998d095546caa31b6e3ba614fd5fde00b825d2",
+      "deltaEvents": 165,
+      "approvalChoices": [],
+      "terminalEvent": "run.cancelled"
+    }
+  ],
+  "productRuns": [
+    {
+      "id": "39819676-f8ab-4612-85b9-de7b1a466232",
+      "http": 200,
+      "status": "completed",
+      "error": null
+    },
+    {
+      "id": "2732b985-784d-4ba2-a060-8fb36580880c",
+      "http": 200,
+      "status": "failed",
+      "error": null
+    },
+    {
+      "id": "36984172-5141-4f85-b190-641d8b632cfc",
+      "http": 200,
+      "status": "completed",
+      "error": null
+    },
+    {
+      "id": "05476321-3562-478e-8994-308fa94ef895",
+      "http": 200,
+      "status": "completed",
+      "error": null
+    },
+    {
+      "id": "bd63ce97-cd1a-458a-b47f-0f1621436cc1",
+      "http": 200,
+      "status": "completed",
+      "error": null
+    },
+    {
+      "id": "b5d022d3-9fb9-4476-b6d6-cc956be583be",
+      "http": 200,
+      "status": "cancelled",
+      "error": null
+    },
+    {
+      "id": "42e106f8-41b4-4d01-8c8c-79faf881390c",
+      "http": 200,
+      "status": "cancelled",
+      "error": null
+    }
+  ],
+  "priorFailures": [
+    {
+      "scenario": "first-browser-stop",
+      "verdict": "FAIL",
+      "reason": "Run-level cancellation consumer rejected turn granularity; native run remained active and was later failed by process closure."
+    },
+    {
+      "scenario": "first-command-denial",
+      "verdict": "FAIL",
+      "reason": "Native availableDecisions offered cancel but no decline; adapter originally rejected denial."
+    },
+    {
+      "scenario": "first-docker-shell",
+      "verdict": "FAIL",
+      "reason": "Nested bwrap user namespace denied by Docker Desktop."
+    },
+    {
+      "scenario": "first-output-stop",
+      "verdict": "FAIL",
+      "reason": "5424 native delta events caused control-plane write pressure; model completed before stop was delivered."
+    }
+  ],
+  "limitations": [
+    "Experimental only; not a release or cross-platform certification.",
+    "Agent execution mode required; direct-provider quick mode is not account-backed.",
+    "In-flight restart fails explicitly; completed native thread resumes.",
+    "Upgrade/rollback, A2A, structured questions, browser tools, schedules and external channels closed.",
+    "Final batched image is specifically proven by the two final cancellation runs; earlier runs used the preceding candidate images."
+  ]
+}

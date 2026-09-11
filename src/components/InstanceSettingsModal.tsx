@@ -17,6 +17,7 @@ import { supportsRuntimeDashboard } from "../../shared/runtimeAccessPolicy";
 import { api, apiFetch } from "../lib/api";
 import { AgentAvatar } from "./agent/AgentAvatar";
 import { PiApprovalPolicySection } from "./PiApprovalPolicySection";
+import { InstanceManagedFeishu } from "./dashboard/InstanceManagedFeishu";
 
 export function InstanceSettingsModal({ instance: initialInstance, onClose, onSave, currentUser, advancedResourceConfigEnabled = false }: { instance: AgentInstance, onClose: () => void, onSave: () => void, currentUser: any, advancedResourceConfigEnabled?: boolean }) {
   const { t } = useTranslation("dashboard");
@@ -136,11 +137,6 @@ export function InstanceSettingsModal({ instance: initialInstance, onClose, onSa
       setWecomAllowedChats(instance.configSummary?.wecomAllowedChats || instance.config?.wecomAllowedChats || "");
       setWebhookUrl(instance.configSummary?.webhookUrl || instance.config?.webhookUrl || "");
 
-      setPetEnabled(instance.configSummary?.pet?.enabled || instance.config?.pet?.enabled || false);
-      setPetSlug(instance.configSummary?.pet?.slug || instance.config?.pet?.slug || "");
-      setPetRenderMode(instance.configSummary?.pet?.render_mode || instance.config?.pet?.render_mode || "webgl");
-      setPetScale(instance.configSummary?.pet?.scale || instance.config?.pet?.scale || 1.0);
-
       setSkills(instance.configSummary?.skills || instance.config?.skills || []);
     }
   }, [loadingDetail, instance.configSummary]);
@@ -231,12 +227,6 @@ export function InstanceSettingsModal({ instance: initialInstance, onClose, onSa
   const [wecomAllowedChats, setWecomAllowedChats] = useState(instance.configSummary?.wecomAllowedChats || instance.config?.wecomAllowedChats || "");
   const [webhookUrl, setWebhookUrl] = useState(instance.configSummary?.webhookUrl || instance.config?.webhookUrl || "");
   const [webhookSecret, setWebhookSecret] = useState("");
-
-  // Pets Config
-  const [petEnabled, setPetEnabled] = useState<boolean>(instance.configSummary?.pet?.enabled || instance.config?.pet?.enabled || false);
-  const [petSlug, setPetSlug] = useState<string>(instance.configSummary?.pet?.slug || instance.config?.pet?.slug || "");
-  const [petRenderMode, setPetRenderMode] = useState<string>(instance.configSummary?.pet?.render_mode || instance.config?.pet?.render_mode || "webgl");
-  const [petScale, setPetScale] = useState<number>(instance.configSummary?.pet?.scale || instance.config?.pet?.scale || 1.0);
 
   // Skills Configs
   const [skills, setSkills] = useState<string[]>(instance.configSummary?.skills || instance.config?.skills || []);
@@ -333,12 +323,6 @@ export function InstanceSettingsModal({ instance: initialInstance, onClose, onSa
         }),
         ...(advancedResourceConfigEnabled ? { limitsCpu, limitsMem } : {}),
         isCustomModel,
-        pet: {
-          enabled: petEnabled,
-          slug: petSlug,
-          render_mode: petRenderMode,
-          scale: Math.max(0.1, Math.min(5.0, parseFloat(petScale as any) || 1.0))
-        }
       };
 
       if (providerApiKey.trim()) payload.providerApiKey = providerApiKey.trim();
@@ -464,7 +448,7 @@ export function InstanceSettingsModal({ instance: initialInstance, onClose, onSa
       {/* Mobile background overlay click handler */}
       <div className="absolute inset-0 z-0" onClick={onClose} />
 
-      <div className="bg-surface rounded-t-2xl md:rounded-xl w-full max-w-2xl overflow-hidden shadow-lg animate-in fade-in slide-in-from-bottom-6 md:zoom-in-98 duration-200 flex flex-col max-h-[90vh] md:max-h-[85vh] relative z-10 border border-slate-200/80 dark:border-slate-800">
+      <div className="bg-surface rounded-t-2xl md:rounded-xl w-full max-w-2xl overflow-hidden shadow-lg animate-in fade-in slide-in-from-bottom-6 md:zoom-in-98 duration-200 flex flex-col h-[100dvh] max-h-[100dvh] md:h-auto md:max-h-[85dvh] relative z-10 border border-slate-200/80 dark:border-slate-800">
 
         {/* Mobile handle styling */}
         <div className="w-full flex justify-center py-2.5 md:hidden bg-slate-50/50 dark:bg-slate-950/40 border-b border-outline/80">
@@ -481,7 +465,7 @@ export function InstanceSettingsModal({ instance: initialInstance, onClose, onSa
           </button>
         </div>
 
-        <div className="p-5 overflow-y-auto space-y-5 flex-1 bg-slate-50/30 dark:bg-slate-950/40">
+        <div className="min-h-0 overscroll-contain p-4 md:p-5 overflow-y-auto space-y-5 flex-1 bg-slate-50/30 dark:bg-slate-950/40">
           <div className="p-3 bg-amber-50/50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 text-[13px] rounded-lg border border-amber-200/40 dark:border-amber-900/40 shadow-xs leading-relaxed">
             {t("settings_restart_notice")}
           </div>
@@ -532,7 +516,9 @@ export function InstanceSettingsModal({ instance: initialInstance, onClose, onSa
             credentials={credentials}
           />
 
-          <AppSettingsChannelSection
+          {runtimeType === "pi" || runtimeType === "codex" ? (
+            <InstanceManagedFeishu key={instance.id} instanceId={instance.id} />
+          ) : <AppSettingsChannelSection
             channel={channel} setChannel={setChannel}
             externalChannelsAllowed={externalChannelsAllowed}
             telegramBotToken={telegramBotToken} setTelegramBotToken={setTelegramBotToken}
@@ -579,7 +565,7 @@ export function InstanceSettingsModal({ instance: initialInstance, onClose, onSa
             wecomAllowedChats={wecomAllowedChats} setWecomAllowedChats={setWecomAllowedChats}
             webhookUrl={webhookUrl} setWebhookUrl={setWebhookUrl}
             webhookSecret={webhookSecret} setWebhookSecret={setWebhookSecret}
-          />
+          />}
 
           <div className="p-5 bg-surface border border-slate-200/60 dark:border-slate-800 rounded-xl space-y-3 shadow-2xs">
             <h4 className="text-[11px] font-semibold uppercase tracking-wider text-content-muted">{t("settings_personality_title")}</h4>
@@ -592,71 +578,6 @@ export function InstanceSettingsModal({ instance: initialInstance, onClose, onSa
                 placeholder={t("settings_personality_placeholder")}
               />
             </div>
-          </div>
-
-          {/* Pet Configuration */}
-          <div className="p-5 bg-surface border border-slate-200/60 dark:border-slate-800 rounded-xl space-y-4 shadow-2xs">
-            <h4 className="text-[11px] font-semibold uppercase tracking-wider text-content-muted">{t("settings_pet_title", "Pet Display")}</h4>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-sm font-medium text-slate-800 dark:text-slate-200">{t("settings_pet_enabled", "Enable Pet")}</Label>
-                <p className="text-[13px] text-content-muted mt-0.5 leading-snug max-w-[85%]">{t("settings_pet_desc", "Display a virtual pet character")}</p>
-              </div>
-              <div
-                className={`w-11 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors ${petEnabled ? 'bg-indigo-600' : 'bg-slate-200 dark:bg-slate-800'}`}
-                onClick={() => setPetEnabled(!petEnabled)}
-              >
-                <div className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform ${petEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
-              </div>
-            </div>
-
-            {petEnabled && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-outline">
-                <div className="space-y-1.5">
-                  <Label className="text-[13px] font-medium text-content-muted">{t("settings_pet_slug", "Pet Slug")}</Label>
-                  <select
-                    value={petSlug}
-                    onChange={e => setPetSlug(e.target.value)}
-                    className="flex h-9 w-full rounded-lg border border-outline bg-surface px-3 text-[13px] text-content focus:border-slate-400 focus:ring-1 focus:ring-slate-400 outline-none transition-all shadow-3xs"
-                  >
-                    <option value="">{t("settings_pet_slug_none", "-- Select --")}</option>
-                    <option value="cat">Cat</option>
-                    <option value="dog">Dog</option>
-                    <option value="fox">Fox</option>
-                    <option value="bunny">Bunny</option>
-                    <option value="panda">Panda</option>
-                    {petSlug && !["cat", "dog", "fox", "bunny", "panda"].includes(petSlug) && (
-                      <option value={petSlug}>{petSlug} (Custom)</option>
-                    )}
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-[13px] font-medium text-content-muted">{t("settings_pet_render_mode", "Render Mode")}</Label>
-                  <select
-                    value={petRenderMode}
-                    onChange={e => setPetRenderMode(e.target.value)}
-                    className="flex h-9 w-full rounded-lg border border-outline bg-surface px-3 text-[13px] text-content focus:border-slate-400 focus:ring-1 focus:ring-slate-400 outline-none transition-all shadow-3xs"
-                  >
-                    <option value="webgl">WebGL</option>
-                    <option value="css">CSS</option>
-                    <option value="image">Image</option>
-                  </select>
-                </div>
-                <div className="space-y-1.5 md:col-span-2">
-                  <Label className="text-[13px] font-medium text-content-muted">{t("settings_pet_scale", "Scale")}</Label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0.1"
-                    max="5.0"
-                    value={petScale}
-                    onChange={e => setPetScale(parseFloat(e.target.value) || 1.0)}
-                    className="flex h-9 w-full rounded-lg border border-outline bg-surface px-3 text-[13px] text-content placeholder:text-content-muted focus:border-slate-400 focus:ring-1 focus:ring-slate-400 outline-none transition-all shadow-3xs"
-                  />
-                </div>
-              </div>
-            )}
           </div>
 
           {dashboardSupported ? <div className="p-5 bg-surface border border-slate-200/60 dark:border-slate-800 rounded-xl space-y-4 shadow-2xs">
@@ -678,8 +599,8 @@ export function InstanceSettingsModal({ instance: initialInstance, onClose, onSa
             <div className="flex items-start gap-3 rounded-xl border border-purple-200 bg-purple-50/60 p-5 dark:border-purple-800/70 dark:bg-purple-950/30">
               <Info className="mt-0.5 h-4 w-4 shrink-0 text-purple-600 dark:text-purple-300" />
               <div>
-                <h4 className="text-[13px] font-semibold text-content">{t("settings_pi_workspace_title")}</h4>
-                <p className="mt-1 text-[12px] leading-relaxed text-content-muted">{t("settings_pi_workspace_desc")}</p>
+                <h4 className="text-[13px] font-semibold text-content">{t(runtimeType === "codex" ? "settings_codex_workspace_title" : "settings_pi_workspace_title")}</h4>
+                <p className="mt-1 text-[12px] leading-relaxed text-content-muted">{t(runtimeType === "codex" ? "settings_codex_workspace_desc" : "settings_pi_workspace_desc")}</p>
               </div>
             </div>
           )}
@@ -741,9 +662,9 @@ export function InstanceSettingsModal({ instance: initialInstance, onClose, onSa
           <div className="h-4 md:hidden"></div>
         </div>
 
-        <div className="px-5 py-3.5 bg-surface border-t border-slate-200/60 dark:border-slate-800 flex flex-col-reverse md:flex-row justify-end gap-2.5 shrink-0">
-          <Button variant="outline" type="button" className="w-full md:w-auto text-[13px] font-medium rounded-lg h-9 text-slate-600 border-slate-200 hover:bg-surface-muted dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800" onClick={onClose} disabled={loading}>{t("action_cancel")}</Button>
-          <Button type="button" variant="primary" className="h-9 w-full rounded-lg text-[13px] font-medium md:w-auto" onClick={handleSave} disabled={loading}>
+        <div className="px-4 pt-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] bg-surface border-t border-slate-200/60 dark:border-slate-800 flex flex-row justify-end gap-2.5 shrink-0">
+          <Button variant="outline" type="button" className="w-full md:w-auto text-[13px] font-medium rounded-lg h-11 text-slate-600 border-slate-200 hover:bg-surface-muted dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800" onClick={onClose} disabled={loading}>{t("action_cancel")}</Button>
+          <Button type="button" variant="primary" className="h-11 w-full rounded-lg text-[13px] font-medium md:w-auto" onClick={handleSave} disabled={loading}>
             {loading ? t("settings_saving_btn") : t("settings_save_btn")}
           </Button>
         </div>

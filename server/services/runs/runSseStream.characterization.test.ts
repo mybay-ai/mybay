@@ -79,7 +79,9 @@ describe("upstream SSE stream characterization", () => {
     options.onChunk('lo"}\n\n');
     options.onChunk("data: [DONE]\n\n");
 
-    const textEvents = getEventsFromCache(runId, 0).events.filter((event) => event.event === "text");
-    expect(textEvents.map((event) => event.data)).toEqual(["hello"]);
+    await vi.waitFor(() => {
+      const textEvents = getEventsFromCache(runId, 0).events.filter((event) => event.event === "text");
+      expect(textEvents.map((event) => event.data)).toEqual(["hello"]);
+    });
   });
 });

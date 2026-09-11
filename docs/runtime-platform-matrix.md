@@ -6,13 +6,17 @@ This matrix reports retained real-runtime certification evidence. It is delibera
 
 | Runtime | Platform | Environment | Certification status | Retained environment detail |
 | --- | --- | --- | --- | --- |
-| hermes | windows | Docker Desktop | certified | architecture not retained; Docker version not retained; MyBay 0.1.26; Runtime v2026.8.27 (upgrade/rollback checks also used v2026.8.31)<br>x64; 29.7.2; MyBay 0.1.27; Runtime v2026.8.27 (upgrade/rollback checks also used v2026.8.31)<br>x64; 29.7.2; MyBay 0.1.28; Runtime v2026.8.27 |
+| hermes | windows | Docker Desktop | certified | architecture not retained; Docker version not retained; MyBay 0.1.26; Runtime v2026.8.27 (upgrade/rollback checks also used v2026.8.31)<br>x64; 29.7.2; MyBay 0.1.27; Runtime v2026.8.27 (upgrade/rollback checks also used v2026.8.31)<br>x64; 29.7.2; MyBay 0.1.28; Runtime v2026.8.27<br>x64; 29.7.2; MyBay 0.1.28; Runtime Hermes v2026.8.27 |
 | hermes | linux | Docker Engine | Pending | No retained real-runtime evidence |
 | hermes | macos | Docker Desktop | Pending | No retained real-runtime evidence |
 | hermes | linux | Docker Engine (headless server) | Pending | No retained real-runtime evidence |
-| pi | windows | Docker Desktop | certified | architecture not retained; Docker version not retained; MyBay 0.1.27.1; Runtime Pi 0.85.1; bridge 0.1.1-beta<br>x64; 29.7.2; MyBay 0.1.28; Runtime Pi 0.85.1; bridge 0.1.1-beta |
+| pi | windows | Docker Desktop | certified | architecture not retained; Docker version not retained; MyBay 0.1.27.1; Runtime Pi 0.85.1; bridge 0.1.1-beta<br>x64; 29.7.2; MyBay 0.1.28; Runtime Pi 0.85.1; bridge 0.1.1-beta<br>x64; 29.7.2; MyBay 0.1.28; Runtime Pi 0.85.1; bridge 0.1.1-beta |
 | pi | linux | Docker Engine | Pending | No retained real-runtime evidence |
 | pi | macos | Docker Desktop | Pending | No retained real-runtime evidence |
 | pi | linux | Docker Engine (headless server) | Pending | No retained real-runtime evidence |
+| codex | windows | Docker Desktop | certified | x64; Docker version not retained; MyBay 0.1.28; Runtime Codex 0.154.0; bridge 0.1.0-experimental.3<br>x64; 29.7.2; MyBay 0.1.29-preview.1; Runtime Codex 0.154.0; bridge 0.1.0-experimental.3 |
+| codex | linux | Docker Engine | Pending | No retained real-runtime evidence |
+| codex | macos | Docker Desktop | Pending | No retained real-runtime evidence |
+| codex | linux | Docker Engine (headless server) | Pending | No retained real-runtime evidence |
 
 Static compatibility is checked on Ubuntu, Windows, and macOS by `.github/workflows/ci.yml`. Those checks validate launchers and contracts without claiming nested-Docker or credentialed product E2E certification.

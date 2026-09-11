@@ -15,6 +15,15 @@ function validDraft() {
 }
 
 describe("quick deployment request adapter", () => {
+  it("sends only the saved credential reference for Codex OAuth", () => {
+    const draft = validDraft();
+    draft.runtimeType = "codex"; draft.codexAuthMode = "api"; draft.selectedSkillIds = [];
+    draft.modelStrategy = { mode: "saved_credential", credentialId: "oauth-1", provider: "openai-codex", model: "test-model" };
+    const { body } = buildQuickDeploymentRequest({ draft, path: "codex-oauth", idempotencyKey: "codex-oauth-request" });
+    expect(body).toMatchObject({ runtime_type: "codex", codexAuthMode: "api", provider: "openai-codex", providerCredentialId: "oauth-1" });
+    expect(body.providerApiKey).toBeUndefined();
+    expect(body.codexAuthJson).toBeUndefined();
+  });
   it("reuses the canonical local instance create request", () => {
     const request = buildQuickDeploymentRequest({
       draft: validDraft(),

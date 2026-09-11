@@ -17,6 +17,7 @@ export function resolveAgentAvatarRuntime(instance?: AgentInstance) {
   const explicitRuntime = String(instance?.runtime_type || instance?.config?.runtime_type || "").trim().toLowerCase();
   if (explicitRuntime) return explicitRuntime;
   const image = String(instance?.agent_image || "").trim().toLowerCase();
+  if (image.includes("codex-runtime")) return "codex";
   if (image.includes("pi-runtime") || /(?:^|[\/_-])pi(?:[\/_-]|$)/.test(image)) return "pi";
   if (image.includes("hermes")) return "hermes";
   return "hermes";

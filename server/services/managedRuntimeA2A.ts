@@ -1,8 +1,8 @@
 import { requestRunsAPI } from "./runsReconciler";
 import { runtimeRegistry } from "../runtime/runtimeRegistry";
+import { resolveA2ATaskWaitMs } from "./a2aTimeoutPolicy";
 
 const POLL_INTERVAL_MS = 500;
-const MAX_WAIT_MS = 180_000;
 
 function runtimeType(instance: any): string {
   return String(instance?.runtime_type || "hermes").trim().toLowerCase();
@@ -65,6 +65,10 @@ function taskState(status: unknown): string {
     case "cancelled":
     case "canceled": return "TASK_STATE_CANCELED";
     case "failed": return "TASK_STATE_FAILED";
+    case "waiting_for_approval":
+    case "approval_required": return "TASK_STATE_AUTH_REQUIRED";
+    case "waiting_for_input":
+    case "input_required": return "TASK_STATE_INPUT_REQUIRED";
     default: return "TASK_STATE_UNKNOWN";
   }
 }
@@ -126,8 +130,8 @@ export function sendManagedRuntimeA2A(peer: any, request: any): Promise<Response
         let task = toA2ATask(submitted.json, contextId);
         if (!submitted.ok || !task.id) throw Error("A2A_RUNTIME_DISPATCH_FAILED");
         emit({ task });
-        const deadline = Date.now() + MAX_WAIT_MS;
-        while (!["TASK_STATE_COMPLETED", "TASK_STATE_FAILED", "TASK_STATE_CANCELED"].includes(task.status.state)) {
+        const deadline = Date.now() + resolveA2ATaskWaitMs();
+        while (!["TASK_STATE_COMPLETED", "TASK_STATE_FAILED", "TASK_STATE_CANCELED", "TASK_STATE_AUTH_REQUIRED", "TASK_STATE_INPUT_REQUIRED"].includes(task.status.state)) {
           if (Date.now() >= deadline) throw Error("A2A_RUNTIME_TIMEOUT");
           await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
           task = await readManagedRuntimeA2ATask(peer, contextId, task.id);

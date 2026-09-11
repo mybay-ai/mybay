@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import AdmZip from "adm-zip";
+import { readOnlyZip } from "./readOnlyZip";
 import { detectSafeImageType, isDeclaredImageTypeCompatible } from "./imageUploadSecurity";
 
 export type SafeUploadResult =
@@ -59,7 +59,12 @@ function isUtf8Text(buffer: Buffer): boolean {
 function isExpectedOfficePackage(buffer: Buffer, extension: string): boolean {
   if (!hasZipMagic(buffer)) return false;
   try {
-    const names = new AdmZip(buffer).getEntries().map((entry) => entry.entryName.replace(/\\/g, "/").toLowerCase());
+    const names = readOnlyZip(buffer, {
+      include: name => name.toLowerCase() === "[content_types].xml"
+        || name.toLowerCase().startsWith("word/")
+        || name.toLowerCase().startsWith("xl/"),
+      limits: { maxEntryBytes: 20 * 1024 * 1024, maxTotalBytes: 100 * 1024 * 1024 },
+    }).map((entry) => entry.entryName.toLowerCase());
     if (!names.includes("[content_types].xml")) return false;
     return extension === ".docx" ? names.some((name) => name.startsWith("word/")) : names.some((name) => name.startsWith("xl/"));
   } catch {

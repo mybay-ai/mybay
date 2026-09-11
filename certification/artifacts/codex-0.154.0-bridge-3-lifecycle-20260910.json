@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-09-10T11:32:55.506Z",
+  "identityObservedAt": "2026-09-10T12:30:01.9372651Z",
+  "runtime": {
+    "type": "codex",
+    "providerKey": "codex-app-server",
+    "contractVersion": 1,
+    "nativeVersion": "0.154.0",
+    "bridgeVersion": "0.1.0-experimental.3",
+    "imageRef": "mybay/codex-runtime:0.154.0",
+    "artifactIdentity": {
+      "kind": "docker-image-id",
+      "value": "sha256:20b46c8407fa9f4a40435653db85b00518d9fff132a7333b9482246357f42256"
+    }
+  },
+  "sourceEvidence": {
+    "path": "docs/plans/runtime-expansion/codex-main-3000-upgrade-rollback-20260910.json",
+    "sha256": "3b9795e80d95f81d16f3a23c893a552924e4e2c1e6fff3c03440f642b1ef6865"
+  },
+  "container": {
+    "name": "mybay-agent-4ee3c436-e6e7-4a2f-816f-843941db6db6",
+    "id": "8f50dc79716e",
+    "createdAt": "2026-09-10T11:31:39.361574554Z",
+    "imageId": "sha256:20b46c8407fa9f4a40435653db85b00518d9fff132a7333b9482246357f42256",
+    "labels": {
+      "com.mybay.codex.runtime": "true",
+      "com.mybay.codex.agent-version": "0.154.0",
+      "com.mybay.codex.bridge-version": "0.1.0-experimental.3"
+    }
+  },
+  "observations": {
+    "runtimeInstall": {
+      "result": "PASS",
+      "instanceId": "4ee3c436-e6e7-4a2f-816f-843941db6db6",
+      "finalStatus": "running",
+      "finalImageTag": "0.154.0"
+    },
+    "taskSubmit": {
+      "result": "PASS",
+      "runId": "5abde737-90ec-442a-b459-8127672d9d97",
+      "status": "completed",
+      "nativeThreadRetained": true
+    },
+    "streamingOutput": {
+      "result": "PASS",
+      "runId": "d559d040-ec0c-4f2c-a476-9957c79fcbdd",
+      "status": "completed",
+      "textEvents": 24,
+      "textChars": 1318,
+      "firstTextMs": 3798
+    },
+    "cancellation": {
+      "result": "PASS",
+      "runId": "0b0f5048-96b3-46cf-a089-4b7cafc9041c",
+      "status": "cancelled",
+      "stopRequested": true
+    }
+  },
+  "boundary": {
+    "browserVisualAcceptance": "NOT_RUN",
+    "platform": "Windows x64 with Docker Desktop",
+    "artifactScope": "host-local",
+    "publication": "NOT_RUN"
+  }
+}

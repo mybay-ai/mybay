@@ -40,6 +40,7 @@ COPY --from=build /app/scripts/recovery-compose.mjs ./scripts/recovery-compose.m
 COPY --from=build /app/shared/schema-version.json ./shared/schema-version.json
 COPY --from=build /app/server/runtimePlugins/oss-local-questions ./server/runtimePlugins/oss-local-questions
 COPY --from=build /app/runtime/pi-bridge ./runtime/pi-bridge
+COPY --from=build /app/runtime/codex-bridge ./runtime/codex-bridge
 
 RUN apk upgrade --no-cache libcrypto3 libssl3 \
     && apk add --no-cache curl \

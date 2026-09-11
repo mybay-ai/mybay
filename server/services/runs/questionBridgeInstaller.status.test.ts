@@ -14,7 +14,7 @@ vi.mock("./questionBridgeCredentials", () => ({
 }));
 vi.mock("../../lib/docker", () => ({ docker: { getContainer } }));
 
-import { inspectLocalQuestionBridge, invalidateLocalQuestionBridgeStatus } from "./questionBridgeInstaller";
+import { inspectLocalQuestionBridge, installLocalQuestionBridge, invalidateLocalQuestionBridgeStatus } from "./questionBridgeInstaller";
 
 const instance = { id: "question-health-test", container_id: "agent" };
 const root = path.resolve("data", "instances", instance.id);
@@ -31,6 +31,7 @@ function runtime(image = supportedImage, running = true, sharedNetwork = true) {
   };
   const controller = { inspect: vi.fn().mockResolvedValue({ Name: "/controller", NetworkSettings: { Networks: sharedNetwork ? { agent_net: {} } : { other_net: {} } } }) };
   getContainer.mockImplementation((id: string) => id === "agent" ? agent : controller);
+  return { agent, controller };
 }
 
 describe("structured question health inspection", () => {
@@ -68,5 +69,48 @@ describe("structured question health inspection", () => {
     expect(getContainer).toHaveBeenCalledTimes(2);
     await inspectLocalQuestionBridge(instance);
     expect(getContainer).toHaveBeenCalledTimes(2);
+  });
+
+  it.each(["pi", "codex", "claude-code"])("rejects Hermes plugin installation for %s before touching Docker or files", async runtime_type => {
+    const writeFile = vi.spyOn(fs, "writeFileSync");
+    const mkdir = vi.spyOn(fs, "mkdirSync");
+    try {
+      await expect(installLocalQuestionBridge({ ...instance, runtime_type }))
+        .rejects.toMatchObject({ code: "QUESTION_IMAGE_NOT_VERIFIED" });
+      expect(getContainer).not.toHaveBeenCalled();
+      expect(writeFile).not.toHaveBeenCalled();
+      expect(mkdir).not.toHaveBeenCalled();
+    } finally {
+      writeFile.mockRestore();
+      mkdir.mockRestore();
+    }
+  });
+
+  it.each(["pi", "codex", "claude-code"])("does not infer %s plugin support from a Hermes image", async runtime_type => {
+    questionBridgeEnabled.mockReturnValue(false);
+    const { agent } = runtime();
+    expect(await inspectLocalQuestionBridge({ ...instance, runtime_type }))
+      .toMatchObject({ supported: false, installable: false, repairable: false, reason: "unsupported_image" });
+    expect(agent.exec).not.toHaveBeenCalled();
+  });
+
+  it("checks a native Pi bridge without offering or probing the Hermes plugin", async () => {
+    questionBridgeEnabled.mockReturnValue(true);
+    authenticateQuestionBridge.mockReturnValue(true);
+    const { agent } = runtime();
+    agent.inspect.mockResolvedValue({
+      Image: "sha256:pi", State: { Running: true }, NetworkSettings: { Networks: { agent_net: {} } },
+      Config: { Labels: { "com.mybay.pi.runtime": "true" }, Env: [
+        `MYBAY_QUESTION_BRIDGE_URL=http://controller:3000/internal/questions/${instance.id}`,
+        `MYBAY_QUESTION_BRIDGE_TOKEN=${"a".repeat(64)}`,
+      ] },
+    });
+    expect(await inspectLocalQuestionBridge({ ...instance, runtime_type: "pi" }))
+      .toMatchObject({ healthy: true, supported: true, installable: false, repairable: false });
+    expect(agent.exec).not.toHaveBeenCalled();
+    invalidateLocalQuestionBridgeStatus(instance.id);
+    authenticateQuestionBridge.mockReturnValue(false);
+    expect(await inspectLocalQuestionBridge({ ...instance, runtime_type: "pi" }))
+      .toMatchObject({ healthy: false, reason: "plugin_unavailable", installable: false, repairable: false });
   });
 });

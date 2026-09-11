@@ -1,0 +1,69 @@
+# Generated from shared/runtimeCatalog.ts. Do not edit by hand.
+specVersion: 1.0.0
+name: codex-agent
+displayName: Codex
+version: 0.154.0
+description: Certified Codex App Server Runtime with isolated native sessions.
+release:
+  supportStatus: available
+  certificationLevel: certified
+  deploymentSupported: true
+  bridgeVersion: 0.1.0-experimental.3
+  artifactIdentity:
+    kind: docker-image-id
+    value: sha256:20b46c8407fa9f4a40435653db85b00518d9fff132a7333b9482246357f42256
+runtime:
+  type: codex
+  image: mybay/codex-runtime
+  tag: 0.154.0
+  internalPort: 8080
+  environmentVariables:
+    - name: CODEX_BRIDGE_API_KEY
+      description: Internal Runtime authentication
+      required: true
+      sensitive: true
+    - name: CODEX_HOME
+      description: Isolated native account and session directory
+      required: true
+      sensitive: false
+health:
+  endpoint: /health
+  intervalSeconds: 20
+  timeoutSeconds: 5
+  expectedStatusCode: 200
+storage:
+  dataPath: /opt/data
+  configPath: /opt/data/codex
+  volumeNamePrefix: mybay-codex-data
+capabilities:
+  chat: true
+  fileUpload: true
+  scheduledTasks: false
+  browser: false
+  shell: true
+  imChannels:
+    - web
+lifecycle:
+  conversation:
+    modes:
+      - streaming
+  cancellation:
+    supported: true
+    granularity: run
+  terminal:
+    observation: events
+  interactions:
+    approvals: true
+    questions: false
+resources:
+  minimumMemory: 512Mi
+  recommendedMemory: 1Gi
+  minimumCpu: 0.5
+backup:
+  includePaths:
+    - /opt/data/codex
+    - /opt/data/codex-bridge
+    - /opt/data/workspace
+  excludePatterns:
+    - '*.log'
+    - tmp/*

@@ -19,8 +19,10 @@ export type QuickDeployModelStrategy =
 export type QuickDeployChannel = "web" | "telegram" | "feishu" | "weixin";
 
 export interface QuickDeployDraft {
+  codexAuthMode?: "chatgpt" | "api";
+  codexAuthJson?: string;
   schemaVersion: 1;
-  runtimeType: "hermes" | "pi";
+  runtimeType: "hermes" | "pi" | "codex";
   entrypoint: "web";
   name: string;
   purpose: string;
@@ -60,6 +62,7 @@ export type QuickDeployValidationCode =
   | "customBaseUrlRequired"
   | "savedCredentialRequired"
   | "oauthCredentialRequired"
+  | "codexAccountRequired"
   | "apiKeyRequired"
   | "telegramBotTokenRequired"
   | "feishuCredentialsRequired"

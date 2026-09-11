@@ -60,6 +60,8 @@ type ChatMessagesPanelProps = {
   onRetry: (message: ChatMessage) => void;
   onEditMessage?: (message: ChatMessage) => void;
   onSwitchToAssistAndDiagnose?: () => void;
+  onReconnectCodexOAuth?: () => void;
+  reconnectingCodexOAuth?: boolean;
   conversationFiles?: PendingAttachment[];
   onOpenConversationFile?: (file: PendingAttachment) => void;
   onOpenInstanceFilePath?: (filePath: string) => void;
@@ -112,6 +114,8 @@ export function ChatMessagesPanel({
   onRetry,
   onEditMessage,
   onSwitchToAssistAndDiagnose,
+  onReconnectCodexOAuth,
+  reconnectingCodexOAuth,
   conversationFiles = EMPTY_CONVERSATION_FILES,
   onOpenConversationFile,
   onOpenInstanceFilePath,
@@ -220,8 +224,11 @@ export function ChatMessagesPanel({
               selectedConversationId={selectedConversationId}
               sending={sending}
               onRetry={onRetry}
+              canRegenerate={messageIndex === messages.length - 1 && msg.role === "assistant" && !activeRunId}
               onEdit={onEditMessage}
               onSwitchToAssistAndDiagnose={onSwitchToAssistAndDiagnose}
+              onReconnectCodexOAuth={onReconnectCodexOAuth}
+              reconnectingCodexOAuth={reconnectingCodexOAuth}
               conversationFiles={conversationFiles}
               onOpenConversationFile={onOpenConversationFile}
               onOpenInstanceFilePath={onOpenInstanceFilePath}

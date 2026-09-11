@@ -1,4 +1,5 @@
 import fs from "fs";
+import { DatabaseSync } from "node:sqlite";
 import path from "path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { closeLocalDatabase, mutateStore, readStore } from "../localStore";
@@ -125,6 +126,21 @@ describe("chatRepo local status contract", () => {
     delete process.env.LOCAL_STORE_PATH;
   });
 
+  it("creates projects and conversations without rewriting unrelated stored messages", async () => {
+    mutateStore(data => { data.chatMessages.push({ id: "unrelated-message", content: "keep" }); });
+    const observer = new DatabaseSync(storePath);
+    try {
+      observer.exec("CREATE TRIGGER protect_existing_message BEFORE DELETE ON chatMessages BEGIN SELECT RAISE(ABORT, 'unrelated message rewrite'); END");
+      const project = await chatRepo.createProject("u", "i", "Project");
+      const conversation = await chatRepo.createConversation("u", "i", "Conversation", project.id);
+      closeLocalDatabase();
+      expect(await chatRepo.getProject("u", "i", project.id)).toMatchObject({ name: "Project" });
+      expect(await chatRepo.getConversation("u", conversation.id)).toMatchObject({ project_id: project.id });
+      expect(readStore().chatMessages).toEqual([{ id: "unrelated-message", content: "keep" }]);
+    } finally {
+      observer.close();
+    }
+  });
   it("uses the route-compatible lifecycle for a synchronous chat turn", async () => {
     const conversation = await chatRepo.createConversation("user-1", "instance-1", "Test");
     const first = await chatRepo.beginChatTurn({
@@ -179,6 +195,20 @@ describe("chatRepo local status contract", () => {
     const duplicate = await chatRepo.finishChatTurn({ conversationId: conversation.id, userMessageId: started.message_id!, status: "failed", errorCode: "OTHER" });
     expect(duplicate.status).toBe("TURN_NOT_PENDING");
     expect(readStore().chatMessages.filter(message => message.conversation_id === conversation.id)).toHaveLength(2);
+  });
+
+  it("returns the latest failed message independently from completed context", async () => {
+    const conversation = await chatRepo.createConversation("user-1", "instance-1", "Failure lookup");
+    const first = await chatRepo.beginChatTurn({ conversationId: conversation.id, userId: "user-1", instanceId: "instance-1", content: "first", requestId: "failure-lookup-1" });
+    await chatRepo.finishChatTurn({ conversationId: conversation.id, userMessageId: first.message_id!, status: "failed", errorCode: "API_KEY_MISSING" });
+    const second = await chatRepo.beginChatTurn({ conversationId: conversation.id, userId: "user-1", instanceId: "instance-1", content: "second", requestId: "failure-lookup-2" });
+    await chatRepo.finishChatTurn({ conversationId: conversation.id, userMessageId: second.message_id!, status: "failed", errorCode: "CODEX_AUTH_REQUIRED" });
+
+    await expect(chatRepo.getLatestFailedMessage(conversation.id)).resolves.toMatchObject({
+      role: "assistant",
+      status: "failed",
+      error_code: "CODEX_AUTH_REQUIRED",
+    });
   });
 
   it("expires a stale pending turn before accepting the next request", async () => {

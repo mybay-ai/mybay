@@ -16,6 +16,85 @@ function cacheDependencies(now: { value: number }) {
 }
 
 describe("run event lifecycle controllers", () => {
+  it("coalesces dense native text, preserves ordering and commits the final delivered cursor", async () => {
+    const streams = createRunSseStreamController(1024 * 1024, 100);
+    const events = vi.fn();
+    const text = Array.from({ length: 1000 }, (_, n) => `id: ${n + 1}\ndata: {"type":"message.delta","run_id":"native","delta":"x"}\n\n`).join("");
+    streams.ensure("local", async (_signal, chunk) => {
+      chunk(text);
+      expect(events).not.toHaveBeenCalled();
+      chunk('id: 1001\ndata: {"type":"approval.request"}\n\n');
+    }, events);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(events.mock.calls.map(([e]) => e.type)).toEqual(["message.delta", "approval.request"]);
+    expect(events.mock.calls[0][0].delta.length).toBe(1000);
+    streams.ensure("local", async (_signal, chunk) => { chunk(text); }, events);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(events).toHaveBeenCalledTimes(2);
+  });
+
+  it("flushes text while a connection stays open and discards pending bytes on clear", async () => {
+    vi.useFakeTimers();
+    try {
+      const streams = createRunSseStreamController(1024 * 1024, 100), events = vi.fn();
+      let send!: (chunk: string) => void;
+      streams.ensure("local", (_signal, chunk) => { send = chunk; return new Promise(() => {}); }, events);
+      send('id: 1\ndata: {"type":"message.delta","delta":"first"}\n\n');
+      await vi.advanceTimersByTimeAsync(100);
+      expect(events).toHaveBeenCalledWith({ type: "message.delta", delta: "first" });
+      send('id: 2\ndata: {"type":"message.delta","delta":"discard"}\n\n');
+      streams.clear("local");
+      await vi.advanceTimersByTimeAsync(100);
+      expect(events).toHaveBeenCalledTimes(1);
+    } finally { vi.useRealTimers(); }
+  });
+  it("does not replay text or approvals when the same upstream stream reconnects", async () => {
+    const streams = createRunSseStreamController();
+    const received = vi.fn();
+    const frame = (id: number, event: unknown) => `id: ${id}\ndata: ${JSON.stringify(event)}\n\n`;
+    const first = frame(1, { type: "message.delta", delta: "hello" })
+      + frame(2, { type: "approval.request", approval_id: "approval-1" });
+    streams.ensure("local", async (_signal, chunk) => { chunk(first); }, received, undefined, "instance:native");
+    await new Promise(resolve => setTimeout(resolve, 0));
+    streams.ensure("local", async (_signal, chunk) => {
+      chunk(first + frame(3, { type: "approval.responded", approval_id: "approval-1" }));
+    }, received, undefined, "instance:native");
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(received.mock.calls.map(([e]) => e.type)).toEqual(["message.delta", "approval.request", "approval.responded"]);
+  });
+
+  it("resets sequence for a replacement upstream and ignores the previous connection", async () => {
+    const streams = createRunSseStreamController();
+    const received = vi.fn();
+    let oldChunk!: (chunk: string) => void;
+    let oldSignal!: AbortSignal;
+    streams.ensure("local", (signal, chunk) => {
+      oldChunk = chunk; oldSignal = signal; chunk('id: 9\ndata: {"text":"old"}\n\n');
+      return new Promise(() => {});
+    }, received, undefined, "native-old");
+    streams.ensure("local", async (_signal, chunk) => {
+      oldChunk('id: 10\ndata: {"text":"late"}\n\n');
+      chunk('id: 1\ndata: {"text":"new"}\n\n');
+    }, received, undefined, "native-new");
+    expect(oldSignal.aborted).toBe(true);
+    expect(received.mock.calls.map(([e]) => e.text)).toEqual(["old", "new"]);
+  });
+
+  it("does not advance past a delivery failure and retries the undelivered event", async () => {
+    const streams = createRunSseStreamController();
+    const received = vi.fn().mockImplementationOnce(() => { throw Error("temporary failure"); });
+    const data = 'id: 1\ndata: {"text":"first"}\n\nid: 2\ndata: {"text":"second"}\n\n';
+    streams.ensure("local", async (_signal, chunk) => { chunk(data); }, received);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(received).toHaveBeenCalledTimes(1);
+    streams.ensure("local", async (_signal, chunk) => { chunk(data); }, received);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(received.mock.calls.map(([e]) => e.text)).toEqual(["first", "first", "second"]);
+    streams.clear("local");
+    streams.ensure("local", async (_signal, chunk) => { chunk(data); }, received);
+    expect(received).toHaveBeenCalledTimes(5);
+  });
+
   it("discards half frames between connections and ignores late bytes from aborted streams", async () => {
     const streams = createRunSseStreamController();
     const received = vi.fn();

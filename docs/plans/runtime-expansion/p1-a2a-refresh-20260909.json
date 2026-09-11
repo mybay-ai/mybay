@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-09T06:49:21.970Z",
+  "environment": {
+    "platform": "win32",
+    "arch": "x64",
+    "node": "v25.2.1"
+  },
+  "target": {
+    "baseUrl": "http://127.0.0.1:4348",
+    "runtimes": {
+      "pi": {
+        "instanceId": "1a5c4df7-4d95-4b0d-b758-84464ede0c6d",
+        "name": "PiAcceptance"
+      },
+      "hermes": {
+        "instanceId": "f4343d7e-b1c5-4869-b0c1-4798310fd240",
+        "name": "HermesAcceptance"
+      }
+    }
+  },
+  "strict": false,
+  "results": [
+    {
+      "name": "hermes-to-pi",
+      "verdict": "NOT_RUN",
+      "reason": "scenario was not selected"
+    },
+    {
+      "name": "pi-to-hermes",
+      "verdict": "NOT_RUN",
+      "reason": "scenario was not selected"
+    },
+    {
+      "name": "parallel",
+      "verdict": "NOT_RUN",
+      "reason": "scenario was not selected"
+    },
+    {
+      "name": "partial-failure",
+      "verdict": "NOT_RUN",
+      "reason": "scenario was not selected"
+    },
+    {
+      "name": "group-cancellation",
+      "verdict": "NOT_RUN",
+      "reason": "scenario was not selected"
+    },
+    {
+      "name": "refresh-recovery",
+      "verdict": "PASS",
+      "durationMs": 27169,
+      "evidence": {
+        "host": {
+          "instanceId": "f4343d7e-b1c5-4869-b0c1-4798310fd240",
+          "name": "HermesAcceptance"
+        },
+        "peer": {
+          "instanceId": "1a5c4df7-4d95-4b0d-b758-84464ede0c6d",
+          "name": "PiAcceptance"
+        },
+        "conversationId": "33711c45-dcd6-44fa-aad2-c5d4ccf3bd19",
+        "callerState": "ready",
+        "toolState": "ready",
+        "peerState": "ready",
+        "runId": "35a9dcd9-bc59-4d3f-8622-e4c0b160b1d5",
+        "runStatus": "completed",
+        "contextId": "ctx-mybay-room-35a9dcd9bc594d3f8622e4c0b160b1d5",
+        "selectedPeerIds": [
+          "1a5c4df7-4d95-4b0d-b758-84464ede0c6d"
+        ],
+        "groupOutcome": "completed",
+        "activityGroupOutcome": "completed",
+        "memberStatus": "completed",
+        "memberTaskId": "task-f544e55b5a3a4f72",
+        "markerObserved": true,
+        "refreshRequested": true,
+        "refreshedMemberStatus": "completed",
+        "remoteRecordState": "finished",
+        "remoteState": "TASK_STATE_COMPLETED"
+      }
+    },
+    {
+      "name": "control-restart-recovery",
+      "verdict": "NOT_RUN",
+      "reason": "scenario was not selected"
+    }
+  ],
+  "summary": {
+    "PASS": 1,
+    "FAIL": 0,
+    "NOT_RUN": 6,
+    "accepted": true
+  }
+}

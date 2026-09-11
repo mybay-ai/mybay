@@ -20,6 +20,14 @@ The MyBay Pi Runtime bridge uses the `@earendil-works/pi-coding-agent` package, 
 - Package: <https://www.npmjs.com/package/@earendil-works/pi-coding-agent>
 - License: MIT
 
+## OpenAI Codex
+
+The MyBay Codex Runtime bridge uses the official `@openai/codex` package, pinned by the Runtime lockfile and distributed under the Apache License 2.0. MyBay is an independent project and is not an official OpenAI product. Interoperability with Codex or ChatGPT account authentication does not imply sponsorship, endorsement, or affiliation.
+
+- Project: <https://github.com/openai/codex>
+- Package: <https://www.npmjs.com/package/@openai/codex>
+- License: Apache License 2.0 (<https://github.com/openai/codex/blob/main/LICENSE>)
+
 ## PDF.js
 
 The instance file center uses the `pdfjs-dist` distribution of Mozilla PDF.js to render local PDF previews in the browser.

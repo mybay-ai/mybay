@@ -31,8 +31,16 @@ export function projectRunTimeline(execution: RunExecutionState, content: string
   blocks: RunBlock[]; finalContent: string; textUnaligned: boolean;
 } {
   const blocks: RunBlock[] = [];
+  const terminal = isTerminalExecutionStatus(execution.status);
+  const hasVisibleText = execution.blocks.some(block => block.type === "text" && block.content.length > 0);
+  const activeLifecycleBlock = terminal || hasVisibleText
+    ? null
+    : [...execution.blocks].reverse().find(block => (
+      block.type === "tool" && block.stepType === "model_reasoning" && block.status === "running"
+    )) || null;
   for (const block of execution.blocks) {
-    if (block.type === "tool" && (block.stepType === "final" || block.stepType === "model_reasoning")) continue;
+    if (block.type === "tool" && block.stepType === "final") continue;
+    if (block.type === "tool" && block.stepType === "model_reasoning" && block !== activeLifecycleBlock) continue;
     const previous = blocks[blocks.length - 1];
     if (previous?.type === "text" && block.type === "text") {
       blocks[blocks.length - 1] = { ...previous, content: previous.content + block.content, lastSeq: block.lastSeq };
@@ -49,7 +57,7 @@ export function projectRunTimeline(execution: RunExecutionState, content: string
     if (lastText && lastTextIndex > lastActionIndex) {
       return { blocks: blocks.filter(block => block !== lastText), finalContent: lastText.content, textUnaligned: false };
     }
-    if (isTerminalExecutionStatus(execution.status)) {
+    if (terminal) {
       return { blocks: blocks.filter(block => block.type !== "text"), finalContent: content, textUnaligned: true };
     }
     return { blocks, finalContent: "", textUnaligned: false };

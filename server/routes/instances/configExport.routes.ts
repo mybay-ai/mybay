@@ -7,7 +7,6 @@ import path from "path";
 import os from "os";
 import multer from "multer";
 import { hasZipMagic } from "../../utils/uploadSecurity";
-import AdmZip from "adm-zip";
 import * as archiver from "archiver";
 import { resolveArchiverFactory } from "../../utils/resolveArchiverFactory";
 import { executeDeployment, buildDeploymentContext, rebuildProxyConfig } from "../../deployment";
@@ -169,8 +168,12 @@ export function createConfigExportRoutes(deps: RouterDependencies) {
       const filesToPack: { absolutePath: string; archivePath: string; size: number }[] = [];
       let totalSize = 0;
 
-      const uploadsDirs = ["uploads", "input", "inputs", "documents", "files"];
-      const outputsDirs = ["outputs", "output", "results", "artifacts"];
+      const archiveSources = [
+        "uploads", "input", "inputs", "documents", "files",
+        "outputs", "output", "results", "artifacts",
+        "workspace/uploads", "workspace/input", "workspace/inputs", "workspace/documents", "workspace/files",
+        "workspace/outputs", "workspace/output", "workspace/results", "workspace/artifacts",
+      ];
       const dirExclusions = ["logs", "cache", "sessions", "tmp", "node_modules", ".venv", "venv", "__pycache__", ".git", "secrets", "keys", "certs"];
 
       function scanDir(currentDir: string, archivePrefix: string) {
@@ -258,16 +261,10 @@ export function createConfigExportRoutes(deps: RouterDependencies) {
       }
 
       if (rootDir && fs.existsSync(rootDir)) {
-        for (const udir of uploadsDirs) {
-          const target = path.join(rootDir, udir);
+        for (const archiveSource of archiveSources) {
+          const target = path.join(rootDir, ...archiveSource.split("/"));
           if (fs.existsSync(target)) {
-            scanDir(target, udir);
-          }
-        }
-        for (const odir of outputsDirs) {
-          const target = path.join(rootDir, odir);
-          if (fs.existsSync(target)) {
-            scanDir(target, odir);
+            scanDir(target, archiveSource);
           }
         }
       }

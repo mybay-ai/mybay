@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { AlertCircle, CheckCircle2, Copy, Eye, EyeOff, KeyRound, Loader2, Settings2, ShieldCheck, Sparkles, Zap } from "lucide-react";
+import { AlertCircle, CheckCircle2, ChevronDown, Copy, Eye, EyeOff, KeyRound, Loader2, Settings2, ShieldCheck, Sparkles, Zap } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { providerRegistry } from "../../../shared/providerRegistry";
 import { resolveProviderRegistryKey } from "../../../shared/providerRegistryUtils";
@@ -19,7 +19,7 @@ import { QuickDeployDelivery } from "./QuickDeployDelivery";
 import { useProviderOAuth } from "./useProviderOAuth";
 import { fetchRuntimeCatalog } from "./runtimeCatalogClient";
 import type { RuntimeDefinition } from "../../../shared/runtimeCatalog";
-import { PI_QUICK_DEPLOY_PROVIDER_IDS, supportsQuickDeployRuntimeProvider } from "../../../shared/runtimeModelProviderPolicy";
+import { CODEX_QUICK_DEPLOY_PROVIDER_IDS, PI_QUICK_DEPLOY_PROVIDER_IDS, supportsQuickDeployRuntimeProvider } from "../../../shared/runtimeModelProviderPolicy";
 import { AgentRuntimeIcon } from "../../components/brand/AgentRuntimeIcon";
 import { ChannelBrandIcon } from "../../components/brand/ChannelBrandIcon";
 
@@ -31,17 +31,11 @@ interface QuickDeployPageProps {
   onViewInstances: () => void;
 }
 
-function randomToken() {
-  return typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : Math.random().toString(36).slice(2) + Date.now().toString(36);
-}
-
 export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat, onViewInstances }: QuickDeployPageProps) {
   const { t } = useTranslation("deploy");
   const [draft, setDraft] = useState<QuickDeployDraft>(() => createQuickDeployDraft());
-  const [path] = useState(() => buildQuickDeployPath("agent", randomToken()));
-  const [idempotencyKey] = useState(() => randomToken());
+  const [path] = useState(() => buildQuickDeployPath("agent", crypto.randomUUID()));
+  const [idempotencyKey] = useState(() => crypto.randomUUID());
   const [credentials, setCredentials] = useState<Credential[]>([]);
   const [optionsLoading, setOptionsLoading] = useState(true);
   const [runtimeDefinitions, setRuntimeDefinitions] = useState<RuntimeDefinition[]>([]);
@@ -58,7 +52,9 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
   const submitLock = useRef(false);
 
   const strategy = draft.modelStrategy;
-  const isPiRuntime = draft.runtimeType === "pi";
+  const isCodexRuntime = draft.runtimeType === "codex";
+  const isCodexAccount = isCodexRuntime && draft.codexAuthMode !== "api";
+  const isNativeBridge = draft.runtimeType !== "hermes";
   const compatibleCredentials = useMemo(() => credentials.filter((credential) => {
     const provider = resolveProviderRegistryKey(credential.provider || credential.type, undefined, credential.baseUrl);
     return supportsQuickDeployRuntimeProvider(draft.runtimeType, provider);
@@ -66,7 +62,7 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
   const selectedRuntime = runtimeDefinitions.find((definition) => definition.runtime.type === draft.runtimeType);
   const providerConfig = providerRegistry[strategy.provider];
   const isOAuthProvider = providerConfig?.authMode === "oauth-device-code";
-  const modelNeedsTest = requiresPredeployModelTest(strategy.provider);
+  const modelNeedsTest = isCodexRuntime ? !isCodexAccount && !isOAuthProvider : requiresPredeployModelTest(strategy.provider);
   const validationIssues = useMemo(() => validateQuickDeployDraft(draft), [draft]);
   const visibleIssues = submitted ? validationIssues : [];
 
@@ -97,10 +93,12 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
     setDraft((current) => ({ ...current, [key]: value, permissionConfirmed: false }));
   };
 
-  const selectRuntime = (runtimeType: "hermes" | "pi") => {
+  const selectRuntime = (runtimeType: "hermes" | "pi" | "codex") => {
+    if (oauth.loading) return;
     const definition = runtimeDefinitions.find((candidate) => candidate.runtime.type === runtimeType);
     if (!definition?.release.deploymentSupported) return;
     setDraft((current) => {
+      if (runtimeType === "codex") return { ...current, codexAuthMode: "chatgpt", codexAuthJson: undefined, runtimeType, channel: "web", selectedSkillIds: [], modelStrategy: { mode: "byok", provider: "openai", model: "", isCustomModel: true }, permissionConfirmed: false };
       let modelStrategy = current.modelStrategy;
       if (!supportsQuickDeployRuntimeProvider(runtimeType, modelStrategy.provider)) {
         const compatibleCredential = credentials.find((credential) => {
@@ -170,6 +168,7 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
         setCredentials(nextCredentials);
         if (nextCredentials.length > 0) {
           setDraft((current) => {
+            if (current.runtimeType === "codex") return current;
             const selected = nextCredentials.find((credential) => {
               const provider = resolveProviderRegistryKey(credential.provider || credential.type, undefined, credential.baseUrl);
               return supportsQuickDeployRuntimeProvider(current.runtimeType, provider);
@@ -222,7 +221,7 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
     setRuntimeCatalogState("loading");
     void fetchRuntimeCatalog(controller.signal)
       .then((result) => {
-        setRuntimeDefinitions(result.runtimes.filter((runtime) => ["hermes", "pi"].includes(runtime.runtime.type)));
+        setRuntimeDefinitions(result.runtimes.filter((runtime) => ["hermes", "pi", "codex"].includes(runtime.runtime.type)));
         setRuntimeCatalogState("ready");
       })
       .catch((error) => {
@@ -293,7 +292,7 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
 
   const selectProvider = (provider: string) => {
     const config = providerRegistry[provider];
-    updateStrategy({ provider, model: config?.defaultModel || "", baseUrl: config?.defaultBaseUrl || "", isCustomModel: provider === "custom-openai-compatible" });
+    updateStrategy({ provider, model: config?.defaultModel || "", baseUrl: (isCodexRuntime ? config?.responsesBaseUrl : undefined) || config?.defaultBaseUrl || "", isCustomModel: provider === "custom-openai-compatible" });
   };
 
   const testModel = async () => {
@@ -301,6 +300,7 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
     setModelTestMessage("");
     try {
       const result = await api.post("/api/system/test-llm", {
+        runtimeType: draft.runtimeType,
         provider: strategy.provider,
         model: strategy.model,
         baseUrl: strategy.baseUrl,
@@ -330,6 +330,7 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
         sessionStorage.setItem(`one_time_credentials_instance_${result.id}`, JSON.stringify(result.initialDashboardCredentials));
       }
       setCreated(result);
+      updateDraft({ codexAuthJson: undefined });
       onCreated(result);
     } catch (error: any) {
       setSubmitError(error?.message || t("quickDeploy.errors.createFailed"));
@@ -363,7 +364,7 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
           <h1 className="text-2xl font-black text-content md:text-3xl">{t("quickDeploy.title")}</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-content-muted">{t("quickDeploy.description")}</p>
         </div>
-        <Button type="button" variant="outline" onClick={() => onAdvanced(buildQuickDeployAdvancedInitialData(draft, path))}>
+        <Button type="button" variant="outline" disabled={isCodexRuntime} onClick={() => onAdvanced(buildQuickDeployAdvancedInitialData(draft, path))}>
           <Settings2 className="mr-2 h-4 w-4" />{t("quickDeploy.advanced")}
         </Button>
       </div>
@@ -386,7 +387,7 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
         {runtimeCatalogState === "ready" && (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {runtimeDefinitions.map((definition) => {
-              const runtimeType = definition.runtime.type as "hermes" | "pi";
+              const runtimeType = definition.runtime.type as "hermes" | "pi" | "codex";
               const selected = draft.runtimeType === runtimeType;
               const deployable = definition.release.deploymentSupported;
               return (
@@ -431,16 +432,32 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
 
           <Card className="space-y-5 p-6">
             <div><h2 className="font-bold text-content">{t("quickDeploy.model.title")}</h2><p className="mt-1 text-xs text-content-muted">{t("quickDeploy.model.description")}</p></div>
+            {isCodexRuntime && <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <Button type="button" variant={isCodexAccount ? "primary" : "outline"} disabled={oauth.loading} onClick={() => updateDraft({ codexAuthMode: "chatgpt", codexAuthJson: undefined, permissionConfirmed: false, modelStrategy: { mode: "byok", provider: "openai", model: "", isCustomModel: true } })}>{t("quickDeploy.model.codexAccountMode")}</Button>
+                <Button type="button" variant={!isCodexAccount ? "primary" : "outline"} disabled={oauth.loading} onClick={() => updateDraft({ codexAuthMode: "api", codexAuthJson: undefined, permissionConfirmed: false, modelStrategy: { mode: "byok", provider: "openai", model: providerRegistry.openai.defaultModel, baseUrl: providerRegistry.openai.defaultBaseUrl, apiKey: "" } })}>{t("quickDeploy.model.codexProviderMode")}</Button>
+              </div>
+              {!isCodexAccount && <p className="text-sm text-content-secondary">{t("quickDeploy.model.codexApiDescription")}</p>}
+            </div>}
+            {isCodexAccount ? <div className="space-y-3">
+              <p className="text-sm text-content-secondary">{t("quickDeploy.model.codexAccountDescription")}</p>
+              <Label htmlFor="codex-account-file">{t("quickDeploy.model.codexAccountFile")}</Label>
+              <Input id="codex-account-file" type="file" accept="application/json,.json" onChange={async event => {
+                const file = event.target.files?.[0];
+                if (!file || file.size > 65536) { updateDraft({ codexAuthJson: undefined }); return; }
+                updateDraft({ codexAuthJson: await file.text(), permissionConfirmed: false });
+              }} />
+            </div> : <>
             <div className="grid grid-cols-2 gap-2">
-              <Button type="button" variant={strategy.mode === "saved_credential" ? "primary" : "outline"} disabled={compatibleCredentials.length === 0} onClick={() => selectMode("saved_credential")}><KeyRound className="mr-2 h-4 w-4" />{t("quickDeploy.model.saved")}</Button>
-              <Button type="button" variant={strategy.mode === "byok" ? "primary" : "outline"} onClick={() => selectMode("byok")}><Zap className="mr-2 h-4 w-4" />{t("quickDeploy.model.byok")}</Button>
+              <Button type="button" variant={strategy.mode === "saved_credential" ? "primary" : "outline"} disabled={compatibleCredentials.length === 0 || oauth.loading} onClick={() => selectMode("saved_credential")}><KeyRound className="mr-2 h-4 w-4" />{t("quickDeploy.model.saved")}</Button>
+              <Button type="button" variant={strategy.mode === "byok" ? "primary" : "outline"} disabled={oauth.loading} onClick={() => selectMode("byok")}><Zap className="mr-2 h-4 w-4" />{t("quickDeploy.model.byok")}</Button>
             </div>
             {strategy.mode === "saved_credential" ? (
-              <div><Label>{t("quickDeploy.model.credential")}</Label><select value={strategy.credentialId} onChange={(event) => selectCredential(event.target.value)} className="mt-2 h-11 w-full rounded-lg border border-outline bg-control px-3 text-sm text-content">{compatibleCredentials.map((credential) => <option key={credential.id} value={credential.id}>{credential.name} ({credential.type})</option>)}</select></div>
+              <div><Label>{t("quickDeploy.model.credential")}</Label><div className="relative mt-2"><select value={strategy.credentialId} onChange={(event) => selectCredential(event.target.value)} className="h-11 w-full appearance-none rounded-lg border border-outline bg-control pl-3.5 pr-10 text-sm text-content">{compatibleCredentials.map((credential) => <option key={credential.id} value={credential.id}>{credential.name} ({credential.type})</option>)}</select><ChevronDown aria-hidden="true" className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-content-muted" /></div></div>
             ) : !isOAuthProvider ? (
               <div><Label>{t("quickDeploy.model.apiKey")}</Label><Input type="password" autoComplete="new-password" value={strategy.apiKey || ""} onChange={(event) => updateStrategy({ apiKey: event.target.value })} /></div>
             ) : null}
-            <div><Label>{t("quickDeploy.model.provider")}</Label><ProviderSelect className="mt-2" value={strategy.provider} onValueChange={selectProvider} includeOAuth={!isPiRuntime} allowedProviderIds={isPiRuntime ? PI_QUICK_DEPLOY_PROVIDER_IDS : undefined} disabled={strategy.mode === "saved_credential" || oauth.loading} /></div>
+            <div><Label>{t("quickDeploy.model.provider")}</Label><ProviderSelect className="mt-2" value={strategy.provider} onValueChange={selectProvider} includeOAuth={!isNativeBridge || isCodexRuntime} allowedProviderIds={isCodexRuntime ? CODEX_QUICK_DEPLOY_PROVIDER_IDS : isNativeBridge ? PI_QUICK_DEPLOY_PROVIDER_IDS : undefined} disabled={strategy.mode === "saved_credential" || oauth.loading} /></div>
             {isOAuthProvider && (
               <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-4 text-sm text-blue-900 dark:border-blue-400/30 dark:bg-blue-400/10 dark:text-blue-100">
                 <div className="flex items-start gap-3">
@@ -461,18 +478,19 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
                 </div>
               </div>
             )}
-            <div><Label>{t("quickDeploy.model.model")}</Label>{providerConfig?.models?.length && !strategy.isCustomModel ? <select value={strategy.model} onChange={(event) => updateStrategy({ model: event.target.value })} className="mt-2 h-11 w-full rounded-lg border border-outline bg-control px-3 text-sm text-content">{providerConfig.models.map((model) => <option key={model} value={model}>{model}</option>)}</select> : <Input value={strategy.model} onChange={(event) => updateStrategy({ model: event.target.value })} />}</div>
-            {(strategy.provider === "custom-openai-compatible" || strategy.isCustomModel) && <div><Label>{t("quickDeploy.model.baseUrl")}</Label><Input value={strategy.baseUrl || ""} onChange={(event) => updateStrategy({ baseUrl: event.target.value })} /></div>}
+            </>}
+            <div><Label>{t("quickDeploy.model.model")}</Label>{providerConfig?.models?.length && !strategy.isCustomModel ? <div className="relative mt-2"><select value={strategy.model} onChange={(event) => updateStrategy({ model: event.target.value })} className="h-11 w-full appearance-none rounded-lg border border-outline bg-control pl-3.5 pr-10 text-sm text-content">{providerConfig.models.map((model) => <option key={model} value={model}>{model}</option>)}</select><ChevronDown aria-hidden="true" className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-content-muted" /></div> : <Input value={strategy.model} onChange={(event) => updateStrategy({ model: event.target.value })} />}</div>
+            {!isCodexAccount && !isOAuthProvider && (isCodexRuntime || strategy.provider === "custom-openai-compatible" || strategy.isCustomModel) && <div><Label>{t("quickDeploy.model.baseUrl")}</Label><Input value={strategy.baseUrl || ""} onChange={(event) => updateStrategy({ baseUrl: event.target.value })} /></div>}
             {modelNeedsTest && <Button type="button" variant="outline" onClick={testModel} disabled={modelTest === "testing" || optionsLoading}>{modelTest === "testing" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}{modelTest === "passed" ? t("quickDeploy.model.testPassed") : t("quickDeploy.model.test")}</Button>}
             {modelTest === "failed" && <p className="text-sm text-danger">{modelTestMessage || t("quickDeploy.errors.modelTestFailed")}</p>}
           </Card>
 
           <Card className="space-y-5 p-6">
-            <div><h2 className="font-bold text-content">{t("quickDeploy.channel.title")}</h2><p className="mt-1 text-xs leading-5 text-content-muted">{t(isPiRuntime ? "quickDeploy.channel.piDescription" : "quickDeploy.channel.description")}</p></div>
+            <div><h2 className="font-bold text-content">{t("quickDeploy.channel.title")}</h2><p className="mt-1 text-xs leading-5 text-content-muted">{t(isCodexRuntime ? "quickDeploy.channel.codexDescription" : isNativeBridge ? "quickDeploy.channel.piDescription" : "quickDeploy.channel.description")}</p></div>
             <ChannelSelector
               selectedId={draft.channel}
               onSelect={selectChannel}
-              channelIds={isPiRuntime ? ["web"] : ["web", "telegram", "feishu", "weixin"]}
+              channelIds={isNativeBridge ? ["web"] : ["web", "telegram", "feishu", "weixin"]}
               compact
             />
             {draft.channel !== "web" && (
@@ -486,10 +504,10 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
 
         <div className="space-y-6">
           <Card className="space-y-5 p-6">
-            {isPiRuntime ? (
+            {isNativeBridge ? (
               <div className="flex items-start gap-3 rounded-xl border border-violet-200 bg-violet-50/70 p-4 text-violet-900 dark:border-violet-500/30 dark:bg-violet-950/30 dark:text-violet-100">
                 <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" />
-                <div><h2 className="font-bold">{t("quickDeploy.access.piTitle")}</h2><p className="mt-1 text-xs leading-5 opacity-80">{t("quickDeploy.access.piDescription")}</p></div>
+                <div><h2 className="font-bold">{t(isCodexRuntime ? "quickDeploy.access.codexTitle" : "quickDeploy.access.piTitle")}</h2><p className="mt-1 text-xs leading-5 opacity-80">{t(isCodexRuntime ? "quickDeploy.access.codexDescription" : "quickDeploy.access.piDescription")}</p></div>
               </div>
             ) : (
               <>
@@ -501,7 +519,7 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
           </Card>
 
           <Card className="space-y-4 p-6">
-            <div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" /><div><h2 className="font-bold text-content">{t("quickDeploy.review.title")}</h2><p className="mt-1 text-xs leading-5 text-content-muted">{t(isPiRuntime ? "quickDeploy.review.piDescription" : "quickDeploy.review.description")}</p></div></div>
+            <div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" /><div><h2 className="font-bold text-content">{t("quickDeploy.review.title")}</h2><p className="mt-1 text-xs leading-5 text-content-muted">{t(isCodexRuntime ? "quickDeploy.review.codexDescription" : isNativeBridge ? "quickDeploy.review.piDescription" : "quickDeploy.review.description")}</p></div></div>
             <div className="space-y-2 rounded-xl bg-surface-muted p-4 text-sm text-content-secondary">
               <p className="flex items-center gap-2 font-semibold text-content">
                 <AgentRuntimeIcon runtimeType={draft.runtimeType} className="h-6 w-6" />
@@ -518,7 +536,7 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
             {submitted && !modelReady && <p className="text-sm text-danger">{t("quickDeploy.validation.modelTestRequired")}</p>}
             {visibleIssues.map((issue) => <p key={`${issue.code}-${issue.field}`} className="text-sm text-danger">{issueText(issue)}</p>)}
             {submitError && <p className="text-sm text-danger">{submitError}</p>}
-            <Button type="submit" className="w-full" disabled={submitting || optionsLoading || preflight === "loading" || runtimeCatalogState !== "ready" || !selectedRuntime?.release.deploymentSupported}>{submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}{t(isPiRuntime ? "quickDeploy.deployPi" : "quickDeploy.deploy")}</Button>
+            <Button type="submit" className="w-full" disabled={submitting || optionsLoading || preflight === "loading" || runtimeCatalogState !== "ready" || !selectedRuntime?.release.deploymentSupported}>{submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}{t(isCodexRuntime ? "quickDeploy.deployCodex" : isNativeBridge ? "quickDeploy.deployPi" : "quickDeploy.deploy")}</Button>
           </Card>
         </div>
       </div>

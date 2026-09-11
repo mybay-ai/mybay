@@ -21,9 +21,11 @@ const discardRunFileSnapshot = vi.hoisted(() => vi.fn());
 const isQuestionBridgeInstalling = vi.hoisted(() => vi.fn(() => false));
 const cancelMappedA2AGroupTasks = vi.hoisted(() => vi.fn());
 const isA2AGroupTransportApplied = vi.hoisted(() => vi.fn(async () => true));
+const a2aTaskLinks = vi.hoisted(() => [] as any[]);
 vi.mock("../../../services/runs/questionBridgeInstaller", () => ({ isQuestionBridgeInstalling }));
 vi.mock("../../../services/a2aTaskCancel", () => ({ cancelMappedA2AGroupTasks }));
 vi.mock("../../../services/a2aGroupReadiness", () => ({ isA2AGroupTransportApplied }));
+vi.mock("../../../localStore", () => ({ readStoreCollections: () => ({ a2aTaskLinks }) }));
 
 vi.mock("../../../middlewares/auth", () => ({
   authenticateToken: (req: any, _res: any, next: any) => {
@@ -47,6 +49,7 @@ vi.mock("../../../utils/capabilities", () => ({ probeCapabilities, probeCapabili
 vi.mock("../../../services/runsReconciler", () => ({
   discardRunFileSnapshot,
   emitRunLifecycleStep: vi.fn(),
+  getLiveRunPartialOutput: vi.fn(() => undefined),
   primeRunFileSnapshot,
   RECONCILER_ID: "reconciler-route-test",
   requestRunsAPI: vi.fn(),
@@ -84,7 +87,15 @@ describe("Interactive Agent POST /runs integration", () => {
     const runId = "44444444-4444-4444-8444-444444444444";
     getInstanceById.mockResolvedValue({ id: instanceId, user_id: userId, owner_id: userId });
     getConversationForOwnerAndInstance.mockResolvedValue({ id: conversationId, user_id: userId, instance_id: instanceId });
-    const run = { id: runId, user_id: userId, instance_id: instanceId, conversation_id: conversationId, status: "completed", file_diffs: {
+    const run = { id: runId, user_id: userId, instance_id: instanceId, conversation_id: conversationId, status: "completed", usage_evidence: {
+      version: 1, source: "runtime_terminal", scope: "session", counter: "snapshot",
+      inputTokens: 120, outputTokens: 30, totalTokens: 150, cacheReadTokens: 10,
+      cacheWriteTokens: 0, modelCalls: 1, model: "gpt-6-astra", durationMs: 450,
+      durationSource: "runtime", contextTokens: 3_595, contextWindow: 258_400,
+      contextPercent: 1.39, compactionStatus: null, compactionReason: null,
+      compactionTokensBefore: null, compactionEstimatedTokensAfter: null,
+      secret: "must-not-leak",
+    }, file_diffs: {
       version: 1, runId, conversationId, capturedBefore: "2026-08-31T00:00:00Z", capturedAfter: "2026-08-31T00:00:01Z", files: [{ path: "a.txt", before: "BEFORE", after: "AFTER" }],
     } };
     getChatRun.mockResolvedValue(run);
@@ -101,7 +112,10 @@ describe("Interactive Agent POST /runs integration", () => {
       expect(response.status).toBe(200);
       expect(response.headers.get("cache-control")).toBe("no-store");
       expect(await response.json()).toMatchObject({ available: true, file: { path: "a.txt", before: "BEFORE", after: "AFTER" } });
-      expect(JSON.stringify(await (await fetch(base)).json())).not.toContain("BEFORE");
+      const runStatus = await (await fetch(base)).json();
+      expect(JSON.stringify(runStatus)).not.toContain("BEFORE");
+      expect(runStatus.run.usageEvidence).toMatchObject({ model: "gpt-6-astra", contextTokens: 3_595, contextWindow: 258_400 });
+      expect(JSON.stringify(runStatus)).not.toContain("must-not-leak");
       expect((await fetch(`${base}/file-diff?path=a.txt&conversationId=${userId}`)).status).toBe(404);
       expect((await fetch(`${base}/file-diff?path=..%2Fa.txt&conversationId=${conversationId}`)).status).toBe(400);
       getChatRun.mockResolvedValue({ ...run, user_id: "someone-else" });
@@ -118,6 +132,52 @@ describe("Interactive Agent POST /runs integration", () => {
     delete process.env.MYBAY_INTERNAL_ROUTING_SECRET;
     delete process.env.MYBAY_A2A_TRACKED_INSTANCES;
     vi.clearAllMocks();
+    a2aTaskLinks.length = 0;
+  });
+
+  it("exposes the persisted group snapshot and fail-closed group outcome on run status", async () => {
+    const runId = "55555555-5555-4555-8555-555555555556";
+    const peerId = "66666666-6666-4666-8666-666666666666";
+    getInstanceById.mockResolvedValue({ id: instanceId, user_id: userId, owner_id: userId });
+    getChatRun.mockResolvedValue({
+      id: runId,
+      instance_id: instanceId,
+      user_id: userId,
+      conversation_id: conversationId,
+      status: "completed",
+      group_collaboration: {
+        version: 1,
+        mode: "group",
+        contextId: "ctx-mybay-room-statustest",
+        leader: { id: instanceId, name: "Hermes Host" },
+        peers: [{ id: peerId, name: "Pi Peer" }],
+        selectedPeerIds: [peerId],
+        maxRounds: 1,
+      },
+    });
+    a2aTaskLinks.push({ parentRunId: runId, peerId, state: "finished", remoteState: "TASK_STATE_COMPLETED" });
+
+    const app = express();
+    const router = express.Router(); registerRunRoutes(router); app.use("/api/instances", router);
+    const server = app.listen(0);
+    try {
+      await new Promise<void>(resolve => server.once("listening", resolve));
+      const response = await fetch(`http://127.0.0.1:${(server.address() as any).port}/api/instances/${instanceId}/runs/${runId}`);
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({
+        success: true,
+        run: {
+          id: runId,
+          groupOutcome: "completed",
+          groupCollaboration: {
+            contextId: "ctx-mybay-room-statustest",
+            selectedPeerIds: [peerId],
+          },
+        },
+      });
+    } finally {
+      await new Promise<void>(resolve => server.close(() => resolve()));
+    }
   });
 
   it("creates a queued Run when the gate is enabled and Hermes supports Runs", async () => {
