@@ -28,6 +28,7 @@ function createPreparationDependencies(): RuntimeRunPreparationDependencies {
 function createEventDependencies(): RuntimeRunEventDependencies {
   return {
     addEvent: vi.fn(),
+    persistPartialOutput: vi.fn(async () => true),
     completeTerminal: vi.fn(async () => false),
     requestReconcile: vi.fn(),
     warn: vi.fn(),

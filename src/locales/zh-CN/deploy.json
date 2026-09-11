@@ -272,7 +272,7 @@
     "quickDeploy":  {
     "badge": "本地快速部署",
     "title": "几分钟内启动你的 Agent",
-    "description": "选择 Hermes、Pi 或 Experimental Codex，创建独立的本地 Agent。",
+    "description": "选择 Hermes、Pi 或 Beta 阶段的 Codex，创建独立的本地 Agent。",
     "advanced": "切换到高级配置",
     "deploy": "立即部署 Agent",
     "deployPi": "立即部署 Pi Agent",
@@ -286,8 +286,8 @@
       "hermesDescription": "支持 Dashboard、Web 与外部消息渠道、技能和完整工具链。",
       "piDescription": "基于官方 Pi RPC 的隔离运行时，支持 Web 流式对话、会话恢复和文件工作流。",
       "unavailable": "当前版本暂不可部署",
-      "codexBadge": "Experimental",
-      "codexDescription": "使用 Codex / ChatGPT 账号或兼容 Responses 的模型 API 运行独立会话，支持 Web 对话。"
+      "codexBadge": "Beta · 本地预览",
+      "codexDescription": "使用 Codex / ChatGPT 账号或兼容 Responses 的模型 API 运行独立会话；部署、流式对话、停止、会话恢复、文件产物与工具事件已经验证。"
     },
     "instance": {
       "title": "Agent 信息",
@@ -1298,6 +1298,8 @@
                                             "hermesDescription":  "经典全功能运行时，包含 9119 控制接口、Python 执行器和多种消息渠道。",
                                             "piBadge":  "已认证 / Web 对话",
                                             "piDescription":  "基于官方 Pi RPC 的隔离运行时，当前支持 Web 流式对话、会话恢复、工具进度与停止。",
+                                            "codexBadge":  "Beta · 本地预览",
+                                            "codexDescription":  "使用隔离的 Codex App Server 会话；部署、流式对话、停止、会话恢复、文件产物与工具事件已经验证。",
                                             "runtimeLoading":  "正在加载已验证的运行时能力…",
                                             "runtimeLoadError":  "无法验证运行时能力。为避免创建不受支持的运行时，部署选择已关闭。",
                                             "runtimeUnavailable":  "运行时不可用",

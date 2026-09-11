@@ -17,7 +17,6 @@ export function applyCodexOAuthCredential(config: Record<string, any>, credentia
   config.codexAuthJson = auth;
   config.codexAuthMode = "chatgpt";
   config.provider = "openai";
-  delete config.providerCredentialId;
   delete config.providerApiKey;
   delete config.apiKey;
   delete config.baseUrl;
@@ -27,7 +26,7 @@ export function validateCodexConnection(config: any) {
   const mode = config?.codexAuthMode || "chatgpt";
   if (!["chatgpt", "api"].includes(mode)) throw Error("CODEX_AUTH_MODE_INVALID");
   if (mode === "chatgpt") {
-    if (config?.provider !== "openai" || config?.baseUrl && config.baseUrl !== "https://api.openai.com/v1" || config?.providerCredentialId || config?.providerApiKey || config?.apiKey) throw Error("CODEX_PROVIDER_UNSUPPORTED");
+    if (config?.provider !== "openai" || config?.baseUrl && config.baseUrl !== "https://api.openai.com/v1" || config?.providerApiKey || config?.apiKey) throw Error("CODEX_PROVIDER_UNSUPPORTED");
     return { mode, baseUrl: "" };
   }
   if (config.codexAuthJson || !CODEX_API_PROVIDER_IDS.includes(config.provider)) throw Error("CODEX_PROVIDER_UNSUPPORTED");
@@ -56,6 +55,63 @@ export function normalizeCodexAccountAuth(value: unknown): string {
   }, ...(typeof auth.last_refresh === "string" ? { last_refresh: auth.last_refresh } : {}) });
 }
 
+function codexAuthPath(instanceId: string): string {
+  const safeInstanceId = path.basename(instanceId);
+  if (safeInstanceId !== instanceId || !/^[A-Za-z0-9_-]{1,128}$/.test(safeInstanceId)) {
+    throw Error("CODEX_INSTANCE_ID_INVALID");
+  }
+  const instancesRoot = path.resolve(process.cwd(), "data", "instances");
+  const authPath = path.resolve(instancesRoot, safeInstanceId, "codex", "auth.json");
+  if (!authPath.startsWith(instancesRoot + path.sep)) throw Error("CODEX_INSTANCE_ID_INVALID");
+  return authPath;
+}
+
+export function readCodexRuntimeAccountAuth(instanceId: string): string | null {
+  const authPath = codexAuthPath(instanceId);
+  if (!fs.existsSync(authPath)) return null;
+  try {
+    return normalizeCodexAccountAuth(fs.readFileSync(authPath, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+export function writeCodexRuntimeAccountAuth(instanceId: string, value: unknown): string {
+  const normalized = normalizeCodexAccountAuth(value);
+  const authPath = codexAuthPath(instanceId);
+  const authDirectory = path.dirname(authPath);
+  fs.mkdirSync(authDirectory, { recursive: true });
+  const targetExists = fs.existsSync(authPath);
+  const temporaryPath = `${authPath}.${process.pid}.${Date.now()}.tmp`;
+  fs.writeFileSync(temporaryPath, normalized + "\n", { mode: 0o600, flag: "wx" });
+  try {
+    // The control plane can run as root while the Codex bridge runs as uid 1000.
+    // Keep the atomically replaced auth file readable by the Runtime owner. Docker
+    // Desktop bind mounts can reject chown; overwriting the existing inode keeps
+    // its Runtime ownership and restrictive mode in that environment.
+    let replaceInPlace = false;
+    if (typeof process.getuid === "function" && process.getuid() === 0) {
+      const directoryStat = fs.statSync(authDirectory);
+      try {
+        fs.chownSync(temporaryPath, directoryStat.uid, directoryStat.gid);
+      } catch (error: any) {
+        if (targetExists && ["EPERM", "EACCES", "ENOSYS"].includes(String(error?.code || ""))) replaceInPlace = true;
+        else throw error;
+      }
+    }
+    if (replaceInPlace) {
+      fs.writeFileSync(authPath, normalized + "\n", { encoding: "utf8", flag: "w" });
+      fs.rmSync(temporaryPath, { force: true });
+    } else {
+      fs.renameSync(temporaryPath, authPath);
+    }
+  } catch (error) {
+    try { fs.rmSync(temporaryPath, { force: true }); } catch {}
+    throw error;
+  }
+  return normalized;
+}
+
 export function buildCodexRuntimeEnvironment(config: any): Record<string, string> {
   const connection = validateCodexConnection(config);
   const key = config?.hermesApiKey ? decrypt(config.hermesApiKey) : "";
@@ -79,8 +135,7 @@ export function writeCodexRuntimeEnvironment(instanceId: string, config: any) {
   // Native refreshes may rotate tokens. Never replace a refreshed account on routine redeploy.
   if (config.codexAuthMode !== "api" && !fs.existsSync(authPath)) {
     const auth = normalizeCodexAccountAuth(config.codexAuthJson ? decrypt(config.codexAuthJson) : null);
-    fs.mkdirSync(path.dirname(authPath), { recursive: true });
-    fs.writeFileSync(authPath, auth + "\n", { mode: 0o600, flag: "wx" });
+    writeCodexRuntimeAccountAuth(instanceId, auth);
   }
   fs.mkdirSync(path.dirname(authPath), { recursive: true });
   const connection = validateCodexConnection(config);

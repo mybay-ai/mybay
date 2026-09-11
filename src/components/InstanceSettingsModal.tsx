@@ -137,11 +137,6 @@ export function InstanceSettingsModal({ instance: initialInstance, onClose, onSa
       setWecomAllowedChats(instance.configSummary?.wecomAllowedChats || instance.config?.wecomAllowedChats || "");
       setWebhookUrl(instance.configSummary?.webhookUrl || instance.config?.webhookUrl || "");
 
-      setPetEnabled(instance.configSummary?.pet?.enabled || instance.config?.pet?.enabled || false);
-      setPetSlug(instance.configSummary?.pet?.slug || instance.config?.pet?.slug || "");
-      setPetRenderMode(instance.configSummary?.pet?.render_mode || instance.config?.pet?.render_mode || "webgl");
-      setPetScale(instance.configSummary?.pet?.scale || instance.config?.pet?.scale || 1.0);
-
       setSkills(instance.configSummary?.skills || instance.config?.skills || []);
     }
   }, [loadingDetail, instance.configSummary]);
@@ -232,12 +227,6 @@ export function InstanceSettingsModal({ instance: initialInstance, onClose, onSa
   const [wecomAllowedChats, setWecomAllowedChats] = useState(instance.configSummary?.wecomAllowedChats || instance.config?.wecomAllowedChats || "");
   const [webhookUrl, setWebhookUrl] = useState(instance.configSummary?.webhookUrl || instance.config?.webhookUrl || "");
   const [webhookSecret, setWebhookSecret] = useState("");
-
-  // Pets Config
-  const [petEnabled, setPetEnabled] = useState<boolean>(instance.configSummary?.pet?.enabled || instance.config?.pet?.enabled || false);
-  const [petSlug, setPetSlug] = useState<string>(instance.configSummary?.pet?.slug || instance.config?.pet?.slug || "");
-  const [petRenderMode, setPetRenderMode] = useState<string>(instance.configSummary?.pet?.render_mode || instance.config?.pet?.render_mode || "webgl");
-  const [petScale, setPetScale] = useState<number>(instance.configSummary?.pet?.scale || instance.config?.pet?.scale || 1.0);
 
   // Skills Configs
   const [skills, setSkills] = useState<string[]>(instance.configSummary?.skills || instance.config?.skills || []);
@@ -334,12 +323,6 @@ export function InstanceSettingsModal({ instance: initialInstance, onClose, onSa
         }),
         ...(advancedResourceConfigEnabled ? { limitsCpu, limitsMem } : {}),
         isCustomModel,
-        pet: {
-          enabled: petEnabled,
-          slug: petSlug,
-          render_mode: petRenderMode,
-          scale: Math.max(0.1, Math.min(5.0, parseFloat(petScale as any) || 1.0))
-        }
       };
 
       if (providerApiKey.trim()) payload.providerApiKey = providerApiKey.trim();
@@ -595,71 +578,6 @@ export function InstanceSettingsModal({ instance: initialInstance, onClose, onSa
                 placeholder={t("settings_personality_placeholder")}
               />
             </div>
-          </div>
-
-          {/* Pet Configuration */}
-          <div className="p-5 bg-surface border border-slate-200/60 dark:border-slate-800 rounded-xl space-y-4 shadow-2xs">
-            <h4 className="text-[11px] font-semibold uppercase tracking-wider text-content-muted">{t("settings_pet_title", "Pet Display")}</h4>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-sm font-medium text-slate-800 dark:text-slate-200">{t("settings_pet_enabled", "Enable Pet")}</Label>
-                <p className="text-[13px] text-content-muted mt-0.5 leading-snug max-w-[85%]">{t("settings_pet_desc", "Display a virtual pet character")}</p>
-              </div>
-              <div
-                className={`w-11 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors ${petEnabled ? 'bg-indigo-600' : 'bg-slate-200 dark:bg-slate-800'}`}
-                onClick={() => setPetEnabled(!petEnabled)}
-              >
-                <div className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform ${petEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
-              </div>
-            </div>
-
-            {petEnabled && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-outline">
-                <div className="space-y-1.5">
-                  <Label className="text-[13px] font-medium text-content-muted">{t("settings_pet_slug", "Pet Slug")}</Label>
-                  <select
-                    value={petSlug}
-                    onChange={e => setPetSlug(e.target.value)}
-                    className="flex h-9 w-full rounded-lg border border-outline bg-surface px-3 text-[13px] text-content focus:border-slate-400 focus:ring-1 focus:ring-slate-400 outline-none transition-all shadow-3xs"
-                  >
-                    <option value="">{t("settings_pet_slug_none", "-- Select --")}</option>
-                    <option value="cat">Cat</option>
-                    <option value="dog">Dog</option>
-                    <option value="fox">Fox</option>
-                    <option value="bunny">Bunny</option>
-                    <option value="panda">Panda</option>
-                    {petSlug && !["cat", "dog", "fox", "bunny", "panda"].includes(petSlug) && (
-                      <option value={petSlug}>{petSlug} (Custom)</option>
-                    )}
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-[13px] font-medium text-content-muted">{t("settings_pet_render_mode", "Render Mode")}</Label>
-                  <select
-                    value={petRenderMode}
-                    onChange={e => setPetRenderMode(e.target.value)}
-                    className="flex h-9 w-full rounded-lg border border-outline bg-surface px-3 text-[13px] text-content focus:border-slate-400 focus:ring-1 focus:ring-slate-400 outline-none transition-all shadow-3xs"
-                  >
-                    <option value="webgl">WebGL</option>
-                    <option value="css">CSS</option>
-                    <option value="image">Image</option>
-                  </select>
-                </div>
-                <div className="space-y-1.5 md:col-span-2">
-                  <Label className="text-[13px] font-medium text-content-muted">{t("settings_pet_scale", "Scale")}</Label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0.1"
-                    max="5.0"
-                    value={petScale}
-                    onChange={e => setPetScale(parseFloat(e.target.value) || 1.0)}
-                    className="flex h-9 w-full rounded-lg border border-outline bg-surface px-3 text-[13px] text-content placeholder:text-content-muted focus:border-slate-400 focus:ring-1 focus:ring-slate-400 outline-none transition-all shadow-3xs"
-                  />
-                </div>
-              </div>
-            )}
           </div>
 
           {dashboardSupported ? <div className="p-5 bg-surface border border-slate-200/60 dark:border-slate-800 rounded-xl space-y-4 shadow-2xs">

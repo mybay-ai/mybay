@@ -1071,7 +1071,7 @@
             "items": [
               "Pin every deployable Runtime to a reproducible native version and immutable OCI digest or Docker image ID.",
               "Upgrade retained certification to schema v3 so stale tags, bridge revisions, and mismatched artifacts cannot pass the release gate.",
-              "Keep Codex Experimental while reporting its verified native, bridge, and host-local build identity separately from Hermes and Pi Certified status."
+              "Promote Codex to Beta after verifying session recovery, file artifacts, usage, tool events, and restart recovery, while reporting its native, bridge, and host-local build identity separately."
             ]
           },
           {

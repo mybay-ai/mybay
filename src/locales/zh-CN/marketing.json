@@ -1071,7 +1071,7 @@
             "items": [
               "将所有可部署 Runtime 固定到可复现的原生版本及不可变 OCI 摘要或 Docker 镜像 ID。",
               "将保留认证升级为 schema v3，使过期标签、Bridge 版本和不匹配构建无法通过发布门禁。",
-              "Codex 继续保持 Experimental，并将已验证的原生版本、Bridge 版本和本机构建身份与 Hermes、Pi 的 Certified 状态分开呈现。"
+              "Codex 在补齐会话恢复、文件产物、用量、工具事件和重启恢复证据后提升至 Beta，并继续单独呈现原生版本、Bridge 版本与本机构建身份。"
             ]
           },
           {

@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "artifactType": "codex-runtime-and-control-interruption-acceptance",
+  "capturedAt": "2026-09-11T06:47:12.298Z",
+  "source": {
+    "mybayVersion": "0.1.29-preview.1",
+    "controlUrl": "http://127.0.0.1:4372",
+    "controlImage": "mybay/local:0.1.29-preview.1-p15",
+    "controlImageId": "sha256:9cb29bcee07d816f5673b163bd4afe60a4aa8b7568325d9af2d448466beab68e",
+    "runtimeImage": "mybay/codex-runtime:0.154.0",
+    "runtimeImageId": "sha256:20b46c8407fa9f4a40435653db85b00518d9fff132a7333b9482246357f42256",
+    "nativeVersion": "0.154.0",
+    "bridgeVersion": "0.1.0-experimental.3",
+    "model": "gpt-6-astra",
+    "credentialMode": "existing ChatGPT OAuth account"
+  },
+  "environment": {
+    "platform": "Windows 10 Pro x64",
+    "runtimePlatform": "Docker Desktop Linux x86_64",
+    "containerEngineVersion": "29.7.2",
+    "instanceId": "a9307d3c-af4a-4fde-97b9-22c211c2e17e"
+  },
+  "observations": {
+    "result": "PASS",
+    "preInterruptionSnapshot": {
+      "result": "PASS",
+      "scope": "Stopped control SQLite plus stopped target Codex instance data",
+      "databaseIntegrity": "ok",
+      "databaseSha256": "796ea18ea677334ee8f94ecff21751f6dc459fe31f451efbb8d3a239c81bec61",
+      "instanceFileCount": 303,
+      "retention": "Credential-bearing snapshot remains under the ignored data directory."
+    },
+    "runtimeInterruption": {
+      "result": "PASS",
+      "conversationId": "95e115f6-85a0-417c-8bfe-dabfd9f70ef1",
+      "interruptedRunId": "ea454085-2c51-416e-b586-ce68fd7199d5",
+      "acceptedMs": 283,
+      "firstTextMs": 4119,
+      "partialTextBytesBeforeRestart": 18,
+      "runtimeRestartMs": 862,
+      "terminalStatus": "failed",
+      "errorCode": "UPSTREAM_FAILED",
+      "partialTextBytesAfterRestart": 98,
+      "automaticTerminal": true,
+      "stopIssued": false,
+      "continuityRunId": "9c1ed5db-f0f0-423d-a032-4dab05d9ab5a",
+      "sameConversationMarkerRecalled": true,
+      "interpretation": "The interrupted turn failed closed, retained partial output and allowed the same native session to complete a later turn."
+    },
+    "controlInterruption": {
+      "result": "PASS",
+      "conversationId": "5a03ec0b-55c2-407a-96bf-1a51227a08c8",
+      "interruptedRunId": "85fbe26c-1204-4ab3-882a-a240029a7245",
+      "acceptedMs": 144,
+      "firstTextMs": 3011,
+      "partialTextBytesBeforeRestart": 42,
+      "controlRestartMs": 4546,
+      "terminalStatus": "completed",
+      "partialTextBytesAfterRestart": 5944,
+      "automaticTerminal": true,
+      "stopIssued": false,
+      "continuityRunId": "669d946a-0339-4500-aa03-dba34060c455",
+      "sameConversationMarkerRecalled": true,
+      "interpretation": "The in-flight Runtime stream survived the control-plane restart and the restored controller persisted its natural completion."
+    },
+    "browserErrorPresentation": {
+      "result": "PASS",
+      "conversationId": "95e115f6-85a0-417c-8bfe-dabfd9f70ef1",
+      "observedText": "Agent 执行意外中断，可能是 Runtime 重启、模型服务或网络异常。已有部分输出会保留，请检查实例状态后重试。",
+      "errorCodeVisible": true,
+      "partialOutputVisible": true,
+      "continuityMarkerVisible": true,
+      "confirmedModelVisible": "gpt-6-astra"
+    },
+    "priorSameHostProductRestore": {
+      "result": "PASS",
+      "artifact": "docs/plans/runtime-expansion/codex-product-restore-20260910.json",
+      "sha256": "b86dfc6c963fe8108e0316e3b4f07add479f52c379ea51dc63dba0e4b3d207ba",
+      "scope": "A previous isolated same-host full MyBay control database and Codex instance restore preserved the conversation, native thread, marker and workspace file."
+    }
+  },
+  "excludedEvents": [
+    {
+      "runId": "c6a8e2ae-c805-4261-9b3e-00d6ebad40ce",
+      "terminalStatus": "cancelled",
+      "reason": "The initial control-interruption prompt requested 800 lines and did not naturally finish within the bounded observation window. The test issued stop, so it is excluded from automatic recovery evidence and was replaced by the shorter passing run."
+    }
+  ],
+  "validation": {
+    "targetedTests": "14 passed",
+    "targetedEslint": "passed",
+    "typecheck": "passed",
+    "productionBuild": "passed",
+    "controllerHealth": "healthy",
+    "runtimeState": "running",
+    "realBrowser": "passed"
+  },
+  "boundaries": [
+    "This acceptance covers the exact retained Codex 0.154.0 image and the named MyBay controller on one Windows Docker Desktop host.",
+    "The new pre-interruption snapshot was created and verified but was not restored into a separate current-image service in this P1.5 run.",
+    "The prior full product restore used the same host class and retained Runtime tag, but its Runtime image ID differs from the current certified 0.154.0 image ID.",
+    "Windows-native to Linux Codex state migration remains unsupported.",
+    "Control-plane deployment and security evidence are not upgraded by this artifact; Codex remains Beta."
+  ],
+  "containsSecrets": false
+}

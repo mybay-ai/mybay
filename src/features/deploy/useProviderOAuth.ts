@@ -6,7 +6,7 @@ import { api } from "../../lib/api";
 interface UseProviderOAuthOptions {
   provider: string;
   enabled: boolean;
-  onComplete: (credential: Credential, credentials: Credential[]) => void;
+  onComplete: (credential: Credential, credentials: Credential[]) => void | Promise<void>;
 }
 
 export function useProviderOAuth({ provider, enabled, onComplete }: UseProviderOAuthOptions) {
@@ -77,7 +77,7 @@ export function useProviderOAuth({ provider, enabled, onComplete }: UseProviderO
       const credentials: Credential[] = Array.isArray(refreshed) ? refreshed : [];
       const saved = credentials.find((credential) => credential.id === result.credentialId);
       if (!saved) throw new Error(t("wizardCopy.model.oauthCredentialMissing"));
-      onCompleteRef.current(saved, credentials);
+      await onCompleteRef.current(saved, credentials);
       setSession({ status: "complete" });
       cancelledRef.current = true;
       if (!popup.closed) popup.close();

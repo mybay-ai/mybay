@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 import { buildRuntimeCatalogResponse } from "./runtimes";
 
 describe("runtime catalog route", () => {
-  it("advertises Pi Certified capabilities and applies the resolved deployment flag", async () => {
+  it("advertises Certified Runtime capabilities and applies the resolved Pi deployment flag", async () => {
     const response = buildRuntimeCatalogResponse(false);
     expect(response.schemaVersion).toBe(1);
     expect(response.runtimes.map((runtime) => runtime.runtime.type)).toEqual(["hermes", "pi", "codex"]);
 
-    expect(response.runtimes[2].release).toMatchObject({ certificationLevel: "experimental", deploymentSupported: true });
+    expect(response.runtimes[2].release).toMatchObject({ certificationLevel: "certified", deploymentSupported: true });
     const hermes = response.runtimes[0];
     expect(hermes.release).toMatchObject({ supportStatus: "available", deploymentSupported: true });
     expect(hermes.runtime).toMatchObject({ image: "nousresearch/hermes-agent", internalPort: 9119 });

@@ -18,6 +18,7 @@ function createHarness(provider: RuntimeRunEventProvider) {
       const normalized = normalizeSseRunEvent({ runId, event, data, seq: ++seq });
       if (normalized) execution = runReducer(execution, normalized);
     },
+    persistPartialOutput: async () => true,
     completeTerminal: async () => true, requestReconcile() {}, warn() {}, randomUUID: () => `tool-${++id}`, now: () => 1,
   });
   return {

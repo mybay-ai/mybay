@@ -1,4 +1,3 @@
-import fs from "node:fs";
 import { unzipSync, type UnzipFileInfo } from "fflate";
 
 export const READ_ONLY_ZIP_DEFAULT_LIMITS = {
@@ -44,16 +43,15 @@ function safeEntryName(value: string): string {
  * the archive limits and duplicate/path checks.
  */
 export function readOnlyZip(
-  source: Buffer | Uint8Array | string,
+  source: Buffer | Uint8Array,
   options: ReadOnlyZipOptions = {},
 ): ReadOnlyZipEntry[] {
-  const input = typeof source === "string" ? fs.readFileSync(source) : source;
   const limits = { ...READ_ONLY_ZIP_DEFAULT_LIMITS, ...options.limits };
   const metadata: Array<{ name: string; directory: boolean; size: number; compressedSize: number; selected: boolean }> = [];
   const names = new Set<string>();
   let totalBytes = 0;
 
-  const inflated = unzipSync(input, {
+  const inflated = unzipSync(source, {
     filter(info: UnzipFileInfo) {
       const name = safeEntryName(info.name);
       const duplicateKey = name.toLowerCase();

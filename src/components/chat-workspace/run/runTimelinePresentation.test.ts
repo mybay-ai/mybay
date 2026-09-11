@@ -13,11 +13,21 @@ const events = [
 ];
 const execution = () => reduceRunEvents(createRunExecutionState({ runId: "r", conversationId: "c" }), events);
 describe("timeline presentation and restoration", () => {
-  it("merges the optimistic queue step with its server event and excludes lifecycle markers from tool counts", () => {
+  it("keeps the active lifecycle phase visible until response text arrives", () => {
     const state = createRunExecutionState({ runId: "r", conversationId: "c", initialStep: { id: "r-task_queued", tool: "agent", stepType: "model_reasoning" } });
     const replay = reduceRunEvents(state, [{ seq: 1, runId: "r", type: "tool.started", payload: { id: "r-task_queued", tool: "other", stepType: "model_reasoning" } }]);
     expect(replay.blocks).toHaveLength(1);
-    expect(projectRunTimeline(replay, "").blocks).toHaveLength(0);
+    expect(projectRunTimeline(replay, "").blocks).toEqual([replay.blocks[0]]);
+
+    const processing = reduceRunEvents(replay, [
+      { seq: 2, runId: "r", type: "tool.started", payload: { id: "r-agent-running", tool: "other", label: "Agent is processing the request", stepType: "model_reasoning" } },
+    ]);
+    expect(projectRunTimeline(processing, "").blocks).toEqual([processing.blocks[1]]);
+
+    const streaming = reduceRunEvents(processing, [
+      { seq: 3, runId: "r", type: "text.delta", payload: { delta: "First text." } },
+    ]);
+    expect(projectRunTimeline(streaming, "First text.").blocks).toHaveLength(0);
   });
   it("interleaves narration and tools while showing the final reply exactly once", () => {
     const projection = projectRunTimeline(execution(), "Before.Final.");

@@ -68,7 +68,9 @@ describe("system network policy characterization", () => {
   });
 
   it("rejects unsafe outbound requests before opening a connection", async () => {
-    await expect(safeOutboundFetch("http://127.0.0.1/admin")).rejects.toThrow(/SSRF|restricted|内网/);
+    await expect(safeOutboundFetch("http://127.0.0.1/admin")).rejects.toMatchObject({
+      code: "OUTBOUND_URL_REJECTED",
+    });
     await expect(safeOutboundFetch("file:///etc/passwd")).rejects.toThrow("Unsupported outbound protocol");
     await expect(safeOutboundFetch("https://user:password@example.com/")).rejects.toThrow("credentials");
   });

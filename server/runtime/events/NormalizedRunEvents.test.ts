@@ -9,16 +9,18 @@ function createProviderHarness(provider: RuntimeRunEventProvider, completeTermin
   const events: Array<{ runId: string; event: string; data: string; ownerId?: string }> = [];
   const requestReconcile = vi.fn();
   const warn = vi.fn();
+  const persistPartialOutput = vi.fn(async () => true);
   let uuidSequence = 0;
   const interpreter = provider.createController({
     addEvent: (runId, event, data, ownerId) => events.push({ runId, event, data, ownerId }),
+    persistPartialOutput,
     completeTerminal,
     requestReconcile,
     warn,
     randomUUID: () => `uuid-${++uuidSequence}`,
     now: () => 1_700_000_000_000,
   });
-  return { interpreter, events, completeTerminal, requestReconcile, warn };
+  return { interpreter, events, completeTerminal, requestReconcile, warn, persistPartialOutput };
 }
 
 describe.each([
@@ -59,11 +61,12 @@ describe.each([
   });
 
   it("commits a failed terminal after partial output instead of silently recovering", async () => {
-    const { interpreter, requestReconcile, completeTerminal } = createHarness();
+    const { interpreter, requestReconcile, completeTerminal, persistPartialOutput } = createHarness();
     const run = { id: "run-1" };
     interpreter.handle(run, { event: "message.delta", delta: "partial" });
     await interpreter.completeTerminalEvent(run, { event: "run.failed", error: "STREAMING_DECODER_ERROR" }, "upstream-1");
     expect(completeTerminal).toHaveBeenCalledWith(run, expect.objectContaining({ status: "failed" }), "upstream-1");
+    expect(persistPartialOutput).toHaveBeenCalledWith("run-1", "partial");
     expect(requestReconcile).not.toHaveBeenCalled();
   });
 

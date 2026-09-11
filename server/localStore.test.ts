@@ -60,6 +60,29 @@ describe("local SQLite store", () => {
     preserved.close();
   });
 
+  it("fails closed on a corrupt existing database before schema setup can replace it", () => {
+    fs.mkdirSync(testDir, { recursive: true });
+    const corrupt = Buffer.from("not-a-sqlite-database-p04");
+    fs.writeFileSync(sqlitePath, corrupt);
+
+    expect(() => readStore()).toThrow(/LOCAL_SQLITE_INTEGRITY_FAILED.*not migrated or replaced/i);
+    expect(fs.readFileSync(sqlitePath)).toEqual(corrupt);
+    expect(fs.existsSync(`${sqlitePath}-wal`)).toBe(false);
+    expect(fs.existsSync(`${sqlitePath}-shm`)).toBe(false);
+  });
+
+  it("checkpoints WAL state during a graceful close and preserves the latest row", () => {
+    mutateStore((store) => { store.systemSettings.p04_shutdown_marker = "preserved"; });
+    expect(fs.existsSync(`${sqlitePath}-wal`)).toBe(true);
+
+    closeLocalDatabase();
+
+    const reopened = new DatabaseSync(sqlitePath, { readOnly: true });
+    expect(reopened.prepare("PRAGMA quick_check").get()?.quick_check).toBe("ok");
+    expect(reopened.prepare("SELECT value FROM systemSettings WHERE key = ?").get("p04_shutdown_marker")?.value).toBe("preserved");
+    reopened.close();
+  });
+
   it("rolls back a failed transaction", () => {
     expect(() => mutateStore((store) => {
       store.users.push({ id: "rolled-back", username: "unsafe" });

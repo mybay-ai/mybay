@@ -14,10 +14,11 @@ describe("managed Runtime version catalog", () => {
       expect.objectContaining({
         runtime_type: "codex", version: "0.154.0", bridge_version: "0.1.0-experimental.3",
         image: "mybay/codex-runtime", image_tag: "0.154.0", upgradeable: true, is_latest: true,
-        certification_level: "experimental",
+        channel: "beta", certification_level: "certified",
       }),
       expect.objectContaining({
         runtime_type: "codex", version: "0.153.4", image_tag: "0.153.4", upgradeable: true, is_latest: false,
+        channel: "experimental", certification_level: "experimental",
       }),
     ]);
     expect(listManagedRuntimeVersions("codex")[0].capabilities).toEqual(expect.arrayContaining(["upgrade", "rollback"]));

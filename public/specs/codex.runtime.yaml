@@ -3,10 +3,10 @@ specVersion: 1.0.0
 name: codex-agent
 displayName: Codex
 version: 0.154.0
-description: Experimental Codex App Server Runtime with isolated native sessions.
+description: Certified Codex App Server Runtime with isolated native sessions.
 release:
   supportStatus: available
-  certificationLevel: experimental
+  certificationLevel: certified
   deploymentSupported: true
   bridgeVersion: 0.1.0-experimental.3
   artifactIdentity:

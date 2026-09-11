@@ -34,6 +34,17 @@
       "runtimeVersion": "Codex 0.154.0; bridge 0.1.0-experimental.3",
       "mybayVersion": "0.1.29-preview.1",
       "headless": true
+    },
+    {
+      "id": "windows-docker-desktop-v0129-preview1-codex-certified-20260911",
+      "platform": "windows",
+      "platformVersion": "Windows 10 Pro",
+      "architecture": "x64",
+      "containerEngine": "docker-desktop",
+      "containerEngineVersion": "29.7.2",
+      "runtimeVersion": "Codex 0.154.0; bridge 0.1.0-experimental.3",
+      "mybayVersion": "0.1.29-preview.1",
+      "headless": false
     }
   ],
   "artifacts": [
@@ -48,6 +59,26 @@
     {
       "path": "certification/artifacts/runtime-v0129-preview1-candidate-20260910.json",
       "sha256": "47bb9ae9ebd31770bcad1208d9405b74d4678355e1f0fe76fbb6e60ca9c4511d"
+    },
+    {
+      "path": "certification/artifacts/codex-0.154.0-beta-windows-x64-20260911.json",
+      "sha256": "9a6133166658c672e6bb5b1862029e234ef9deddeabb8c316aff7fc16706b6fb"
+    },
+    {
+      "path": "certification/artifacts/codex-0.154.0-oauth-lifecycle-20260911.json",
+      "sha256": "feb8db9dc5982a6b19c8f6f6216ba1a4e17256f3cd6b8ead8a25c01de3384a7f"
+    },
+    {
+      "path": "certification/artifacts/codex-0.154.0-upgrade-rollback-windows-x64-20260911.json",
+      "sha256": "f548e35cebc6ce67a5e83a50d4af82d31128382a12ec741bf43fe2f54f246b59"
+    },
+    {
+      "path": "certification/artifacts/codex-0.154.0-recovery-p15-windows-x64-20260911.json",
+      "sha256": "0067cbfa9fb1c49569bed06f7e59e0a09532c60fe8d3c904ddb4d33d4ce1259a"
+    },
+    {
+      "path": "certification/artifacts/codex-0.154.0-certified-windows-x64-20260911.json",
+      "sha256": "657168b915e981b9565f72c96acd8a5be890aa99c422662a815ce8f675725785"
     }
   ],
   "checks": [
@@ -92,6 +123,132 @@
         "certification/artifacts/codex-0.154.0-bridge-3-lifecycle-20260910.json#observations.cancellation"
       ],
       "note": "A live run was observed running, stop was accepted, and the upstream Runtime terminal state was cancelled."
+    },
+    {
+      "requirementId": "session-recovery",
+      "status": "passed",
+      "scope": "runtime",
+      "observedAt": "2026-09-10T14:36:20.471Z",
+      "environment": "Windows Docker Desktop 29.7.2; MyBay 0.1.29-preview.1 candidate2; Codex 0.154.0 bridge 0.1.0-experimental.3",
+      "evidenceRefs": [
+        "certification/artifacts/runtime-v0129-preview1-candidate-20260910.json#observations.markerContinuityAfterRestart"
+      ],
+      "note": "The same MyBay conversation resumed its native Codex thread and recovered the exact marker after the Runtime restarted."
+    },
+    {
+      "requirementId": "file-artifact",
+      "status": "passed",
+      "scope": "runtime",
+      "observedAt": "2026-09-10T16:13:31.473Z",
+      "environment": "Windows Docker Desktop 29.7.2; MyBay 0.1.29-preview.1 candidate2; Codex 0.154.0 bridge 0.1.0-experimental.3",
+      "evidenceRefs": [
+        "certification/artifacts/codex-0.154.0-beta-windows-x64-20260911.json#observations.file"
+      ],
+      "note": "A Runtime-created workspace file was confirmed by tool metadata, persisted message evidence, a bounded before/after snapshot and content hash verification."
+    },
+    {
+      "requirementId": "usage-reporting",
+      "status": "passed",
+      "scope": "runtime",
+      "observedAt": "2026-09-10T14:36:20.471Z",
+      "environment": "Windows Docker Desktop 29.7.2; MyBay 0.1.29-preview.1 candidate2; Codex 0.154.0 bridge 0.1.0-experimental.3",
+      "evidenceRefs": [
+        "certification/artifacts/runtime-v0129-preview1-candidate-20260910.json#observations.runtimes"
+      ],
+      "note": "Both real runs reported run-scoped token usage, model identity and context-window usage."
+    },
+    {
+      "requirementId": "tool-events",
+      "status": "passed",
+      "scope": "runtime",
+      "observedAt": "2026-09-10T16:13:31.473Z",
+      "environment": "Windows Docker Desktop 29.7.2; MyBay 0.1.29-preview.1 candidate2; Codex 0.154.0 bridge 0.1.0-experimental.3",
+      "evidenceRefs": [
+        "certification/artifacts/codex-0.154.0-beta-windows-x64-20260911.json#observations.events"
+      ],
+      "note": "The real run produced three stable started/completed event pairs, including a confirmed file-change pair with the same native call identity."
+    },
+    {
+      "requirementId": "restart-recovery",
+      "status": "passed",
+      "scope": "runtime",
+      "observedAt": "2026-09-11T06:47:12.298Z",
+      "environment": "Windows Docker Desktop 29.7.2; MyBay 0.1.29-preview.1 p15; Codex 0.154.0 bridge 0.1.0-experimental.3; existing ChatGPT OAuth account",
+      "evidenceRefs": [
+        "certification/artifacts/runtime-v0129-preview1-candidate-20260910.json#observations.markerContinuityAfterRestart",
+        "certification/artifacts/codex-0.154.0-recovery-p15-windows-x64-20260911.json#observations.runtimeInterruption",
+        "certification/artifacts/codex-0.154.0-recovery-p15-windows-x64-20260911.json#observations.controlInterruption"
+      ],
+      "note": "A Runtime interruption failed the active turn closed while retaining partial output; a control-plane interruption resumed the in-flight stream to natural completion. Both scenarios retained the same conversation and recalled its marker on a later turn."
+    },
+    {
+      "requirementId": "control-plane-deploy",
+      "status": "passed",
+      "scope": "e2e",
+      "observedAt": "2026-09-11T07:15:36.909Z",
+      "environment": "Windows Docker Desktop 29.7.2; MyBay 0.1.29-preview.1 p16; exact Codex 0.154.0 image; existing saved OpenAI Codex OAuth credential",
+      "evidenceRefs": [
+        "certification/artifacts/codex-0.154.0-certified-windows-x64-20260911.json#observations.controlPlaneDeploy"
+      ],
+      "note": "The authenticated product flow created an isolated restored clone, rebound its local OAuth credential, deployed the exact Runtime image, reached running/chat-ready in the browser, and removed the clone through the cleanup saga."
+    },
+    {
+      "requirementId": "real-e2e",
+      "status": "passed",
+      "scope": "e2e",
+      "observedAt": "2026-09-11T02:56:15.112Z",
+      "environment": "Windows Docker Desktop 29.7.2; MyBay 0.1.29-preview.1 candidate10; Codex 0.154.0 bridge 0.1.0-experimental.3; existing ChatGPT OAuth account",
+      "evidenceRefs": [
+        "certification/artifacts/codex-0.154.0-oauth-lifecycle-20260911.json#observations.automaticRefresh",
+        "certification/artifacts/codex-0.154.0-oauth-lifecycle-20260911.json#observations.restart",
+        "certification/artifacts/codex-0.154.0-oauth-lifecycle-20260911.json#observations.rejectedRefresh",
+        "certification/artifacts/codex-0.154.0-oauth-lifecycle-20260911.json#observations.recovery"
+      ],
+      "note": "A credentialed browser-to-control-plane Codex direct turn refreshed a rejected access token, survived a Runtime restart, exposed the explicit reconnect path for rejected refresh credentials, and completed again after local credential rebinding."
+    },
+    {
+      "requirementId": "upgrade",
+      "status": "passed",
+      "scope": "e2e",
+      "observedAt": "2026-09-11T04:06:58.566Z",
+      "environment": "Windows Docker Desktop 29.7.2; MyBay 0.1.29-preview.1 candidate10; Codex 0.153.4 to 0.154.0; existing ChatGPT OAuth account",
+      "evidenceRefs": [
+        "certification/artifacts/codex-0.154.0-upgrade-rollback-windows-x64-20260911.json#observations.upgrade"
+      ],
+      "note": "The managed upgrade completed through the product API and retained OAuth, the same MyBay and native Codex session IDs, configured model evidence, workspace content and a usable rollback point."
+    },
+    {
+      "requirementId": "rollback",
+      "status": "passed",
+      "scope": "e2e",
+      "observedAt": "2026-09-11T04:06:58.566Z",
+      "environment": "Windows Docker Desktop 29.7.2; MyBay 0.1.29-preview.1 candidate10; Codex 0.154.0 to 0.153.4; existing ChatGPT OAuth account",
+      "evidenceRefs": [
+        "certification/artifacts/codex-0.154.0-upgrade-rollback-windows-x64-20260911.json#observations.rollback"
+      ],
+      "note": "The recorded rollback point restored the retained 0.153.4 image and the same native session recovered both pre-upgrade and post-upgrade markers plus the unchanged workspace file."
+    },
+    {
+      "requirementId": "security",
+      "status": "passed",
+      "scope": "e2e",
+      "observedAt": "2026-09-11T07:15:36.909Z",
+      "environment": "Windows Docker Desktop 29.7.2; MyBay 0.1.29-preview.1 p16; restored Codex 0.154.0 clone",
+      "evidenceRefs": [
+        "certification/artifacts/codex-0.154.0-certified-windows-x64-20260911.json#observations.security"
+      ],
+      "note": "Anonymous protected routes failed closed and the restored Runtime ran as a non-root user with a read-only root filesystem, all capabilities dropped, no-new-privileges, loopback-only publication, resource limits, one data mount and no Docker socket."
+    },
+    {
+      "requirementId": "backup-restore",
+      "status": "passed",
+      "scope": "e2e",
+      "observedAt": "2026-09-11T07:15:36.909Z",
+      "environment": "Authenticated MyBay product backup/import path; Windows Docker Desktop 29.7.2; exact Codex 0.154.0 restored clone; existing saved OpenAI Codex OAuth credential",
+      "evidenceRefs": [
+        "certification/artifacts/codex-0.154.0-certified-windows-x64-20260911.json#observations.backupRestore"
+      ],
+      "note": "The redacted archive preserved a Codex workspace artifact byte-for-byte, previewed and restored it at the Runtime path, required explicit OAuth rebinding, deployed the exact image, completed a credentialed browser-visible Runtime turn and cleaned up the clone."
     }
   ]
 }

@@ -61,9 +61,17 @@ export function AssistantInstanceGrid(props: Props) {
                 )}
                 <AgentAvatar instance={instance} label={instance.name} />
                 <div className="min-w-0 flex-1">
-                  <h3 className="line-clamp-2 break-words text-base font-semibold leading-6 text-content" title={instance.name}>
-                    {instance.name}
-                  </h3>
+                  <button
+                    type="button"
+                    className="block max-w-full rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+                    aria-label={t("agent_view_manage_named", { name: instance.name })}
+                    title={t("action_manage")}
+                    onClick={() => setManagedInstanceId(instance.id)}
+                  >
+                    <h3 className="line-clamp-2 break-words text-base font-semibold leading-6 text-content transition-colors hover:text-indigo-600 dark:hover:text-indigo-300" title={instance.name}>
+                      {instance.name}
+                    </h3>
+                  </button>
                   <p className="mt-0.5 line-clamp-2 break-words text-xs leading-5 text-content-muted" title={subtitle}>
                     {subtitle}
                   </p>

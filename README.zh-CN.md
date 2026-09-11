@@ -52,7 +52,7 @@ MyBay 将产品控制面与 Agent Runtime 分离。你可以按任务选择合�
 | --- | --- | --- | --- |
 | **Hermes Agent** | Certified；精确 OCI 身份已验证 | 通用、工具丰富的 Agent 工作流 | 流式与批量对话、文件、Shell、浏览器、定时任务、Web 与已支持的消息渠道 |
 | **Pi Agent** | Certified；本机精确构建已验证 | 编程和工作区类 Agent 工作流 | 流式对话、文件、Shell、停止、会话恢复、审批、用量和 Web 访问 |
-| **Codex** | Experimental；本机精确构建已验证 | 使用 Codex / ChatGPT 账号的原生编程 Agent 工作流 | 流式对话、文件、Shell、停止、原生会话连续性、审批和用量证据 |
+| **Codex** | Certified；本机精确构建已验证 | 使用 Codex / ChatGPT 账号的原生编程 Agent 工作流 | 流式对话、文件、Shell、停止、原生会话连续性、审批、用量、工具事件、重启恢复、升级、回滚和可移植备份恢复 |
 | **更多底座** | 路线图 | 更多开源 Agent Runtime | 通过 Runtime 清单、Adapter 契约、能力守卫和认证阶梯接入 |
 
 自动生成的 [Runtime 能力矩阵](./docs/runtime-capability-matrix.md) 是当前声明能力与渠道的事实来源。[MyBay Runtime Certification](./docs/runtime-certification.md) 单独发布基于证据的验证结果；仅注册 Adapter 或声明能力不代表产品 E2E 已通过。
@@ -80,7 +80,7 @@ chmod +x quick-start.sh
 ./quick-start.sh
 ```
 
-打开 [http://localhost:3000](http://localhost:3000)，添加模型供应商或连接 Codex / ChatGPT 账号，然后选择 Hermes Agent、Pi Agent 或 Experimental Codex 部署第一个 Agent。不要分享或提交 `.env`。
+打开 [http://localhost:3000](http://localhost:3000)，添加模型供应商或连接 Codex / ChatGPT 账号，然后选择 Hermes Agent、Pi Agent 或 Codex 部署第一个 Agent。不要分享或提交 `.env`。
 
 第一次尝试生成文件时，请在对话输入框旁切换为“Agent模式”。默认的“快速模式”只回复文字，不执行工具或保存文件。
 
@@ -286,7 +286,7 @@ data/
 
 - **Hermes Agent：** 当前可用、可部署，并达到 MyBay `certified` 级别。固定的 v2026.8.27 镜像已绑定保留的 OCI 摘要及 Windows Docker Desktop 认证证据。
 - **Pi Agent：** 当前默认可用、可部署，并达到 MyBay `certified` 级别。Pi 0.85.1 与 bridge 0.1.1-beta 已绑定保留的 Windows Docker 镜像身份；已有安装仍可显式设置 `MYBAY_ENABLE_PI_RUNTIME=false` 保持关闭。
-- **Codex：** 当前以 `experimental` 状态可用、可部署。本机 Codex 0.154.0 / bridge 0.1.0-experimental.3 镜像已和保留的生命周期证据精确绑定；跨平台认证和公共镜像发布仍待完成。
+- **Codex：** 当前以 MyBay `certified` 级别可用、可部署。本机 Codex 0.154.0 / bridge 0.1.0-experimental.3 镜像已和 Windows Docker Desktop 上的部署、执行、流式输出、停止、恢复、文件、用量、工具事件、升级、回滚、安全和可移植备份恢复证据精确绑定。Windows 原生数据到 Linux 的迁移以及公共多架构镜像发布不在本次认证范围内。
 
 控制面会依据所选 Runtime 的能力声明禁用不支持的功能。依赖具体消息渠道或对话模式前，请查看自动生成的 [Runtime 能力矩阵](./docs/runtime-capability-matrix.md)。
 
@@ -327,7 +327,7 @@ desktop、LAN、server 三种模式的 Webhook 默认都要求 secret。历史�
 
 ## Agent 运行态接入规范 (`mybay.runtime.yaml`)
 
-MyBay 提供可扩展的 **Agent Runtime Specification（运行态接入规范）**，用于接入更多开源 Agent。Hermes 与 Pi 已具备当前固定构建的 schema v3 精确证据；Codex 为 Experimental，已保留本机构建的精确证据：
+MyBay 提供可扩展的 **Agent Runtime Specification（运行态接入规范）**，用于接入更多开源 Agent。Hermes、Pi 与 Codex 均具备当前固定构建的 schema v3 精确证据：
 
 - **JSON Schema 校验规范**：`/public/schemas/mybay.runtime.schema.json`
 - **运行态规格声明示例**：

@@ -8,4 +8,4 @@ Runtime-declared capabilities describe the integration contract. They do not pro
 | --- | --- | --- | --- | ---: | --- | ---: | --- | --- |
 | Hermes Agent | hermes | available | certified | yes | streaming, batch | yes | chat, file-upload, scheduled-tasks, browser, shell | web, telegram, feishu, weixin, slack, webhook, api |
 | Pi Agent | pi | available | certified | yes | streaming | yes | chat, file-upload, shell | web |
-| Codex | codex | available | experimental | yes | streaming | yes | chat, file-upload, shell | web |
+| Codex | codex | available | certified | yes | streaming | yes | chat, file-upload, shell | web |

@@ -37,6 +37,8 @@ export type RuntimeRunTerminalOutcome =
 
 export interface RuntimeRunEventDependencies {
   addEvent(runId: string, event: string, data: string, ownerId?: string): void;
+  /** Persist the cumulative visible answer before terminal recovery needs it. */
+  persistPartialOutput(runId: string, partialOutput: string, ownerId?: string): Promise<unknown>;
   completeTerminal(
     run: RuntimeRunEventTarget,
     outcome: RuntimeRunTerminalOutcome,

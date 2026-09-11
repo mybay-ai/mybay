@@ -7,7 +7,6 @@ import path from "path";
 import os from "os";
 import multer from "multer";
 import { hasZipMagic } from "../../utils/uploadSecurity";
-import AdmZip from "adm-zip";
 import * as archiver from "archiver";
 import { resolveArchiverFactory } from "../../utils/resolveArchiverFactory";
 import { executeDeployment, buildDeploymentContext, rebuildProxyConfig } from "../../deployment";
@@ -35,7 +34,7 @@ import { execFile } from "child_process";
 import { runInstanceHealthChecks } from "../../healthCheck";
 import { startPeriodicAgentDbSync } from "../../sqliteAgentSync";
 import { ensureEncryptedDashboardAuthSecret } from "../../utils/dashboardAuthSecret";
-import { applySavedProviderCredential, SavedProviderCredentialError } from "../../utils/savedProviderCredential";
+import { applySavedProviderCredential, resolveStoredCredentialApiKey, SavedProviderCredentialError } from "../../utils/savedProviderCredential";
 import { validateConfigArchiveEntries } from "../../utils/configArchiveSecurity";
 import {
   isPrivilegedUser,
@@ -54,12 +53,71 @@ import {
   INSTANCE_OPERATION_IN_PROGRESS,
   instanceOperationCoordinator,
 } from "../../services/instances/instanceOperationCoordinator";
+import {
+  normalizeCodexAccountAuth,
+  writeCodexRuntimeAccountAuth,
+} from "../../runtime/adapters/codex/CodexRuntimeEnvironment";
 
 export function createConfigRoutes(deps: RouterDependencies) {
   const router = Router();
   const { io, wrappedUpdateStatus, docker, setupSessionMap, containerStatsCache } = deps;
 
   router.use(createConfigArchiveRoutes(deps));
+
+  router.post("/:id/codex-oauth", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const credentialId = typeof req.body?.credentialId === "string" ? req.body.credentialId.trim() : "";
+      if (!credentialId) return res.status(400).json({ code: "CREDENTIAL_REQUIRED", error: "A saved Codex OAuth credential is required." });
+
+      const instance: any = await dbAdapter.getInstanceById(req.params.id);
+      if (!instance) return res.status(404).json({ code: "INSTANCE_NOT_FOUND", error: "Instance not found" });
+      if (instance.user_id !== req.user.id && !isPrivilegedUser(req.user)) {
+        return res.status(403).json({ code: "FORBIDDEN", error: "Forbidden: Access denied" });
+      }
+      if (String(instance.runtime_type || "").toLowerCase() !== "codex") {
+        return res.status(409).json({ code: "CODEX_RUNTIME_REQUIRED", error: "OAuth reconnection is only available for Codex instances." });
+      }
+
+      const credential: any = await dbAdapter.getCredentialById(credentialId, req.user.id);
+      if (!credential || credential.type !== "openai-codex") {
+        return res.status(404).json({ code: "CODEX_OAUTH_CREDENTIAL_NOT_FOUND", error: "The selected Codex OAuth credential was not found." });
+      }
+      const storedKey = credential.key || credential.encrypted_value || credential.key_encrypted;
+      const normalizedAuth = normalizeCodexAccountAuth(resolveStoredCredentialApiKey(storedKey));
+      const config = parseInstanceConfigJson(instance.config_json);
+      config.provider = "openai";
+      config.codexAuthMode = "chatgpt";
+      config.providerCredentialId = credentialId;
+      config.codexAuthJson = encrypt(normalizedAuth);
+      delete config.providerApiKey;
+      delete config.apiKey;
+      delete config.baseUrl;
+
+      writeCodexRuntimeAccountAuth(req.params.id, normalizedAuth);
+      await dbAdapter.updateInstanceConfig(req.params.id, JSON.stringify(config));
+      await dbAdapter.updateInstanceVersionInfo(req.params.id, {
+        model_provider: "openai-codex",
+        model_config_status: "pending",
+        model_config_error: null,
+      });
+      await dbAdapter.insertAuditLog({
+        instance_id: req.params.id,
+        action: "reconnect_codex_oauth",
+        user_id: req.user.id,
+        timestamp: new Date().toISOString(),
+        details: "Reconnected local OpenAI Codex OAuth credential",
+      });
+      io.emit("instances_updated", { id: req.params.id, status: instance.status });
+      return res.json({ success: true, credentialId, authMode: "chatgpt" });
+    } catch (error: any) {
+      const code = String(error?.code || error?.message || "");
+      if (["CREDENTIAL_DECRYPT_FAILED", "CODEX_ACCOUNT_AUTH_INVALID"].includes(code)) {
+        return res.status(400).json({ code, error: "The saved Codex OAuth credential is invalid. Reconnect the account and try again." });
+      }
+      console.error("[Codex OAuth] Failed to reconnect instance:", error?.message || error);
+      return res.status(500).json({ code: "CODEX_OAUTH_RECONNECT_FAILED", error: "Failed to reconnect Codex OAuth." });
+    }
+  });
 
   router.put("/:id/config", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     try {

@@ -26,6 +26,10 @@ import { DeployReviewStep } from "./DeployReviewStep";
 import { isDeployChannelAllowedByEntitlement } from "../../../shared/planChannelAccess";
 import { HERMES_RUNTIME_DEFINITION } from "../../../shared/runtimeCatalog";
 
+function secureRandomSuffix(length = 6): string {
+  return crypto.randomUUID().replaceAll("-", "").slice(0, length);
+}
+
 export function DeployWizard({ 
   onSuccess, 
   socket, 
@@ -89,9 +93,9 @@ export function DeployWizard({
   const planChannelRestrictionMessage = t("validation.plan_channel_restricted");
 
   const [data, setData] = useState<Partial<SetupFormData>>(() => normalizeRuntimeAccessDraft({
-    id: Math.random().toString(36).substring(7),
+    id: crypto.randomUUID(),
     runtime_type: "hermes",
-    path: `agent-${Math.random().toString(36).substring(2, 8)}`,
+    path: `agent-${secureRandomSuffix()}`,
     image: HERMES_RUNTIME_DEFINITION.runtime.image,
     imageTag: HERMES_RUNTIME_DEFINITION.runtime.tag,
     channel: "web",
@@ -190,7 +194,7 @@ export function DeployWizard({
             const presetConfig = {
               template_id: t.id,
               template_slug: t.slug || t.id,
-              name: `${t.name}-${Math.random().toString(36).substring(7).toUpperCase()}`,
+              name: `${t.name}-${secureRandomSuffix().toUpperCase()}`,
               username: "admin",
               prompt: t.default_prompt || "",
               provider: t.default_provider || "",
@@ -238,7 +242,7 @@ export function DeployWizard({
             setActiveBlueprint(bp);
             setActiveWorkflowTemplate(null);
             const presetConfig = {
-              name: `${bp.name}-${Math.random().toString(36).substring(7).toUpperCase()}`,
+              name: `${bp.name}-${secureRandomSuffix().toUpperCase()}`,
               username: "admin",
               prompt: bp.system_context_preview || "",
               provider: "google",
@@ -669,7 +673,7 @@ export function DeployWizard({
               const presetConfig = {
                 template_id: t.id,
                 template_slug: t.slug || t.id,
-                name: `${t.name}-${Math.random().toString(36).substring(7).toUpperCase()}`,
+                name: `${t.name}-${secureRandomSuffix().toUpperCase()}`,
                 username: "admin",
                 prompt: t.default_prompt || "",
                 provider: t.default_provider || "",

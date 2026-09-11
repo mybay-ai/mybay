@@ -39,6 +39,24 @@ export class NormalizedRunEventProvider implements RuntimeRunEventProvider {
   createController(dependencies: RuntimeRunEventDependencies): RuntimeRunEventController {
     const { shouldReconcileEmptyFailure } = this.policy;
     const trackers = new Map<string, RuntimeRunEventTracker>();
+    const progressWrites = new Map<string, Promise<unknown>>();
+
+    function persistProgress(runId: string, partialOutput: string): void {
+      const previous = progressWrites.get(runId);
+      const write = previous
+        ? previous.then(() => dependencies.persistPartialOutput(runId, partialOutput))
+        : dependencies.persistPartialOutput(runId, partialOutput);
+      const guarded = write.catch((error) => {
+        dependencies.warn(
+          `[RunsReconciler] Partial output persistence failed for run ${runId}:`,
+          error instanceof Error ? error.message : "unknown",
+        );
+      });
+      progressWrites.set(runId, guarded);
+      void guarded.finally(() => {
+        if (progressWrites.get(runId) === guarded) progressWrites.delete(runId);
+      });
+    }
 
     function getOrCreate(runId: string, initialPartialOutput: unknown = ""): RuntimeRunEventTracker {
       let tracker = trackers.get(runId);
@@ -101,6 +119,7 @@ export class NormalizedRunEventProvider implements RuntimeRunEventProvider {
       if (event.run_id && upstreamRunId && String(event.run_id) !== upstreamRunId) return false;
       const eventType = String(event.event || event.type || "");
       const tracker = trackers.get(run.id);
+      await progressWrites.get(run.id);
       const durationMs = typeof event.duration_ms === "number" && Number.isSafeInteger(event.duration_ms) && event.duration_ms >= 0 ? event.duration_ms : null;
 
       if (TERMINAL_COMPLETED_EVENTS.has(eventType)) {
@@ -177,6 +196,7 @@ export class NormalizedRunEventProvider implements RuntimeRunEventProvider {
           return;
         }
         tracker.lastPartialOutput = nextOutput;
+        persistProgress(run.id, nextOutput);
         dependencies.addEvent(run.id, "text", event.delta);
         return;
       }

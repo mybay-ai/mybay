@@ -9,6 +9,7 @@ import { conversationSearchLimiter, conversationWriteLimiter } from "./conversat
 import { resolveConversationAuthority, resolveInstanceAuthority } from "../../../services/instances/resourceAuthorityService";
 import { readChatGroupConfig } from "../../../../shared/chatCollaboration";
 import { normalizeA2APeerIds } from "../../../../shared/a2aConfig";
+import { getLiveRunPartialOutput } from "../../../services/runsReconciler";
 
 export function registerConversationRoutes(router: Router) {
 
@@ -469,7 +470,7 @@ export function registerConversationRoutes(router: Router) {
           upstreamRunId: activeRun.upstream_run_id,
           userMessageId: activeRun.user_message_id,
           requestId: activeRun.request_id,
-          partialOutput: activeRun.partial_output,
+          partialOutput: getLiveRunPartialOutput(activeRun.id) ?? activeRun.partial_output,
           errorCode: activeRun.error_code,
           lastEventSeq: activeRun.last_event_seq,
           updatedAt: activeRun.updated_at,

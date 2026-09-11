@@ -10,7 +10,7 @@ A declared certification level is a release target. A verified level is granted 
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | hermes | certified | certified | exact | oci-digest | verified | windows/not-retained (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop) | 2026-09-07T19:12:40.573Z | certification/evidence/hermes.certification.json |
 | pi | certified | certified | exact | docker-image-id | verified | windows/not-retained (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop) | 2026-09-07T19:12:40.573Z | certification/evidence/pi.certification.json |
-| codex | experimental | experimental | exact | docker-image-id | verified | windows/x64 (docker-desktop), windows/x64 (docker-desktop) | 2026-09-10T11:32:55.506Z | certification/evidence/codex.certification.json |
+| codex | certified | certified | exact | docker-image-id | verified | windows/x64 (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop) | 2026-09-11T07:15:36.909Z | certification/evidence/codex.certification.json |
 
 ## Evidence-backed capability coverage
 
@@ -20,7 +20,7 @@ A `passed` cell means retained evidence satisfied that certification requirement
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | hermes | passed | passed | passed | passed | passed | passed | passed | passed | passed | passed | passed | passed | passed | n/a* | verified |
 | pi | passed | passed | passed | passed | passed | passed | passed | passed | passed | passed | passed | passed | passed | n/a* | verified |
-| codex | passed | passed | passed | passed | missing | missing | missing | missing | missing | missing | missing | missing | missing | n/a* | verified |
+| codex | passed | passed | passed | passed | passed | passed | passed | passed | passed | passed | passed | passed | passed | n/a* | verified |
 
 Note: A2A is currently a Control Plane collaboration feature, not a field in the Runtime Driver capability contract or certification ladder. It is shown as `n/a` rather than inferred.
 

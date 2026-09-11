@@ -58,6 +58,6 @@ P1 changed no persisted schema, public capability declaration or Driver contract
 
 ## P2 Codex implementation / P2 Codex 实施
 
-Codex now has an isolated App Server bridge pinned to official CLI 0.154.0 with MyBay bridge 0.1.0-experimental.3, a registered Driver, account-import deployment, capability-based readiness, and same-host local upgrade and rollback. Deployment is available by default without an opt-in flag; certification remains Experimental. See [bridge boundaries](../runtime/codex-bridge/README.md). Claude Code is not implemented.
+Codex now has an isolated App Server bridge pinned to official CLI 0.154.0 with MyBay bridge 0.1.0-experimental.3, a registered Driver, account-import deployment, capability-based readiness, and same-host local upgrade and rollback. Deployment is available by default without an opt-in flag; exact Windows Docker Desktop evidence verifies the Runtime at Certified, including security and portable backup/restore with explicit OAuth rebinding. See [bridge boundaries](../runtime/codex-bridge/README.md). Claude Code is not implemented.
 
 Approval resolution keeps the run waiting while another pending approval remains. Restart preserves completed session identity but explicitly fails an in-flight turn; no automatic tool replay is claimed. Native account and bridge state directories are excluded from the product file surface. Upgrade and rollback fail closed before lifecycle mutation.

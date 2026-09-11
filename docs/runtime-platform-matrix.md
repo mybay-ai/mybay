@@ -14,7 +14,7 @@ This matrix reports retained real-runtime certification evidence. It is delibera
 | pi | linux | Docker Engine | Pending | No retained real-runtime evidence |
 | pi | macos | Docker Desktop | Pending | No retained real-runtime evidence |
 | pi | linux | Docker Engine (headless server) | Pending | No retained real-runtime evidence |
-| codex | windows | Docker Desktop | experimental | x64; Docker version not retained; MyBay 0.1.28; Runtime Codex 0.154.0; bridge 0.1.0-experimental.3 |
+| codex | windows | Docker Desktop | certified | x64; Docker version not retained; MyBay 0.1.28; Runtime Codex 0.154.0; bridge 0.1.0-experimental.3<br>x64; 29.7.2; MyBay 0.1.29-preview.1; Runtime Codex 0.154.0; bridge 0.1.0-experimental.3 |
 | codex | linux | Docker Engine | Pending | No retained real-runtime evidence |
 | codex | macos | Docker Desktop | Pending | No retained real-runtime evidence |
 | codex | linux | Docker Engine (headless server) | Pending | No retained real-runtime evidence |

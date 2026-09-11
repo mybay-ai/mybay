@@ -7,6 +7,10 @@ import { checkSSRFSafe } from "../../utils/ssrfValidator";
 
 const MAX_OUTBOUND_RESPONSE_BYTES = 2 * 1024 * 1024;
 
+function outboundPolicyError(message: string): Error & { code: "OUTBOUND_URL_REJECTED" } {
+  return Object.assign(new Error(message), { code: "OUTBOUND_URL_REJECTED" as const });
+}
+
 function isPublicAddress(address: string): boolean {
   try {
     return ipaddr.parse(address).range() === "unicast";
@@ -45,14 +49,14 @@ export async function isSafeUrl(urlStr: string, allowPrivateNetwork = false): Pr
  */
 export async function safeOutboundFetch(urlStr: string, init: RequestInit = {}): Promise<Response> {
   const parsed = new URL(urlStr);
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") throw new Error("Unsupported outbound protocol");
-  if (parsed.username || parsed.password) throw new Error("Outbound URL credentials are not allowed");
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") throw outboundPolicyError("Unsupported outbound protocol");
+  if (parsed.username || parsed.password) throw outboundPolicyError("Outbound URL credentials are not allowed");
   const policy = await checkSSRFSafe(parsed.toString());
-  if (!policy.safe) throw new Error(policy.error || "Outbound URL rejected by SSRF policy");
+  if (!policy.safe) throw outboundPolicyError(policy.error || "Outbound URL rejected by SSRF policy");
 
   const records = await dns.promises.lookup(parsed.hostname, { all: true, verbatim: true });
   if (!records.length || records.some((record) => !isPublicAddress(record.address))) {
-    throw new Error("Outbound host resolved to a restricted network address");
+    throw outboundPolicyError("Outbound host resolved to a restricted network address");
   }
   const pinned = records[0];
   const transport = parsed.protocol === "https:" ? https : http;

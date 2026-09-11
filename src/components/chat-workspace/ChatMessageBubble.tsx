@@ -4,7 +4,7 @@ import { readLocalRunUsage, usageNumber } from "../../../shared/localRunUsage";
 import { readLocalModelEvidence } from "../../../shared/localModelEvidence";
 import { memo, useEffect, useMemo, useState } from "react";
 import { useChatCallback } from './useChatCallback';
-import { Brain, Check, Clock3, Copy, Gauge, ThumbsDown, ThumbsUp } from "lucide-react";
+import { Brain, Check, Clock3, Copy, Gauge, RefreshCw, ThumbsDown, ThumbsUp } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { AgentInstance, User as UserType } from "../../types";
 import type { ChatMessage } from "../../lib/chatWorkspaceState";
@@ -40,8 +40,11 @@ interface ChatMessageBubbleProps {
   selectedConversationId: string | null;
   sending: boolean;
   onRetry: (message: ChatMessage) => void;
+  canRegenerate?: boolean;
   onEdit?: (message: ChatMessage) => void;
   onSwitchToAssistAndDiagnose?: () => void;
+  onReconnectCodexOAuth?: () => void;
+  reconnectingCodexOAuth?: boolean;
   conversationFiles?: PendingAttachment[];
   onOpenConversationFile?: (file: PendingAttachment) => void;
   onOpenInstanceFilePath?: (filePath: string) => void;
@@ -135,8 +138,11 @@ function ChatMessageBubbleBody({
   selectedConversationId,
   sending,
   onRetry,
+  canRegenerate = false,
   onEdit,
   onSwitchToAssistAndDiagnose,
+  onReconnectCodexOAuth,
+  reconnectingCodexOAuth,
   conversationFiles = EMPTY_CONVERSATION_FILES,
   onOpenConversationFile,
   onOpenInstanceFilePath,
@@ -290,6 +296,19 @@ function ChatMessageBubbleBody({
             >
               {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
             </button>
+            {canRegenerate && retrySourceMessage && message.status === "completed" && (
+              <button
+                type="button"
+                onClick={() => onRetry(retrySourceMessage)}
+                disabled={sending}
+                className="inline-flex h-7 items-center justify-center gap-1 rounded-full px-2 hover:bg-surface-muted hover:text-content-secondary disabled:opacity-50"
+                title={t("chatWorkspace.regenerateResponse")}
+                aria-label={t("chatWorkspace.regenerateResponse")}
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                <span className="text-[11px] font-semibold">{t("chatWorkspace.regenerateResponse")}</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => handleAssistantFeedback("up")}
@@ -327,7 +346,7 @@ function ChatMessageBubbleBody({
             )}
           </div>
         )}
-        <ChatMessageStatusNotices message={message} isUser={isUser} sending={sending} failureMessage={failureMessage} retryTarget={retryTarget} onRetry={onRetry} onEdit={onEdit} onSwitchToAssistAndDiagnose={onSwitchToAssistAndDiagnose} t={t} />
+        <ChatMessageStatusNotices message={message} isUser={isUser} sending={sending} failureMessage={failureMessage} retryTarget={retryTarget} onRetry={onRetry} onEdit={onEdit} onSwitchToAssistAndDiagnose={onSwitchToAssistAndDiagnose} onReconnectCodexOAuth={onReconnectCodexOAuth} reconnectingCodexOAuth={reconnectingCodexOAuth} t={t} />
       </div>
 
       {isUser && <ChatUserAvatar currentUser={currentUser} />}
@@ -341,12 +360,13 @@ export function ChatMessageBubble(props: ChatMessageBubbleProps) {
   const onRetry = useChatCallback(props.onRetry);
   const onEdit = useChatCallback(props.onEdit);
   const onSwitchToAssistAndDiagnose = useChatCallback(props.onSwitchToAssistAndDiagnose);
+  const onReconnectCodexOAuth = useChatCallback(props.onReconnectCodexOAuth);
   const onOpenConversationFile = useChatCallback(props.onOpenConversationFile);
   const onOpenInstanceFilePath = useChatCallback(props.onOpenInstanceFilePath);
   const onDownloadInstanceFilePath = useChatCallback(props.onDownloadInstanceFilePath);
   const onMessageFeedbackChange = useChatCallback(props.onMessageFeedbackChange);
   const onRespondToApproval = useChatCallback(props.onRespondToApproval);
-  return <MemoizedMessageBubble {...props} onRetry={onRetry} onEdit={onEdit} onSwitchToAssistAndDiagnose={onSwitchToAssistAndDiagnose}
+  return <MemoizedMessageBubble {...props} onRetry={onRetry} onEdit={onEdit} onSwitchToAssistAndDiagnose={onSwitchToAssistAndDiagnose} onReconnectCodexOAuth={onReconnectCodexOAuth}
     onOpenConversationFile={onOpenConversationFile} onOpenInstanceFilePath={onOpenInstanceFilePath} onDownloadInstanceFilePath={onDownloadInstanceFilePath}
     onMessageFeedbackChange={onMessageFeedbackChange} onRespondToApproval={onRespondToApproval} />;
 }

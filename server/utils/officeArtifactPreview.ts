@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import AdmZip from "adm-zip";
+import { readOnlyZip } from "./readOnlyZip";
 import WordExtractor from "word-extractor";
 import * as XLSX from "@e965/xlsx";
 
@@ -88,8 +88,14 @@ function slideNumber(entryName: string): number {
 }
 
 function renderPptxPreview(filePath: string, title: string): OfficeArtifactPreview {
-  const archive = new AdmZip(filePath);
-  const slides = archive.getEntries()
+  const slides = readOnlyZip(fs.readFileSync(filePath), {
+    include: name => /^ppt\/slides\/slide\d+\.xml$/i.test(name),
+    limits: {
+      maxEntries: 5_000,
+      maxEntryBytes: OFFICE_ARTIFACT_PREVIEW_MAX_BYTES,
+      maxTotalBytes: 200 * 1024 * 1024,
+    },
+  })
     .filter(entry => /^ppt\/slides\/slide\d+\.xml$/i.test(entry.entryName))
     .sort((left, right) => slideNumber(left.entryName) - slideNumber(right.entryName));
   const visibleSlides = slides.slice(0, MAX_SLIDES);

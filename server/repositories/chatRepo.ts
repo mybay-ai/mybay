@@ -449,6 +449,12 @@ export const chatRepo = {
     return selectRecentMessagesForContext(rows, maxChars);
   },
 
+  async getLatestFailedMessage(conversationId: string): Promise<ChatMessage | null> {
+    return readStoreCollections(["chatMessages"] as const).chatMessages
+      .filter((message) => message.conversation_id === conversationId && (message.status === "failed" || !!message.error_code))
+      .sort((a, b) => Number(b.sequence_no || 0) - Number(a.sequence_no || 0))[0] || null;
+  },
+
   async getMessage(messageId: string): Promise<ChatMessage | null> {
     return readStoreCollections(["chatMessages"] as const).chatMessages.find((m) => m.id === messageId) || null;
   },

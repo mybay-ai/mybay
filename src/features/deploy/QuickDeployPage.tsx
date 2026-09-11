@@ -31,17 +31,11 @@ interface QuickDeployPageProps {
   onViewInstances: () => void;
 }
 
-function randomToken() {
-  return typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : Math.random().toString(36).slice(2) + Date.now().toString(36);
-}
-
 export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat, onViewInstances }: QuickDeployPageProps) {
   const { t } = useTranslation("deploy");
   const [draft, setDraft] = useState<QuickDeployDraft>(() => createQuickDeployDraft());
-  const [path] = useState(() => buildQuickDeployPath("agent", randomToken()));
-  const [idempotencyKey] = useState(() => randomToken());
+  const [path] = useState(() => buildQuickDeployPath("agent", crypto.randomUUID()));
+  const [idempotencyKey] = useState(() => crypto.randomUUID());
   const [credentials, setCredentials] = useState<Credential[]>([]);
   const [optionsLoading, setOptionsLoading] = useState(true);
   const [runtimeDefinitions, setRuntimeDefinitions] = useState<RuntimeDefinition[]>([]);

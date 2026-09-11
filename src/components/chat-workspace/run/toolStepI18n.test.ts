@@ -7,6 +7,8 @@ describe("translateToolStepLabel", () => {
   it("translates known Agent event titles", () => {
     expect(translateToolStepLabel(t, "Agent task queued")).toBe("translated:chatWorkspace.toolStepAgentTaskQueued");
     expect(translateToolStepLabel(t, "Deployment worker claimed the Agent task")).toBe("translated:chatWorkspace.toolStepDeploymentWorkerClaimed");
+    expect(translateToolStepLabel(t, "Connecting to Pi Agent runtime")).toBe("translated:chatWorkspace.toolStepConnectingRuntime");
+    expect(translateToolStepLabel(t, "Connected to Codex Agent runtime")).toBe("translated:chatWorkspace.toolStepConnectedRuntime");
   });
 
   it("translates stored chatWorkspace keys", () => {

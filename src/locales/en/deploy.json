@@ -272,7 +272,7 @@
     "quickDeploy":  {
     "badge": "Local quick deploy",
     "title": "Start your Agent in minutes",
-    "description": "Create an isolated local Agent with Hermes, Pi or Experimental Codex.",
+    "description": "Create an isolated local Agent with Hermes, Pi, or Beta Codex.",
     "advanced": "Switch to advanced setup",
     "deploy": "Deploy Agent now",
     "deployPi": "Deploy Pi Agent now",
@@ -286,8 +286,8 @@
       "hermesDescription": "Supports Dashboard, Web and external messaging channels, skills, and the full toolchain.",
       "piDescription": "An isolated runtime built on official Pi RPC with Web streaming, session recovery, and file workflows.",
       "unavailable": "Deployment is unavailable in this version",
-      "codexBadge": "Experimental",
-      "codexDescription": "Isolated sessions using a Codex / ChatGPT account or a Responses-compatible model API, with Web chat."
+      "codexBadge": "Beta · Local preview",
+      "codexDescription": "Run isolated sessions with a Codex / ChatGPT account or a Responses-compatible model API; deployment, streaming chat, stop, session recovery, file artifacts, and tool events are verified."
     },
     "instance": {
       "title": "Agent information",
@@ -1298,6 +1298,8 @@
                                             "hermesDescription":  "Classic full-featured runtime with the 9119 control API, Python executor, and multiple messaging channels.",
                                             "piBadge":  "Certified / Web chat",
                                             "piDescription":  "An isolated runtime built on the official Pi RPC interface, currently supporting Web streaming, session recovery, tool progress, and stop.",
+                                            "codexBadge":  "Beta · Local preview",
+                                            "codexDescription":  "Uses isolated Codex App Server sessions; deployment, streaming chat, stop, session recovery, file artifacts, and tool events are verified.",
                                             "runtimeLoading":  "Loading verified runtime capabilities…",
                                             "runtimeLoadError":  "Runtime capabilities could not be verified. Deployment selection is disabled to prevent an unsupported runtime from being created.",
                                             "runtimeUnavailable":  "Runtime unavailable",

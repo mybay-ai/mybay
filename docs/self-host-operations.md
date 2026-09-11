@@ -7,7 +7,7 @@ npm run doctor
 npm run doctor -- --json
 ```
 
-Doctor checks SQLite integrity and schema metadata, Docker daemon reachability, disk availability, and whether required encryption, JWT, and internal-routing secrets are configured with valid shapes. It reports only secret status and never prints secret values.
+Doctor checks SQLite integrity and schema metadata, Docker daemon reachability, disk availability, and whether required encryption, JWT, and internal-routing secrets are configured with valid shapes. It reports only secret status and never prints secret values. Normal service startup also runs a read-only SQLite `quick_check` before schema setup or migration; a failed check leaves the existing file in place and stops startup with `LOCAL_SQLITE_INTEGRITY_FAILED`.
 
 ## Backup
 
@@ -32,7 +32,7 @@ The SQLite snapshot is transactionally consistent, but files copied from active 
 
 ## Restore into a new directory
 
-The local candidate includes an isolated restore command. It does **not** overwrite live data, restart containers, migrate schemas, or perform an application rollback. These commands require this candidate's source or an image built from it, not the already published v0.1.24 image.
+The local candidate includes an isolated restore command. It does **not** overwrite live data, restart containers, migrate schemas, or perform an application rollback. These commands require this candidate's source or an image built from it, not an older published image.
 
 ```bash
 npm run backup:verify -- --backup /secure/path/mybay-backup
@@ -59,7 +59,7 @@ For POSIX shells, use the same container commands with absolute host paths in `-
 
 ## Manual cutover and rollback gate
 
-The candidate now validates the database before starting HTTP or background workers. A schema newer than this application supports is rejected before schema initialization; use the matching version or an older backup, not an in-place downgrade.
+The candidate now validates the database before starting HTTP or background workers. Corrupt SQLite input and a schema newer than this application supports are rejected before schema initialization; use a verified backup and the matching application version, not an in-place downgrade. Graceful shutdown attempts a truncating WAL checkpoint before closing the final connection; an abrupt host or process loss still relies on SQLite WAL recovery and must be tested separately for each deployment environment.
 
 1. Verify the recovered copy before changing a service. Keep the original data, `.env`, exact image digests, Agent IDs and bind-mount paths as the rollback point.
 2. Use a separate port and private network for a rehearsal. Preserve the original `ENCRYPTION_KEY`; do not let a rehearsal controller operate production Agents through a shared Docker socket. Validate login, decrypted model configuration, history and file hashes.

@@ -16,6 +16,7 @@ interface CodexVersion {
   capabilities?: string[];
   is_latest?: boolean;
   prewarm_status?: string;
+  certification_level?: "experimental" | "beta" | "certified";
 }
 
 interface CodexVersionPanelProps {
@@ -113,7 +114,14 @@ export function CodexVersionPanel({
             <div className="flex items-center gap-2">
               <strong className="font-mono">{version.version}</strong>
               {version.is_latest && <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-500">{t("codexVersions.latest")}</span>}
-              <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-500">{t("codexVersions.experimental")}</span>
+              <span className={cn(
+                "rounded-full px-2 py-0.5 text-xs font-semibold",
+                version.certification_level === "certified"
+                  ? "bg-emerald-500/15 text-emerald-500"
+                  : version.certification_level === "beta"
+                    ? "bg-indigo-500/15 text-indigo-500"
+                    : "bg-amber-500/15 text-amber-500",
+              )}>{t(`codexVersions.${version.certification_level}`)}</span>
             </div>
             <span className="text-xs text-content-muted">{version.published_at?.slice(0, 10)}</span>
           </div>

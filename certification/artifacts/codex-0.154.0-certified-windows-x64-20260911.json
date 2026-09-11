@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "artifactType": "codex-runtime-certified-deploy-security-backup-restore-live-evidence",
+  "capturedAt": "2026-09-11T07:15:36.909Z",
+  "environment": {
+    "host": "Windows 10 Pro x64 with Docker Desktop 29.7.2",
+    "application": "MyBay OSS 0.1.29-preview.1 on 127.0.0.1:4372",
+    "controlImage": "mybay/local:0.1.29-preview.1-p16",
+    "runtime": {
+      "type": "codex",
+      "providerKey": "codex-app-server",
+      "contractVersion": 1,
+      "nativeVersion": "0.154.0",
+      "bridgeVersion": "0.1.0-experimental.3",
+      "image": "mybay/codex-runtime:0.154.0",
+      "imageId": "sha256:20b46c8407fa9f4a40435653db85b00518d9fff132a7333b9482246357f42256"
+    },
+    "credentialMode": "existing saved OpenAI Codex OAuth credential"
+  },
+  "sanitization": {
+    "credentials": "Credential values, cookies, access tokens, refresh tokens, passwords and encryption material were not retained.",
+    "archive": "The credential-free product backup remains under the ignored data directory; only its checksum, size, structure and bounded file evidence are retained.",
+    "docker": "Only container policy fields, image identity, resource limits, mount destinations and environment variable names were retained."
+  },
+  "observations": {
+    "controlPlaneDeploy": {
+      "result": "passed",
+      "productPath": "Authenticated MyBay export -> import preview -> clone -> reconnect saved Codex OAuth -> redeploy",
+      "cloneInitialState": "stopped",
+      "credentialRebound": true,
+      "deploymentAccepted": true,
+      "deploymentDurationMs": 13258,
+      "finalStatus": "running",
+      "exactRuntimeImage": true,
+      "runtimeImageId": "sha256:20b46c8407fa9f4a40435653db85b00518d9fff132a7333b9482246357f42256",
+      "browserVisible": true,
+      "browserChatReady": true,
+      "cleanupCompleted": true
+    },
+    "security": {
+      "result": "passed",
+      "anonymousProtectedRequests": {
+        "instanceList": 401,
+        "credentialList": 401,
+        "restoredInstanceFiles": 401
+      },
+      "archive": {
+        "redacted": true,
+        "forbiddenPrivateEntryCount": 0,
+        "activeSessionsIncluded": false,
+        "credentialsIncluded": false
+      },
+      "container": {
+        "user": "node",
+        "privileged": false,
+        "readOnlyRootfs": true,
+        "capDrop": ["ALL"],
+        "securityOpt": ["no-new-privileges:true"],
+        "pidsLimit": 512,
+        "memoryBytes": 1073741824,
+        "nanoCpus": 1000000000,
+        "allPublishedPortsLoopback": true,
+        "mountDestinations": ["/opt/data"],
+        "dockerSocketMounted": false
+      }
+    },
+    "backupRestore": {
+      "result": "passed",
+      "archive": {
+        "sha256": "361d20ca35a791d85800ba6989dc59758ac82292ada2929d380b47f6e44a0623",
+        "sizeBytes": 2501,
+        "entryCount": 8,
+        "redacted": true,
+        "proofPath": "workspace/outputs/codex-beta-cffb57e1.txt",
+        "proofSha256": "638c66049589822a7507983f461e433b4074c9aeb85dfbcd653e593658c8f9f2",
+        "proofHashMatched": true,
+        "forbiddenPrivateEntryCount": 0
+      },
+      "preview": {
+        "valid": true,
+        "outputsDetected": true,
+        "manifestDeclaredOutputs": true,
+        "sourceInstanceMatched": true
+      },
+      "restoredClone": {
+        "credentialRebound": true,
+        "status": "running",
+        "exactRuntimeImage": true,
+        "proofPathRestored": true,
+        "proofHashMatched": true
+      },
+      "credentialedRuntime": {
+        "result": "passed",
+        "runId": "78099533-f17f-4b62-90a6-2aeeb0c79355",
+        "terminalStatus": "completed",
+        "exactRandomMarkerReturned": true,
+        "providerConfirmedModel": "gpt-6-astra",
+        "usageTotalTokens": 17386,
+        "browserVisible": true
+      },
+      "cleanup": {
+        "requestedThroughProductApi": true,
+        "cleanupTaskRetained": true,
+        "databaseRemoved": true,
+        "containerRemoved": true,
+        "dataDirectoryRemoved": true,
+        "networkRemoved": true
+      }
+    }
+  },
+  "implementationRepairsValidatedDuringAcceptance": [
+    "Export Codex Runtime artifacts from workspace upload and output directories while preserving their Runtime-relative paths.",
+    "Recognize workspace upload and output entries during archive preview, manifest consistency checks and clone extraction.",
+    "Keep archive path classification limited to the existing portable upload and output roots."
+  ],
+  "excludedEvents": [
+    {
+      "runId": "127d57f8-7a54-4c83-b45d-9e3fb2c76597",
+      "reason": "A restored Runtime file-read prompt entered the native tool approval flow and remained running for the bounded 180-second observation window. It was excluded from real-E2E proof; file preservation was verified byte-for-byte and a separate no-tool credentialed Runtime turn completed with a random marker."
+    }
+  ],
+  "validation": {
+    "archiveTests": "13 passed",
+    "eslint": "passed",
+    "typecheck": "passed",
+    "productionBuild": "passed",
+    "controllerHealth": "healthy",
+    "realBrowser": "passed"
+  },
+  "boundaries": [
+    "Certification covers this exact host-local Runtime image on Windows Docker Desktop.",
+    "The portable Agent backup intentionally excludes OAuth credentials and native conversation sessions; the restored clone requires explicit local credential rebinding.",
+    "Cross-platform Windows-native to Linux Runtime state migration remains unsupported.",
+    "No public multi-architecture Codex Runtime image publication is claimed."
+  ],
+  "containsSecrets": false
+}

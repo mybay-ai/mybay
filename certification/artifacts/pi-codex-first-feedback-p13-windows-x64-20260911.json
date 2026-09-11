@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "artifactType": "pi-codex-first-feedback-real-acceptance",
+  "phase": "P1.3",
+  "capturedAt": "2026-09-11T05:56:31.2708173Z",
+  "baseCommit": "85c8bd708604c1cdbfe9cf7957ad0b0fa9530d8e",
+  "source": {
+    "mybayVersion": "0.1.29-preview.1",
+    "controlUrl": "http://127.0.0.1:4372",
+    "controlImage": "mybay/local:0.1.29-preview.1-p13",
+    "controlImageId": "sha256:b5d2f86e5cd3fe2b9ddc7ac36aaa2343fc3b8b820092385ae6af6049c25da4ab"
+  },
+  "implementation": {
+    "activePhase": "The latest running model lifecycle phase remains visible before the first response text arrives.",
+    "phaseRetirement": "Lifecycle phases are removed from the inline timeline after the first text delta and from all terminal history.",
+    "stepCount": "Lifecycle and final markers do not increase the user-facing tool-step count.",
+    "runtimeNeutralTranslation": "Dynamic Pi, Codex and Hermes connection labels resolve to the shared localized Runtime phase copy.",
+    "accessibility": "The active lifecycle row uses polite live-region announcements."
+  },
+  "browserAcceptance": {
+    "result": "PASS",
+    "desktopCodex": {
+      "result": "PASS",
+      "runtimeImage": "mybay/codex-runtime:0.154.0",
+      "model": "gpt-6-astra",
+      "beforeFirstText": {
+        "visiblePhase": "正在分析任务上下文",
+        "header": "执行过程 · 执行中 · 0 个步骤",
+        "toolStepCount": 0
+      },
+      "afterFirstText": {
+        "visibleLines": 19,
+        "lifecyclePhaseHidden": true,
+        "partialOutputRetainedAfterStop": true
+      }
+    },
+    "mobilePi": {
+      "result": "PASS",
+      "runtimeImage": "mybay/pi-runtime:0.85.1",
+      "model": "deepseek-v4-flash",
+      "viewport": { "width": 390, "height": 844, "scrollWidth": 390 },
+      "horizontalOverflow": false,
+      "requestToFirstFeedbackMs": 760,
+      "firstFeedbackPhase": "queued",
+      "requestToFirstVisibleTextMs": 4826,
+      "refreshRecoveredAndAdvanced": true,
+      "stopAccepted": true
+    },
+    "mobileCodex": {
+      "result": "PASS",
+      "runtimeImage": "mybay/codex-runtime:0.154.0",
+      "model": "gpt-6-astra",
+      "viewport": { "width": 390, "height": 844, "scrollWidth": 390 },
+      "horizontalOverflow": false,
+      "requestToFirstFeedbackMs": 445,
+      "phaseTransitions": [
+        { "ms": 445, "phase": "queued" },
+        { "ms": 1558, "phase": "processing" }
+      ],
+      "requestToFirstVisibleTextMs": 5987,
+      "refreshRecoveredAndAdvanced": true,
+      "stopAccepted": true
+    }
+  },
+  "latencyBoundary": {
+    "piRunId": "295f3c25-c4ba-4f25-8422-6c971faad4aa",
+    "piServerDispatchToFirstVisibleTextMs": 3108,
+    "codexRunId": "5625045e-645a-4a4c-810d-49a3a84744b9",
+    "codexServerDispatchToFirstVisibleTextMs": 3943,
+    "finding": "P1.3 shortens perceived silence by exposing durable lifecycle feedback. It does not claim a reduction in provider/model first-token generation time."
+  },
+  "validation": {
+    "targetedTests": { "result": "PASS", "files": 4, "tests": 22 },
+    "typecheck": "PASS",
+    "eslint": "PASS",
+    "productionBuild": "PASS",
+    "controllerHealth": "healthy"
+  },
+  "evidence": {
+    "mobilePiResult": "data/p12-pi-codex-streaming-20260911/mobile-pi-browser-result.json",
+    "mobileCodexResult": "data/p12-pi-codex-streaming-20260911/mobile-codex-browser-result.json",
+    "mobilePiPhaseScreenshot": "data/p12-pi-codex-streaming-20260911/mobile-pi-phase-390x844.png",
+    "mobileCodexPhaseScreenshot": "data/p12-pi-codex-streaming-20260911/mobile-codex-phase-390x844.png"
+  },
+  "boundaries": [
+    "Measurements cover the listed local instances and one Windows Docker Desktop host.",
+    "First-feedback time is measured from the browser send action to the first visible lifecycle phase.",
+    "Provider/model first-token latency remains workload, model and account dependent.",
+    "P1.3 does not change the declared certification level of any Runtime."
+  ],
+  "containsSecrets": false
+}

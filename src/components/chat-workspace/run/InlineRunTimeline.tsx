@@ -28,7 +28,7 @@ function ToolBlock({ block, execution }: { block: ToolRunBlock; execution: RunEx
           displayStatus === "stopped" || displayStatus === "unknown" ? "text-amber-500" : "text-rose-500"
   );
   return (
-    <div className="flex items-start gap-2 rounded-xl border border-outline/80 bg-surface-muted/55 px-3 py-2 text-[12px]">
+    <div className="flex items-start gap-2 rounded-xl border border-outline/80 bg-surface-muted/55 px-3 py-2 text-[12px]" aria-live={block.stepType === "model_reasoning" && displayStatus === "running" ? "polite" : undefined}>
       <Icon className={iconClass} />
       <div className="min-w-0 flex-1">
         <div className="truncate font-medium text-content">{block.completionInferred ? t("chatWorkspace.timelineGenericStep") : translateToolStepLabel(t, block.label || block.tool, block.tool)}</div>
@@ -122,7 +122,7 @@ export function InlineRunTimeline({
   const [now, setNow] = useState(Date.now());
   const visibleBlocks = useMemo(() => execution.blocks.filter(block => !hideApprovalBlocks || block.type !== "approval"), [execution.blocks, hideApprovalBlocks]);
   const rows = useMemo(() => groupTimelineBlocks(visibleBlocks), [visibleBlocks]);
-  const stepCount = execution.blocks.filter(block => block.type === "tool").length;
+  const stepCount = execution.blocks.filter(block => block.type === "tool" && block.stepType !== "model_reasoning" && block.stepType !== "final").length;
   const archivedWithoutDuration = terminal && execution.timelinePartial !== undefined && metrics?.durationMs == null;
   const duration = archivedWithoutDuration ? "" : formatTimelineDuration(resolveRunDurationMs({
     metrics,

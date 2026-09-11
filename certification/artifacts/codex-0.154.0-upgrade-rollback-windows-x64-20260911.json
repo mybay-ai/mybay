@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "artifactType": "codex-upgrade-rollback-real-acceptance",
+  "capturedAt": "2026-09-11T04:06:58.566Z",
+  "source": {
+    "mybayVersion": "0.1.29-preview.1",
+    "controlUrl": "http://127.0.0.1:4372",
+    "controlImage": "mybay/local:0.1.29-preview.1-candidate10",
+    "controlImageId": "sha256:3556fe632cb43e3aab317765be837fb5d8019124f85eea887b28d3f974adc3fb",
+    "oldRuntime": {
+      "image": "mybay/codex-runtime:0.153.4",
+      "imageId": "sha256:83982840a9189cc92745e2addafb8adfc4b7be8656fc75e3da06d2527c90138c",
+      "nativeVersion": "0.153.4",
+      "bridgeVersion": "0.1.0-experimental.2"
+    },
+    "newRuntime": {
+      "image": "mybay/codex-runtime:0.154.0",
+      "imageId": "sha256:20b46c8407fa9f4a40435653db85b00518d9fff132a7333b9482246357f42256",
+      "nativeVersion": "0.154.0",
+      "bridgeVersion": "0.1.0-experimental.3"
+    }
+  },
+  "environment": {
+    "platform": "Windows 10 Pro x64",
+    "runtimePlatform": "Docker Desktop Linux x86_64",
+    "containerEngineVersion": "29.7.2",
+    "credentialMode": "existing ChatGPT OAuth account"
+  },
+  "observations": {
+    "result": "PASS",
+    "instanceId": "ddcf12de-0c7b-4daa-aceb-d24d15affb65",
+    "conversationId": "5acebcac-74a0-441f-a2ee-3d18ae9f01e0",
+    "nativeSessionId": "codex-v2-d9e1f4f9-d7ce-4246-94a7-f0e254867ca5",
+    "preparation": {
+      "result": "PASS",
+      "transition": "0.154.0 -> 0.153.4",
+      "purpose": "Establish the retained old-version baseline because the selected instance had no prior rollback point.",
+      "priorConversationMarkerRecovered": true,
+      "oldRuntimeHealthy": true
+    },
+    "upgrade": {
+      "result": "PASS",
+      "transition": "0.153.4 -> 0.154.0",
+      "preflight": {
+        "allowed": true,
+        "passed": 9,
+        "warnings": 2,
+        "blockers": 0
+      },
+      "terminalPhase": "completed",
+      "runtimeHealthy": true,
+      "conversationIdPreserved": true,
+      "nativeSessionIdPreserved": true,
+      "workspaceMarkerRecovered": true,
+      "runIds": [
+        "911410e0-ca70-4c75-8c9b-ef50a0255465",
+        "bb013afe-8d45-4045-b4f6-edefda4f6a45"
+      ]
+    },
+    "rollback": {
+      "result": "PASS",
+      "transition": "0.154.0 -> 0.153.4",
+      "terminalPhase": "rolled_back",
+      "runtimeHealthy": true,
+      "conversationIdPreserved": true,
+      "nativeSessionIdPreserved": true,
+      "preUpgradeMarkerRecovered": true,
+      "postUpgradeMarkerRecovered": true,
+      "workspaceMarkerRecovered": true,
+      "runId": "e953e40b-6def-490e-a0dd-c8c829d30c5e"
+    },
+    "oauth": {
+      "result": "PASS",
+      "reauthorizationRequired": false,
+      "authFilePresentAtAllSnapshots": true,
+      "authFileDigestMatch": true,
+      "authFileHashStableAcrossOldUpgradeRollback": true
+    },
+    "model": {
+      "result": "PASS",
+      "configuredModel": "gpt-6-astra",
+      "configuredProvider": "openai",
+      "completedRunCount": 5,
+      "allRunsRetainedConfiguredModelEvidence": true,
+      "modelEvidenceSource": "configured_snapshot"
+    },
+    "workspace": {
+      "result": "PASS",
+      "path": "workspace/outputs/p11-0079c0ef.txt",
+      "sha256": "e4273ea8a168b054cec3638871efed7aaaef6712157e245fe708e306b5bbeb0b",
+      "hashStableAcrossOldUpgradeRollback": true
+    },
+    "snapshots": [
+      {
+        "stage": "old-baseline",
+        "backupPath": "data/p11-codex-upgrade-rollback-20260911/old-baseline-backup",
+        "manifestSha256": "64addec0ae5578f695657ffe7148df3544c3fb4d48002b120b5f59be02afee6a",
+        "databaseSha256": "118d996da26ade95dbc62075a9dc6f7b7ef58307345c147bc6e15c69de50d580",
+        "schemaVersion": 8,
+        "fileCount": 1700,
+        "verified": true
+      },
+      {
+        "stage": "after-upgrade",
+        "backupPath": "data/p11-codex-upgrade-rollback-20260911/after-upgrade-backup",
+        "manifestSha256": "0213b7285cd272eb7bc92ad78967bcf61d1c3ef289faba23448da84a1862dc1e",
+        "databaseSha256": "03d46684ec6452d62e27ba74f7f85a273610cad4a11c90bcb981f5a3d50ac662",
+        "schemaVersion": 8,
+        "fileCount": 1701,
+        "verified": true
+      },
+      {
+        "stage": "after-rollback",
+        "backupPath": "data/p11-codex-upgrade-rollback-20260911/after-rollback-backup",
+        "manifestSha256": "38aca5bfbaf3ad511c639e59cd35238ffd63cd9e39a59dfa800fb30988f5785d",
+        "databaseSha256": "7619b2e96a17975b187ea45a891347c50b5a4c154299844fdfe497ca2490be7c",
+        "schemaVersion": 8,
+        "fileCount": 1702,
+        "verified": true
+      }
+    ],
+    "finalState": {
+      "image": "mybay/codex-runtime:0.153.4",
+      "imageId": "sha256:83982840a9189cc92745e2addafb8adfc4b7be8656fc75e3da06d2527c90138c",
+      "status": "running",
+      "healthStatus": "healthy",
+      "upgradeStatus": "success",
+      "upgradePhase": "rolled_back",
+      "rollbackPoint": "0.154.0"
+    }
+  },
+  "excludedEvents": [
+    {
+      "runId": "e995cd28-89b6-415d-814e-0936385cc931",
+      "terminalStatus": "cancelled",
+      "reason": "The first workspace tool run awaited approval and was explicitly stopped. It is excluded from pass evidence; a later approved run validated the same workspace file."
+    }
+  ],
+  "boundaries": [
+    "This acceptance covers the exact retained 0.153.4 and 0.154.0 Docker image IDs on one Windows Docker Desktop host.",
+    "The preserved database and instance backups contain local credentials and remain under the ignored data directory; only hashes and sanitized observations are retained in this artifact.",
+    "Configured model evidence proves that MyBay retained gpt-6-astra for each run; it does not claim an upstream provider-confirmed model identity.",
+    "This acceptance does not restore a backup into a separate service, prove cross-platform migration, or prove survival of an in-flight tool execution."
+  ],
+  "containsSecrets": false
+}

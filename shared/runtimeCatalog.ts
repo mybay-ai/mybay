@@ -280,10 +280,10 @@ export const PI_RUNTIME_DEFINITION = freezeRuntimeDefinition({
 
 export const CODEX_RUNTIME_DEFINITION = freezeRuntimeDefinition({
   specVersion: "1.0.0", name: "codex-agent", displayName: "Codex", version: CODEX_BUILD.nativeVersion,
-  description: "Experimental Codex App Server Runtime with isolated native sessions.",
+  description: "Certified Codex App Server Runtime with isolated native sessions.",
   providerKey: "codex-app-server", contractVersion: 1,
   release: {
-    supportStatus: "available", certificationLevel: "experimental", deploymentSupported: true,
+    supportStatus: "available", certificationLevel: "certified", deploymentSupported: true,
     bridgeVersion: CODEX_BUILD.bridgeVersion,
     artifactIdentity: {
       kind: "docker-image-id",

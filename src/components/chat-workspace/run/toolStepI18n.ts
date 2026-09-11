@@ -36,9 +36,12 @@ type Translate = (key: string) => string;
 export function translateToolStepLabel(t: Translate, rawValue: unknown, fallback = ""): string {
   const raw = String(rawValue || "").trim();
   if (!raw) return fallback;
-  const fixedEventKey = TOOL_STEP_EVENT_KEYS[raw.toLowerCase()];
+  const normalized = raw.toLowerCase();
+  const fixedEventKey = TOOL_STEP_EVENT_KEYS[normalized];
   if (fixedEventKey) return t("chatWorkspace." + fixedEventKey);
-  if (raw.toLowerCase().startsWith("chatworkspace.")) {
+  if (/^connecting to .+ agent runtime$/.test(normalized)) return t("chatWorkspace.toolStepConnectingRuntime");
+  if (/^connected to .+ agent runtime$/.test(normalized)) return t("chatWorkspace.toolStepConnectedRuntime");
+  if (normalized.startsWith("chatworkspace.")) {
     return t("chatWorkspace." + raw.slice("chatWorkspace.".length));
   }
   return raw;

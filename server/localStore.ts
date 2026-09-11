@@ -445,6 +445,27 @@ function migrateLegacyStore(db: DatabaseSync, legacyPath: string, sqlitePath: st
   console.info("[LocalDatabase] Existing local data migrated to SQLite successfully.");
 }
 
+export function verifyLocalDatabaseIntegrity(sqlitePath = getLocalDatabasePath()): void {
+  if (!fs.existsSync(sqlitePath)) return;
+  let db: DatabaseSync | null = null;
+  try {
+    db = new DatabaseSync(sqlitePath, { readOnly: true });
+    const rows = db.prepare("PRAGMA quick_check").all();
+    const messages = rows.map(row => String(Object.values(row)[0] ?? "unknown"));
+    if (messages.length !== 1 || messages[0].toLowerCase() !== "ok") {
+      throw new Error(messages.join("; "));
+    }
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `LOCAL_SQLITE_INTEGRITY_FAILED: ${detail}. Restore a verified backup; the existing database was not migrated or replaced.`,
+      { cause: error },
+    );
+  } finally {
+    db?.close();
+  }
+}
+
 function openDatabase(): DatabaseSync {
   const sqlitePath = getLocalDatabasePath();
   if (activeDb && activeDbPath === sqlitePath) return activeDb;
@@ -452,6 +473,7 @@ function openDatabase(): DatabaseSync {
 
   fs.mkdirSync(path.dirname(sqlitePath), { recursive: true });
   const existed = fs.existsSync(sqlitePath);
+  if (existed) verifyLocalDatabaseIntegrity(sqlitePath);
   const db = new DatabaseSync(sqlitePath);
   try {
     // Reject newer databases before any DDL, WAL setup or migration can mutate
@@ -886,6 +908,19 @@ export function deleteProvisioningRecords(instanceId: string) {
 
 export function closeLocalDatabase() {
   if (!activeDb) return;
+  try {
+    const checkpoint = activeDb.prepare("PRAGMA wal_checkpoint(TRUNCATE)").get() as {
+      busy?: number;
+      log?: number;
+      checkpointed?: number;
+    } | undefined;
+    if (Number(checkpoint?.busy || 0) !== 0) {
+      console.warn("[LocalDatabase] SQLite WAL checkpoint remained busy during shutdown; SQLite will recover it on the next verified open.");
+    }
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    console.warn(`[LocalDatabase] SQLite WAL checkpoint failed during shutdown: ${detail}`);
+  }
   activeDb.close();
   activeDb = null;
   activeDbPath = "";

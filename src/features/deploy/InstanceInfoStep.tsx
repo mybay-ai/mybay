@@ -684,12 +684,12 @@ export function InstanceInfoStep({ data, update, updateTemplateInput, applyTempl
                   ? t("wizardCopy.instanceInfo.hermesDescription")
                   : runtimeType === "pi"
                     ? t("wizardCopy.instanceInfo.piDescription")
-                    : definition.description;
+                    : t("wizardCopy.instanceInfo.codexDescription");
                 const badge = runtimeType === "hermes"
                   ? t("wizardCopy.instanceInfo.hermesBadge")
                   : runtimeType === "pi"
                     ? t("wizardCopy.instanceInfo.piBadge")
-                    : definition.release.certificationLevel;
+                    : t("wizardCopy.instanceInfo.codexBadge");
                 return (
                   <button
                     key={runtimeType}

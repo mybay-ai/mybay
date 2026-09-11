@@ -49,6 +49,7 @@ vi.mock("../../../utils/capabilities", () => ({ probeCapabilities, probeCapabili
 vi.mock("../../../services/runsReconciler", () => ({
   discardRunFileSnapshot,
   emitRunLifecycleStep: vi.fn(),
+  getLiveRunPartialOutput: vi.fn(() => undefined),
   primeRunFileSnapshot,
   RECONCILER_ID: "reconciler-route-test",
   requestRunsAPI: vi.fn(),

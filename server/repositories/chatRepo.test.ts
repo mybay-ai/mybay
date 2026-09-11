@@ -197,6 +197,20 @@ describe("chatRepo local status contract", () => {
     expect(readStore().chatMessages.filter(message => message.conversation_id === conversation.id)).toHaveLength(2);
   });
 
+  it("returns the latest failed message independently from completed context", async () => {
+    const conversation = await chatRepo.createConversation("user-1", "instance-1", "Failure lookup");
+    const first = await chatRepo.beginChatTurn({ conversationId: conversation.id, userId: "user-1", instanceId: "instance-1", content: "first", requestId: "failure-lookup-1" });
+    await chatRepo.finishChatTurn({ conversationId: conversation.id, userMessageId: first.message_id!, status: "failed", errorCode: "API_KEY_MISSING" });
+    const second = await chatRepo.beginChatTurn({ conversationId: conversation.id, userId: "user-1", instanceId: "instance-1", content: "second", requestId: "failure-lookup-2" });
+    await chatRepo.finishChatTurn({ conversationId: conversation.id, userMessageId: second.message_id!, status: "failed", errorCode: "CODEX_AUTH_REQUIRED" });
+
+    await expect(chatRepo.getLatestFailedMessage(conversation.id)).resolves.toMatchObject({
+      role: "assistant",
+      status: "failed",
+      error_code: "CODEX_AUTH_REQUIRED",
+    });
+  });
+
   it("expires a stale pending turn before accepting the next request", async () => {
     const conversation = await chatRepo.createConversation("user-1", "instance-1", "Test");
     const first = await chatRepo.beginChatTurn({

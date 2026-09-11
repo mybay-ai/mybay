@@ -8,6 +8,7 @@ import { probeCapabilities, probeCapabilitiesDetailed } from "../../../utils/cap
 import {
   discardRunFileSnapshot,
   emitRunLifecycleStep,
+  getLiveRunPartialOutput,
   primeRunFileSnapshot,
   RECONCILER_ID,
   requestRunReconcile,
@@ -523,7 +524,7 @@ export function registerRunRoutes(router: Router) {
         run: {
           id: run.id,
           status: run.status,
-          partialOutput: run.partial_output,
+          partialOutput: getLiveRunPartialOutput(run.id) ?? run.partial_output,
           errorCode: run.error_code,
           durationMs: run.duration_ms,
           usagePromptTokens: run.usage_prompt_tokens,
