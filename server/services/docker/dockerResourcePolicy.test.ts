@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { getDockerProfile, getResourceLimits } from "../../dockerDeployment";
-import { getAgentContainerSecurityProfile } from "./dockerResourcePolicy";
+import {
+  getAgentContainerSecurityProfile,
+  getAgentContainerTmpfs,
+  supportsAgentContainerNoNewPrivileges,
+} from "./dockerResourcePolicy";
 
 describe("docker resource policy characterization", () => {
   it("normalizes configured CPU and memory while preserving runtime limits", () => {
@@ -47,7 +51,7 @@ describe("docker resource policy characterization", () => {
     });
   });
 
-  it("hardens the Pi Agent container without changing the Hermes profile", () => {
+  it("uses the native bridge security profile for Pi and Codex", () => {
     expect(getAgentContainerSecurityProfile("pi")).toEqual({
       CapDrop: ["ALL"],
       CapAdd: [],
@@ -55,7 +59,38 @@ describe("docker resource policy characterization", () => {
       ReadonlyRootfs: true,
       User: "node",
     });
-    expect(getAgentContainerSecurityProfile("hermes")).toEqual(getDockerProfile("mybay-agent-runtime"));
+    expect(getAgentContainerSecurityProfile("codex")).toEqual(getAgentContainerSecurityProfile("pi"));
+  });
+
+  it("bounds the capabilities required by the pinned Hermes s6 image", () => {
+    expect(getAgentContainerSecurityProfile("hermes")).toEqual({
+      CapDrop: ["ALL"],
+      CapAdd: ["CHOWN", "DAC_OVERRIDE", "KILL", "SETGID", "SETUID"],
+      SecurityOpt: [],
+      ReadonlyRootfs: true,
+      User: "root",
+    });
+    expect(getAgentContainerSecurityProfile(undefined)).toEqual(getAgentContainerSecurityProfile("hermes"));
+  });
+
+  it("provides only the writable temporary filesystems each Runtime needs", () => {
+    expect(getAgentContainerTmpfs("hermes")).toEqual({
+      "/tmp": "rw,noexec,nosuid,nodev,size=128m,mode=1777",
+      "/run": "rw,suid,exec,size=32m,mode=0755",
+    });
+    expect(getAgentContainerTmpfs("pi")).toEqual({
+      "/tmp": "rw,noexec,nosuid,nodev,size=64m,mode=1777",
+    });
+    expect(getAgentContainerTmpfs("codex")).toEqual(getAgentContainerTmpfs("pi"));
+    expect(getAgentContainerTmpfs("community-runtime")).toEqual({});
+  });
+
+  it("keeps no-new-privileges off only for the pinned Hermes initialization path", () => {
+    expect(supportsAgentContainerNoNewPrivileges("hermes")).toBe(false);
+    expect(supportsAgentContainerNoNewPrivileges(undefined)).toBe(false);
+    expect(supportsAgentContainerNoNewPrivileges("pi")).toBe(true);
+    expect(supportsAgentContainerNoNewPrivileges("codex")).toBe(true);
+    expect(supportsAgentContainerNoNewPrivileges("community-runtime")).toBe(true);
   });
 });
 

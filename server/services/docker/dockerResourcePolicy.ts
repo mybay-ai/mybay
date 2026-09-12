@@ -56,7 +56,8 @@ export interface DockerProfile {
 }
 
 export function getAgentContainerSecurityProfile(agentRuntimeType: unknown): DockerProfile {
-  if (["pi", "codex"].includes(String(agentRuntimeType || "").trim().toLowerCase())) {
+  const runtimeType = String(agentRuntimeType || "hermes").trim().toLowerCase();
+  if (["pi", "codex"].includes(runtimeType)) {
     return {
       CapDrop: ["ALL"],
       CapAdd: [],
@@ -65,7 +66,42 @@ export function getAgentContainerSecurityProfile(agentRuntimeType: unknown): Doc
       User: "node",
     };
   }
+  if (runtimeType === "hermes") {
+    return {
+      CapDrop: ["ALL"],
+      // The pinned upstream image uses a root-owned s6-overlay supervisor
+      // which drops the Agent processes to uid 10000. These are the bounded
+      // capabilities required for initialization and graceful shutdown.
+      CapAdd: ["CHOWN", "DAC_OVERRIDE", "KILL", "SETGID", "SETUID"],
+      // no-new-privileges prevents the upstream s6 stage0 transition.
+      SecurityOpt: [],
+      ReadonlyRootfs: true,
+      User: "root",
+    };
+  }
   return getDockerProfile("mybay-agent-runtime");
+}
+
+export function getAgentContainerTmpfs(agentRuntimeType: unknown): Record<string, string> {
+  const runtimeType = String(agentRuntimeType || "hermes").trim().toLowerCase();
+  if (runtimeType === "hermes") {
+    return {
+      "/tmp": "rw,noexec,nosuid,nodev,size=128m,mode=1777",
+      // s6-overlay stages its supervision tree here and must execute it.
+      "/run": "rw,suid,exec,size=32m,mode=0755",
+    };
+  }
+  if (["pi", "codex"].includes(runtimeType)) {
+    return { "/tmp": "rw,noexec,nosuid,nodev,size=64m,mode=1777" };
+  }
+  return {};
+}
+
+export function supportsAgentContainerNoNewPrivileges(agentRuntimeType: unknown): boolean {
+  // The pinned Hermes image needs its root-owned s6 stage0 process to perform
+  // the uid/gid transition to the unprivileged Agent user. Docker's
+  // no-new-privileges flag blocks that initialization path.
+  return String(agentRuntimeType || "hermes").trim().toLowerCase() !== "hermes";
 }
 
 export function getDockerProfile(runtimeType: "console-runtime" | "mybay-agent-runtime" | "sandbox-skill-runtime"): DockerProfile {
