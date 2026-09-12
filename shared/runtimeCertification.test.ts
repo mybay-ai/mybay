@@ -28,6 +28,7 @@ function evidenceFor(level: "experimental" | "beta" | "certified"): RuntimeCerti
       status: "passed",
       scope: requirement.minimumEvidenceScope,
       observedAt,
+      environmentId: "test-runtime",
       environment: "isolated-test-runtime",
       evidenceRefs: [`artifacts/${requirement.id}.json`],
     }));
@@ -91,6 +92,30 @@ describe("Runtime certification evaluator", () => {
     expect(experimental).toMatchObject({ verifiedLevel: "experimental", publicationStatus: "pending" });
     expect(beta).toMatchObject({ verifiedLevel: "beta", publicationStatus: "pending" });
     expect(certified).toMatchObject({ verifiedLevel: "certified", publicationStatus: "verified" });
+  });
+
+  it("requires every target-platform check to bind to a matching environment id", () => {
+    const bundle = evidenceFor("certified");
+    const targetEnvironment = { platform: "linux" as const, headless: true };
+    expect(evaluateRuntimeCertification(exactHermesDefinition, bundle, { now, targetEnvironment })).toMatchObject({
+      verifiedLevel: "certified",
+      publicationStatus: "verified",
+    });
+
+    const unboundChecks = bundle.checks.map(({ environmentId: _environmentId, ...check }) => check);
+    expect(evaluateRuntimeCertification(exactHermesDefinition, { ...bundle, checks: unboundChecks }, { now, targetEnvironment })).toMatchObject({
+      verifiedLevel: "unverified",
+      publicationStatus: "pending",
+    });
+  });
+
+  it("fails closed when the requested platform or headless mode has no current environment", () => {
+    const report = evaluateRuntimeCertification(exactHermesDefinition, evidenceFor("certified"), {
+      now,
+      targetEnvironment: { platform: "linux", headless: false },
+    });
+    expect(report).toMatchObject({ verifiedLevel: "unverified", publicationStatus: "invalid" });
+    expect(report.errors).toContain("Certification evidence does not cover target linux/interactive.");
   });
 
   it("does not accept contract-only evidence for live Runtime requirements", () => {

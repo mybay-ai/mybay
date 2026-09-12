@@ -79,6 +79,7 @@
           "scope": { "enum": ["contract", "runtime", "e2e"] },
           "observedAt": { "type": "string", "format": "date-time" },
           "validUntil": { "type": "string", "format": "date-time" },
+          "environmentId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,79}$" },
           "environment": { "type": "string", "minLength": 1, "maxLength": 200 },
           "command": { "type": "string", "minLength": 1, "maxLength": 1000 },
           "evidenceRefs": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 1000 } },

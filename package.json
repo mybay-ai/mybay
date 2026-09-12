@@ -22,6 +22,7 @@
         "runtime:build": "tsx scripts/runtime-catalog.ts --write && tsx scripts/runtime-certification.ts --write",
         "runtime:certification": "tsx scripts/runtime-certification.ts",
         "runtime:certify": "tsx scripts/runtime-certification.ts --strict",
+        "runtime:certify:linux-headless": "tsx scripts/runtime-certification.ts --strict --platform=linux --headless=true",
         "release:gate": "npm run check && npm run runtime:certify",
         "docs:check": "tsx scripts/docs-build.ts",
         "docs:build": "tsx scripts/docs-build.ts --write",

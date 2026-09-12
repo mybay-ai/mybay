@@ -1,0 +1,38 @@
+name: Linux Headless Runtime Certification Gate
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-retained-evidence:
+    name: Validate retained Linux headless evidence
+    runs-on: [self-hosted, linux, x64, mybay-runtime-certification]
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@v4
+
+      - name: Verify native Linux Docker Engine host
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(uname -s)" = "Linux"
+          test "$(docker info --format '{{.OSType}}')" = "linux"
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Validate source and retained target evidence
+        run: |
+          npm run runtime:check
+          npm run runtime:certify:linux-headless

@@ -6,7 +6,7 @@ A declared certification level is a release target. A verified level is granted 
 
 ## Current status
 
-| Runtime | Declared level | Verified level | Release identity | Artifact verification | Publication status | Verified platforms | Last verified | Evidence bundle |
+| Runtime | Declared level | Verified level | Release identity | Artifact verification | Publication status | Retained environments | Last verified | Evidence bundle |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | hermes | certified | certified | exact | oci-digest | verified | windows/not-retained (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop) | 2026-09-07T19:12:40.573Z | certification/evidence/hermes.certification.json |
 | pi | certified | certified | exact | docker-image-id | verified | windows/not-retained (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop) | 2026-09-07T19:12:40.573Z | certification/evidence/pi.certification.json |
@@ -44,6 +44,6 @@ Note: A2A is currently a Control Plane collaboration feature, not a field in the
 | certified | backup-restore | Backup and restore | e2e |
 | certified | real-e2e | Real end-to-end acceptance | e2e |
 
-Evidence bundles live at `certification/evidence/<runtime-type>.certification.json` and current bundles must validate against `public/schemas/mybay.runtime-certification-evidence.schema.json`. Schema v3 binds native version, explicit nullable bridge version, image reference, and an immutable OCI digest or Docker image ID. Legacy schema v2 evidence remains readable as metadata-compatible history but cannot produce an exact verified publication. Each bundle identifies the real platform and versions it covers, and every local evidence reference is resolved and protected by a retained SHA-256. Secrets and credentials must never be committed.
+Evidence bundles live at `certification/evidence/<runtime-type>.certification.json` and current bundles must validate against `public/schemas/mybay.runtime-certification-evidence.schema.json`. Schema v3 binds native version, explicit nullable bridge version, image reference, and an immutable OCI digest or Docker image ID. Its optional `environmentId` check field is mandatory when satisfying a target-platform gate. Legacy schema v2 evidence remains readable as metadata-compatible history but cannot produce an exact verified publication. Each bundle identifies the real platform and versions it covers, and every local evidence reference is resolved and protected by a retained SHA-256. Secrets and credentials must never be committed.
 
 Run `npm run runtime:certification` to validate and display the current report. Run `npm run runtime:certify` as the strict release gate; it fails while a Runtime's declared level is not fully verified.
