@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile, rename } from "node:fs/promises";
 import { join, resolve, relative, isAbsolute } from "node:path";
 import { EventEmitter } from "node:events";
 import { A2A_DYNAMIC_TOOLS, executeA2ATool, readConfiguredPeers } from "./a2a-tools.mjs";
+import { normalizeCodexQuestion } from "./question-bridge.mjs";
 
 const ACTIVE = new Set(["queued", "running", "waiting_for_approval"]);
 const safeId = value => typeof value === "string" && /^[A-Za-z0-9_.:-]{8,160}$/.test(value);
@@ -43,10 +44,11 @@ export function fileMetadata(workspace, filePath, kind) {
 }
 
 export class CodexRuntime extends EventEmitter {
-  constructor({ rpc, dataDir, workspace, model, externalSandbox = false, a2aPeers = readConfiguredPeers() }) {
+  constructor({ rpc, dataDir, workspace, model, externalSandbox = false, a2aPeers = readConfiguredPeers(), questionBridge = null }) {
     super(); this.rpc = rpc; this.dataDir = dataDir; this.workspace = resolve(workspace); this.model = model;
     this.externalSandbox = externalSandbox;
     this.a2aPeers = a2aPeers; this.activeA2A = new Map();
+    this.questionBridge = questionBridge; this.questionRequests = new Map();
     this.pendingDeltas = new Map(); this.deltaTimer = null;
     this.runs = new Map(); this.sessions = new Map(); this.loaded = new Set(); this.queue = Promise.resolve();
     rpc.on("message", message => {
@@ -171,6 +173,7 @@ export class CodexRuntime extends EventEmitter {
     if (!ACTIVE.has(run.status)) return run;
     run.stopRequested = true; await this.persist();
     for (const active of this.activeA2A.values()) if (active.runId === run.id) active.controller.abort();
+    for (const pending of this.questionRequests.values()) if (pending.runId === run.id) pending.controller.abort();
     if (run.turnId) void this.interrupt(run);
     return run;
   }
@@ -189,6 +192,7 @@ export class CodexRuntime extends EventEmitter {
     if (!ACTIVE.has(run.status)) return;
     for (const active of this.activeA2A.values()) if (active.runId === run.id) active.controller.abort();
     run.status = status; run.error = error; run.approvals = {};
+    for (const pending of this.questionRequests.values()) if (pending.runId === run.id) pending.controller.abort();
     if (run.tokenTotals) this.sessions.get(run.sessionId).tokenTotals = run.tokenTotals;
     await this.emitEvent(run, { type: `run.${status}`, output: run.output, error, usage: run.usage, model: run.model });
   }
@@ -209,6 +213,28 @@ export class CodexRuntime extends EventEmitter {
       this.activeA2A.delete(message.id);
       if (ACTIVE.has(run.status)) await this.emitEvent(run, { type: "tool.completed", tool_call_id: String(p.callId || message.id), tool: String(p.tool || "a2a"), success, status: success ? "completed" : "failed" });
     });
+  }
+  async requestUserInput(run, message) {
+    const questions = message.params?.questions;
+    if (!this.questionBridge || !Array.isArray(questions) || questions.length < 1 || questions.length > 3) throw fail("CODEX_QUESTION_UNSUPPORTED");
+    const normalized = questions.map(normalizeCodexQuestion);
+    if (new Set(normalized.map(question => question.nativeId)).size !== normalized.length) throw fail("CODEX_QUESTION_INVALID");
+    const requestKey = String(message.id);
+    if (this.questionRequests.has(requestKey)) throw fail("CODEX_QUESTION_DUPLICATE");
+    const controller = new AbortController();
+    this.questionRequests.set(requestKey, { runId: run.id, controller });
+    try {
+      const answerEntries = [];
+      for (const question of questions) {
+        if (!ACTIVE.has(run.status) || run.stopRequested) throw fail("CODEX_QUESTION_CANCELLED");
+        const answer = await this.questionBridge.ask(run.sessionId, question, controller.signal);
+        answerEntries.push([answer.id, { answers: answer.answers }]);
+      }
+      if (!ACTIVE.has(run.status) || run.stopRequested) throw fail("CODEX_QUESTION_CANCELLED");
+      this.rpc.respond(message.id, { answers: Object.fromEntries(answerEntries) });
+    } finally {
+      this.questionRequests.delete(requestKey);
+    }
   }
   async onMessage(message) {
     const p = message.params || {};
@@ -233,6 +259,15 @@ export class CodexRuntime extends EventEmitter {
           await this.emitEvent(run, { type: "tool.started", tool_call_id: p.callId, tool: String(p.tool || "a2a") });
           void this.handleA2ATool(run, message, controller).catch(() => this.emit("persistenceError"));
         }
+      } else if (message.method === "item/tool/requestUserInput") {
+        void this.requestUserInput(run, message).catch(error => {
+          this.rpc.send({ id: message.id, error: { code: -32602, message: error.message?.startsWith("CODEX_") ? error.message : "CODEX_QUESTION_FAILED" } });
+          void this.enqueue(async () => {
+            if (!ACTIVE.has(run.status)) return;
+            run.stopRequested = true; this.questionRequests.delete(String(message.id)); await this.persist();
+            if (run.turnId) void this.interrupt(run);
+          });
+        });
       } else if (["item/commandExecution/requestApproval", "item/fileChange/requestApproval"].includes(message.method)) {
         const id = randomUUID();
         run.approvals[id] = { id: message.id, method: message.method, availableDecisions: p.availableDecisions };

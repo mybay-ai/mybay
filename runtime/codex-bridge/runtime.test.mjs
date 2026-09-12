@@ -91,6 +91,25 @@ test("foreign turn events and unsupported native requests cannot approve a tool"
   assert.equal(rpc.responses[1].error.code, -32601);
   assert.equal(run.stopRequested, true);
 });
+test("maps native structured questions to exact App Server answers and rejects secret input", async t => {
+  const calls = [];
+  const questionBridge = { ask: async (sessionId, question) => {
+    calls.push({ sessionId, question });
+    return { id: question.id, answers: [question.options[0].label] };
+  } };
+  const { run, session, event, rpc } = await fixture(t, { questionBridge });
+  await event("item/tool/requestUserInput", { questions: [{ id: "region", header: "Region", question: "Choose", isOther: false,
+    options: [{ label: "EU", description: "European Union" }] }] }, 93);
+  for (let i = 0; i < 30 && rpc.responses.length === 0; i++) await new Promise(resolve => setTimeout(resolve, 5));
+  assert.equal(calls[0].sessionId, session.id);
+  assert.deepEqual(rpc.responses[0], { id: 93, result: { answers: { region: { answers: ["EU"] } } } });
+
+  await event("item/tool/requestUserInput", { questions: [{ id: "token", header: "Secret", question: "Paste token", isSecret: true }] }, 94);
+  for (let i = 0; i < 30 && rpc.responses.length < 2; i++) await new Promise(resolve => setTimeout(resolve, 5));
+  assert.equal(rpc.responses[1].error.message, "CODEX_SECRET_QUESTION_UNSUPPORTED");
+  for (let i = 0; i < 30 && !run.stopRequested; i++) await new Promise(resolve => setTimeout(resolve, 5));
+  assert.equal(run.stopRequested, true);
+});
 test("idempotency rejects reuse across sessions or different inputs", async t => {
   const { runtime, session, run } = await fixture(t);
   assert.equal(await runtime.submit({ session_id: session.id, input: "hello" }, "client-run-1234"), run);

@@ -14,7 +14,8 @@ test("HTTP authentication, dynamic A2A capability and durable SSE reconnect", as
   rpc.request = async method => method === "account/read" ? { account: { type: "chatgpt" } } : { thread: { id: "native-thread-123" }, turn: { id: "native-turn-123" } };
   const key = "fixture-authentication-key-12345678";
   const { server, runtime } = await startServer({ rpc, env: { CODEX_BRIDGE_API_KEY: key, CODEX_BRIDGE_DATA_DIR: join(root, "state"), CODEX_WORKSPACE_DIR: join(root, "workspace"), HOST: "127.0.0.1", PORT: "0",
-    MYBAY_A2A_PEERS_JSON: JSON.stringify([{ id: "peer-1", name: "Peer", url: "http://relay/a2a", token: "secret" }]) } });
+    MYBAY_A2A_PEERS_JSON: JSON.stringify([{ id: "peer-1", name: "Peer", url: "http://relay/a2a", token: "secret" }]),
+    MYBAY_QUESTION_BRIDGE_URL: "http://mybay-local-control-panel:3000/internal/questions/instance-1", MYBAY_QUESTION_BRIDGE_TOKEN: "a".repeat(64) } });
   t.after(async () => { server.closeAllConnections(); await new Promise(r => server.close(r)); await runtime.queue; await rm(root, { recursive: true, force: true }); });
   const base = `http://127.0.0.1:${server.address().port}`;
   const headers = { Authorization: `Bearer ${key}`, "Content-Type": "application/json" };
@@ -24,6 +25,7 @@ test("HTTP authentication, dynamic A2A capability and durable SSE reconnect", as
   assert.equal(capabilities.features.session_context_usage, true);
   assert.equal(capabilities.features.a2a_tools, true);
   assert.equal(capabilities.features.managed_collaboration, true);
+  assert.equal(capabilities.features.structured_questions, true);
   const session = await fetch(base + "/api/sessions", { headers, method: "POST", body: "{}" }).then(r => r.json());
   assert.equal((await fetch(base + "/v1/runs", { headers, method: "POST", body: JSON.stringify({ session_id: "missing-session", input: "hello" }) })).status, 404);
   assert.equal(rpc.closed, undefined);

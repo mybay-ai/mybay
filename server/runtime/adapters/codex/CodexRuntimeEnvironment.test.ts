@@ -2,7 +2,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { applyCodexOAuthCredential, normalizeCodexAccountAuth, buildCodexRuntimeEnvironment, validateCodexConnection, writeCodexRuntimeAccountAuth } from "./CodexRuntimeEnvironment";
+const issueQuestionBridgeCredential = vi.hoisted(() => vi.fn(() => "a".repeat(64)));
+vi.mock("../../../services/runs/questionBridgeCredentials", () => ({ issueQuestionBridgeCredential }));
+import { applyCodexOAuthCredential, normalizeCodexAccountAuth, buildCodexRuntimeEnvironment, validateCodexConnection, writeCodexRuntimeAccountAuth, writeCodexRuntimeEnvironment } from "./CodexRuntimeEnvironment";
+import { encrypt } from "../../../crypto";
 import { redactSecretsDeep } from "../../../utils/sanitizer";
 import { classifyInstanceFilePath } from "../../../services/instances/instanceFileSecurityService";
 
@@ -61,6 +64,27 @@ describe("Codex account isolation", () => {
       tokens: { access_token: "access", refresh_token: "refresh", id_token: "identity" },
     }))).toThrow("CODEX_INSTANCE_ID_INVALID");
     expect(mkdir).not.toHaveBeenCalled();
+  });
+
+  it("issues an instance-scoped question bridge environment for Codex", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "mybay-codex-question-env-"));
+    vi.spyOn(process, "cwd").mockReturnValue(root);
+    const authDirectory = path.join(root, "data", "instances", "instance-1", "codex");
+    fs.mkdirSync(authDirectory, { recursive: true });
+    fs.writeFileSync(path.join(authDirectory, "auth.json"), "{}\n");
+    try {
+      const result = writeCodexRuntimeEnvironment("instance-1", {
+        codexAuthMode: "chatgpt", provider: "openai", hermesApiKey: encrypt("bridge-secret"),
+      });
+      expect(issueQuestionBridgeCredential).toHaveBeenCalledWith("instance-1");
+      expect(result.finalEnvMap).toMatchObject({
+        MYBAY_QUESTION_BRIDGE_URL: "http://mybay-local-control-panel:3000/internal/questions/instance-1",
+        MYBAY_QUESTION_BRIDGE_TOKEN: "a".repeat(64),
+      });
+      expect(fs.readFileSync(path.join(root, "data", "instances", "instance-1", ".env"), "utf8")).toContain("MYBAY_QUESTION_BRIDGE_TOKEN=");
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it("preserves an existing Runtime-owned auth file when a bind mount rejects chown", () => {

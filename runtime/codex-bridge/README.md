@@ -19,7 +19,8 @@ The image is `mybay/codex-runtime:0.154.0`, built from this directory. It runs a
 - Completed session history resumes after restart. An interrupted in-flight run is explicitly failed with `CODEX_BRIDGE_RESTARTED`; tools are not replayed automatically.
 - SSE cursor replay and persisted run identity support reconnects.
 - A2A tools are registered through the pinned App Server's native `dynamicTools` / `item/tool/call` protocol only when the control plane injects resolved trusted peers. Peer URLs and bearer credentials never appear in tool output. Calls are bounded, preserve the collaboration context and can be aborted with the parent run. Existing native threads created before A2A was configured must use a new MyBay session because Codex 0.154.0 accepts dynamic tool registration only at `thread/start`.
-- Structured questions, browser automation and schedules remain closed in this isolated branch.
+- Native `request_user_input` questions are validated and shown through the existing instance-scoped Chat Workspace question cards. Up to three questions are handled sequentially; secret questions are rejected and never persisted.
+- Browser automation and schedules remain closed.
 - Maximum 200 retained runs per instance in this Beta version. Capacity exhaustion is explicit; automatic retention cleanup is not implemented.
 - Account import is not a new OAuth login flow. Reauthentication and account-switching UX remain future work.
 
