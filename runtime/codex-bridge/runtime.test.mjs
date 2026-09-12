@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -116,6 +117,58 @@ test("idempotency rejects reuse across sessions or different inputs", async t =>
   await assert.rejects(runtime.submit({ session_id: session.id, input: "different" }, "client-run-1234"), /IDEMPOTENCY_CONFLICT/);
   const second = await runtime.enqueue(() => runtime.createSession());
   await assert.rejects(runtime.submit({ session_id: second.id, input: "hello" }, "client-run-1234"), /IDEMPOTENCY_CONFLICT/);
+});
+test("automatically prunes the oldest terminal run and retains an idempotency tombstone", async t => {
+  const root = await mkdtemp(join(tmpdir(), "mybay-codex-retention-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const rpc = new Rpc();
+  const runtime = new CodexRuntime({
+    rpc,
+    dataDir: join(root, "data"),
+    workspace: join(root, "workspace"),
+    maxRetainedRuns: 2,
+  });
+  await runtime.initialize();
+  const session = await runtime.enqueue(() => runtime.createSession());
+  const oldBody = { session_id: session.id, input: "old" };
+  runtime.runs.set("old-run-1234", {
+    id: "old-run-1234", clientRunId: "old-client-1234", fingerprint: createHash("sha256").update(JSON.stringify(oldBody)).digest("hex"), sessionId: session.id,
+    status: "completed", events: [], approvals: {}, createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:01.000Z",
+  });
+  runtime.runs.set("newer-run-1234", {
+    id: "newer-run-1234", clientRunId: "newer-client-1234", fingerprint: "newer-fingerprint", sessionId: session.id,
+    status: "failed", events: [], approvals: {}, createdAt: "2026-01-02T00:00:00.000Z", updatedAt: "2026-01-02T00:00:01.000Z",
+  });
+  const run = await runtime.enqueue(() => runtime.submit({ session_id: session.id, input: "next" }, "next-client-1234"));
+  assert.equal(runtime.runs.size, 2);
+  assert.equal(runtime.runs.has("old-run-1234"), false);
+  assert.equal(runtime.runs.has("newer-run-1234"), true);
+  assert.equal(runtime.runs.has(run.id), true);
+  assert.equal(runtime.runTombstones.has("old-client-1234"), true);
+  await assert.rejects(runtime.submit(oldBody, "old-client-1234"), error => error.message === "CODEX_RUN_EXPIRED" && error.statusCode === 410);
+  await assert.rejects(runtime.submit({ session_id: session.id, input: "different" }, "old-client-1234"), /IDEMPOTENCY_CONFLICT/);
+  for (let i = 0; i < 30 && !run.turnId; i++) await new Promise(resolve => setTimeout(resolve, 5));
+  await runtime.queue;
+  await runtime.enqueue(() => runtime.finish(run, "cancelled"));
+  const restarted = new CodexRuntime({ rpc: new Rpc(), dataDir: join(root, "data"), workspace: join(root, "workspace"), maxRetainedRuns: 2 });
+  await restarted.initialize();
+  assert.equal(restarted.runTombstones.has("old-client-1234"), true);
+  await assert.rejects(restarted.submit(oldBody, "old-client-1234"), /CODEX_RUN_EXPIRED/);
+});
+
+test("never evicts an active run to make retention capacity", async t => {
+  const root = await mkdtemp(join(tmpdir(), "mybay-codex-retention-active-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const runtime = new CodexRuntime({ rpc: new Rpc(), dataDir: join(root, "data"), workspace: join(root, "workspace"), maxRetainedRuns: 1 });
+  await runtime.initialize();
+  const first = await runtime.enqueue(() => runtime.createSession());
+  const second = await runtime.enqueue(() => runtime.createSession());
+  runtime.runs.set("active-run-1234", {
+    id: "active-run-1234", clientRunId: "active-client-1234", fingerprint: "active-fingerprint", sessionId: first.id,
+    status: "running", events: [], approvals: {}, createdAt: "2026-01-01T00:00:00.000Z",
+  });
+  await assert.rejects(runtime.submit({ session_id: second.id, input: "next" }, "next-client-1234"), error => error.message === "CODEX_RUN_CAPACITY" && error.statusCode === 429);
+  assert.equal(runtime.runs.has("active-run-1234"), true);
 });
 test("restart retains terminal evidence and resumes original session without replaying a turn", async t => {
   const { runtime, root, run, session } = await fixture(t);

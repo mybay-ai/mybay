@@ -21,7 +21,7 @@ The image is `mybay/codex-runtime:0.154.0`, built from this directory. It runs a
 - A2A tools are registered through the pinned App Server's native `dynamicTools` / `item/tool/call` protocol only when the control plane injects resolved trusted peers. Peer URLs and bearer credentials never appear in tool output. Calls are bounded, preserve the collaboration context and can be aborted with the parent run. Existing native threads created before A2A was configured must use a new MyBay session because Codex 0.154.0 accepts dynamic tool registration only at `thread/start`.
 - Native `request_user_input` questions are validated and shown through the existing instance-scoped Chat Workspace question cards. Up to three questions are handled sequentially; secret questions are rejected and never persisted.
 - Browser automation and schedules remain closed.
-- Maximum 200 retained runs per instance in this Beta version. Capacity exhaustion is explicit; automatic retention cleanup is not implemented.
+- A maximum of 200 run records is retained per instance. Before accepting a new run, the bridge removes the oldest terminal records only; active runs are never evicted. Bounded idempotency tombstones reject replay of recently removed client run keys. Capacity exhaustion remains explicit when all retained runs are active.
 - Account import is not a new OAuth login flow. Reauthentication and account-switching UX remain future work.
 
 Run bridge tests with `node --test runtime/codex-bridge/*.test.mjs` from the repository root. Tests and certification evidence are separate from fresh browser and platform acceptance.

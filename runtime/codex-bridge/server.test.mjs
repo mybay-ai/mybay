@@ -26,6 +26,7 @@ test("HTTP authentication, dynamic A2A capability and durable SSE reconnect", as
   assert.equal(capabilities.features.a2a_tools, true);
   assert.equal(capabilities.features.managed_collaboration, true);
   assert.equal(capabilities.features.structured_questions, true);
+  assert.equal(capabilities.features.automatic_run_cleanup, true);
   const session = await fetch(base + "/api/sessions", { headers, method: "POST", body: "{}" }).then(r => r.json());
   assert.equal((await fetch(base + "/v1/runs", { headers, method: "POST", body: JSON.stringify({ session_id: "missing-session", input: "hello" }) })).status, 404);
   assert.equal(rpc.closed, undefined);

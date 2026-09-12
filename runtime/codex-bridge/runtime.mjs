@@ -44,13 +44,15 @@ export function fileMetadata(workspace, filePath, kind) {
 }
 
 export class CodexRuntime extends EventEmitter {
-  constructor({ rpc, dataDir, workspace, model, externalSandbox = false, a2aPeers = readConfiguredPeers(), questionBridge = null }) {
+  constructor({ rpc, dataDir, workspace, model, externalSandbox = false, a2aPeers = readConfiguredPeers(), questionBridge = null, maxRetainedRuns = 200, maxRunTombstones = 1000 }) {
     super(); this.rpc = rpc; this.dataDir = dataDir; this.workspace = resolve(workspace); this.model = model;
     this.externalSandbox = externalSandbox;
     this.a2aPeers = a2aPeers; this.activeA2A = new Map();
     this.questionBridge = questionBridge; this.questionRequests = new Map();
+    this.maxRetainedRuns = Number.isSafeInteger(maxRetainedRuns) && maxRetainedRuns > 0 ? maxRetainedRuns : 200;
+    this.maxRunTombstones = Number.isSafeInteger(maxRunTombstones) && maxRunTombstones > 0 ? maxRunTombstones : 1000;
     this.pendingDeltas = new Map(); this.deltaTimer = null;
-    this.runs = new Map(); this.sessions = new Map(); this.loaded = new Set(); this.queue = Promise.resolve();
+    this.runs = new Map(); this.runTombstones = new Map(); this.sessions = new Map(); this.loaded = new Set(); this.queue = Promise.resolve();
     rpc.on("message", message => {
       if (message.method === "item/agentMessage/delta" && typeof message.params?.delta === "string") {
         const p = message.params; const key = JSON.stringify([p.threadId, p.turnId, p.itemId]);
@@ -82,19 +84,56 @@ export class CodexRuntime extends EventEmitter {
     try {
       const saved = JSON.parse(await readFile(join(this.dataDir, "state.json"), "utf8"));
       for (const session of saved.sessions || []) if (safeId(session.id)) this.sessions.set(session.id, session);
+      for (const tombstone of saved.runTombstones || []) {
+        if (safeId(tombstone.clientRunId) && safeId(tombstone.sessionId) && typeof tombstone.fingerprint === "string") {
+          this.runTombstones.set(tombstone.clientRunId, tombstone);
+        }
+      }
       for (const run of saved.runs || []) if (safeId(run.id)) {
         run.approvals = {}; this.runs.set(run.id, run);
         // A process restart cannot preserve an outstanding native turn or approval.
         // Retain identity and partial output, and fail explicitly rather than replaying side effects.
         if (ACTIVE.has(run.status)) { run.status = "failed"; run.error = "CODEX_BRIDGE_RESTARTED"; run.events.push({ type: "run.failed", error: run.error, run_id: run.id }); }
       }
+      this.pruneTerminalRuns();
+      this.pruneRunTombstones();
     } catch (error) { if (error.code !== "ENOENT") throw fail("CODEX_STATE_INVALID", 500); }
     await this.rpc.initialize(); await this.persist();
   }
   async persist() {
     const target = join(this.dataDir, "state.json");
-    await writeFile(`${target}.tmp`, JSON.stringify({ sessions: [...this.sessions.values()], runs: [...this.runs.values()] }), { mode: 0o600 });
+    await writeFile(`${target}.tmp`, JSON.stringify({
+      sessions: [...this.sessions.values()],
+      runs: [...this.runs.values()],
+      runTombstones: [...this.runTombstones.values()],
+    }), { mode: 0o600 });
     await rename(`${target}.tmp`, target);
+  }
+  pruneRunTombstones() {
+    const oldest = [...this.runTombstones.values()]
+      .sort((left, right) => String(left.expiredAt || "").localeCompare(String(right.expiredAt || "")));
+    while (this.runTombstones.size > this.maxRunTombstones && oldest.length) {
+      this.runTombstones.delete(oldest.shift().clientRunId);
+    }
+  }
+  pruneTerminalRuns(reserve = 0) {
+    const targetSize = Math.max(0, this.maxRetainedRuns - reserve);
+    const terminal = [...this.runs.values()]
+      .filter(run => !ACTIVE.has(run.status))
+      .sort((left, right) => String(left.updatedAt || left.createdAt || "").localeCompare(String(right.updatedAt || right.createdAt || "")));
+    while (this.runs.size > targetSize && terminal.length) {
+      const run = terminal.shift();
+      this.runs.delete(run.id);
+      if (safeId(run.clientRunId)) {
+        this.runTombstones.set(run.clientRunId, {
+          clientRunId: run.clientRunId,
+          sessionId: run.sessionId,
+          fingerprint: run.fingerprint,
+          expiredAt: new Date().toISOString(),
+        });
+      }
+    }
+    this.pruneRunTombstones();
   }
   async createSession() {
     const session = { id: "codex-v2-" + randomUUID(), threadId: null };
@@ -120,9 +159,15 @@ export class CodexRuntime extends EventEmitter {
       if (existing.sessionId !== body.session_id || existing.fingerprint !== fingerprint) throw fail("IDEMPOTENCY_CONFLICT", 409);
       return existing;
     }
+    const tombstone = key && this.runTombstones.get(key);
+    if (tombstone) {
+      if (tombstone.sessionId !== body.session_id || tombstone.fingerprint !== fingerprint) throw fail("IDEMPOTENCY_CONFLICT", 409);
+      throw fail("CODEX_RUN_EXPIRED", 410);
+    }
     if ([...this.runs.values()].some(r => r.sessionId === body.session_id && ACTIVE.has(r.status))) throw fail("CODEX_SESSION_BUSY", 409);
-    if (this.runs.size >= 200) throw fail("CODEX_RUN_CAPACITY", 429);
     if (!(typeof body.input === "string" || Array.isArray(body.input))) throw fail("INVALID_INPUT");
+    this.pruneTerminalRuns(1);
+    if (this.runs.size >= this.maxRetainedRuns) throw fail("CODEX_RUN_CAPACITY", 429);
     const session = this.sessions.get(body.session_id);
     const run = { id: randomUUID(), clientRunId: key || randomUUID(), fingerprint, sessionId: body.session_id,
       status: "queued", output: "", model: safeModel(this.model) || safeModel(session.model), threadId: null, turnId: null,
