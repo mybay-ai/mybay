@@ -30,7 +30,8 @@
         "start": "node dist/server.cjs",
         "typecheck": "tsc --noEmit",
         "typecheck:strict-core": "tsc -p tsconfig.strict.json --noEmit",
-        "test": "vitest run && node --test runtime/codex-bridge/*.test.mjs",
+        "test": "vitest run && npm run test:runtime-bridges",
+        "test:runtime-bridges": "node --test runtime/pi-bridge/*.test.mjs runtime/codex-bridge/*.test.mjs",
         "test:schema": "vitest run server/runtimeSchema.test.ts",
         "test:docker-e2e": "vitest run server/dockerLifecycle.e2e.test.ts",
         "check:mojibake": "node scripts/check-mojibake.mjs",
@@ -121,6 +122,7 @@
         "typescript": "~5.8.2",
         "typescript-eslint": "^8.67.0",
         "vite": "^6.4.3",
+        "typebox": "1.3.7",
         "vitest": "^4.1.8"
     },
     "overrides": {
