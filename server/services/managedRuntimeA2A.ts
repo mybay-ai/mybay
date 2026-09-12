@@ -14,7 +14,7 @@ export function isManagedRuntimeA2APeer(instance: any): boolean {
 }
 
 export function isManagedRuntimeA2ACaller(instance: any): boolean {
-  if (runtimeType(instance) !== "pi") return false;
+  if (!["pi", "codex"].includes(runtimeType(instance))) return false;
   try {
     runtimeRegistry.resolveRunBinding(instance);
     return true;
@@ -28,11 +28,12 @@ export async function probeManagedRuntimeA2ACaller(instance: any) {
   try {
     const response = await runtimeRequest(instance, "GET", "/v1/capabilities", undefined, 5_000);
     const ready = response.ok && response.json?.features?.run_submission === true;
+    const runtime = runtimeType(instance);
     return ready
-      ? { state: "ready" as const, runtime: "pi", transport: "mybay_runtime" as const, toolState: response.json?.features?.a2a_tools === true ? "ready" as const : "unavailable" as const }
-      : { state: "unavailable" as const, runtime: "pi", transport: "mybay_runtime" as const, toolState: "unavailable" as const };
+      ? { state: "ready" as const, runtime, transport: "mybay_runtime" as const, toolState: response.json?.features?.a2a_tools === true ? "ready" as const : "unavailable" as const }
+      : { state: "unavailable" as const, runtime, transport: "mybay_runtime" as const, toolState: "unavailable" as const };
   } catch {
-    return { state: "unavailable" as const, runtime: "pi", transport: "mybay_runtime" as const, toolState: "unavailable" as const };
+    return { state: "unavailable" as const, runtime: runtimeType(instance), transport: "mybay_runtime" as const, toolState: "unavailable" as const };
   }
 }
 
@@ -45,10 +46,10 @@ export async function probeManagedRuntimeA2APeer(instance: any) {
   try {
     const response = await runtimeRequest(instance, "GET", "/v1/capabilities", undefined, 5_000);
     return response.ok && response.json?.features?.run_submission === true
-      ? { state: "ready" as const, runtime: "pi", transport: "mybay_runtime" as const }
-      : { state: "unavailable" as const, runtime: "pi", transport: "mybay_runtime" as const };
+      ? { state: "ready" as const, runtime: runtimeType(instance), transport: "mybay_runtime" as const }
+      : { state: "unavailable" as const, runtime: runtimeType(instance), transport: "mybay_runtime" as const };
   } catch {
-    return { state: "unavailable" as const, runtime: "pi", transport: "mybay_runtime" as const };
+    return { state: "unavailable" as const, runtime: runtimeType(instance), transport: "mybay_runtime" as const };
   }
 }
 
@@ -82,7 +83,7 @@ function toA2ATask(run: any, contextId: string) {
       state: taskState(run?.status),
       ...(run?.error ? { message: { role: "agent", parts: [{ kind: "text", text: String(run.error) }] } } : {}),
     },
-    ...(output ? { artifacts: [{ artifactId: "reply", name: "Pi Agent response", parts: [{ kind: "text", text: output }] }] } : {}),
+    ...(output ? { artifacts: [{ artifactId: "reply", name: "Managed Runtime response", parts: [{ kind: "text", text: output }] }] } : {}),
   };
 }
 

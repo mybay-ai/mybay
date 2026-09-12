@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { decrypt } from "../../../crypto";
+import { buildA2ARuntimeEnv } from "../../../services/a2aRuntimeConfig";
 import { providerRegistry } from "../../../../shared/providerRegistry";
 import { CODEX_API_PROVIDER_IDS } from "../../../../shared/runtimeModelProviderPolicy";
 import { buildDeepSeekCodexModelCatalog } from "./CodexModelCatalog";
@@ -123,6 +124,7 @@ export function buildCodexRuntimeEnvironment(config: any): Record<string, string
   return { PORT: "8080", CODEX_BRIDGE_API_KEY: key, CODEX_HOME: "/opt/data/codex",
     CODEX_BRIDGE_DATA_DIR: "/opt/data/codex-bridge", CODEX_WORKSPACE_DIR: "/opt/data/workspace",
     CODEX_AUTH_MODE: connection.mode,
+    ...buildA2ARuntimeEnv(config),
     ...(apiKey ? { MYBAY_CODEX_PROVIDER_KEY: apiKey } : {}),
     ...(model ? { CODEX_MODEL: model } : {}) };
 }

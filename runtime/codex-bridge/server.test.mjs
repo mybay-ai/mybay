@@ -6,14 +6,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { startServer } from "./server.mjs";
 
-test("HTTP authentication, rejected operations and durable SSE reconnect", async t => {
+test("HTTP authentication, dynamic A2A capability and durable SSE reconnect", async t => {
   const root = await mkdtemp(join(tmpdir(), "mybay-codex-http-"));
   const rpc = new EventEmitter();
   rpc.initialize = async () => {};
   rpc.close = () => { rpc.closed = true; };
   rpc.request = async method => method === "account/read" ? { account: { type: "chatgpt" } } : { thread: { id: "native-thread-123" }, turn: { id: "native-turn-123" } };
   const key = "fixture-authentication-key-12345678";
-  const { server, runtime } = await startServer({ rpc, env: { CODEX_BRIDGE_API_KEY: key, CODEX_BRIDGE_DATA_DIR: join(root, "state"), CODEX_WORKSPACE_DIR: join(root, "workspace"), HOST: "127.0.0.1", PORT: "0" } });
+  const { server, runtime } = await startServer({ rpc, env: { CODEX_BRIDGE_API_KEY: key, CODEX_BRIDGE_DATA_DIR: join(root, "state"), CODEX_WORKSPACE_DIR: join(root, "workspace"), HOST: "127.0.0.1", PORT: "0",
+    MYBAY_A2A_PEERS_JSON: JSON.stringify([{ id: "peer-1", name: "Peer", url: "http://relay/a2a", token: "secret" }]) } });
   t.after(async () => { server.closeAllConnections(); await new Promise(r => server.close(r)); await runtime.queue; await rm(root, { recursive: true, force: true }); });
   const base = `http://127.0.0.1:${server.address().port}`;
   const headers = { Authorization: `Bearer ${key}`, "Content-Type": "application/json" };
@@ -21,6 +22,8 @@ test("HTTP authentication, rejected operations and durable SSE reconnect", async
   const capabilities = await fetch(base + "/v1/capabilities", { headers }).then(r => r.json());
   assert.equal(capabilities.features.run_submission, true);
   assert.equal(capabilities.features.session_context_usage, true);
+  assert.equal(capabilities.features.a2a_tools, true);
+  assert.equal(capabilities.features.managed_collaboration, true);
   const session = await fetch(base + "/api/sessions", { headers, method: "POST", body: "{}" }).then(r => r.json());
   assert.equal((await fetch(base + "/v1/runs", { headers, method: "POST", body: JSON.stringify({ session_id: "missing-session", input: "hello" }) })).status, 404);
   assert.equal(rpc.closed, undefined);

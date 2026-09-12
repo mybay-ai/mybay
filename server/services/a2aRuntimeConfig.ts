@@ -71,7 +71,11 @@ export async function hydrateA2ARuntimePeers(instanceId: string, config: any): P
     } catch {
       continue;
     }
-    const managedRuntimePeer = String(peer.runtime_type || "hermes").trim().toLowerCase() === "pi"
+    const peerRuntime = String(peer.runtime_type || "hermes").trim().toLowerCase();
+    const expectedProvider = peerRuntime === "pi" ? "pi-rpc" : peerRuntime === "codex" ? "codex-app-server" : "";
+    const managedRuntimePeer = Boolean(expectedProvider)
+      && String(peer.runtime_provider_key || "").trim().toLowerCase() === expectedProvider
+      && Number(peer.runtime_contract_version) === 1
       && String(peer.status || "").trim().toLowerCase() === "running"
       && a2aTrackingEnabled(instanceId);
     if (!managedRuntimePeer && (peerConfig.a2aEnabled !== true || !peerConfig.a2aBearerToken)) continue;

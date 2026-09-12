@@ -5,6 +5,7 @@ import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { CodexAppServer } from "./app-server.mjs";
 import { CodexRuntime } from "./runtime.mjs";
+import { readConfiguredPeers } from "./a2a-tools.mjs";
 
 export const CODEX_BRIDGE_FEATURES = Object.freeze({
   run_submission: true, run_status: true, run_events_sse: true, run_stop: true,
@@ -40,7 +41,8 @@ export async function startServer(options = {}) {
     args: env.CODEX_CLI_PATH ? [] : [join(dirname(fileURLToPath(import.meta.url)), "node_modules/@openai/codex/bin/codex.js")],
     cwd: dirname(fileURLToPath(import.meta.url)), env: { ...env, CODEX_HOME: codexHome },
   });
-  const runtime = new CodexRuntime({ rpc, dataDir, workspace, model: env.CODEX_MODEL || undefined, externalSandbox: env.CODEX_EXTERNAL_SANDBOX === "true" });
+  const runtime = new CodexRuntime({ rpc, dataDir, workspace, model: env.CODEX_MODEL || undefined,
+    externalSandbox: env.CODEX_EXTERNAL_SANDBOX === "true", a2aPeers: readConfiguredPeers(env.MYBAY_A2A_PEERS_JSON || "") });
   try { await runtime.initialize(); } catch (error) { rpc.close(); throw error; }
   const expected = Buffer.from(`Bearer ${apiKey}`);
   async function handle(request, response) {
@@ -51,7 +53,9 @@ export async function startServer(options = {}) {
     if (request.method === "GET" && url.pathname === "/v1/capabilities") {
       const account = env.CODEX_AUTH_MODE === "api" ? { account: null } : await rpc.request("account/read", { refreshToken: false });
       const ready = env.CODEX_AUTH_MODE === "api" ? Boolean(env.MYBAY_CODEX_PROVIDER_KEY) : Boolean(account.account);
-      return json(response, 200, { runtime: "codex", auth_ready: ready, features: { ...CODEX_BRIDGE_FEATURES, run_submission: ready }, endpoints: { sessions: "/api/sessions", runs: "/v1/runs" } });
+      const a2aReady = runtime.a2aPeers.length > 0;
+      return json(response, 200, { runtime: "codex", auth_ready: ready, features: { ...CODEX_BRIDGE_FEATURES, run_submission: ready,
+        a2a_tools: a2aReady, managed_collaboration: a2aReady }, endpoints: { sessions: "/api/sessions", runs: "/v1/runs" } });
     }
     if (request.method === "POST" && url.pathname === "/api/sessions") return json(response, 201, await runtime.enqueue(() => runtime.createSession()));
     if (request.method === "GET" && url.pathname === "/v1/runs") return json(response, 200, { data: [...runtime.runs.values()].map(r => runtime.publicRun(r)) });

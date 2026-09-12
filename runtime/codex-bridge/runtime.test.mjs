@@ -19,11 +19,11 @@ class Rpc extends EventEmitter {
   respond(id, result) { this.responses.push({ id, result }); }
   send(value) { this.responses.push(value); }
 }
-async function fixture(t) {
+async function fixture(t, options = {}) {
   const root = await mkdtemp(join(tmpdir(), "mybay-codex-test-"));
   t.after(() => rm(root, { recursive: true, force: true }));
   const rpc = new Rpc();
-  const runtime = new CodexRuntime({ rpc, dataDir: join(root, "data"), workspace: join(root, "workspace") });
+  const runtime = new CodexRuntime({ rpc, dataDir: join(root, "data"), workspace: join(root, "workspace"), ...options });
   await runtime.initialize();
   const session = await runtime.enqueue(() => runtime.createSession());
   const run = await runtime.enqueue(() => runtime.submit({ session_id: session.id, input: "hello" }, "client-run-1234"));
@@ -33,6 +33,18 @@ async function fixture(t) {
   const event = (method, params = {}, id) => runtime.enqueue(() => runtime.onMessage({ method, id, params: { threadId: run.threadId, turnId: run.turnId, ...params } }));
   return { runtime, rpc, session, run, root, event };
 }
+test("advertises configured A2A tools and answers native dynamic tool calls", async t => {
+  const a2aPeers = [{ id: "reviewer-1", name: "Reviewer", url: "http://relay/a2a", token: "secret", capabilities: ["review"] }];
+  const { runtime, rpc, event } = await fixture(t, { a2aPeers });
+  const started = rpc.calls.find(call => call.method === "thread/start");
+  assert.deepEqual(started.params.dynamicTools.map(tool => tool.name), ["a2a_list", "a2a_call", "a2a_orchestrate"]);
+  await event("item/tool/call", { callId: "tool-call-1", tool: "a2a_list", arguments: {} }, 77);
+  for (let i = 0; i < 30 && !rpc.responses.some(response => response.id === 77); i++) await new Promise(resolve => setTimeout(resolve, 5));
+  assert.deepEqual(rpc.responses.find(response => response.id === 77), { id: 77, result: {
+    contentItems: [{ type: "inputText", text: "Configured A2A agents:\n- Reviewer (reviewer-1): review" }], success: true,
+  } });
+  await runtime.queue;
+});
 test("native approval decisions never widen once/deny to persistent grants", () => {
   for (const method of ["item/commandExecution/requestApproval", "item/fileChange/requestApproval"]) {
     assert.deepEqual(approvalDecision(method, "once"), { decision: "accept" });

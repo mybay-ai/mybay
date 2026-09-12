@@ -2,9 +2,12 @@ import { randomUUID, createHash } from "node:crypto";
 import { mkdir, readFile, writeFile, rename } from "node:fs/promises";
 import { join, resolve, relative, isAbsolute } from "node:path";
 import { EventEmitter } from "node:events";
+import { A2A_DYNAMIC_TOOLS, executeA2ATool, readConfiguredPeers } from "./a2a-tools.mjs";
 
 const ACTIVE = new Set(["queued", "running", "waiting_for_approval"]);
 const safeId = value => typeof value === "string" && /^[A-Za-z0-9_.:-]{8,160}$/.test(value);
+const safeCallId = value => typeof value === "string" && value.length >= 1 && value.length <= 512
+  && ![...value].some(character => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127);
 const fail = (code, statusCode = 400) => Object.assign(Error(code), { statusCode });
 const safeModel = value => typeof value === "string" && value.length <= 160
   && /^[A-Za-z0-9][A-Za-z0-9._:/-]*$/.test(value)
@@ -40,9 +43,10 @@ export function fileMetadata(workspace, filePath, kind) {
 }
 
 export class CodexRuntime extends EventEmitter {
-  constructor({ rpc, dataDir, workspace, model, externalSandbox = false }) {
+  constructor({ rpc, dataDir, workspace, model, externalSandbox = false, a2aPeers = readConfiguredPeers() }) {
     super(); this.rpc = rpc; this.dataDir = dataDir; this.workspace = resolve(workspace); this.model = model;
     this.externalSandbox = externalSandbox;
+    this.a2aPeers = a2aPeers; this.activeA2A = new Map();
     this.pendingDeltas = new Map(); this.deltaTimer = null;
     this.runs = new Map(); this.sessions = new Map(); this.loaded = new Set(); this.queue = Promise.resolve();
     rpc.on("message", message => {
@@ -130,7 +134,8 @@ export class CodexRuntime extends EventEmitter {
     const session = this.sessions.get(run.sessionId);
     const options = { cwd: this.workspace, model: this.model, approvalPolicy: "untrusted", approvalsReviewer: "user", sandbox: "workspace-write" };
     if (!session.threadId) {
-      const result = await this.rpc.request("thread/start", { ...options, developerInstructions: String(body.instructions || "") || undefined });
+      const result = await this.rpc.request("thread/start", { ...options, developerInstructions: String(body.instructions || "") || undefined,
+        ...(this.a2aPeers.length ? { dynamicTools: A2A_DYNAMIC_TOOLS } : {}) });
       if (!safeId(result?.thread?.id)) throw fail("CODEX_THREAD_INVALID");
       await this.enqueue(async () => {
         session.threadId = result.thread.id; session.model = safeModel(result.model) || safeModel(result.thread?.model) || run.model;
@@ -165,6 +170,7 @@ export class CodexRuntime extends EventEmitter {
   async stop(run) {
     if (!ACTIVE.has(run.status)) return run;
     run.stopRequested = true; await this.persist();
+    for (const active of this.activeA2A.values()) if (active.runId === run.id) active.controller.abort();
     if (run.turnId) void this.interrupt(run);
     return run;
   }
@@ -181,9 +187,28 @@ export class CodexRuntime extends EventEmitter {
   }
   async finish(run, status, error) {
     if (!ACTIVE.has(run.status)) return;
+    for (const active of this.activeA2A.values()) if (active.runId === run.id) active.controller.abort();
     run.status = status; run.error = error; run.approvals = {};
     if (run.tokenTotals) this.sessions.get(run.sessionId).tokenTotals = run.tokenTotals;
     await this.emitEvent(run, { type: `run.${status}`, output: run.output, error, usage: run.usage, model: run.model });
+  }
+  async handleA2ATool(run, message, controller) {
+    const p = message.params || {};
+    let success = false;
+    let resultText;
+    try {
+      if (!this.a2aPeers.length) throw new Error("A2A_NOT_CONFIGURED");
+      const result = await executeA2ATool(this.a2aPeers, p.tool, p.arguments, controller.signal);
+      success = result.success; resultText = result.text;
+    } catch (error) {
+      const code = controller.signal.aborted ? "A2A_CANCELLED" : String(error?.message || error).slice(0, 1_000);
+      resultText = `Error: ${code}`;
+    }
+    await this.enqueue(async () => {
+      this.rpc.respond(message.id, { contentItems: [{ type: "inputText", text: resultText }], success });
+      this.activeA2A.delete(message.id);
+      if (ACTIVE.has(run.status)) await this.emitEvent(run, { type: "tool.completed", tool_call_id: String(p.callId || message.id), tool: String(p.tool || "a2a"), success, status: success ? "completed" : "failed" });
+    });
   }
   async onMessage(message) {
     const p = message.params || {};
@@ -197,7 +222,18 @@ export class CodexRuntime extends EventEmitter {
       run.turnId = p.turn?.id; run.status = "running"; await this.emitEvent(run, { type: "run.started" });
       if (run.stopRequested) void this.interrupt(run);
     } else if (message.id !== undefined) {
-      if (["item/commandExecution/requestApproval", "item/fileChange/requestApproval"].includes(message.method)) {
+      if (message.method === "item/tool/call") {
+        // Do not hold the persistence queue while a remote Agent is running; stop() must be able to abort it.
+        const validCall = safeCallId(p.callId) && (p.namespace === null || p.namespace === undefined);
+        if (!validCall) {
+          this.rpc.respond(message.id, { contentItems: [{ type: "inputText", text: "Error: A2A_ARGUMENT_INVALID" }], success: false });
+        } else {
+          const controller = new AbortController();
+          this.activeA2A.set(message.id, { runId: run.id, controller });
+          await this.emitEvent(run, { type: "tool.started", tool_call_id: p.callId, tool: String(p.tool || "a2a") });
+          void this.handleA2ATool(run, message, controller).catch(() => this.emit("persistenceError"));
+        }
+      } else if (["item/commandExecution/requestApproval", "item/fileChange/requestApproval"].includes(message.method)) {
         const id = randomUUID();
         run.approvals[id] = { id: message.id, method: message.method, availableDecisions: p.availableDecisions };
         run.status = "waiting_for_approval";

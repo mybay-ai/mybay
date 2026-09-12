@@ -48,6 +48,12 @@ describe("Codex account isolation", () => {
     expect(() => buildCodexRuntimeEnvironment({ provider: "openai" })).toThrow("CODEX_BRIDGE_API_KEY_MISSING");
   });
 
+  it("injects only resolved A2A peers into the isolated Codex bridge", () => {
+    const env = buildCodexRuntimeEnvironment({ provider: "openai", hermesApiKey: "bridge-secret", a2aEnabled: true,
+      a2aBearerToken: "own-a2a-secret", a2aResolvedPeers: [{ instanceId: "peer-1", name: "Reviewer", url: "http://relay/a2a", encryptedToken: "relay-secret", capabilities: ["review"] }] });
+    expect(JSON.parse(env.MYBAY_A2A_PEERS_JSON)).toEqual([{ id: "peer-1", name: "Reviewer", url: "http://relay/a2a", token: "relay-secret", capabilities: ["review"] }]);
+  });
+
   it("rejects instance identifiers that could escape the managed instance root", () => {
     const mkdir = vi.spyOn(fs, "mkdirSync");
     expect(() => writeCodexRuntimeAccountAuth("../outside", JSON.stringify({

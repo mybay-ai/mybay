@@ -22,21 +22,25 @@ const peer = {
 
 beforeEach(() => request.mockReset());
 
-it("accepts only a running Pi instance with a valid persisted Runtime binding", () => {
+it("accepts Pi and Codex only with a valid persisted Runtime binding", () => {
   expect(isManagedRuntimeA2ACaller({ ...peer, status: "stopped" })).toBe(true);
+  expect(isManagedRuntimeA2ACaller({ ...peer, runtime_type: "codex", runtime_provider_key: "codex-app-server" })).toBe(true);
   expect(isManagedRuntimeA2APeer(peer)).toBe(true);
   expect(isManagedRuntimeA2APeer({ ...peer, status: "stopped" })).toBe(false);
   expect(isManagedRuntimeA2APeer({ ...peer, runtime_provider_key: "hermes-core" })).toBe(false);
 });
 
-it("requires the Pi bridge to advertise active A2A tools before declaring the caller ready", async () => {
+it("requires a managed bridge to advertise active A2A tools before declaring the caller ready", async () => {
   request.mockResolvedValueOnce({ ok: true, json: { features: { run_submission: true, a2a_tools: true } } });
   await expect(probeManagedRuntimeA2ACaller(peer)).resolves.toMatchObject({ state: "ready", toolState: "ready" });
   request.mockResolvedValueOnce({ ok: true, json: { features: { run_submission: true } } });
   await expect(probeManagedRuntimeA2ACaller(peer)).resolves.toMatchObject({ state: "ready", toolState: "unavailable" });
+  request.mockResolvedValueOnce({ ok: true, json: { features: { run_submission: true, a2a_tools: true } } });
+  await expect(probeManagedRuntimeA2ACaller({ ...peer, runtime_type: "codex", runtime_provider_key: "codex-app-server" }))
+    .resolves.toMatchObject({ state: "ready", runtime: "codex", toolState: "ready" });
 });
 
-it("translates an A2A message into a Pi run and streams mapped terminal evidence", async () => {
+it("translates an A2A message into a managed run and streams mapped terminal evidence", async () => {
   request
     .mockResolvedValueOnce({ ok: true, statusCode: 201, json: { id: "session-1234" } })
     .mockResolvedValueOnce({ ok: true, statusCode: 202, json: { id: "run-12345678", status: "queued" } })
