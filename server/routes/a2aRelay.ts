@@ -54,7 +54,7 @@ export function createA2ARelayRouter() {
       const nativePeer = isNativeA2APeer(peer, peerConfig, true) && Boolean(peerConfig.a2aBearerToken);
       if (!config.a2aEnabled || !config.a2aPeerIds?.includes(peerId) || (!managedPeer && !nativePeer)) return res.sendStatus(403);
       if (req.method === 'GET' && ['/.well-known/agent-card.json', '/.well-known/agent.json'].includes(req.path)) {
-        return res.json({ name: managedPeer ? String(peer.name || 'Pi Agent') : 'MyBay tracked A2A peer', description: managedPeer ? 'MyBay managed Runtime collaboration peer' : 'Tracked internal collaboration', capabilities: { streaming: true }, supportedInterfaces: [{ protocolBinding: 'JSONRPC', protocolVersion: '1.0', url: a2aRelayUrl(instanceId, peerId) }], skills: [] });
+        return res.json({ name: managedPeer ? String(peer.name || 'Managed Agent') : 'MyBay tracked A2A peer', description: managedPeer ? 'MyBay managed Runtime collaboration peer' : 'Tracked internal collaboration', capabilities: { streaming: true }, supportedInterfaces: [{ protocolBinding: 'JSONRPC', protocolVersion: '1.0', url: a2aRelayUrl(instanceId, peerId) }], skills: [] });
       }
       if (req.method !== 'POST' || !['/', ''].includes(req.path)) return res.sendStatus(404);
       const activityStore = readStoreCollections(['chatRuns', 'a2aTaskLinks']);

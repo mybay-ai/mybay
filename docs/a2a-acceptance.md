@@ -18,9 +18,9 @@ The report contains IDs, states, durations, and marker presence. Credentials rem
 
 报告只包含 ID、状态、耗时与标记是否命中。凭据仅从环境变量读取，不写入报告。
 
-Managed member calls and reconnect polling share `MYBAY_A2A_TASK_WAIT_MS` (default 300000, bounded to 30000-900000). A Pi `waiting_for_approval` or `waiting_for_input` response is surfaced immediately as an actionable failed group outcome instead of being polled until timeout.
+Managed member calls and reconnect polling share `MYBAY_A2A_TASK_WAIT_MS` (default 300000, bounded to 30000-900000). A Pi or Codex `waiting_for_approval` or `waiting_for_input` response is surfaced immediately as an actionable failed group outcome instead of being polled until timeout.
 
-托管成员调用与断线恢复轮询共用 `MYBAY_A2A_TASK_WAIT_MS`（默认 300000，限制为 30000-900000）。Pi 返回 `waiting_for_approval` 或 `waiting_for_input` 时，会立即形成可处理的群组失败终态，不再轮询到超时。
+托管成员调用与断线恢复轮询共用 `MYBAY_A2A_TASK_WAIT_MS`（默认 300000，限制为 30000-900000）。Pi 或 Codex 返回 `waiting_for_approval` 或 `waiting_for_input` 时，会立即形成可处理的群组失败终态，不再轮询到超时。
 
 ## Run / 执行
 

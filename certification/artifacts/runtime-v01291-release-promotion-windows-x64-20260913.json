@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "artifactType": "runtime-release-promotion",
+  "capturedAt": "2026-09-13T01:05:02.144Z",
+  "source": {
+    "version": "0.1.29.1",
+    "baseCommit": "695746330f1ba53510279351bfc16e10b92176d3",
+    "controlImage": "mybay/local:0.1.29.1-release-candidate",
+    "controlImageId": "sha256:8f01a83fb9a5ad955abaa11f747e40502d6d11e1bc02a7b8f8a74f55f85fecd3"
+  },
+  "environment": {
+    "platform": "Windows 10 Pro x64",
+    "runtimePlatform": "Docker Desktop / Engine 29.7.2 / Linux x86_64",
+    "controlUrl": "http://127.0.0.1:4392",
+    "codexRuntimeUrl": "http://127.0.0.1:4393",
+    "isolatedData": true,
+    "dataLocation": "release-worktree/data/acceptance-v01291"
+  },
+  "observations": {
+    "sourceValidation": {
+      "status": "PASS",
+      "typecheck": "PASS",
+      "strictCoreTypecheck": "PASS",
+      "strictBoundaryTypecheck": "PASS",
+      "eslint": "PASS",
+      "contentChecks": "PASS",
+      "vitest": {
+        "status": "PASS",
+        "filesPassed": 403,
+        "filesSkipped": 1,
+        "testsPassed": 2218,
+        "testsSkipped": 6
+      },
+      "runtimeBridgeTests": {
+        "status": "PASS",
+        "testsPassed": 49
+      }
+    },
+    "finalImageBuild": "PASS",
+    "finalContainerHealth": "PASS",
+    "healthResponse": {
+      "status": "healthy",
+      "version": "0.1.29.1"
+    },
+    "containerPackageVersion": "0.1.29.1",
+    "loopbackPortBinding": "127.0.0.1:4392",
+    "codexRuntimeImage": {
+      "status": "PASS",
+      "nativeVersion": "0.154.0",
+      "bridgeVersion": "0.1.0-experimental.4",
+      "imageRef": "mybay/codex-runtime:0.154.0",
+      "imageId": "sha256:f9d456034bf02c74c336e33f95775b410e800228273419a45afa52e20000424a",
+      "health": "PASS",
+      "readOnlyRootFilesystem": true,
+      "capabilitiesDropped": "ALL",
+      "noNewPrivileges": true
+    },
+    "credentialedCodexAcceptance": {
+      "status": "PASS",
+      "scope": "one real Codex core lifecycle task followed by restart recovery",
+      "runId": "6158586a-0adc-4062-aa7a-a241ce78d140",
+      "nativeThreadId": "01a0984a-b693-7783-bf68-2d84ca59d40d",
+      "nativeTurnId": "01a0984a-c20f-7d61-b63c-9ca0e6604a20",
+      "model": "gpt-6-astra",
+      "expectedOutput": "MYBAY_V01291_CODEX_OK",
+      "observedOutput": "MYBAY_V01291_CODEX_OK",
+      "terminalStatus": "completed",
+      "eventTypes": [
+        "run.created",
+        "run.started",
+        "message.delta",
+        "message.delta",
+        "run.completed"
+      ],
+      "eventCount": 5,
+      "usage": {
+        "inputTokens": 16357,
+        "cachedInputTokens": 12160,
+        "outputTokens": 13,
+        "totalTokens": 16370
+      },
+      "restartRecovery": "PASS"
+    },
+    "runtimeImages": [
+      {
+        "runtime": "hermes",
+        "imageRef": "nousresearch/hermes-agent:v2026.8.27",
+        "imageId": "sha256:e0df6adebddf29b91112aefc999d4aaf6846c9eb544faca5672a16a13590ff79"
+      },
+      {
+        "runtime": "pi",
+        "imageRef": "mybay/pi-runtime:0.85.1",
+        "imageId": "sha256:b2ad5cf15c9f79a826a72ebda523b45ee2de80e53e438952227e06a8d79e0aa0"
+      },
+      {
+        "runtime": "codex",
+        "imageRef": "mybay/codex-runtime:0.154.0",
+        "imageId": "sha256:f9d456034bf02c74c336e33f95775b410e800228273419a45afa52e20000424a"
+      }
+    ]
+  },
+  "promotionBasis": [
+    "The exact final 0.1.29.1 control image was built from the integrated release branch and returned a healthy 0.1.29.1 response from an isolated container.",
+    "The complete source, lint, typecheck, content, and Runtime bridge test suites passed on the final-version tree.",
+    "A credentialed Codex task completed with the expected fixed marker and the same terminal run was recovered after restarting the hardened Runtime container.",
+    "Hermes and Pi image identities are retained from the previously certified release line; their bridge contracts were rerun in this release tree."
+  ],
+  "boundaries": [
+    "The credentialed run covers one Codex core lifecycle task only.",
+    "Codex A2A tools and structured user questions passed fixture and contract tests; real mixed-Runtime A2A and interactive question UI acceptance are NOT_RUN for 0.1.29.1.",
+    "Hermes and Pi native images are unchanged; their older credentialed lifecycle scenarios were not all rerun for this patch release.",
+    "Linux and headless certification is NOT_RUN for 0.1.29.1; the new workflow fails closed until matching evidence is captured.",
+    "GitHub-hosted release assets, SBOM, SHA256SUMS, multi-architecture image publication, and GitHub Actions results are pending until the v0.1.29.1 tag workflow completes.",
+    "No credentials or unrestricted model responses are retained in this artifact."
+  ],
+  "containsSecrets": false
+}

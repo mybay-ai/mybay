@@ -1,9 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { decrypt } from "../../../crypto";
+import { buildA2ARuntimeEnv } from "../../../services/a2aRuntimeConfig";
 import { providerRegistry } from "../../../../shared/providerRegistry";
 import { CODEX_API_PROVIDER_IDS } from "../../../../shared/runtimeModelProviderPolicy";
 import { buildDeepSeekCodexModelCatalog } from "./CodexModelCatalog";
+import { issueQuestionBridgeCredential } from "../../../services/runs/questionBridgeCredentials";
 
 // Called only after the saved credential has been resolved for the current user.
 export function applyCodexOAuthCredential(config: Record<string, any>, credentialType: unknown) {
@@ -123,6 +125,7 @@ export function buildCodexRuntimeEnvironment(config: any): Record<string, string
   return { PORT: "8080", CODEX_BRIDGE_API_KEY: key, CODEX_HOME: "/opt/data/codex",
     CODEX_BRIDGE_DATA_DIR: "/opt/data/codex-bridge", CODEX_WORKSPACE_DIR: "/opt/data/workspace",
     CODEX_AUTH_MODE: connection.mode,
+    ...buildA2ARuntimeEnv(config),
     ...(apiKey ? { MYBAY_CODEX_PROVIDER_KEY: apiKey } : {}),
     ...(model ? { CODEX_MODEL: model } : {}) };
 }
@@ -131,6 +134,11 @@ export function writeCodexRuntimeEnvironment(instanceId: string, config: any) {
   if (!/^[A-Za-z0-9_-]{1,128}$/.test(instanceId)) throw Error("CODEX_INSTANCE_ID_INVALID");
   const root = path.resolve(process.cwd(), "data", "instances", instanceId);
   const finalEnvMap = buildCodexRuntimeEnvironment(config);
+  const questionToken = issueQuestionBridgeCredential(instanceId);
+  const configuredPort = Number(process.env.PORT || 3000);
+  const controlPanelPort = Number.isInteger(configuredPort) && configuredPort > 0 && configuredPort <= 65535 ? configuredPort : 3000;
+  finalEnvMap.MYBAY_QUESTION_BRIDGE_URL = `http://mybay-local-control-panel:${controlPanelPort}/internal/questions/${instanceId}`;
+  finalEnvMap.MYBAY_QUESTION_BRIDGE_TOKEN = questionToken;
   const authPath = path.join(root, "codex", "auth.json");
   // Native refreshes may rotate tokens. Never replace a refreshed account on routine redeploy.
   if (config.codexAuthMode !== "api" && !fs.existsSync(authPath)) {

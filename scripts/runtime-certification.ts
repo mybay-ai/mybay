@@ -15,6 +15,20 @@ const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "
 const packageVersion = JSON.parse(fs.readFileSync(path.join(projectRoot, "package.json"), "utf8")).version as string;
 const writeOutputs = process.argv.includes("--write");
 const strict = process.argv.includes("--strict");
+const platformArgument = process.argv.find((argument) => argument.startsWith("--platform="))?.slice("--platform=".length);
+const headlessArgument = process.argv.find((argument) => argument.startsWith("--headless="))?.slice("--headless=".length);
+if (platformArgument && !["windows", "linux", "macos"].includes(platformArgument)) {
+  throw new Error(`unsupported certification platform: ${platformArgument}`);
+}
+if (headlessArgument && !["true", "false"].includes(headlessArgument)) {
+  throw new Error(`unsupported headless value: ${headlessArgument}`);
+}
+if ((platformArgument === undefined) !== (headlessArgument === undefined)) {
+  throw new Error("--platform and --headless must be supplied together");
+}
+const targetEnvironment = platformArgument
+  ? { platform: platformArgument as RuntimeCertificationEnvironment["platform"], headless: headlessArgument === "true" }
+  : undefined;
 const errors: string[] = [];
 const requirementIds: ReadonlySet<string> = new Set(RUNTIME_CERTIFICATION_REQUIREMENTS.map(({ id }) => id));
 
@@ -131,12 +145,18 @@ function parseEvidence(relativePath: string): AnyRuntimeCertificationEvidenceBun
         || !["contract", "runtime", "e2e"].includes(String(check.scope))
         || typeof check.observedAt !== "string"
         || (check.validUntil !== undefined && typeof check.validUntil !== "string")
+        || (check.environmentId !== undefined && (typeof check.environmentId !== "string"
+          || !/^[a-z0-9][a-z0-9._-]{0,79}$/.test(check.environmentId)))
         || typeof check.environment !== "string"
         || (check.command !== undefined && typeof check.command !== "string")
         || !Array.isArray(check.evidenceRefs)
         || check.evidenceRefs.some((reference) => typeof reference !== "string")
         || (check.note !== undefined && typeof check.note !== "string")) {
         throw new Error(`check ${index} is invalid`);
+      }
+      if (check.environmentId !== undefined
+        && !value.environments.some((environment) => (environment as RuntimeCertificationEnvironment).id === check.environmentId)) {
+        throw new Error(`check ${index} references an unknown environment id: ${check.environmentId}`);
       }
       for (const reference of check.evidenceRefs as string[]) {
         validateEvidenceReference(reference, index);
@@ -152,13 +172,16 @@ function parseEvidence(relativePath: string): AnyRuntimeCertificationEvidenceBun
   }
 }
 
-function publishedReport(definition: RuntimeDefinition): PublishedRuntimeCertification {
+function publishedReport(
+  definition: RuntimeDefinition,
+  target?: { readonly platform: RuntimeCertificationEnvironment["platform"]; readonly headless: boolean },
+): PublishedRuntimeCertification {
   const relativeEvidencePath = `certification/evidence/${definition.runtime.type}.certification.json`;
   const evidenceExists = fs.existsSync(path.join(projectRoot, relativeEvidencePath));
   const report = evaluateRuntimeCertification(
     definition,
     evidenceExists ? parseEvidence(relativeEvidencePath) : undefined,
-    { expectedMybayVersion: packageVersion },
+    { expectedMybayVersion: packageVersion, targetEnvironment: target },
   );
   return {
     ...report,
@@ -166,7 +189,10 @@ function publishedReport(definition: RuntimeDefinition): PublishedRuntimeCertifi
   };
 }
 
-const reports = RUNTIME_DEFINITIONS.map(publishedReport);
+const reports = RUNTIME_DEFINITIONS.map((definition) => publishedReport(definition));
+const gateReports = targetEnvironment
+  ? RUNTIME_DEFINITIONS.map((definition) => publishedReport(definition, targetEnvironment))
+  : reports;
 
 function publicDocument(): string {
   return `${JSON.stringify({
@@ -211,7 +237,7 @@ function certificationDocument(): string {
     "",
     "## Current status",
     "",
-    "| Runtime | Declared level | Verified level | Release identity | Artifact verification | Publication status | Verified platforms | Last verified | Evidence bundle |",
+    "| Runtime | Declared level | Verified level | Release identity | Artifact verification | Publication status | Retained environments | Last verified | Evidence bundle |",
     "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ...runtimeRows,
     "",
@@ -231,7 +257,7 @@ function certificationDocument(): string {
     "| --- | --- | --- | --- |",
     ...requirementRows,
     "",
-    "Evidence bundles live at `certification/evidence/<runtime-type>.certification.json` and current bundles must validate against `public/schemas/mybay.runtime-certification-evidence.schema.json`. Schema v3 binds native version, explicit nullable bridge version, image reference, and an immutable OCI digest or Docker image ID. Legacy schema v2 evidence remains readable as metadata-compatible history but cannot produce an exact verified publication. Each bundle identifies the real platform and versions it covers, and every local evidence reference is resolved and protected by a retained SHA-256. Secrets and credentials must never be committed.",
+    "Evidence bundles live at `certification/evidence/<runtime-type>.certification.json` and current bundles must validate against `public/schemas/mybay.runtime-certification-evidence.schema.json`. Schema v3 binds native version, explicit nullable bridge version, image reference, and an immutable OCI digest or Docker image ID. Its optional `environmentId` check field is mandatory when satisfying a target-platform gate. Legacy schema v2 evidence remains readable as metadata-compatible history but cannot produce an exact verified publication. Each bundle identifies the real platform and versions it covers, and every local evidence reference is resolved and protected by a retained SHA-256. Secrets and credentials must never be committed.",
     "",
     "Run `npm run runtime:certification` to validate and display the current report. Run `npm run runtime:certify` as the strict release gate; it fails while a Runtime's declared level is not fully verified.",
     "",
@@ -261,19 +287,29 @@ checkOrWrite("docs/runtime-certification.md", certificationDocument());
 function platformMatrixDocument(): string {
   const targets = [
     { platform: "windows", environment: "Docker Desktop", headless: false },
+    { platform: "windows", environment: "Docker Desktop (headless run)", headless: true },
     { platform: "linux", environment: "Docker Engine", headless: false },
     { platform: "macos", environment: "Docker Desktop", headless: false },
     { platform: "linux", environment: "Docker Engine (headless server)", headless: true },
   ] as const;
-  const rows = reports.flatMap((report) => targets.map((target) => {
-    const matches = report.environments.filter((environment) => environment.platform === target.platform && environment.headless === target.headless);
-    const status = report.declaredLevel === "spec-only" ? "Spec-only"
-      : matches.length > 0 && report.publicationStatus === "verified" ? report.verifiedLevel
-        : matches.length > 0 ? "Historical evidence only" : "Pending";
+  const rows = RUNTIME_DEFINITIONS.flatMap((definition) => targets.map((target) => {
+    const relativeEvidencePath = `certification/evidence/${definition.runtime.type}.certification.json`;
+    const evidence = parseEvidence(relativeEvidencePath);
+    const targetReport = evaluateRuntimeCertification(definition, evidence, {
+      expectedMybayVersion: packageVersion,
+      targetEnvironment: { platform: target.platform, headless: target.headless },
+    });
+    const matches = evidence?.environments.filter((environment) =>
+      environment.platform === target.platform && environment.headless === target.headless) ?? [];
+    const currentMatches = targetReport.environments;
+    const status = targetReport.declaredLevel === "spec-only" ? "Spec-only"
+      : targetReport.publicationStatus === "verified" ? targetReport.verifiedLevel
+        : currentMatches.length > 0 ? "Evidence pending target binding"
+          : matches.length > 0 ? "Historical evidence only" : "Pending";
     const detail = matches.length > 0
       ? matches.map((environment) => `${environment.architecture ?? "architecture not retained"}; ${environment.containerEngineVersion ?? "Docker version not retained"}; MyBay ${environment.mybayVersion}; Runtime ${environment.runtimeVersion}`).join("<br>")
       : "No retained real-runtime evidence";
-    return `| ${report.runtimeType} | ${target.platform} | ${target.environment} | ${status} | ${detail} |`;
+    return `| ${targetReport.runtimeType} | ${target.platform} | ${target.environment} | ${status} | ${detail} |`;
   }));
   return [
     "# Runtime x Platform Certification Matrix",
@@ -286,14 +322,14 @@ function platformMatrixDocument(): string {
     "| --- | --- | --- | --- | --- |",
     ...rows,
     "",
-    "Static compatibility is checked on Ubuntu, Windows, and macOS by `.github/workflows/ci.yml`. Those checks validate launchers and contracts without claiming nested-Docker or credentialed product E2E certification.",
+    "Static compatibility is checked on Ubuntu, Windows, and macOS by `.github/workflows/ci.yml`. Those checks validate launchers and contracts without claiming nested-Docker or credentialed product E2E certification. A platform row verifies only when every required check carries an `environmentId` bound to a current-version environment for that exact platform and headless mode.",
     "",
   ].join("\n");
 }
 
 checkOrWrite("docs/runtime-platform-matrix.md", platformMatrixDocument());
 
-for (const report of reports) {
+for (const report of gateReports) {
   console.log(`[runtime:certification] runtime=${report.runtimeType} declared=${report.declaredLevel} verified=${report.verifiedLevel} status=${report.publicationStatus}`);
   for (const detail of report.errors) {
     console.warn(`[runtime:certification:status] runtime=${report.runtimeType} ${detail}`);
@@ -302,6 +338,9 @@ for (const report of reports) {
     const detail = report.errors.length > 0 ? ` (${report.errors.join("; ")})` : "";
     errors.push(`${report.runtimeType}: declared ${report.declaredLevel} is not verified${detail}`);
   }
+}
+if (targetEnvironment) {
+  console.log(`[runtime:certification:target] platform=${targetEnvironment.platform} headless=${targetEnvironment.headless}`);
 }
 for (const error of errors) console.error(`[runtime:certification:error] ${error}`);
 if (errors.length > 0) process.exitCode = 1;

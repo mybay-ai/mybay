@@ -1,3 +1,7 @@
+import { transitionDeployRuntime } from "./deployRuntimeTransition";
+import { useDeployForm } from "./useDeployForm";
+import { useDeploySubmission } from "./useDeploySubmission";
+import { switchDeployChannel } from "./deployChannelDraft";
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, ChevronRight, HardDrive, ShieldAlert, Zap, Globe, Cpu, RefreshCw, Layers, Bell, Eye, EyeOff, Shield, Server, Activity, Compass, XCircle, Terminal, Users, TrendingUp, CheckCircle2, AlertCircle, Sparkles } from "lucide-react";
@@ -6,10 +10,7 @@ import { Button, Input, Label, Card } from "../../components/ui";
 import type { SetupFormData } from "../../types";
 import { useInstanceQuota } from "../../hooks/useInstanceQuota";
 import { api } from "../../lib/api";
-import { sanitizeDeployPayload } from "./sanitizeDeployPayload";
-import { normalizeRuntimeAccessDraft } from "../../../shared/runtimeAccessPolicy";
-import { buildLocalDeploymentRequest } from "./localDeploymentRequestAdapter";
-import { isDeploymentSuccessful, isDeploymentTerminal } from "./deploymentUiState";
+import { useDeployDiagnostics } from "./useDeployDiagnostics";
 import { hasBasicStepError, hasModelStepError, requiresPredeployModelTest } from "./deployStepValidation";
 
 // Import modular sub-components
@@ -75,38 +76,17 @@ export function DeployWizard({
   const [showContactInfo, setShowContactInfo] = useState(false);
 
   const [step, setStep] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [preflight, setPreflight] = useState<any>(null);
-  const [testResults, setTestResults] = useState<any>({});
-  const [createdInstance, setCreatedInstance] = useState<any>(null);
-  const [idempotencyKey] = useState(() => crypto.randomUUID());
-  const [versions, setVersions] = useState<any[]>([]);
   const [showPassword, setShowPassword] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [trustPermissionConfirmed, setTrustPermissionConfirmed] = useState(false);
   const [activeWorkflowTemplate, setActiveWorkflowTemplate] = useState<any>(null);
   const [activeBlueprint, setActiveBlueprint] = useState<any>(null);
 
-  const isTraefik = preflight?.proxyMode === "traefik";
 
   const isChannelAllowedByPlan = (channel: any) => isDeployChannelAllowedByEntitlement(channel, externalChannelsAllowed);
   const planChannelRestrictionMessage = t("validation.plan_channel_restricted");
 
-  const [data, setData] = useState<Partial<SetupFormData>>(() => normalizeRuntimeAccessDraft({
-    id: crypto.randomUUID(),
-    runtime_type: "hermes",
-    path: `agent-${secureRandomSuffix()}`,
-    image: HERMES_RUNTIME_DEFINITION.runtime.image,
-    imageTag: HERMES_RUNTIME_DEFINITION.runtime.tag,
-    channel: "web",
-    allowMode: "bind_later",
-    modelBillingMode: "byok",
-    enableDashboard: true,
-    limitsCpu: "1",
-    limitsMem: "1024MB",
-    ...initialData,
-  }));
-  const isPiRuntime = String(data.runtime_type || "hermes").toLowerCase() === "pi";
+  const { data, setData, isPiRuntime, trustPermissionConfirmed, setTrustPermissionConfirmed } = useDeployForm(initialData);
+  const { preflight, versions, testResults, setTestResults, runPreflight, testLLM, testChannel, testSkill } = useDeployDiagnostics(data, currentUser);
+  const isTraefik = preflight?.proxyMode === "traefik";
   const isChannelAllowedForRuntime = (channel: any) => (
     isChannelAllowedByPlan(channel)
     && (!isPiRuntime || channel === "web" || channel === "none")
@@ -115,60 +95,7 @@ export function DeployWizard({
     ? t("wizardCopy.channel.piWebOnly")
     : planChannelRestrictionMessage;
 
-  useEffect(() => {
-    if (!isPiRuntime) return;
-    setData(current => normalizeRuntimeAccessDraft(current));
-  }, [isPiRuntime]);
 
-  const trustPermissionFingerprint = JSON.stringify({
-    provider: data.provider,
-    model: data.model,
-    channel: data.channel,
-    channelMode: data.channelMode,
-    allowMode: data.allowMode,
-    gatewayAllowAllUsers: data.gatewayAllowAllUsers,
-    limitsDisk: (data as any).limitsDisk,
-    providerCredentialId: data.providerCredentialId,
-    providerApiKey: data.providerApiKey ? "configured" : "",
-    skills: data.skills || []
-  });
-
-  useEffect(() => {
-    setTrustPermissionConfirmed(false);
-  }, [trustPermissionFingerprint]);
-
-  useEffect(() => {
-    const taskId = createdInstance?.deploymentTaskId;
-    if (!taskId || isDeploymentTerminal(createdInstance?.deploymentStatus)) return;
-    let stopped = false;
-    const poll = async () => {
-      try {
-        const deployment = await api.get(`/api/deployments/${taskId}`);
-        if (stopped) return;
-        const terminalSuccess = isDeploymentSuccessful(deployment);
-        setCreatedInstance((current: any) => current?.deploymentTaskId === taskId ? {
-          ...current,
-          deploymentStatus: terminalSuccess ? "success" : deployment.status,
-          currentStep: deployment.currentStep,
-          progress: deployment.progress,
-          errorCode: deployment.errorCode,
-          errorMessage: deployment.errorMessage,
-          healthStatus: deployment.healthStatus,
-          instanceStatus: deployment.instanceStatus,
-        } : current);
-      } catch (error) {
-        console.error("Deployment status polling failed:", error);
-      }
-    };
-    void poll();
-    const timer = window.setInterval(() => void poll(), 1500);
-    return () => { stopped = true; window.clearInterval(timer); };
-  }, [createdInstance?.deploymentTaskId, createdInstance?.deploymentStatus]);
-
-  useEffect(() => {
-    runPreflight();
-    fetchVersions();
-  }, []);
 
   useEffect(() => {
     if (!templateWorkflowsEnabled) {
@@ -282,87 +209,6 @@ export function DeployWizard({
     }
   }, [templateWorkflowsEnabled, templateType, templateId, blueprintId, currentUser, i18n.resolvedLanguage, i18n.language]);
 
-  const fetchVersions = async () => {
-    try {
-      const data = await api.get("/api/agent-versions");
-      if (data) {
-        setVersions(data);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const runPreflight = async () => {
-    if (currentUser?.role !== 'admin') {
-      // Regular users don't see technical preflight details, mock success to allow deployment wizard flow
-      setPreflight({
-        status: "ok",
-        checks: [
-          { name: t("wizardCopy.preflight.localRuntime"), status: "ok", message: t("wizardCopy.preflight.localRuntimeReady") },
-          { name: "Deployment quota check", status: "ok", message: "Local administrator can deploy instances." }
-        ]
-      });
-      return;
-    }
-    setPreflight(null);
-    try {
-      const result = await api.get("/api/system/preflight");
-      setPreflight(result);
-    } catch (e: any) {
-      console.error(e);
-      if (e.status === 403) {
-        setPreflight({
-          status: "error",
-          checks: [{ name: t("preflight_errors.permission_title"), status: "fail", message: t("preflight_errors.permission_msg") }]
-        });
-      } else {
-        setPreflight({
-          status: "error",
-          checks: [{ name: t("preflight_errors.system_title"), status: "fail", message: t("preflight_errors.system_msg") }]
-        });
-      }
-    }
-  };
-
-
-  const testLLM = async () => {
-    setTestResults((tr: any) => ({ ...tr, llm: { loading: true } }));
-    try {
-      const result = await api.post("/api/system/test-llm", {
-        provider: data.provider,
-        model: data.model,
-        baseUrl: data.baseUrl,
-        apiKey: data.providerApiKey,
-        credentialId: data.providerCredentialId
-      });
-      setTestResults((tr: any) => ({ ...tr, llm: { loading: false, result } }));
-    } catch (e: any) {
-      setTestResults((tr: any) => ({ ...tr, llm: { loading: false, result: { success: false, error: e.message } } }));
-    }
-  };
-
-  const testChannel = async () => {
-    setTestResults((tr: any) => ({ ...tr, channel: { loading: true } }));
-    try {
-      const sanitized = sanitizeDeployPayload(data);
-      const result = await api.post("/api/system/test-channel", sanitized);
-      setTestResults((tr: any) => ({ ...tr, channel: { loading: false, result } }));
-    } catch (e: any) {
-      setTestResults((tr: any) => ({ ...tr, channel: { loading: false, result: { success: false, error: e.message } } }));
-    }
-  };
-
-  const testSkill = async (skillId: string) => {
-    setTestResults((tr: any) => ({ ...tr, [`skill_${skillId}`]: { loading: true } }));
-    try {
-      const result = await api.post("/api/system/test-skill", { skillId, ...data });
-      setTestResults((tr: any) => ({ ...tr, [`skill_${skillId}`]: { loading: false, result } }));
-    } catch (e: any) {
-      setTestResults((tr: any) => ({ ...tr, [`skill_${skillId}`]: { loading: false, result: { success: false, error: e.message } } }));
-    }
-  };
-
   const handleClearTemplate = () => {
     setActiveWorkflowTemplate(null);
     setActiveBlueprint(null);
@@ -388,55 +234,16 @@ export function DeployWizard({
       return;
     }
     setTestResults((tr: any) => ({ ...tr, channel: undefined }));
-    setData(d => {
-      const updated = { ...d, channel: id };
-
-      // 1. Clean up fields of other channels
-      const channelFieldGroups: Record<string, string[]> = {
-        telegram: ["telegramBotToken", "telegramAllowedUsers", "telegramAllowedChats"],
-        feishu: ["feishuAppId", "feishuAppSecret", "feishuRegion", "feishuAllowedUsers", "feishuAllowedChats"],
-        weixin: ["weixinAccountId", "weixinToken", "weixinBaseUrl", "weixinAllowedUsers", "weixinAllowedChats"],
-        slack: ["slackBotToken", "slackSigningSecret", "slackAppToken", "slackAllowedUsers", "slackAllowedChannels"],
-        discord: ["discordBotToken", "discordAllowedGuilds", "discordAllowedUsers", "discordAllowedChannels"],
-        webhook: ["webhookUrl", "webhookSecret", "webhookAllowedUsers", "webhookAllowedChannels"],
-        whatsapp: ["whatsappPhoneNumberId", "whatsappAccessToken", "whatsappAllowedUsers", "whatsappAllowedChannels"],
-        dingtalk: ["dingtalkAppKey", "dingtalkAppSecret", "dingtalkRobotSecret", "dingtalkAllowedUsers", "dingtalkAllowedChats"],
-        qq_bot: ["qqBotAppId", "qqBotSecret", "qqBotAllowedUsers", "qqBotAllowedGuilds", "qqBotAllowedChannels"],
-        wechat_mp: ["wechatMpAppId", "wechatMpAppSecret", "wechatMpAllowedUsers", "wechatMpAllowedChats"],
-        wecom: ["wecomAppId", "wecomAppSecret", "wecomAgentId", "wecomAllowedUsers", "wecomAllowedChats"]
-      };
-
-      // Remove fields of all channels EXCEPT the newly selected one
-      Object.keys(channelFieldGroups).forEach(ch => {
-        if (ch !== id) {
-          channelFieldGroups[ch].forEach(field => {
-            delete (updated as any)[field];
-          });
-        }
-      });
-
-      // Clear lark explicitly
-      if (id !== "feishu" && id !== "lark") {
-        delete (updated as any).larkAppId;
-        delete (updated as any).larkAppSecret;
-      }
-
-      // If "none" or "web", clear allowMode and gatewayAllowAllUsers
-      if (id === "none" || id === "web") {
-        updated.gatewayAllowAllUsers = false;
-        updated.allowMode = "disabled";
-      }
-
-      // If "feishu", set feishuRegion default
-      if (id === "feishu") {
-        updated.feishuRegion = d.feishuRegion || "feishu";
-      }
-
-      return updated;
-    });
+    setData(d => switchDeployChannel(d, id));
   };
 
   const update = (k: keyof SetupFormData, v: any) => {
+    if (k === "runtime_type") {
+      setData(d => transitionDeployRuntime(d, String(v)));
+      setTestResults({});
+      setTrustPermissionConfirmed(false);
+      return;
+    }
     if (k === "channel" && !isChannelAllowedForRuntime(v)) {
       setTestResults((tr: any) => ({
         ...tr,
@@ -493,54 +300,11 @@ export function DeployWizard({
     }
   }, [externalChannelsAllowed, data.channel, data.runtime_type]);
 
-  const submit = async () => {
-    if (quota.entitlementsReady && !quota.canCreateInstance) {
-      setSubmitError(quotaStatusText);
-      return;
-    }
-
-    if (!isChannelAllowedForRuntime(data.channel)) {
-      setSubmitError(channelRestrictionMessage);
-      return;
-    }
-    setLoading(true);
-    setSubmitError(null);
-    try {
-      const deploymentDraft = normalizeRuntimeAccessDraft(data);
-      const request = buildLocalDeploymentRequest({
-        draft: deploymentDraft,
-        idempotencyKey,
-        permissionConfirmed: trustPermissionConfirmed,
-      });
-      const result = await api.post(request.path, request.body, request.options);
-      if (!isPiRuntime && result && result.initialDashboardCredentials) {
-        sessionStorage.setItem(
-          "one_time_credentials_instance_" + result.id,
-          JSON.stringify(result.initialDashboardCredentials)
-        );
-      }
-      setCreatedInstance({ ...result, deploymentStatus: result.status || "queued", currentStep: "queued", progress: 5 });
-      setStep(7); // Go to Success page
-    } catch (e: any) {
-      console.error(e);
-      setSubmitError(e.message || t("validation.submit_error"));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const retryDeployment = async () => {
-    if (!createdInstance?.deploymentTaskId) return;
-    setLoading(true);
-    try {
-      await api.post(`/api/deployments/${createdInstance.deploymentTaskId}/retry`);
-      setCreatedInstance((current: any) => ({ ...current, deploymentStatus: "retry_wait", currentStep: "queued", progress: 5, errorCode: null, errorMessage: null }));
-    } catch (error: any) {
-      setSubmitError(error.message || "Retry failed.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { loading, createdInstance, submitError, submit, retryDeployment } = useDeploySubmission({
+    data, quotaBlocked: quota.entitlementsReady && !quota.canCreateInstance, quotaStatusText,
+    isChannelAllowedForRuntime, channelRestrictionMessage, trustPermissionConfirmed, isPiRuntime,
+    onCreated: () => setStep(7),
+  });
   const next = () => {
     setStep(s => Math.min(7, s + 1));
   };

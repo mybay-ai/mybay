@@ -1,3 +1,4 @@
+import { supportsQuickDeployRuntimeProvider } from "../../../shared/runtimeModelProviderPolicy";
 import { providerRegistry } from "../../../shared/providerRegistry";
 
 export interface BasicStepData {
@@ -14,6 +15,7 @@ export function hasBasicStepError(data: BasicStepData): boolean {
 }
 
 export interface ModelStepData {
+  runtime_type?: string;
   provider?: string;
   model?: string;
   baseUrl?: string;
@@ -27,6 +29,7 @@ export function requiresPredeployModelTest(provider?: string): boolean {
 }
 
 export function hasModelStepError(data: ModelStepData, testSucceeded: boolean): boolean {
+  if (data.runtime_type === "codex" && !supportsQuickDeployRuntimeProvider("codex", data.provider)) return true;
   const config = data.provider ? providerRegistry[data.provider] : undefined;
   if (!config || !config.enabled || !data.model) return true;
   if (data.provider === "custom-openai-compatible" && !data.baseUrl) return true;

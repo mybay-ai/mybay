@@ -42,7 +42,7 @@ describe("A2A runtime configuration", () => {
     vi.stubEnv("MYBAY_A2A_TRACKED_INSTANCES", "caller");
     vi.stubEnv("MYBAY_CONTROL_PANEL_CONTAINER", "test-control");
     vi.mocked(dbAdapter.getInstanceById).mockResolvedValue({
-      id: "pi-peer", name: "Pi reviewer", status: "running", runtime_type: "pi", config_json: "{}",
+      id: "pi-peer", name: "Pi reviewer", status: "running", runtime_type: "pi", runtime_provider_key: "pi-rpc", runtime_contract_version: 1, config_json: "{}",
     } as any);
     const config: any = { a2aEnabled: true, a2aPeerIds: ["pi-peer"] };
     try {
@@ -53,6 +53,22 @@ describe("A2A runtime configuration", () => {
         url: "http://test-control:3000/internal/a2a/caller/pi-peer",
       });
       expect(config.a2aResolvedPeers[0].encryptedToken).toMatch(/^encrypted:/);
+    } finally { vi.unstubAllEnvs(); }
+  });
+  it("routes a running Codex peer through the managed relay without native A2A configuration", async () => {
+    vi.stubEnv("MYBAY_A2A_TASK_TRACKING", "true");
+    vi.stubEnv("MYBAY_INTERNAL_ROUTING_SECRET", "test-relay-secret");
+    vi.stubEnv("MYBAY_A2A_TRACKED_INSTANCES", "caller");
+    vi.stubEnv("MYBAY_CONTROL_PANEL_CONTAINER", "test-control");
+    vi.mocked(dbAdapter.getInstanceById).mockResolvedValue({
+      id: "codex-peer", name: "Codex reviewer", status: "running", runtime_type: "codex", runtime_provider_key: "codex-app-server", runtime_contract_version: 1, config_json: "{}",
+    } as any);
+    const config: any = { a2aEnabled: true, a2aPeerIds: ["codex-peer"] };
+    try {
+      await hydrateA2ARuntimePeers("caller", config);
+      expect(config.a2aResolvedPeers[0]).toMatchObject({
+        instanceId: "codex-peer", name: "Codex reviewer", url: "http://test-control:3000/internal/a2a/caller/codex-peer",
+      });
     } finally { vi.unstubAllEnvs(); }
   });
   it("carries adoption evidence even when disabling A2A without forwarding its token", () => {

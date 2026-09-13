@@ -1060,36 +1060,36 @@
     "timelineTip": "Stable release",
     "releases": [
       {
-        "version": "v0.1.29",
-        "date": "2026.09.11",
+        "version": "v0.1.29.1",
+        "date": "2026.09.13",
         "badge": "Stable",
-        "summary": "MyBay Open Source v0.1.29 hardens the Hermes, Pi, and Codex Runtime release path with pinned identities, fail-closed certification, safer deployment recovery, and complete model/context presentation.",
+        "summary": "MyBay Open Source v0.1.29.1 adds guarded Codex collaboration, modular Chat and deployment workflows, stricter Runtime isolation, and fail-closed Linux certification.",
         "sections": [
           {
-            "title": "Runtime release identity",
+            "title": "Runtime safety and certification",
             "type": "feature",
             "items": [
-              "Pin every deployable Runtime to a reproducible native version and immutable OCI digest or Docker image ID.",
-              "Upgrade retained certification to schema v3 so stale tags, bridge revisions, and mismatched artifacts cannot pass the release gate.",
-              "Promote Codex to Certified after verifying session recovery, file artifacts, usage, tool events, and restart recovery, while reporting its native, bridge, and host-local build identity separately."
+              "Run Pi bridge contracts from the root test and CI path so bridge regressions cannot bypass the normal quality gate.",
+              "Tighten Hermes container capabilities and resource policy while preserving the declared Runtime guard contract.",
+              "Add a fail-closed Linux headless certification workflow and explicit platform-scoped evidence validation."
             ]
           },
           {
-            "title": "Deployment reliability",
-            "type": "fix",
+            "title": "Codex collaboration",
+            "type": "feature",
             "items": [
-              "Enable Pi deployments by default while preserving an explicit compatibility switch for existing installations.",
-              "Recover safely from exhausted Docker default address pools using only operator-configured private subnets after overlap checks.",
-              "Clear stale failure metadata after manual retries, port-conflict retries, and successful Runtime convergence."
+              "Expose trusted A2A tools only for control-plane-resolved peers without disclosing peer credentials.",
+              "Bridge native structured questions into existing instance-scoped Chat Workspace question cards.",
+              "Prune only terminal Codex runs with bounded idempotency tombstones; active runs are never evicted."
             ]
           },
           {
-            "title": "Conversation continuity",
-            "type": "fix",
+            "title": "Workspace maintainability",
+            "type": "improvement",
             "items": [
-              "Stream useful Hermes progress commentary during long tool runs instead of waiting for the final answer.",
-              "Return sanitized Runtime usage evidence so Pi and Codex model and context labels survive reload and run recovery.",
-              "Preserve current run evidence as the fallback for assistant message and context presentation without inventing missing historical data."
+              "Split Chat Workspace orchestration, message presentation, history, realtime synchronization, and responsive controls into tested modules.",
+              "Split deployment diagnostics, form state, status polling, submission, and Runtime transitions into focused hooks.",
+              "Document local worktree hygiene and keep dependency backup directories outside Git and Docker build contexts."
             ]
           }
         ]

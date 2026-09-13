@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -19,11 +20,11 @@ class Rpc extends EventEmitter {
   respond(id, result) { this.responses.push({ id, result }); }
   send(value) { this.responses.push(value); }
 }
-async function fixture(t) {
+async function fixture(t, options = {}) {
   const root = await mkdtemp(join(tmpdir(), "mybay-codex-test-"));
   t.after(() => rm(root, { recursive: true, force: true }));
   const rpc = new Rpc();
-  const runtime = new CodexRuntime({ rpc, dataDir: join(root, "data"), workspace: join(root, "workspace") });
+  const runtime = new CodexRuntime({ rpc, dataDir: join(root, "data"), workspace: join(root, "workspace"), ...options });
   await runtime.initialize();
   const session = await runtime.enqueue(() => runtime.createSession());
   const run = await runtime.enqueue(() => runtime.submit({ session_id: session.id, input: "hello" }, "client-run-1234"));
@@ -33,6 +34,18 @@ async function fixture(t) {
   const event = (method, params = {}, id) => runtime.enqueue(() => runtime.onMessage({ method, id, params: { threadId: run.threadId, turnId: run.turnId, ...params } }));
   return { runtime, rpc, session, run, root, event };
 }
+test("advertises configured A2A tools and answers native dynamic tool calls", async t => {
+  const a2aPeers = [{ id: "reviewer-1", name: "Reviewer", url: "http://relay/a2a", token: "secret", capabilities: ["review"] }];
+  const { runtime, rpc, event } = await fixture(t, { a2aPeers });
+  const started = rpc.calls.find(call => call.method === "thread/start");
+  assert.deepEqual(started.params.dynamicTools.map(tool => tool.name), ["a2a_list", "a2a_call", "a2a_orchestrate"]);
+  await event("item/tool/call", { callId: "tool-call-1", tool: "a2a_list", arguments: {} }, 77);
+  for (let i = 0; i < 30 && !rpc.responses.some(response => response.id === 77); i++) await new Promise(resolve => setTimeout(resolve, 5));
+  assert.deepEqual(rpc.responses.find(response => response.id === 77), { id: 77, result: {
+    contentItems: [{ type: "inputText", text: "Configured A2A agents:\n- Reviewer (reviewer-1): review" }], success: true,
+  } });
+  await runtime.queue;
+});
 test("native approval decisions never widen once/deny to persistent grants", () => {
   for (const method of ["item/commandExecution/requestApproval", "item/fileChange/requestApproval"]) {
     assert.deepEqual(approvalDecision(method, "once"), { decision: "accept" });
@@ -79,12 +92,83 @@ test("foreign turn events and unsupported native requests cannot approve a tool"
   assert.equal(rpc.responses[1].error.code, -32601);
   assert.equal(run.stopRequested, true);
 });
+test("maps native structured questions to exact App Server answers and rejects secret input", async t => {
+  const calls = [];
+  const questionBridge = { ask: async (sessionId, question) => {
+    calls.push({ sessionId, question });
+    return { id: question.id, answers: [question.options[0].label] };
+  } };
+  const { run, session, event, rpc } = await fixture(t, { questionBridge });
+  await event("item/tool/requestUserInput", { questions: [{ id: "region", header: "Region", question: "Choose", isOther: false,
+    options: [{ label: "EU", description: "European Union" }] }] }, 93);
+  for (let i = 0; i < 30 && rpc.responses.length === 0; i++) await new Promise(resolve => setTimeout(resolve, 5));
+  assert.equal(calls[0].sessionId, session.id);
+  assert.deepEqual(rpc.responses[0], { id: 93, result: { answers: { region: { answers: ["EU"] } } } });
+
+  await event("item/tool/requestUserInput", { questions: [{ id: "token", header: "Secret", question: "Paste token", isSecret: true }] }, 94);
+  for (let i = 0; i < 30 && rpc.responses.length < 2; i++) await new Promise(resolve => setTimeout(resolve, 5));
+  assert.equal(rpc.responses[1].error.message, "CODEX_SECRET_QUESTION_UNSUPPORTED");
+  for (let i = 0; i < 30 && !run.stopRequested; i++) await new Promise(resolve => setTimeout(resolve, 5));
+  assert.equal(run.stopRequested, true);
+});
 test("idempotency rejects reuse across sessions or different inputs", async t => {
   const { runtime, session, run } = await fixture(t);
   assert.equal(await runtime.submit({ session_id: session.id, input: "hello" }, "client-run-1234"), run);
   await assert.rejects(runtime.submit({ session_id: session.id, input: "different" }, "client-run-1234"), /IDEMPOTENCY_CONFLICT/);
   const second = await runtime.enqueue(() => runtime.createSession());
   await assert.rejects(runtime.submit({ session_id: second.id, input: "hello" }, "client-run-1234"), /IDEMPOTENCY_CONFLICT/);
+});
+test("automatically prunes the oldest terminal run and retains an idempotency tombstone", async t => {
+  const root = await mkdtemp(join(tmpdir(), "mybay-codex-retention-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const rpc = new Rpc();
+  const runtime = new CodexRuntime({
+    rpc,
+    dataDir: join(root, "data"),
+    workspace: join(root, "workspace"),
+    maxRetainedRuns: 2,
+  });
+  await runtime.initialize();
+  const session = await runtime.enqueue(() => runtime.createSession());
+  const oldBody = { session_id: session.id, input: "old" };
+  runtime.runs.set("old-run-1234", {
+    id: "old-run-1234", clientRunId: "old-client-1234", fingerprint: createHash("sha256").update(JSON.stringify(oldBody)).digest("hex"), sessionId: session.id,
+    status: "completed", events: [], approvals: {}, createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:01.000Z",
+  });
+  runtime.runs.set("newer-run-1234", {
+    id: "newer-run-1234", clientRunId: "newer-client-1234", fingerprint: "newer-fingerprint", sessionId: session.id,
+    status: "failed", events: [], approvals: {}, createdAt: "2026-01-02T00:00:00.000Z", updatedAt: "2026-01-02T00:00:01.000Z",
+  });
+  const run = await runtime.enqueue(() => runtime.submit({ session_id: session.id, input: "next" }, "next-client-1234"));
+  assert.equal(runtime.runs.size, 2);
+  assert.equal(runtime.runs.has("old-run-1234"), false);
+  assert.equal(runtime.runs.has("newer-run-1234"), true);
+  assert.equal(runtime.runs.has(run.id), true);
+  assert.equal(runtime.runTombstones.has("old-client-1234"), true);
+  await assert.rejects(runtime.submit(oldBody, "old-client-1234"), error => error.message === "CODEX_RUN_EXPIRED" && error.statusCode === 410);
+  await assert.rejects(runtime.submit({ session_id: session.id, input: "different" }, "old-client-1234"), /IDEMPOTENCY_CONFLICT/);
+  for (let i = 0; i < 30 && !run.turnId; i++) await new Promise(resolve => setTimeout(resolve, 5));
+  await runtime.queue;
+  await runtime.enqueue(() => runtime.finish(run, "cancelled"));
+  const restarted = new CodexRuntime({ rpc: new Rpc(), dataDir: join(root, "data"), workspace: join(root, "workspace"), maxRetainedRuns: 2 });
+  await restarted.initialize();
+  assert.equal(restarted.runTombstones.has("old-client-1234"), true);
+  await assert.rejects(restarted.submit(oldBody, "old-client-1234"), /CODEX_RUN_EXPIRED/);
+});
+
+test("never evicts an active run to make retention capacity", async t => {
+  const root = await mkdtemp(join(tmpdir(), "mybay-codex-retention-active-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const runtime = new CodexRuntime({ rpc: new Rpc(), dataDir: join(root, "data"), workspace: join(root, "workspace"), maxRetainedRuns: 1 });
+  await runtime.initialize();
+  const first = await runtime.enqueue(() => runtime.createSession());
+  const second = await runtime.enqueue(() => runtime.createSession());
+  runtime.runs.set("active-run-1234", {
+    id: "active-run-1234", clientRunId: "active-client-1234", fingerprint: "active-fingerprint", sessionId: first.id,
+    status: "running", events: [], approvals: {}, createdAt: "2026-01-01T00:00:00.000Z",
+  });
+  await assert.rejects(runtime.submit({ session_id: second.id, input: "next" }, "next-client-1234"), error => error.message === "CODEX_RUN_CAPACITY" && error.statusCode === 429);
+  assert.equal(runtime.runs.has("active-run-1234"), true);
 });
 test("restart retains terminal evidence and resumes original session without replaying a turn", async t => {
   const { runtime, root, run, session } = await fixture(t);

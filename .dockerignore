@@ -4,6 +4,7 @@
 .gitignore
 
 /node_modules
+/node_modules*/
 /dist
 /build
 /coverage
@@ -20,6 +21,7 @@
 !/runtime/codex-bridge/
 !/runtime/codex-bridge/**
 **/node_modules
+**/node_modules*/
 /secrets
 
 .env

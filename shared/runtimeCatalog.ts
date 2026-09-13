@@ -287,7 +287,7 @@ export const CODEX_RUNTIME_DEFINITION = freezeRuntimeDefinition({
     bridgeVersion: CODEX_BUILD.bridgeVersion,
     artifactIdentity: {
       kind: "docker-image-id",
-      value: "sha256:20b46c8407fa9f4a40435653db85b00518d9fff132a7333b9482246357f42256",
+      value: "sha256:f9d456034bf02c74c336e33f95775b410e800228273419a45afa52e20000424a",
     },
   },
   runtime: { type: "codex", image: CODEX_BUILD.image, tag: CODEX_BUILD.imageTag, internalPort: 8080,
@@ -299,7 +299,7 @@ export const CODEX_RUNTIME_DEFINITION = freezeRuntimeDefinition({
   storage: { dataPath: "/opt/data", configPath: "/opt/data/codex", volumeNamePrefix: "mybay-codex-data" },
   capabilities: { chat: true, fileUpload: true, scheduledTasks: false, browser: false, shell: true, imChannels: ["web"] },
   lifecycle: { conversation: { modes: ["streaming"] }, cancellation: { supported: true, granularity: "run" },
-    terminal: { observation: "events" }, interactions: { approvals: true, questions: false } },
+    terminal: { observation: "events" }, interactions: { approvals: true, questions: true } },
   resources: { minimumMemory: "512Mi", recommendedMemory: "1Gi", minimumCpu: 0.5 },
   backup: { includePaths: ["/opt/data/codex", "/opt/data/codex-bridge", "/opt/data/workspace"], excludePatterns: ["*.log", "tmp/*"] },
 });

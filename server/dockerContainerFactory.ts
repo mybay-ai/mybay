@@ -34,7 +34,13 @@ import tar from "tar-fs";
 import { skillPolicyRegistry } from "../shared/skillPolicyRegistry";
 import { assertRuntimeSatisfiesSkillPolicy, createRuntimeSecurityManifest } from "./services/skillPolicyEnforcer";
 import { resolveHermesProvider, VALID_HERMES_PROVIDERS } from "./providerEnv";
-import { getAgentContainerSecurityProfile, getDockerProfile, getResourceLimits } from "./services/docker/dockerResourcePolicy";
+import {
+  getAgentContainerSecurityProfile,
+  getAgentContainerTmpfs,
+  getDockerProfile,
+  getResourceLimits,
+  supportsAgentContainerNoNewPrivileges,
+} from "./services/docker/dockerResourcePolicy";
 import { ensureLocalFeishuRuntimeImage, requiresLocalFeishuRuntime } from "./services/localFeishuRuntime";
 import { ensureSelectedPiRuntimeImage } from "./services/localPiRuntime";
 import {
@@ -129,6 +135,9 @@ export async function buildDockerHostConfig(
   const profile = runtimeType === "mybay-agent-runtime"
     ? getAgentContainerSecurityProfile(options.config?.runtime_type)
     : getDockerProfile(runtimeType);
+  const agentContainerTmpfs = runtimeType === "mybay-agent-runtime"
+    ? getAgentContainerTmpfs(options.config?.runtime_type)
+    : {};
 
   // Refined binds: only map the essential data volume
   const binds = [
@@ -189,7 +198,9 @@ export async function buildDockerHostConfig(
 
   const isAdmin = isInstancePrivileged;
   const securityOpts = [...(profile.SecurityOpt || [])];
-  if (!isAdmin) {
+  const supportsNoNewPrivileges = runtimeType !== "mybay-agent-runtime"
+    || supportsAgentContainerNoNewPrivileges(options.config?.runtime_type);
+  if (!isAdmin && supportsNoNewPrivileges) {
     if (!securityOpts.includes("no-new-privileges:true")) {
       securityOpts.push("no-new-privileges:true");
     }
@@ -229,8 +240,8 @@ export async function buildDockerHostConfig(
     SecurityOpt: securityOpts,
     CapDrop: profile.CapDrop || [],
     CapAdd: profile.CapAdd ?? ["CHOWN", "SETUID", "SETGID"],
-    ...(["pi", "codex"].includes(String(options.config?.runtime_type || "").trim().toLowerCase())
-      ? { Tmpfs: { "/tmp": "rw,noexec,nosuid,nodev,size=64m,mode=1777" } }
+    ...(Object.keys(agentContainerTmpfs).length > 0
+      ? { Tmpfs: agentContainerTmpfs }
       : {}),
     Privileged: false // Ensure regular containers are never running as privileged
   };

@@ -5,11 +5,14 @@ export class QuestionError extends Error {
   constructor(public code: string, public status = 409) { super(code); }
 }
 function validIdentity(value: unknown): value is string { return typeof value === "string" && QUESTION_ID.test(value); }
+function supportedRuntimeType(value: unknown): "hermes" | "pi" | "codex" {
+  return value === "pi" || value === "codex" ? value : "hermes";
+}
 function nativeRun(data: ReturnType<typeof readStoreCollections<"chatRuns" | "conversations">>, instanceId: string, nativeId: string | undefined, sessionId: string, runtimeType = "hermes", questionId?: string) {
   const matches = data.chatRuns.filter(run => {
     if (run.instance_id !== instanceId || run.runtime_type !== runtimeType) return false;
     if (runtimeType === "hermes") return run.upstream_run_id === nativeId;
-    if (runtimeType !== "pi") return false;
+    if (!["pi", "codex"].includes(runtimeType)) return false;
     const conversation = data.conversations.find(value => value.id === run.conversation_id);
     if (!conversation || conversation.session_id !== sessionId) return false;
     if (questionId) return Array.isArray(run.local_questions) && run.local_questions.some(question => question.id === questionId);
@@ -22,7 +25,7 @@ function nativeRun(data: ReturnType<typeof readStoreCollections<"chatRuns" | "co
 }
 export const runQuestionsRepo = {
   create(instanceId: string, input: { nativeRunId?: unknown; sessionId?: unknown; runtimeType?: unknown; id?: unknown; spec?: unknown }) {
-    const runtimeType = input.runtimeType === "pi" ? "pi" : "hermes";
+    const runtimeType = supportedRuntimeType(input.runtimeType);
     if ((runtimeType === "hermes" && !validIdentity(input.nativeRunId)) || !validIdentity(input.sessionId) || !validIdentity(input.id)) throw new QuestionError("INVALID_QUESTION", 400);
     let spec;
     try { spec = parseQuestionSpec(input.spec); } catch { throw new QuestionError("INVALID_QUESTION", 400); }

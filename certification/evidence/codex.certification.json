@@ -5,11 +5,11 @@
     "providerKey": "codex-app-server",
     "contractVersion": 1,
     "nativeVersion": "0.154.0",
-    "bridgeVersion": "0.1.0-experimental.3",
+    "bridgeVersion": "0.1.0-experimental.4",
     "imageRef": "mybay/codex-runtime:0.154.0",
     "artifactIdentity": {
       "kind": "docker-image-id",
-      "value": "sha256:20b46c8407fa9f4a40435653db85b00518d9fff132a7333b9482246357f42256"
+      "value": "sha256:f9d456034bf02c74c336e33f95775b410e800228273419a45afa52e20000424a"
     }
   },
   "environments": [
@@ -56,6 +56,17 @@
       "runtimeVersion": "Codex 0.154.0; bridge 0.1.0-experimental.3",
       "mybayVersion": "0.1.29",
       "headless": true
+    },
+    {
+      "id": "windows-docker-desktop-v01291-codex-release-20260913",
+      "platform": "windows",
+      "platformVersion": "Windows 10 Pro",
+      "architecture": "x64",
+      "containerEngine": "docker-desktop",
+      "containerEngineVersion": "29.7.2",
+      "runtimeVersion": "Codex 0.154.0; bridge 0.1.0-experimental.4",
+      "mybayVersion": "0.1.29.1",
+      "headless": true
     }
   ],
   "artifacts": [
@@ -94,6 +105,10 @@
     {
       "path": "certification/artifacts/runtime-v0129-release-promotion-windows-x64-20260911.json",
       "sha256": "9a33fc6b0485015617e47b3c7d1df5ec894a07c0f3895a6e75a3bb90906356f2"
+    },
+    {
+      "path": "certification/artifacts/runtime-v01291-release-promotion-windows-x64-20260913.json",
+      "sha256": "9914fcd81bd57b99e40032e2c0461528b71d486f4faba3c7ab2cd67a2d5769c7"
     }
   ],
   "checks": [

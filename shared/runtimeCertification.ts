@@ -43,6 +43,8 @@ export interface RuntimeCertificationEvidenceCheck {
   readonly scope: RuntimeCertificationEvidenceScope;
   readonly observedAt: string;
   readonly validUntil?: string;
+  /** Stable id from the bundle's environments array. Required by target-platform certification gates. */
+  readonly environmentId?: string;
   readonly environment: string;
   readonly command?: string;
   readonly evidenceRefs: readonly string[];
@@ -319,7 +321,14 @@ function levelRank(level: RuntimeCertificationLevel | "unverified"): number {
 export function evaluateRuntimeCertification(
   definition: RuntimeDefinition,
   bundle?: AnyRuntimeCertificationEvidenceBundle,
-  options: { readonly now?: number; readonly expectedMybayVersion?: string } = {},
+  options: {
+    readonly now?: number;
+    readonly expectedMybayVersion?: string;
+    readonly targetEnvironment?: {
+      readonly platform: RuntimeCertificationPlatform;
+      readonly headless: boolean;
+    };
+  } = {},
 ): RuntimeCertificationReport {
   const errors: string[] = [];
   const declaredLevel = definition.release.certificationLevel;
@@ -345,6 +354,7 @@ export function evaluateRuntimeCertification(
   let identityStatus: RuntimeCertificationIdentityStatus = bundle ? "metadata-compatible" : "missing";
   let artifactVerification: RuntimeCertificationArtifactVerification = "pending";
 
+  let matchedEnvironments: readonly RuntimeCertificationEnvironment[] = bundle?.environments ?? [];
   if (bundle) {
     const expectedImageRef = `${definition.runtime.image}:${definition.runtime.tag}`;
     const baseBindingMatches = bundle.runtime.type === definition.runtime.type
@@ -397,12 +407,28 @@ export function evaluateRuntimeCertification(
       && !bundle.environments?.some((environment) => environment.mybayVersion.replace(/^v/i, "") === options.expectedMybayVersion?.replace(/^v/i, ""))) {
       errors.push(`Certification evidence does not cover MyBay ${options.expectedMybayVersion}.`);
     }
+    if (options.targetEnvironment) {
+      matchedEnvironments = bundle.environments.filter((environment) =>
+        environment.platform === options.targetEnvironment?.platform
+        && environment.headless === options.targetEnvironment?.headless
+        && (!options.expectedMybayVersion
+          || environment.mybayVersion.replace(/^v/i, "") === options.expectedMybayVersion.replace(/^v/i, "")));
+      if (matchedEnvironments.length === 0) {
+        errors.push(
+          `Certification evidence does not cover target ${options.targetEnvironment.platform}/${options.targetEnvironment.headless ? "headless" : "interactive"}.`,
+        );
+      }
+    }
   }
 
   const evidenceByRequirement = new Map<RuntimeCertificationRequirementId, RuntimeCertificationEvidenceCheck>();
+  const matchedEnvironmentIds = new Set(matchedEnvironments.map((environment) => environment.id));
   for (const evidence of runtimeBindingMatches ? (bundle?.checks ?? []) : []) {
     if (!REQUIREMENT_IDS.has(evidence.requirementId)) {
       errors.push(`Certification evidence requirement is unknown: ${String(evidence.requirementId)}`);
+      continue;
+    }
+    if (options.targetEnvironment && (!evidence.environmentId || !matchedEnvironmentIds.has(evidence.environmentId))) {
       continue;
     }
     if (evidenceByRequirement.has(evidence.requirementId)) {
@@ -432,7 +458,7 @@ export function evaluateRuntimeCertification(
     publicationStatus,
     identityStatus,
     artifactVerification,
-    environments: Object.freeze([...(bundle?.environments ?? [])]),
+    environments: Object.freeze([...matchedEnvironments]),
     requirements,
     errors: Object.freeze(errors),
   });

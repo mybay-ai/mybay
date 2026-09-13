@@ -29,6 +29,14 @@ describe("local Run questions", () => {
     const answered = runQuestionsRepo.answer("run", "pi-question", { selected: ["a"], custom: "" }, false);
     expect(runQuestionsRepo.poll("instance", undefined, "session", "pi-question", "pi")).toEqual(answered);
   });
+  it("binds a Codex question to the only active Run in its native session", () => {
+    mutateStoreCollections(["chatRuns"], data => { data.chatRuns[0].runtime_type = "codex"; });
+    const codexRequest = { runtimeType: "codex", sessionId: "session", id: "codex-question", spec };
+    const question = runQuestionsRepo.create("instance", codexRequest);
+    expect(question.runId).toBe("run");
+    const answered = runQuestionsRepo.answer("run", "codex-question", { selected: ["b"], custom: "" }, false);
+    expect(runQuestionsRepo.poll("instance", undefined, "session", "codex-question", "codex")).toEqual(answered);
+  });
   it("keeps simultaneous Pi sessions isolated", () => {
     mutateStoreCollections(["chatRuns", "conversations"], data => {
       data.chatRuns[0].runtime_type = "pi";

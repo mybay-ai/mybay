@@ -8,10 +8,10 @@ release:
   supportStatus: available
   certificationLevel: certified
   deploymentSupported: true
-  bridgeVersion: 0.1.0-experimental.3
+  bridgeVersion: 0.1.0-experimental.4
   artifactIdentity:
     kind: docker-image-id
-    value: sha256:20b46c8407fa9f4a40435653db85b00518d9fff132a7333b9482246357f42256
+    value: sha256:f9d456034bf02c74c336e33f95775b410e800228273419a45afa52e20000424a
 runtime:
   type: codex
   image: mybay/codex-runtime
@@ -54,7 +54,7 @@ lifecycle:
     observation: events
   interactions:
     approvals: true
-    questions: false
+    questions: true
 resources:
   minimumMemory: 512Mi
   recommendedMemory: 1Gi
