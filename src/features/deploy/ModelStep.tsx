@@ -1,3 +1,4 @@
+import { CODEX_QUICK_DEPLOY_PROVIDER_IDS, supportsQuickDeployRuntimeProvider } from "../../../shared/runtimeModelProviderPolicy";
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Cpu, Zap, Key, Link2, AlertCircle, CheckCircle2, Loader2, ShieldCheck, Database } from "lucide-react";
@@ -39,6 +40,8 @@ export function ModelStep({ data, update, testLLM, testStatus, currentUser }: Mo
   }, [currentUser]);
 
   const isPlatformModelMode = false;
+  const isCodexRuntime = data.runtime_type === "codex";
+  const compatibleCredentials = credentials.filter(c => !isCodexRuntime || supportsQuickDeployRuntimeProvider("codex", resolveProviderRegistryKey(c.provider || c.type, undefined, c.baseUrl)));
 
   const selectedProviderConf = data.provider ? providerRegistry[data.provider as string] : undefined;
   const isOAuthProvider = selectedProviderConf?.authMode === "oauth-device-code";
@@ -55,7 +58,9 @@ export function ModelStep({ data, update, testLLM, testStatus, currentUser }: Mo
   });
 
   const handleProviderChange = (prov: string) => {
+    if (isCodexRuntime && !supportsQuickDeployRuntimeProvider("codex", prov)) return;
     update("provider", prov);
+    if (isCodexRuntime) { update("codexAuthMode", "api"); update("codexAuthJson", undefined); update("providerApiKey", ""); }
     update("providerCredentialId", ""); // Reset saved credential selection
     const conf = providerRegistry[prov];
     if (conf) {
@@ -63,7 +68,7 @@ export function ModelStep({ data, update, testLLM, testStatus, currentUser }: Mo
         update("providerApiKey", "");
       }
       update("model", conf.defaultModel || "");
-      update("baseUrl", conf.defaultBaseUrl || "");
+      update("baseUrl", (isCodexRuntime ? conf.responsesBaseUrl : undefined) || conf.defaultBaseUrl || "");
     } else {
       update("model", "");
       update("baseUrl", "");
@@ -75,15 +80,15 @@ export function ModelStep({ data, update, testLLM, testStatus, currentUser }: Mo
     update("providerCredentialId", credId);
 
     if (credId) {
-      const selected = credentials.find(c => c.id === credId);
+      const selected = compatibleCredentials.find(c => c.id === credId);
       if (selected) {
         update("providerApiKey", ""); // Keep key empty to use stored key
 
-        const providerId = resolveProviderRegistryKey(selected.type, undefined, selected.baseUrl);
+        const providerId = resolveProviderRegistryKey(selected.provider || selected.type, undefined, selected.baseUrl);
         const providerConf = providerRegistry[providerId];
 
         // Use credential's baseUrl if present, otherwise fallback to provider default
-        const targetBaseUrl = selected.baseUrl || providerConf?.defaultBaseUrl || "";
+        const targetBaseUrl = selected.baseUrl || (isCodexRuntime ? providerConf?.responsesBaseUrl : undefined) || providerConf?.defaultBaseUrl || "";
         update("baseUrl", targetBaseUrl);
 
         // If the provider changes, handle it and update default model
@@ -245,7 +250,7 @@ export function ModelStep({ data, update, testLLM, testStatus, currentUser }: Mo
               onChange={handleCredentialSelect}
             >
               <option value="">{t("wizardCopy.model.manualKey")}</option>
-              {credentials.map(c => (
+              {compatibleCredentials.map(c => (
                 <option key={c.id} value={c.id}>{c.name} ({c.type})</option>
               ))}
             </select>
@@ -260,6 +265,7 @@ export function ModelStep({ data, update, testLLM, testStatus, currentUser }: Mo
               {t("wizardCopy.model.provider")}
             </Label>
             <ProviderSelect
+              allowedProviderIds={isCodexRuntime ? CODEX_QUICK_DEPLOY_PROVIDER_IDS : undefined}
               className="mt-2"
               value={data.provider || ""}
               onValueChange={handleProviderChange}

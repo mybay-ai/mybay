@@ -2039,7 +2039,7 @@
         "count": 1
       },
       {
-        "fingerprint": "src/features/deploy/DeployWizard.tsx|copy-property:message|Local administrator can deploy instances.",
+        "fingerprint": "src/features/deploy/useDeployDiagnostics.ts|copy-property:message|Local administrator can deploy instances.",
         "count": 1
       },
       {

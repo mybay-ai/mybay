@@ -188,7 +188,7 @@ export function ContainerConfigStep({
                 </div>
                 <div className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-200/40">
                   <span>{t("container_config.internal_rules")}</span>
-                  <span className="font-mono font-semibold text-slate-800 text-[11px]">internal_web_port: {data.runtime_type === "pi" ? 8080 : 9119} ({data.runtime_type === "pi" ? "Pi Agent" : "Hermes Agent"})</span>
+                  <span className="font-mono font-semibold text-slate-800 text-[11px]">internal_web_port: {runtimeDefinition.runtime.internalPort} ({runtimeDefinition.displayName})</span>
                 </div>
               </div>
             </details>
@@ -207,7 +207,7 @@ export function ContainerConfigStep({
               </p>
               <div className="pt-2 flex items-center gap-2">
                  <span className="px-2 py-0.5 bg-surface border border-blue-100 dark:border-slate-600 text-[11px] text-blue-600 dark:text-blue-200 font-bold rounded-md">
-                    {isPiRuntime ? "8080 (Pi Runtime)" : t("container_config.internal_port_badge")}
+                    {runtimeDefinition.runtime.internalPort} ({runtimeDefinition.displayName})
                  </span>
                  <span className="px-2 py-0.5 bg-blue-600 text-white text-[11px] font-bold rounded-md animate-pulse">
                    {t("container_config.allocating_badge")}
