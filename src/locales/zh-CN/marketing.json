@@ -1060,36 +1060,36 @@
     "timelineTip": "正式版",
     "releases": [
       {
-        "version": "v0.1.29",
-        "date": "2026.09.11",
+        "version": "v0.1.29.1",
+        "date": "2026.09.13",
         "badge": "正式版",
-        "summary": "麦贝开源版 v0.1.29 加固 Hermes、Pi 与 Codex Runtime 发布链路，加入固定构建身份、失败关闭认证、安全部署恢复，以及完整的模型和上下文展示。",
+        "summary": "麦贝开源版 v0.1.29.1 增加受控的 Codex 协作能力、模块化 Chat 与部署流程、更严格的 Runtime 隔离，以及失败关闭的 Linux 认证。",
         "sections": [
           {
-            "title": "Runtime 发布身份",
+            "title": "Runtime 安全与认证",
             "type": "feature",
             "items": [
-              "将所有可部署 Runtime 固定到可复现的原生版本及不可变 OCI 摘要或 Docker 镜像 ID。",
-              "将保留认证升级为 schema v3，使过期标签、Bridge 版本和不匹配构建无法通过发布门禁。",
-              "Codex 在补齐会话恢复、文件产物、用量、工具事件和重启恢复证据后提升至 Certified，并继续单独呈现原生版本、Bridge 版本与本机构建身份。"
+              "将 Pi bridge 合同测试接入根测试与 CI 路径，避免 bridge 回归绕过常规质量门禁。",
+              "收紧 Hermes 容器能力与资源策略，同时保持声明的 Runtime Guard 合同。",
+              "新增失败关闭的 Linux headless 认证工作流，并按平台严格验证证据范围。"
             ]
           },
           {
-            "title": "部署可靠性",
-            "type": "fix",
+            "title": "Codex 协作",
+            "type": "feature",
             "items": [
-              "默认开放 Pi 部署，同时为已有安装保留显式兼容开关。",
-              "Docker 默认地址池耗尽时，只使用管理员配置且已完成重叠检查的私有子网安全恢复。",
-              "手动重试、端口冲突重试及 Runtime 成功收敛后清理残留失败状态。"
+              "仅向控制端解析的可信 Peer 暴露 A2A 工具，且不泄露 Peer 凭据。",
+              "把原生结构化提问桥接到现有实例范围的 Chat Workspace 问题卡片。",
+              "仅清理终态 Codex Run，并保留有界幂等墓碑；活跃 Run 永不淘汰。"
             ]
           },
           {
-            "title": "对话连续性",
-            "type": "fix",
+            "title": "Workspace 可维护性",
+            "type": "improvement",
             "items": [
-              "Hermes 长时间工具任务会持续流式输出有意义的进度说明，不再只等待最终回答。",
-              "返回经过字段过滤的 Runtime 用量证据，使 Pi 和 Codex 的模型及上下文标签在刷新和运行恢复后继续显示。",
-              "消息和上下文展示可使用当前运行证据兜底，同时不会为缺失证据的历史数据编造模型。"
+              "将 Chat Workspace 编排、消息呈现、历史记录、实时同步与响应式控件拆分为带测试的模块。",
+              "将部署诊断、表单状态、状态轮询、提交与 Runtime 切换拆分为聚焦的 hooks。",
+              "补充本地 worktree 整理约定，并将依赖备份目录排除在 Git 和 Docker 构建上下文之外。"
             ]
           }
         ]

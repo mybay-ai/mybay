@@ -4,10 +4,14 @@ const MAX_RESPONSE_BYTES = 32 * 1024;
 const QUESTION_TIMEOUT_MS = 300_000;
 const POLL_INTERVAL_MS = 1_000;
 const SAFE_ID = /^[A-Za-z0-9_.:-]{1,80}$/;
+const hasUnsafeControlCharacter = value => [...value].some(character => {
+  const code = character.charCodeAt(0);
+  return code <= 0x1f && code !== 0x09 && code !== 0x0a && code !== 0x0d;
+});
 
 function boundedText(value, maximum) {
   if (typeof value !== "string" || !value.trim() || value.trim().length > maximum
-    || /[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(value)) throw Error("CODEX_QUESTION_INVALID");
+    || hasUnsafeControlCharacter(value)) throw Error("CODEX_QUESTION_INVALID");
   return value.trim();
 }
 
