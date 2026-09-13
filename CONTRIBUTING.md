@@ -114,3 +114,13 @@ Contributions submitted under the current process are licensed under the reposit
 The project does not currently require a Contributor License Agreement (CLA) or copyright assignment. If the maintainers later introduce a CLA for a commercial relicensing model, it will require a separate, explicit governance and legal decision; community contributions must not be assumed to grant proprietary relicensing rights before that process exists.
 
 This section describes the current contribution policy and is not legal advice.
+
+
+## Local directory hygiene
+
+- Use a dedicated branch or worktree based on the intended release. Check `git status` and `git worktree list` before changing checkout locations.
+- Put temporary verification logs and scratch files in `tmp/`; keep release archives in `release/` and generated build output in `dist/`. These directories are ignored by Git.
+- Keep runtime state in `data/` and backups in `backups/`. Do not remove them as part of source cleanup.
+- Remove old worktrees only after checking uncommitted changes and services using their paths. Dependency backup directories (`node_modules*`) must stay outside Git and Docker build contexts.
+- Keep certification evidence and its referenced artifacts: release checks depend on them. Regenerate tracked catalog/documentation outputs through the existing npm scripts.
+- Refactor by responsibility and retain nearby tests. Avoid moving all scripts or components at once; update build, CI and documentation references with each move.
