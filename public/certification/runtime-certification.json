@@ -188,6 +188,17 @@
           "runtimeVersion": "Hermes v2026.8.27",
           "mybayVersion": "0.1.29",
           "headless": true
+        },
+        {
+          "id": "windows-docker-desktop-v01291-hermes-release-20260913",
+          "platform": "windows",
+          "platformVersion": "Windows 10 Pro",
+          "architecture": "x64",
+          "containerEngine": "docker-desktop",
+          "containerEngineVersion": "29.7.2",
+          "runtimeVersion": "Hermes v2026.8.27",
+          "mybayVersion": "0.1.29.1",
+          "headless": true
         }
       ],
       "requirements": [
@@ -567,6 +578,17 @@
           "runtimeVersion": "Pi 0.85.1; bridge 0.1.1-beta",
           "mybayVersion": "0.1.29",
           "headless": true
+        },
+        {
+          "id": "windows-docker-desktop-v01291-pi-release-20260913",
+          "platform": "windows",
+          "platformVersion": "Windows 10 Pro",
+          "architecture": "x64",
+          "containerEngine": "docker-desktop",
+          "containerEngineVersion": "29.7.2",
+          "runtimeVersion": "Pi 0.85.1; bridge 0.1.1-beta",
+          "mybayVersion": "0.1.29.1",
+          "headless": true
         }
       ],
       "requirements": [
@@ -915,6 +937,17 @@
           "containerEngineVersion": "29.7.2",
           "runtimeVersion": "Codex 0.154.0; bridge 0.1.0-experimental.3",
           "mybayVersion": "0.1.29",
+          "headless": true
+        },
+        {
+          "id": "windows-docker-desktop-v01291-codex-release-20260913",
+          "platform": "windows",
+          "platformVersion": "Windows 10 Pro",
+          "architecture": "x64",
+          "containerEngine": "docker-desktop",
+          "containerEngineVersion": "29.7.2",
+          "runtimeVersion": "Codex 0.154.0; bridge 0.1.0-experimental.4",
+          "mybayVersion": "0.1.29.1",
           "headless": true
         }
       ],
