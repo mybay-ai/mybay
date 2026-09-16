@@ -22,6 +22,11 @@
 !/runtime/codex-bridge/**
 **/node_modules
 **/node_modules*/
+
+# Keep this after the Runtime re-includes above so bridge tests stay out of images.
+# Tests remain in Git and source release archives for contributors and audits.
+**/*.test.*
+
 /secrets
 
 .env
