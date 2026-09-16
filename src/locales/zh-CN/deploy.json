@@ -1,4 +1,22 @@
 {
+  "runtimePresentation": {
+    "certification": {
+      "spec-only": "仅规格",
+      "experimental": "实验性",
+      "beta": "Beta",
+      "certified": "已认证"
+    },
+    "surface": {
+      "hermes": "全功能",
+      "pi": "Web 工作区",
+      "codex": "本地工作区"
+    },
+    "description": {
+      "hermes": "支持 Dashboard、Web 与外部消息渠道、技能和完整工具链。",
+      "pi": "基于官方 Pi RPC 的隔离运行时，支持 Web 流式对话、会话恢复和文件工作流。",
+      "codex": "使用 Codex / ChatGPT 账号或兼容 Responses 的模型 API 运行独立会话；部署、流式对话、停止、会话恢复、文件产物与工具事件已经验证。"
+    }
+  },
   "systemSecurity": {
     "loadError": "无法加载系统诊断数据",
     "loading": "正在获取运行环境与安全诊断数据...",
@@ -281,13 +299,7 @@
       "description": "按工作需求选择运行时；各项能力与认证级别分别标注。",
       "loading": "正在读取可部署的 Runtime…",
       "loadError": "无法读取 Runtime 目录，请刷新后重试。",
-      "hermesBadge": "已认证 / 全功能",
-      "piBadge": "已认证 / Web 工作区",
-      "hermesDescription": "支持 Dashboard、Web 与外部消息渠道、技能和完整工具链。",
-      "piDescription": "基于官方 Pi RPC 的隔离运行时，支持 Web 流式对话、会话恢复和文件工作流。",
-      "unavailable": "当前版本暂不可部署",
-      "codexBadge": "已认证 / 本地工作区",
-      "codexDescription": "使用 Codex / ChatGPT 账号或兼容 Responses 的模型 API 运行独立会话；部署、流式对话、停止、会话恢复、文件产物与工具事件已经验证。"
+      "unavailable": "当前版本暂不可部署"
     },
     "instance": {
       "title": "Agent 信息",
@@ -1294,12 +1306,6 @@
                        "instanceInfo":  {
                                             "reupload":  "重新上传",
                                             "runtimeType":  "Agent 运行时类型",
-                                            "hermesBadge":  "已认证 / 全功能",
-                                            "hermesDescription":  "经典全功能运行时，包含 9119 控制接口、Python 执行器和多种消息渠道。",
-                                            "piBadge":  "已认证 / Web 对话",
-                                            "piDescription":  "基于官方 Pi RPC 的隔离运行时，当前支持 Web 流式对话、会话恢复、工具进度与停止。",
-                                            "codexBadge":  "已认证 / 本地工作区",
-                                            "codexDescription":  "使用隔离的 Codex App Server 会话；部署、流式对话、停止、会话恢复、文件产物与工具事件已经验证。",
                                             "runtimeLoading":  "正在加载已验证的运行时能力…",
                                             "runtimeLoadError":  "无法验证运行时能力。为避免创建不受支持的运行时，部署选择已关闭。",
                                             "runtimeUnavailable":  "运行时不可用",

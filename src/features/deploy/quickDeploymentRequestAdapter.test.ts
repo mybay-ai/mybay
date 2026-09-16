@@ -3,6 +3,7 @@ import { createQuickDeployDraft } from "./quickDeployConfig";
 import { buildQuickDeployAdvancedInitialData } from "./quickDeployAdvancedHandoff";
 import { buildQuickDeploymentRequest } from "./quickDeploymentRequestAdapter";
 import { QuickDeployValidationError } from "./quickDeployTypes";
+import { getRuntimeDefinition } from "../../../shared/runtimeCatalog";
 
 function validDraft() {
   const draft = createQuickDeployDraft({ suffix: "request", password: "password-123" });
@@ -15,6 +16,28 @@ function validDraft() {
 }
 
 describe("quick deployment request adapter", () => {
+  it.each(["hermes", "pi", "codex"] as const)("keeps the %s selection catalog-aligned through submission", (runtimeType) => {
+    const draft = validDraft();
+    draft.runtimeType = runtimeType;
+    draft.selectedSkillIds = [];
+    if (runtimeType === "codex") {
+      draft.codexAuthMode = "api";
+      draft.modelStrategy = { mode: "byok", provider: "openai", model: "gpt-5.5", apiKey: "codex-api-key" };
+    }
+    const definition = getRuntimeDefinition(runtimeType);
+    const request = buildQuickDeploymentRequest({
+      draft,
+      path: `quick-${runtimeType}-catalog`,
+      idempotencyKey: `quick-deploy-${runtimeType}-catalog`,
+    });
+    expect(request.body).toMatchObject({
+      runtime_type: runtimeType,
+      image: definition.runtime.image,
+      imageTag: definition.runtime.tag,
+      enableDashboard: runtimeType === "hermes",
+    });
+  });
+
   it("sends only the saved credential reference for Codex OAuth", () => {
     const draft = validDraft();
     draft.runtimeType = "codex"; draft.codexAuthMode = "api"; draft.selectedSkillIds = [];

@@ -22,6 +22,7 @@ import type { RuntimeDefinition } from "../../../shared/runtimeCatalog";
 import { CODEX_QUICK_DEPLOY_PROVIDER_IDS, PI_QUICK_DEPLOY_PROVIDER_IDS, supportsQuickDeployRuntimeProvider } from "../../../shared/runtimeModelProviderPolicy";
 import { AgentRuntimeIcon } from "../../components/brand/AgentRuntimeIcon";
 import { ChannelBrandIcon } from "../../components/brand/ChannelBrandIcon";
+import { getDeployRuntimePresentationKeys } from "./runtimePresentation";
 
 interface QuickDeployPageProps {
   currentUser: any;
@@ -390,6 +391,7 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
               const runtimeType = definition.runtime.type as "hermes" | "pi" | "codex";
               const selected = draft.runtimeType === runtimeType;
               const deployable = definition.release.deploymentSupported;
+              const presentation = getDeployRuntimePresentationKeys(definition);
               return (
                 <button
                   key={runtimeType}
@@ -409,11 +411,13 @@ export function QuickDeployPage({ currentUser, onAdvanced, onCreated, onOpenChat
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block font-semibold text-content">{definition.displayName}</span>
-                      <span className="mt-0.5 block text-xs font-medium text-content-muted">{t(`quickDeploy.runtime.${runtimeType}Badge`)}</span>
+                      <span className="mt-0.5 block text-xs font-medium text-content-muted">
+                        {t(presentation.certificationKey)} / {t(presentation.surfaceKey)}
+                      </span>
                     </span>
                     {selected && <CheckCircle2 className="h-5 w-5 shrink-0 text-indigo-600 dark:text-indigo-300" />}
                   </div>
-                  <span className="mt-3 block text-xs leading-5 text-content-muted">{t(`quickDeploy.runtime.${runtimeType}Description`)}</span>
+                  <span className="mt-3 block text-xs leading-5 text-content-muted">{t(presentation.descriptionKey)}</span>
                   {!deployable && <span className="mt-2 block text-xs font-semibold text-amber-700 dark:text-amber-300">{t("quickDeploy.runtime.unavailable")}</span>}
                 </button>
               );
