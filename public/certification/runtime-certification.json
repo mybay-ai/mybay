@@ -119,7 +119,7 @@
       "contractVersion": 1,
       "declaredLevel": "certified",
       "verifiedLevel": "certified",
-      "publicationStatus": "invalid",
+      "publicationStatus": "verified",
       "identityStatus": "exact",
       "artifactVerification": "oci-digest",
       "environments": [
@@ -198,6 +198,17 @@
           "containerEngineVersion": "29.7.2",
           "runtimeVersion": "Hermes v2026.8.27",
           "mybayVersion": "0.1.29.1",
+          "headless": true
+        },
+        {
+          "id": "windows-docker-desktop-v01292-hermes-release-20260917",
+          "platform": "windows",
+          "platformVersion": "Windows 10 Pro",
+          "architecture": "x64",
+          "containerEngine": "docker-desktop",
+          "containerEngineVersion": "29.7.2",
+          "runtimeVersion": "Hermes v2026.8.27",
+          "mybayVersion": "0.1.29.2",
           "headless": true
         }
       ],
@@ -511,9 +522,7 @@
           }
         }
       ],
-      "errors": [
-        "Certification evidence does not cover MyBay 0.1.29.2."
-      ],
+      "errors": [],
       "evidenceFile": "certification/evidence/hermes.certification.json"
     },
     {
@@ -522,7 +531,7 @@
       "contractVersion": 1,
       "declaredLevel": "certified",
       "verifiedLevel": "certified",
-      "publicationStatus": "invalid",
+      "publicationStatus": "verified",
       "identityStatus": "exact",
       "artifactVerification": "docker-image-id",
       "environments": [
@@ -590,6 +599,17 @@
           "containerEngineVersion": "29.7.2",
           "runtimeVersion": "Pi 0.85.1; bridge 0.1.1-beta",
           "mybayVersion": "0.1.29.1",
+          "headless": true
+        },
+        {
+          "id": "windows-docker-desktop-v01292-pi-release-20260917",
+          "platform": "windows",
+          "platformVersion": "Windows 10 Pro",
+          "architecture": "x64",
+          "containerEngine": "docker-desktop",
+          "containerEngineVersion": "29.7.2",
+          "runtimeVersion": "Pi 0.85.1; bridge 0.1.1-beta",
+          "mybayVersion": "0.1.29.2",
           "headless": true
         }
       ],
@@ -884,9 +904,7 @@
           }
         }
       ],
-      "errors": [
-        "Certification evidence does not cover MyBay 0.1.29.2."
-      ],
+      "errors": [],
       "evidenceFile": "certification/evidence/pi.certification.json"
     },
     {
@@ -895,7 +913,7 @@
       "contractVersion": 1,
       "declaredLevel": "certified",
       "verifiedLevel": "certified",
-      "publicationStatus": "invalid",
+      "publicationStatus": "verified",
       "identityStatus": "exact",
       "artifactVerification": "docker-image-id",
       "environments": [
@@ -952,6 +970,17 @@
           "containerEngineVersion": "29.7.2",
           "runtimeVersion": "Codex 0.154.0; bridge 0.1.0-experimental.4",
           "mybayVersion": "0.1.29.1",
+          "headless": true
+        },
+        {
+          "id": "windows-docker-desktop-v01292-codex-release-20260917",
+          "platform": "windows",
+          "platformVersion": "Windows 10 Pro",
+          "architecture": "x64",
+          "containerEngine": "docker-desktop",
+          "containerEngineVersion": "29.7.2",
+          "runtimeVersion": "Codex 0.154.0; bridge 0.1.0-experimental.4",
+          "mybayVersion": "0.1.29.2",
           "headless": true
         }
       ],
@@ -1260,9 +1289,7 @@
           }
         }
       ],
-      "errors": [
-        "Certification evidence does not cover MyBay 0.1.29.2."
-      ],
+      "errors": [],
       "evidenceFile": "certification/evidence/codex.certification.json"
     }
   ]

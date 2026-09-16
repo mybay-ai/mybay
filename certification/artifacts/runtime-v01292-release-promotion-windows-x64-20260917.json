@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "artifactType": "runtime-release-promotion",
+  "capturedAt": "2026-09-16T16:58:11.960Z",
+  "source": {
+    "version": "0.1.29.2",
+    "baseCommit": "551ee62ab32df84070326a3b03e5b276fb968538",
+    "controlImage": "mybay/local:0.1.29.2-release-candidate",
+    "controlImageId": "sha256:71239af01db84e02ca70809f5f863928aafdcce95f447a1545ec7663297d41db"
+  },
+  "environment": {
+    "platform": "Windows 10 Pro x64",
+    "runtimePlatform": "Docker Desktop / Engine 29.7.2 / Linux x86_64",
+    "controlUrl": "http://127.0.0.1:4492",
+    "isolatedData": true,
+    "dataLocation": "release-certification-worktree/data/acceptance-v01292"
+  },
+  "observations": {
+    "mergedSourceValidation": {
+      "status": "PASS",
+      "commit": "551ee62ab32df84070326a3b03e5b276fb968538",
+      "ci": {
+        "status": "PASS",
+        "runUrl": "https://github.com/mybay-ai/mybay/actions/runs/35123333454",
+        "jobs": [
+          "test-and-build",
+          "Secret Scan",
+          "Quick Start (windows-latest)",
+          "Quick Start (ubuntu-latest)",
+          "Quick Start (macos-latest)"
+        ]
+      },
+      "security": {
+        "status": "PASS",
+        "runUrl": "https://github.com/mybay-ai/mybay/actions/runs/35123333503"
+      },
+      "dependabot": {
+        "status": "PASS",
+        "runUrl": "https://github.com/mybay-ai/mybay/actions/runs/35123494578"
+      }
+    },
+    "localValidation": {
+      "runtimeBridgeTests": {
+        "status": "PASS",
+        "testsPassed": 50
+      },
+      "releaseAndPackagingRegressionTests": {
+        "status": "PASS",
+        "testFilesPassed": 4,
+        "testsPassed": 27
+      },
+      "versionConsistency": "PASS",
+      "strictCertificationBeforeEvidenceUpdate": "FAIL_CLOSED_EXPECTED",
+      "releaseGate": {
+        "status": "PASS",
+        "vitest": {
+          "filesPassed": 405,
+          "filesSkipped": 1,
+          "testsPassed": 2234,
+          "testsSkipped": 6
+        },
+        "runtimeBridgeTestsPassed": 50,
+        "eslint": "PASS",
+        "typecheck": "PASS",
+        "strictCoreTypecheck": "PASS",
+        "strictBoundaryTypecheck": "PASS",
+        "contentAndContractChecks": "PASS",
+        "productionBuild": "PASS",
+        "strictRuntimeCertification": "PASS"
+      }
+    },
+    "finalImageBuild": "PASS",
+    "finalContainerHealth": "PASS",
+    "healthResponse": {
+      "status": "healthy",
+      "version": "0.1.29.2"
+    },
+    "containerPackageVersion": "0.1.29.2",
+    "loopbackPortBinding": "127.0.0.1:4492",
+    "productionPackaging": {
+      "status": "PASS",
+      "projectTestFilesUnderRuntime": 0,
+      "piReleaseMetadata": {
+        "nativeVersion": "0.85.1",
+        "bridgeVersion": "0.1.1-beta",
+        "imageRef": "mybay/pi-runtime:0.85.1"
+      },
+      "codexReleaseMetadata": {
+        "nativeVersion": "0.154.0",
+        "bridgeVersion": "0.1.0-experimental.4",
+        "imageRef": "mybay/codex-runtime:0.154.0"
+      }
+    },
+    "runtimeImages": [
+      {
+        "runtime": "hermes",
+        "imageRef": "nousresearch/hermes-agent:v2026.8.27",
+        "imageId": "sha256:e0df6adebddf29b91112aefc999d4aaf6846c9eb544faca5672a16a13590ff79"
+      },
+      {
+        "runtime": "pi",
+        "imageRef": "mybay/pi-runtime:0.85.1",
+        "imageId": "sha256:b2ad5cf15c9f79a826a72ebda523b45ee2de80e53e438952227e06a8d79e0aa0"
+      },
+      {
+        "runtime": "codex",
+        "imageRef": "mybay/codex-runtime:0.154.0",
+        "imageId": "sha256:f9d456034bf02c74c336e33f95775b410e800228273419a45afa52e20000424a"
+      }
+    ],
+    "credentialedRuntimeAcceptance": {
+      "status": "NOT_RUN",
+      "reason": "The native Runtime images are unchanged and this patch-release promotion did not rerun credentialed Hermes, Pi, or Codex tasks."
+    }
+  },
+  "promotionBasis": [
+    "The exact final 0.1.29.2 control image was built from the merged main commit and returned a healthy 0.1.29.2 response from an isolated loopback-bound container.",
+    "The merged commit passed CI test-and-build, secret scan, three-platform quick-start checks, the security workflow, and Dependabot analysis.",
+    "The current tree passed all 50 Runtime bridge tests, 27 focused release and packaging regression tests, and version consistency checks.",
+    "The production image contains the aligned Pi and Codex release metadata and excludes project test files from the Runtime bridge directories.",
+    "Hermes, Pi, and Codex native image identities are unchanged from the retained certified release line and match the immutable Docker image IDs in their certification bundles."
+  ],
+  "boundaries": [
+    "No credentialed Hermes, Pi, or Codex native task was rerun for 0.1.29.2; credentialed lifecycle evidence remains historical evidence for the unchanged native Runtime images.",
+    "Real mixed-Runtime A2A, structured-question UI acceptance, and automatic cleanup product acceptance are NOT_RUN for 0.1.29.2.",
+    "Linux and headless Runtime certification is NOT_RUN for 0.1.29.2 and must not be inferred from GitHub-hosted quick-start checks.",
+    "GitHub Release assets, SBOM, SHA256SUMS, multi-architecture image publication, and downloaded-asset verification remain pending until the v0.1.29.2 tag workflow completes.",
+    "No credentials, tokens, administrator secrets, or unrestricted model responses are retained in this artifact."
+  ],
+  "containsSecrets": false
+}

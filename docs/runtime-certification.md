@@ -8,9 +8,9 @@ A declared certification level is a release target. A verified level is granted 
 
 | Runtime | Declared level | Verified level | Release identity | Artifact verification | Publication status | Retained environments | Last verified | Evidence bundle |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| hermes | certified | certified | exact | oci-digest | invalid | windows/not-retained (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop) | 2026-09-07T19:12:40.573Z | certification/evidence/hermes.certification.json |
-| pi | certified | certified | exact | docker-image-id | invalid | windows/not-retained (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop) | 2026-09-07T19:12:40.573Z | certification/evidence/pi.certification.json |
-| codex | certified | certified | exact | docker-image-id | invalid | windows/x64 (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop) | 2026-09-11T07:15:36.909Z | certification/evidence/codex.certification.json |
+| hermes | certified | certified | exact | oci-digest | verified | windows/not-retained (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop) | 2026-09-07T19:12:40.573Z | certification/evidence/hermes.certification.json |
+| pi | certified | certified | exact | docker-image-id | verified | windows/not-retained (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop) | 2026-09-07T19:12:40.573Z | certification/evidence/pi.certification.json |
+| codex | certified | certified | exact | docker-image-id | verified | windows/x64 (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop), windows/x64 (docker-desktop) | 2026-09-11T07:15:36.909Z | certification/evidence/codex.certification.json |
 
 ## Evidence-backed capability coverage
 
@@ -18,9 +18,9 @@ A `passed` cell means retained evidence satisfied that certification requirement
 
 | Runtime | Install | Run | Stream | Cancel | Session recovery | Files | Tools | Restart recovery | Upgrade | Rollback | Backup | Security | Real E2E | A2A | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| hermes | passed | passed | passed | passed | passed | passed | passed | passed | passed | passed | passed | passed | passed | n/a* | invalid |
-| pi | passed | passed | passed | passed | passed | passed | passed | passed | passed | passed | passed | passed | passed | n/a* | invalid |
-| codex | passed | passed | passed | passed | passed | passed | passed | passed | passed | passed | passed | passed | passed | n/a* | invalid |
+| hermes | passed | passed | passed | passed | passed | passed | passed | passed | passed | passed | passed | passed | passed | n/a* | verified |
+| pi | passed | passed | passed | passed | passed | passed | passed | passed | passed | passed | passed | passed | passed | n/a* | verified |
+| codex | passed | passed | passed | passed | passed | passed | passed | passed | passed | passed | passed | passed | passed | n/a* | verified |
 
 Note: A2A is currently a Control Plane collaboration feature, not a field in the Runtime Driver capability contract or certification ladder. It is shown as `n/a` rather than inferred.
 
