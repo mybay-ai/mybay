@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkRuntimeBridgeMetadata, checkVersionConsistency } from "./check-version.mjs";
+import { buildRuntimePublicMetadata, checkRuntimeBridgeMetadata, checkRuntimePublicMetadata, checkVersionConsistency } from "./check-version.mjs";
 
 const packageJson = { name: "mybay-local", version: "0.1.0-preview" };
 const packageLock = { name: "mybay-local", version: "0.1.0-preview", packages: { "": { name: "mybay-local", version: "0.1.0-preview" } } };
@@ -76,5 +76,35 @@ describe("release version consistency", () => {
     expect(errors).toContain("Codex bridge native dependency (0.153.0) does not match release nativeVersion (0.154.0)");
     expect(errors).toContain("runtime/codex-bridge/Dockerfile does not label bridgeVersion 0.1.0-experimental.4");
     expect(errors).toContain("README.md does not identify the current Codex bridge version as 0.1.0-experimental.4");
+  });
+
+  it("accepts public Runtime entries derived from the catalog specs", () => {
+    const specs = [{
+      name: "hermes-agent",
+      displayName: "Hermes Agent",
+      version: "v2026.8.27",
+      release: { certificationLevel: "certified", bridgeVersion: null },
+    }];
+    const runtimes = buildRuntimePublicMetadata(specs, [
+      { name: "README.md", content: "- **Hermes Agent:** Runtime v2026.8.27 is `certified`." },
+      { name: "README.zh-CN.md", content: "- **Hermes Agent：** Runtime v2026.8.27 已达到 `certified`。" },
+    ]);
+    expect(checkRuntimePublicMetadata(runtimes)).toEqual([]);
+  });
+
+  it("rejects missing and stale public Runtime entries", () => {
+    const errors = checkRuntimePublicMetadata([{
+      displayName: "Pi Agent",
+      version: "0.85.1",
+      release: { certificationLevel: "certified", bridgeVersion: "0.1.1-beta" },
+      references: [
+        { name: "README.md", content: "- **Pi Agent:** Pi 0.85.0 at beta with bridge 0.1.0." },
+        { name: "README.zh-CN.md", content: "" },
+      ],
+    }]);
+    expect(errors).toContain("README.md does not identify Pi Agent Runtime version 0.85.1");
+    expect(errors).toContain("README.md does not identify Pi Agent certification level certified");
+    expect(errors).toContain("README.md does not identify Pi Agent bridge version 0.1.1-beta");
+    expect(errors).toContain("README.zh-CN.md is missing the public Pi Agent release entry");
   });
 });
