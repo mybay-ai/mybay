@@ -1,3 +1,4 @@
+import release from "./release.json" with { type: "json" };
 import http from "node:http";
 import { randomBytes, randomUUID } from "node:crypto";
 import { mkdir, readFile, readdir, rename, writeFile } from "node:fs/promises";
@@ -730,7 +731,7 @@ async function handleRequest(request, response) {
     return createApprovalRequest(request, response, await readJson(request));
   }
   if (request.method === "GET" && ["/health", "/api/health"].includes(url.pathname)) {
-    return json(response, 200, { ok: true, runtime: "pi", version: "0.85.1" });
+    return json(response, 200, { ok: true, runtime: "pi", version: release.nativeVersion, bridgeVersion: release.bridgeVersion });
   }
   if (request.method === "GET" && url.pathname === "/api/status") {
     return json(response, 200, { status: "ok", runtime: "pi", auth_required: true, auth_providers: ["basic"] });

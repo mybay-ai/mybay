@@ -7,6 +7,7 @@ import type { RuntimeDefinition } from "../../../shared/runtimeCatalog";
 import { fetchRuntimeCatalog } from "./runtimeCatalogClient";
 import { supportsRuntimeDashboard } from "../../../shared/runtimeAccessPolicy";
 import { AgentRuntimeIcon } from "../../components/brand/AgentRuntimeIcon";
+import { getDeployRuntimePresentationKeys } from "./runtimePresentation";
 
 interface InstanceInfoStepProps {
   data: any;
@@ -680,16 +681,9 @@ export function InstanceInfoStep({ data, update, updateTemplateInput, applyTempl
                 const selected = (data.runtime_type || "hermes") === runtimeType;
                 const deployable = definition.release.deploymentSupported;
                 const isPi = runtimeType === "pi";
-                const description = runtimeType === "hermes"
-                  ? t("wizardCopy.instanceInfo.hermesDescription")
-                  : runtimeType === "pi"
-                    ? t("wizardCopy.instanceInfo.piDescription")
-                    : t("wizardCopy.instanceInfo.codexDescription");
-                const badge = runtimeType === "hermes"
-                  ? t("wizardCopy.instanceInfo.hermesBadge")
-                  : runtimeType === "pi"
-                    ? t("wizardCopy.instanceInfo.piBadge")
-                    : t("wizardCopy.instanceInfo.codexBadge");
+                const presentation = getDeployRuntimePresentationKeys(definition);
+                const description = t(presentation.descriptionKey);
+                const badge = `${t(presentation.certificationKey)} / ${t(presentation.surfaceKey)}`;
                 return (
                   <button
                     key={runtimeType}

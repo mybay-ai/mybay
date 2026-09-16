@@ -1,4 +1,5 @@
 import { CODEX_BUILD } from "./codexBuild";
+import { PI_BUILD } from "./piBuild";
 export type RuntimeType = string;
 
 export type RuntimeSupportStatus = "available" | "spec-only";
@@ -202,15 +203,15 @@ export const PI_RUNTIME_DEFINITION = freezeRuntimeDefinition({
   specVersion: "1.0.0",
   name: "pi-agent",
   displayName: "Pi Agent",
-  version: "0.85.1",
-  description: "Certified MyBay integration for Pi Agent 0.85.1, with isolated web conversations and persisted file workflows.",
+  version: PI_BUILD.nativeVersion,
+  description: `Certified MyBay integration for Pi Agent ${PI_BUILD.nativeVersion}, with isolated web conversations and persisted file workflows.`,
   providerKey: "pi-rpc",
   contractVersion: 1,
   release: {
     supportStatus: "available",
     certificationLevel: "certified",
     deploymentSupported: true,
-    bridgeVersion: "0.1.1-beta",
+    bridgeVersion: PI_BUILD.bridgeVersion,
     artifactIdentity: {
       kind: "docker-image-id",
       value: "sha256:b2ad5cf15c9f79a826a72ebda523b45ee2de80e53e438952227e06a8d79e0aa0",
@@ -218,8 +219,8 @@ export const PI_RUNTIME_DEFINITION = freezeRuntimeDefinition({
   },
   runtime: {
     type: "pi",
-    image: "mybay/pi-runtime",
-    tag: "0.85.1",
+    image: PI_BUILD.image,
+    tag: PI_BUILD.imageTag,
     internalPort: 8080,
     environmentVariables: [
       {

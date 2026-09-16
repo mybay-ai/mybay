@@ -119,7 +119,7 @@
       "contractVersion": 1,
       "declaredLevel": "certified",
       "verifiedLevel": "certified",
-      "publicationStatus": "verified",
+      "publicationStatus": "invalid",
       "identityStatus": "exact",
       "artifactVerification": "oci-digest",
       "environments": [
@@ -511,7 +511,9 @@
           }
         }
       ],
-      "errors": [],
+      "errors": [
+        "Certification evidence does not cover MyBay 0.1.29.2."
+      ],
       "evidenceFile": "certification/evidence/hermes.certification.json"
     },
     {
@@ -520,7 +522,7 @@
       "contractVersion": 1,
       "declaredLevel": "certified",
       "verifiedLevel": "certified",
-      "publicationStatus": "verified",
+      "publicationStatus": "invalid",
       "identityStatus": "exact",
       "artifactVerification": "docker-image-id",
       "environments": [
@@ -882,7 +884,9 @@
           }
         }
       ],
-      "errors": [],
+      "errors": [
+        "Certification evidence does not cover MyBay 0.1.29.2."
+      ],
       "evidenceFile": "certification/evidence/pi.certification.json"
     },
     {
@@ -891,7 +895,7 @@
       "contractVersion": 1,
       "declaredLevel": "certified",
       "verifiedLevel": "certified",
-      "publicationStatus": "verified",
+      "publicationStatus": "invalid",
       "identityStatus": "exact",
       "artifactVerification": "docker-image-id",
       "environments": [
@@ -1256,7 +1260,9 @@
           }
         }
       ],
-      "errors": [],
+      "errors": [
+        "Certification evidence does not cover MyBay 0.1.29.2."
+      ],
       "evidenceFile": "certification/evidence/codex.certification.json"
     }
   ]

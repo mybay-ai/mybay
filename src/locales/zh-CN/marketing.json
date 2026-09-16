@@ -1060,36 +1060,36 @@
     "timelineTip": "正式版",
     "releases": [
       {
-        "version": "v0.1.29.1",
-        "date": "2026.09.13",
+        "version": "v0.1.29.2",
+        "date": "2026.09.16",
         "badge": "正式版",
-        "summary": "麦贝开源版 v0.1.29.1 增加受控的 Codex 协作能力、模块化 Chat 与部署流程、更严格的 Runtime 隔离，以及失败关闭的 Linux 认证。",
+        "summary": "麦贝开源版 v0.1.29.2 收紧 Runtime 发布真相，统一 Codex 与 Pi Bridge 身份，并由已验证 Runtime Catalog 驱动部署呈现。",
         "sections": [
           {
-            "title": "Runtime 安全与认证",
-            "type": "feature",
-            "items": [
-              "将 Pi bridge 合同测试接入根测试与 CI 路径，避免 bridge 回归绕过常规质量门禁。",
-              "收紧 Hermes 容器能力与资源策略，同时保持声明的 Runtime Guard 合同。",
-              "新增失败关闭的 Linux headless 认证工作流，并按平台严格验证证据范围。"
-            ]
-          },
-          {
-            "title": "Codex 协作",
-            "type": "feature",
-            "items": [
-              "仅向控制端解析的可信 Peer 暴露 A2A 工具，且不泄露 Peer 凭据。",
-              "把原生结构化提问桥接到现有实例范围的 Chat Workspace 问题卡片。",
-              "仅清理终态 Codex Run，并保留有界幂等墓碑；活跃 Run 永不淘汰。"
-            ]
-          },
-          {
-            "title": "Workspace 可维护性",
+            "title": "Runtime 发布真相",
             "type": "improvement",
             "items": [
-              "将 Chat Workspace 编排、消息呈现、历史记录、实时同步与响应式控件拆分为带测试的模块。",
-              "将部署诊断、表单状态、状态轮询、提交与 Runtime 切换拆分为聚焦的 hooks。",
-              "补充本地 worktree 整理约定，并将依赖备份目录排除在 Git 和 Docker 构建上下文之外。"
+              "将 Codex package、lockfile、Docker 标签与公开文档统一到 bridge 0.1.0-experimental.4。",
+              "新增 Pi release manifest，统一提供原生 0.85.1 与 bridge 0.1.1-beta 身份。",
+              "当 Hermes、Pi 或 Codex 的公开版本和认证声明偏离生成的 Runtime Spec 时，让源码与发布包检查失败关闭。"
+            ]
+          },
+          {
+            "title": "Catalog 驱动部署",
+            "type": "fix",
+            "items": [
+              "部署复核页显示 Runtime 注册名称，避免把 Codex 错标为 Hermes。",
+              "快速部署与高级部署共用一套本地化认证等级、产品形态和说明文案。",
+              "保证 Hermes、Pi、Codex 的选择结果、镜像与标签贯穿部署提交过程。"
+            ]
+          },
+          {
+            "title": "发布质量门禁",
+            "type": "improvement",
+            "items": [
+              "将版本一致性检查接入项目常规质量门禁。",
+              "要求经过验证的发布包包含 Runtime Spec 与 Bridge release manifest。",
+              "增加 Runtime 元数据漂移及三种 Runtime 部署选择的回归覆盖。"
             ]
           }
         ]
