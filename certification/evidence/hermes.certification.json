@@ -89,6 +89,17 @@
       "runtimeVersion": "Hermes v2026.8.27",
       "mybayVersion": "0.1.29.1",
       "headless": true
+    },
+    {
+      "id": "windows-docker-desktop-v01292-hermes-release-20260917",
+      "platform": "windows",
+      "platformVersion": "Windows 10 Pro",
+      "architecture": "x64",
+      "containerEngine": "docker-desktop",
+      "containerEngineVersion": "29.7.2",
+      "runtimeVersion": "Hermes v2026.8.27",
+      "mybayVersion": "0.1.29.2",
+      "headless": true
     }
   ],
   "artifacts": [
@@ -155,6 +166,10 @@
     {
       "path": "certification/artifacts/runtime-v01291-release-promotion-windows-x64-20260913.json",
       "sha256": "9914fcd81bd57b99e40032e2c0461528b71d486f4faba3c7ab2cd67a2d5769c7"
+    },
+    {
+      "path": "certification/artifacts/runtime-v01292-release-promotion-windows-x64-20260917.json",
+      "sha256": "a35b0497fd708f85d51f2a2f9d298b6e8e85e9f688bcd9d95521fff5660b34a8"
     }
   ],
   "checks": [
