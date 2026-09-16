@@ -37,7 +37,7 @@
         "test:docker-e2e": "vitest run server/dockerLifecycle.e2e.test.ts",
         "check:mojibake": "node scripts/check-mojibake.mjs",
         "check:local-copy": "node scripts/check-local-edition-copy.mjs",
-        "check": "npm run runtime:check && npm run docs:check && npm run lint && npm run typecheck && npm run typecheck:strict-core && npm run typecheck:strict-boundary && npm run test && npm run check:mojibake && npm run check:local-copy && npm run check:i18n && npm run check:i18n-hardcode && npm run check:i18n-fallbacks && npm run check:api-error-contract && npm run build",
+        "check": "npm run check:version && npm run runtime:check && npm run docs:check && npm run lint && npm run typecheck && npm run typecheck:strict-core && npm run typecheck:strict-boundary && npm run test && npm run check:mojibake && npm run check:local-copy && npm run check:i18n && npm run check:i18n-hardcode && npm run check:i18n-fallbacks && npm run check:api-error-contract && npm run build",
         "lint": "eslint .",
         "check:i18n": "node scripts/check-i18n-keys.mjs",
         "check:i18n-hardcode": "node scripts/check-i18n-hardcode.mjs",

@@ -286,7 +286,7 @@ data/
 
 - **Hermes Agent：** 当前可用、可部署，并达到 MyBay `certified` 级别。固定的 v2026.8.27 镜像已绑定保留的 OCI 摘要及 Windows Docker Desktop 认证证据。
 - **Pi Agent：** 当前默认可用、可部署，并达到 MyBay `certified` 级别。Pi 0.85.1 与 bridge 0.1.1-beta 已绑定保留的 Windows Docker 镜像身份；已有安装仍可显式设置 `MYBAY_ENABLE_PI_RUNTIME=false` 保持关闭。
-- **Codex：** 当前以 MyBay `certified` 级别可用、可部署。本机 Codex 0.154.0 / bridge 0.1.0-experimental.3 镜像已和 Windows Docker Desktop 上的部署、执行、流式输出、停止、恢复、文件、用量、工具事件、升级、回滚、安全和可移植备份恢复证据精确绑定。Windows 原生数据到 Linux 的迁移以及公共多架构镜像发布不在本次认证范围内。
+- **Codex：** 当前以 MyBay `certified` 级别可用、可部署。本机 Codex 0.154.0 / bridge 0.1.0-experimental.4 镜像已和 Windows Docker Desktop 上的部署、执行、流式输出、停止、恢复、文件、用量、工具事件、升级、回滚、安全和可移植备份恢复证据精确绑定。Windows 原生数据到 Linux 的迁移以及公共多架构镜像发布不在本次认证范围内。
 
 控制面会依据所选 Runtime 的能力声明禁用不支持的功能。依赖具体消息渠道或对话模式前，请查看自动生成的 [Runtime 能力矩阵](./docs/runtime-capability-matrix.md)。
 

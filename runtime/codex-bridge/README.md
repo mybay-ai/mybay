@@ -1,6 +1,6 @@
-# Codex Runtime (Beta)
+# Codex Runtime (Certified)
 
-An isolated adapter for the official `@openai/codex` App Server, pinned to 0.154.0. It does not connect to the Codex desktop daemon. Each instance owns its account directory, native threads, workspace and bridge state.
+An isolated adapter for the official `@openai/codex` App Server, pinned to native 0.154.0 with MyBay bridge 0.1.0-experimental.4. It does not connect to the Codex desktop daemon. Each instance owns its account directory, native threads, workspace and bridge state.
 
 ## Local deployment
 
@@ -28,8 +28,8 @@ Run bridge tests with `node --test runtime/codex-bridge/*.test.mjs` from the rep
 
 The fixture suite verifies the native tool envelope and authenticated relay contract. A real credentialed Codex-to-peer model round trip is not certified by those tests and must remain `NOT_RUN` until separately accepted.
 
-中文：此版本通过 MyBay Beta 认证。使用独立账号目录与原生会话，已验证 Web 流式对话、工具事件、文件产物、单次审批、取消、用量与重启后的会话恢复；跨平台认证以及正在执行任务的无损恢复仍未验证。
+中文：此版本通过 MyBay Certified 认证。使用独立账号目录与原生会话，已验证 Web 流式对话、工具事件、文件产物、单次审批、取消、用量与重启后的会话恢复；跨平台认证以及正在执行任务的无损恢复仍未验证。
 
 The Docker image uses the native `externalSandbox` turn policy: the nonroot Docker container, read-only root filesystem, capability restrictions and dedicated instance mount provide the execution boundary. This avoids nested namespace creation on Docker Desktop. Direct host tests retain Codex's native workspace sandbox by default. Never enable `CODEX_EXTERNAL_SANDBOX` for an unsandboxed host process.
 
-When native command approval offers only `cancel` rather than `decline`, MyBay denial maps to cancellation of the native turn. It never grants permission. In the Beta UI, choose **Agent execution** for account-backed Codex conversations; the separate direct-provider quick mode is not account-backed. Historical messages created before bridge 0.1.0-experimental.3 can retain an unknown model because their terminal evidence did not record one.
+When native command approval offers only `cancel` rather than `decline`, MyBay denial maps to cancellation of the native turn. It never grants permission. In the Chat UI, choose **Agent execution** for account-backed Codex conversations; the separate direct-provider quick mode is not account-backed. Historical messages created before bridge 0.1.0-experimental.3 can retain an unknown model because their terminal evidence did not record one.

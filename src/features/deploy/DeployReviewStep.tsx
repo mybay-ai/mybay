@@ -6,6 +6,7 @@ import { InstanceReadinessNotice } from "../../components/instance-runtime/Insta
 import type { AgentInstance } from "../../types";
 import { AgentRuntimeIcon } from "../../components/brand/AgentRuntimeIcon";
 import { ChannelBrandIcon } from "../../components/brand/ChannelBrandIcon";
+import { getDeployRuntimeDisplayName } from "./runtimePresentation";
 
 interface DeployReviewStepProps {
   step: number;
@@ -296,6 +297,7 @@ const getIconComponent = (iconName: string) => {
 
 export function DeployReviewStep({ step, data, createdInstance, testResults, onSuccess, submitError, onRetry, isTraefik, onViewGuide, activeWorkflowTemplate, activeBlueprint, permissionConfirmed = false, onPermissionConfirmedChange }: DeployReviewStepProps) {
   const isPiRuntime = String(data?.runtime_type || "hermes").trim().toLowerCase() === "pi";
+  const runtimeDisplayName = getDeployRuntimeDisplayName(data?.runtime_type);
   const navigate = useNavigate();
   const { t } = useTranslation("deploy");
   const isReview = step === 6;
@@ -495,7 +497,7 @@ export function DeployReviewStep({ step, data, createdInstance, testResults, onS
               <span className="text-content-muted font-sans font-medium">{t("wizardCopy.instanceInfo.runtimeType")}</span>
             </div>
             <span className="font-bold text-content-secondary">
-              {isPiRuntime ? "Pi Agent" : "Hermes Agent"}
+              {runtimeDisplayName}
             </span>
           </div>
 

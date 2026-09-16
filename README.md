@@ -286,7 +286,7 @@ data/
 
 - **Hermes Agent:** Available and deployable at MyBay's `certified` level. The pinned v2026.8.27 image is bound to its retained OCI digest and Windows Docker Desktop certification evidence.
 - **Pi Agent:** Available and deployable by default at MyBay's `certified` level. Pi 0.85.1 and bridge 0.1.1-beta are bound to the retained Windows Docker image identity; explicit `MYBAY_ENABLE_PI_RUNTIME=false` remains supported for existing installations.
-- **Codex:** Available and deployable at MyBay's `certified` level. The current native 0.154.0 / bridge 0.1.0-experimental.3 host-local image is exactly bound to retained Windows Docker Desktop evidence for deployment, execution, streaming, cancellation, recovery, files, usage, tool events, upgrade, rollback, security, and portable backup/restore. Windows-native-to-Linux state migration and public multi-architecture image publication remain outside this certification.
+- **Codex:** Available and deployable at MyBay's `certified` level. The current native 0.154.0 / bridge 0.1.0-experimental.4 host-local image is exactly bound to retained Windows Docker Desktop evidence for deployment, execution, streaming, cancellation, recovery, files, usage, tool events, upgrade, rollback, security, and portable backup/restore. Windows-native-to-Linux state migration and public multi-architecture image publication remain outside this certification.
 
 The control plane applies capability guards to features a selected Runtime does not declare. Check the generated [capability matrix](./docs/runtime-capability-matrix.md) before depending on a particular channel or conversation mode.
 

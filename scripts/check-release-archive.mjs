@@ -14,7 +14,7 @@ const requiredFiles = [
   "docker-compose.server.yml", "docker-compose.windows.yml", "docker-compose.yml", "package-lock.json", "package.json", "quick-start.ps1", "quick-start.sh",
   "Repair-MyBay.bat", "Start-MyBay.bat", "Stop-MyBay.bat", "Uninstall-MyBay.bat", "View-Logs.bat", "scripts/quick-start-env.ps1", "scripts/quick-start-env.sh",
   "scripts/windows-control.ps1", "scripts/windows-preflight.ps1", "scripts/windows-prerequisites.ps1", "runtime/pi-bridge/Dockerfile",
-  "runtime/codex-bridge/Dockerfile", "runtime/codex-bridge/package.json", "runtime/codex-bridge/package-lock.json", "runtime/codex-bridge/server.mjs", "runtime/codex-bridge/runtime.mjs", "runtime/codex-bridge/app-server.mjs",
+  "runtime/codex-bridge/Dockerfile", "runtime/codex-bridge/README.md", "runtime/codex-bridge/package.json", "runtime/codex-bridge/package-lock.json", "runtime/codex-bridge/release.json", "runtime/codex-bridge/server.mjs", "runtime/codex-bridge/runtime.mjs", "runtime/codex-bridge/app-server.mjs",
   "runtime/pi-bridge/package.json", "runtime/pi-bridge/package-lock.json", "runtime/pi-bridge/server.mjs",
 ];
 
@@ -41,6 +41,9 @@ const archivedPackage = JSON.parse(readAsText("package.json"));
 const archivedLock = JSON.parse(readAsText("package-lock.json"));
 const archivedEnMarketing = JSON.parse(readAsText("src/locales/en/marketing.json"));
 const archivedZhMarketing = JSON.parse(readAsText("src/locales/zh-CN/marketing.json"));
+const archivedCodexRelease = JSON.parse(readAsText("runtime/codex-bridge/release.json"));
+const archivedCodexPackage = JSON.parse(readAsText("runtime/codex-bridge/package.json"));
+const archivedCodexPackageLock = JSON.parse(readAsText("runtime/codex-bridge/package-lock.json"));
 const archivedPublicMetadata = {
   readmes: [
     { name: "README.md", content: readAsText("README.md") },
@@ -50,6 +53,20 @@ const archivedPublicMetadata = {
     { name: "src/locales/en/marketing.json", releases: archivedEnMarketing.changelog?.releases },
     { name: "src/locales/zh-CN/marketing.json", releases: archivedZhMarketing.changelog?.releases },
   ],
+  runtimeBridges: [{
+    name: "Codex bridge",
+    release: archivedCodexRelease,
+    packageJson: archivedCodexPackage,
+    packageLock: archivedCodexPackageLock,
+    nativePackage: "@openai/codex",
+    dockerfile: { name: "runtime/codex-bridge/Dockerfile", content: readAsText("runtime/codex-bridge/Dockerfile") },
+    dockerLabels: { bridge: "com.mybay.codex.bridge-version", native: "com.mybay.codex.agent-version" },
+    references: [
+      { name: "README.md", content: readAsText("README.md") },
+      { name: "README.zh-CN.md", content: readAsText("README.zh-CN.md") },
+      { name: "runtime/codex-bridge/README.md", content: readAsText("runtime/codex-bridge/README.md") },
+    ],
+  }],
 };
 const versionErrors = checkVersionConsistency(archivedPackage, archivedLock, archivedPublicMetadata);
 if (versionErrors.length) throw new Error("Archive version metadata is inconsistent:\n- " + versionErrors.join("\n- "));
