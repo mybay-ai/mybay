@@ -1060,36 +1060,36 @@
     "timelineTip": "Stable release",
     "releases": [
       {
-        "version": "v0.1.29.1",
-        "date": "2026.09.13",
+        "version": "v0.1.29.2",
+        "date": "2026.09.16",
         "badge": "Stable",
-        "summary": "MyBay Open Source v0.1.29.1 adds guarded Codex collaboration, modular Chat and deployment workflows, stricter Runtime isolation, and fail-closed Linux certification.",
+        "summary": "MyBay Open Source v0.1.29.2 tightens Runtime release truth, aligns Codex and Pi bridge identities, and derives deployment presentation from the verified Runtime catalog.",
         "sections": [
           {
-            "title": "Runtime safety and certification",
-            "type": "feature",
-            "items": [
-              "Run Pi bridge contracts from the root test and CI path so bridge regressions cannot bypass the normal quality gate.",
-              "Tighten Hermes container capabilities and resource policy while preserving the declared Runtime guard contract.",
-              "Add a fail-closed Linux headless certification workflow and explicit platform-scoped evidence validation."
-            ]
-          },
-          {
-            "title": "Codex collaboration",
-            "type": "feature",
-            "items": [
-              "Expose trusted A2A tools only for control-plane-resolved peers without disclosing peer credentials.",
-              "Bridge native structured questions into existing instance-scoped Chat Workspace question cards.",
-              "Prune only terminal Codex runs with bounded idempotency tombstones; active runs are never evicted."
-            ]
-          },
-          {
-            "title": "Workspace maintainability",
+            "title": "Runtime release truth",
             "type": "improvement",
             "items": [
-              "Split Chat Workspace orchestration, message presentation, history, realtime synchronization, and responsive controls into tested modules.",
-              "Split deployment diagnostics, form state, status polling, submission, and Runtime transitions into focused hooks.",
-              "Document local worktree hygiene and keep dependency backup directories outside Git and Docker build contexts."
+              "Align Codex package, lockfile, Docker labels and public documentation with bridge 0.1.0-experimental.4.",
+              "Add a Pi release manifest as the single source for native 0.85.1 and bridge 0.1.1-beta identities.",
+              "Fail source and release-archive checks when Hermes, Pi or Codex public version and certification claims drift from generated Runtime specs."
+            ]
+          },
+          {
+            "title": "Catalog-driven deployment",
+            "type": "fix",
+            "items": [
+              "Show the registered Runtime name in deployment review instead of mislabeling Codex as Hermes.",
+              "Use one localized certification, surface and description source across Quick Deploy and Advanced Deploy.",
+              "Keep Hermes, Pi and Codex selection, image and tag identities aligned through deployment submission."
+            ]
+          },
+          {
+            "title": "Release quality gates",
+            "type": "improvement",
+            "items": [
+              "Run version consistency as part of the normal project check path.",
+              "Require Runtime specs and bridge release manifests in verified release archives.",
+              "Add regression coverage for stale Runtime metadata and all three deployment selections."
             ]
           }
         ]
